@@ -1,0 +1,121 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CanDoItAll.Composition;
+
+public static class FiniteOperationComposition {
+    public static IServiceCollection AddFiniteOperationPools(this IServiceCollection services) {
+        services.AddSingleton(provider => ProjectFiniteOperationPool.Create(provider.GetRequiredService<IOptions<ProjectDefinitionOperationOptions>>().Value));
+        services.AddSingleton(provider => WorkbenchTaskPlanFiniteOperations.Create(provider.GetRequiredService<IOptions<ProjectTaskPlanOperationOptions>>().Value));
+        return services;
+    }
+}
+
+public sealed class FiniteOperationMaintenance(IServiceScopeFactory scopes, ICanonicalRuntimeDatabase database,
+    DatasetActivationService activation, IEnumerable<FiniteOperationPoolRegistration> registrations,
+    ILogger<FiniteOperationMaintenance> logger) : BackgroundService {
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        var pools = registrations.ToArray();
+        var schedule = new FiniteOperationMaintenanceState(pools);
+        var health = pools.ToDictionary(pool => pool.Pool, pool => new FiniteOperationMaintenanceHealth(pool.Timing.WarningAfter));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        do {
+            var profile = database.Profile.Profile;
+            if (profile.ProviderKind != DatabaseProviderKind.PostgreSql) {
+                continue;
+            }
+            DatasetActivationBinding binding;
+            try {
+                binding = await activation.ReadActiveBindingAsync(profile.Id, stoppingToken);
+            } catch (Exception exception) when (!stoppingToken.IsCancellationRequested) {
+                var failure = FiniteOperationMaintenanceFailure.From(exception);
+                logger.LogWarning("Finite operation maintenance could not read its active profile binding: {FailureType}, SQLSTATE {SqlState}.",
+                    failure.Type, failure.SqlState);
+                continue;
+            }
+            schedule.ObserveBinding(profile.Id, binding);
+            while (schedule.TakeDue(DateTimeOffset.UtcNow) is { } turn) {
+                using var budget = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                budget.CancelAfter(FiniteOperationBounds.MaintenanceBudget);
+                var cycle = new FiniteOperationMaintenanceCycle(turn.Pool, schedule);
+                FiniteOperationMaintenanceResult result;
+                try {
+                    await using var scope = scopes.CreateAsyncScope();
+                    var epochs = scope.ServiceProvider.GetRequiredService<FiniteOperationEpochStore>();
+                    var receipts = scope.ServiceProvider.GetRequiredService<FiniteOperationReceiptMaintenance>();
+                    result = await cycle.RunAsync(epochs, receipts, binding, budget.Token, stoppingToken);
+                } catch (Exception exception) {
+                    result = cycle.Failed(exception, budget.Token, stoppingToken);
+                }
+                result = result with { Elapsed = cycle.Elapsed };
+                var observation = health[turn.Pool.Pool].Observe(profile.Id, binding, result, DateTimeOffset.UtcNow);
+                FiniteOperationMaintenanceMetrics.Record(turn, result, observation);
+                Report(logger, profile.Id, turn.Pool.Pool, result, observation);
+                if (result.Stop == FiniteOperationMaintenanceStop.HostCancellation) {
+                    return;
+                }
+            }
+        } while (await timer.WaitForNextTickAsync(stoppingToken));
+    }
+
+    public static void Report(ILogger logger, Guid profileId, FiniteOperationPoolId pool, FiniteOperationMaintenanceResult result,
+        FiniteOperationMaintenanceHealthObservation? health) {
+        if (result.Failure is { } failure) {
+            logger.LogWarning("Finite operation maintenance failed for profile {ProfileId}, pool {PoolId}, with {FailureType} and SQLSTATE {SqlState}; {ReceiptCount} receipts and {PayloadBytes} payload bytes were confirmed deleted before failure.",
+                profileId, pool.Value, failure.Type, failure.SqlState, result.DeletedReceipts, result.DeletedBytes);
+        }
+        if (health?.Transition == FiniteOperationMaintenanceHealthTransition.Warning) {
+            logger.LogWarning("Finite operation maintenance has sustained {MaintenanceHealth} for profile {ProfileId}, pool {PoolId}; retained evidence must not be shortened, and incoming traffic or storage capacity needs operator review.",
+                health.State, profileId, pool.Value);
+        } else if (health?.Transition == FiniteOperationMaintenanceHealthTransition.Recovery) {
+            logger.LogInformation("Finite operation maintenance pressure cleared for profile {ProfileId}, pool {PoolId}, after a successful empty cycle.",
+                profileId, pool.Value);
+        }
+    }
+}
+
+internal static class FiniteOperationMaintenanceMetrics {
+    internal const string MeterName = "CanDoItAll.FiniteOperations.Maintenance";
+    private static readonly Meter Meter = new(MeterName, "1.0.0");
+    private static readonly Counter<long> Receipts = Meter.CreateCounter<long>("candoitall.finite_operations.maintenance.deleted_receipts", "receipts");
+    private static readonly Counter<long> Bytes = Meter.CreateCounter<long>("candoitall.finite_operations.maintenance.deleted_payload_bytes", "bytes");
+    private static readonly Counter<long> Cycles = Meter.CreateCounter<long>("candoitall.finite_operations.maintenance.cycles", "cycles");
+    private static readonly Histogram<double> Duration = Meter.CreateHistogram<double>("candoitall.finite_operations.maintenance.duration", "ms");
+    private static readonly Histogram<double> Lateness = Meter.CreateHistogram<double>("candoitall.finite_operations.maintenance.scheduled_lateness", "ms");
+    private static readonly Histogram<int> Eligible = Meter.CreateHistogram<int>("candoitall.finite_operations.maintenance.eligible_observed", "boolean");
+    private static readonly Histogram<double> Age = Meter.CreateHistogram<double>("candoitall.finite_operations.maintenance.observed_eligibility_age", "s");
+    private static readonly Histogram<double> SinceProgress = Meter.CreateHistogram<double>("candoitall.finite_operations.maintenance.since_progress", "s");
+
+    internal static void Record(FiniteOperationMaintenanceTurn turn, FiniteOperationMaintenanceResult result,
+        FiniteOperationMaintenanceHealthObservation health) {
+        var tags = new TagList { { "pool", turn.Pool.Pool.Value }, { "stop", result.Stop.ToString() }, { "eligibility", result.EligibleWork.ToString() } };
+        foreach (var family in result.Families.IsDefault ? [] : result.Families) {
+            var familyTags = new TagList { { "pool", turn.Pool.Pool.Value }, { "family", family.Family.Value } };
+            Receipts.Add(family.DeletedReceipts, familyTags);
+            Bytes.Add(family.DeletedBytes, familyTags);
+        }
+        Cycles.Add(1, tags);
+        Duration.Record(result.Elapsed.TotalMilliseconds, tags);
+        Lateness.Record(turn.ScheduledLateness.TotalMilliseconds, tags);
+        foreach (var family in result.Families.IsDefault ? [] : result.Families) {
+            var familyTags = new TagList { { "pool", turn.Pool.Pool.Value }, { "family", family.Family.Value } };
+            if (family.EligibleWork != FiniteOperationEligibleWork.Unknown) {
+                Eligible.Record(family.EligibleWork == FiniteOperationEligibleWork.Present ? 1 : 0, familyTags);
+            }
+            if (family.EligibleAtUtc is { } eligibleAt && family.ObservedAtUtc is { } observedAt) {
+                Age.Record(Math.Max(0, (observedAt - eligibleAt).TotalSeconds), familyTags);
+            }
+        }
+        if (health.SinceProgress is { } elapsed) {
+            SinceProgress.Record(elapsed.TotalSeconds, tags);
+        }
+    }
+}

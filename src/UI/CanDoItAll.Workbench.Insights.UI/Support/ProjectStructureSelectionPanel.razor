@@ -1,0 +1,461 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+
+<div class="workbench-insights-selection">
+@{
+    var state = State;
+    var origin = Origin;
+    var receiver = Dispatch;
+    var targets = state.SelectedNodes.Select(node => node.Id).ToArray();
+    Task Send(InsightsSelectionCommand command) => receiver.InvokeAsync(new InsightsSelectionIntent(origin, targets, command));
+}
+
+@if (state.SelectedNodes.Count != 1 && !string.IsNullOrWhiteSpace(state.Feedback))
+{
+    <div class="project-structure-inline-feedback" data-tone="@state.FeedbackTone">
+        @state.Feedback
+    </div>
+}
+
+@if (state.SelectedNodes.Count == 0)
+{
+    <div class="cw-empty-state">
+        <p class="cw-panel-kicker">Canvas selection</p>
+        <h3>Select a project object</h3>
+        <p>Pick a node to edit its status, attachments, and next-step actions without leaving the canvas.</p>
+        <div class="cw-chip-row">
+            <span class="cw-node__chip">Click</span>
+            <span class="cw-node__chip">Ctrl + Shift + click</span>
+            <span class="cw-node__chip">Alt + drag</span>
+            <span class="cw-node__chip">Right-click</span>
+        </div>
+    </div>
+}
+else if (state.SelectedNodes.Count > 1)
+{
+    <div class="space-y-4">
+        <div class="cw-panel-card">
+            <p class="cw-panel-kicker">Multi-select</p>
+            <h3 class="cw-panel-title">@($"{state.SelectedNodes.Count} nodes selected")</h3>
+            <p class="cw-panel-copy">Batch movement stays on the canvas. Shared status, progress, marker, priority, and grouping controls stay here.</p>
+            <div class="cw-button-row">
+                <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => Send(new InsightsSelectionCommand.Clear()))">Clear selection</button>
+                <button type="button" class="cw-button" data-tone="accent" @onclick="@(() => Send(new InsightsSelectionCommand.Focus(state.SelectedNodes[0].Id)))">Focus first</button>
+            </div>
+        </div>
+
+        <div class="cw-panel-card project-structure-batch-card">
+            @if (state.CanApplySelectionStatus)
+            {
+                <div class="project-structure-action-band">
+                    <span>Status</span>
+                    <div class="cw-button-row">
+                        <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.InProgress)))'>In progress</button>
+                        <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.Done)))'>Done</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Status(InsightsStatus.NotApplicable)))'>N/A</button>
+                    </div>
+                </div>
+            }
+
+            <div class="project-structure-action-band">
+                <span>Progress</span>
+                <div class="cw-button-row">
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(0)))'>0%</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(25)))'>25%</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(50)))'>50%</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Progress(100)))'>100%</button>
+                </div>
+            </div>
+
+            <div class="project-structure-action-band">
+                <span>Marker</span>
+                <div class="cw-button-row">
+                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("question", "sky", "Question"))))'>Question</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("idea", "accent", "Idea"))))'>Idea</button>
+                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest("risk", "danger", "Risk"))))'>Risk</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Marker(new ProjectStructureSelectionMarkerRequest(string.Empty, string.Empty, string.Empty))))'>Clear</button>
+                </div>
+            </div>
+
+            <div class="project-structure-action-band">
+                <span>Priority</span>
+                <div class="cw-button-row">
+                    <button type="button" class="cw-button" data-tone="warn" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(1)))'>P1</button>
+                    <button type="button" class="cw-button" data-tone="accent" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(2)))'>P2</button>
+                    <button type="button" class="cw-button" data-tone="ghost" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(3)))'>P3</button>
+                    <button type="button" class="cw-button" data-tone="mint" @onclick='@(() => Send(new InsightsSelectionCommand.Priority(0)))'>Clear</button>
+                </div>
+            </div>
+
+            <div class="project-structure-action-band">
+                <span>Grouping</span>
+                <div class="space-y-3">
+                    <input class="cw-context-toolbox__search"
+                           type="text"
+                           placeholder="Name this border"
+                           value="@state.SelectionBorderName"
+                           @oninput="@((ChangeEventArgs args) => Send(new InsightsSelectionCommand.BorderName(args.Value?.ToString() ?? string.Empty)))" />
+                    <div class="cw-button-row">
+                        <button type="button" class="cw-button" data-tone="sky" @onclick="@(() => Send(new InsightsSelectionCommand.CreateBorder(state.SelectionBorderName)))">Border</button>
+                        <button type="button" class="cw-button" data-tone="ghost" @onclick="@(() => Send(new InsightsSelectionCommand.ClearBorders()))">Clear border</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cw-panel-card">
+            <p class="cw-panel-kicker">Selected nodes</p>
+            <div class="cw-list">
+                @foreach (var node in state.SelectedNodes)
+                {
+                    <button type="button" class="cw-list-item" @onclick="@(() => Send(new InsightsSelectionCommand.Focus(node.Id)))">
+                        <strong>@node.Title</strong>
+                        <span>@($"{node.KindLabel} - {node.Status}")</span>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+else if (state.SelectedNode is not null)
+{
+    var selectedNode = state.SelectedNode;
+
+        <div class="space-y-4">
+            <div class="cw-panel-card project-structure-selected-card">
+            <p class="cw-panel-kicker">@selectedNode.Kicker</p>
+            <h3 class="cw-panel-title">@selectedNode.Title</h3>
+            <p class="cw-panel-copy">@selectedNode.LeadText</p>
+
+            <div class="cw-chip-row project-structure-selection-chip-row">
+                <Pill Tone="PillTone.Neutral"
+                      Text="@selectedNode.Status"
+                      Class="project-structure-selection-chip project-structure-selection-chip--status"
+                      data-testid="project-structure-selection-status"
+                      data-badge-style="Status" />
+                @foreach (var badge in selectedNode.BadgePresentations)
+                {
+                    <Pill Tone="PillTone.Neutral"
+                          Text="@badge.Text"
+                          Class="project-structure-selection-chip"
+                          data-testid="@badge.TestId"
+                          data-badge-style="@badge.Style" />
+                }
+            </div>
+
+            @if (state.IsConnectMode)
+            {
+                <div class="cw-panel-card">
+                    <p class="cw-panel-kicker">Connect mode</p>
+                    <p class="cw-panel-copy">Select another node on the canvas or in the outline to create a dependency link from the active source.</p>
+                </div>
+            }
+
+            @if (state.IsReconnectMode)
+            {
+                <div class="cw-panel-card">
+                    <p class="cw-panel-kicker">Reconnect mode</p>
+                    <p class="cw-panel-copy">Select the new parent node for this branch. The hierarchy will be updated explicitly instead of creating a hidden duplicate link.</p>
+                </div>
+            }
+
+            <div class="project-structure-quick-signals" data-testid="project-structure-quick-signals">
+                <div class="project-structure-quick-signal">
+                    <span>Progress</span>
+                    <strong>@selectedNode.ProgressLabel</strong>
+                </div>
+                <div class="project-structure-quick-signal">
+                    <span>Priority</span>
+                    <strong>@selectedNode.PriorityLabel</strong>
+                </div>
+                <div class="project-structure-quick-signal">
+                    <span>Marker</span>
+                    <strong>@selectedNode.MarkerLabel</strong>
+                </div>
+            </div>
+        </div>
+
+        @if (selectedNode.WorkflowStatus is not null)
+        {
+            var workflowStatus = selectedNode.WorkflowStatus;
+
+            <div class="cw-panel-card project-structure-workflow-status-card"
+                  data-testid="project-structure-workflow-status-card">
+                <p class="cw-panel-kicker">Workflow status</p>
+                <h3 class="cw-panel-title">@workflowStatus.WorkflowName</h3>
+                <p class="cw-panel-copy">@workflowStatus.Message</p>
+
+                <CompactStatStrip Class="project-structure-advanced-summary-grid">
+                    <CompactStat Text="@($"State {workflowStatus.State}")"
+                                 Tone="info"
+                                 TooltipText="@($"Workflow state: {workflowStatus.State}")" />
+                    <CompactStat Text="@($"Step {workflowStatus.StepLabel}")"
+                                 Tone="success"
+                                 TooltipText="@($"Current workflow step: {workflowStatus.StepLabel}")" />
+                    <CompactStat Text="@($"Progress {workflowStatus.ProgressLabel}")"
+                                 TooltipText="@($"Workflow progress: {workflowStatus.ProgressLabel}")" />
+                    <CompactStat Text="@($"Updated {workflowStatus.LastUpdatedLabel}")"
+                                 Tone="warning"
+                                 TooltipText="@($"Last workflow update: {workflowStatus.LastUpdatedLabel}")" />
+                </CompactStatStrip>
+
+                @if (!string.IsNullOrWhiteSpace(workflowStatus.RunId))
+                {
+                    <div class="project-structure-fact-row">
+                        <span>Run id</span>
+                        <strong>@workflowStatus.RunId</strong>
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedNodeIds.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-nodes">
+                        @foreach (var nodeId in workflowStatus.CreatedNodeIds)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>Node</span>
+                                <strong>@nodeId</strong>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedAssetIds.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-assets">
+                        @foreach (var assetId in workflowStatus.CreatedAssetIds)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>Asset</span>
+                                <strong>@assetId</strong>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (workflowStatus.CreatedFilePaths.Count > 0)
+                {
+                    <div class="project-structure-facts-list"
+                         data-testid="project-structure-workflow-created-files">
+                        @foreach (var filePath in workflowStatus.CreatedFilePaths)
+                        {
+                            <div class="project-structure-fact-row">
+                                <span>File</span>
+                                <strong>@filePath</strong>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @if (selectedNode.StorageSummary is not null)
+        {
+            <StorageSummaryCard Model="@selectedNode.StorageSummary"
+                                data-testid="project-structure-storage-summary" />
+        }
+
+        @if (selectedNode.AttachmentPreview is not null)
+        {
+            var preview = selectedNode.AttachmentPreview;
+
+            <div class="cw-panel-card">
+                <p class="cw-panel-kicker">Attachment preview</p>
+                <h3 class="cw-panel-title">@preview.DisplayName</h3>
+                <p class="cw-panel-copy">@preview.LeadCopy</p>
+
+                <Alert AlertStyle="AlertStyle.Info"
+                       Variant="Variant.Outlined"
+                       data-testid="project-structure-governed-preview-summary">
+                    Content opens only through the current authorized FileInteraction. Unsupported formats stay inert instead of loading an unsigned route.
+                </Alert>
+
+                <div class="cw-chip-row">
+                    @if (!string.IsNullOrWhiteSpace(preview.OriginalFileName))
+                    {
+                        <span class="cw-node__chip">@preview.OriginalFileName</span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(preview.ContentType))
+                    {
+                        <span class="cw-node__chip">@preview.ContentType</span>
+                    }
+                </div>
+
+                <div class="cw-button-row">
+                    @if (preview.CanShowLocalOpen)
+                    {
+                        <button type="button"
+                                class="cw-button"
+                                data-tone="primary"
+                                @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.AttachmentLocal)))">
+                            Show in folder
+                        </button>
+                    }
+                    @if (preview.CanRenderPreview)
+                    {
+                        <button type="button"
+                                class="cw-button"
+                                data-tone="accent"
+                                @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.AttachmentPreview)))">
+                            Expand preview
+                        </button>
+                    }
+
+                </div>
+
+                @if (preview.ShowLocalOpenFeedback)
+                {
+                    <div class="project-structure-inline-feedback" data-tone="@preview.LocalOpenFeedbackTone">
+                        @preview.LocalOpenFeedback
+                    </div>
+                }
+            </div>
+        }
+
+        @if (selectedNode.HasMermaidViewer)
+        {
+            <div class="cw-panel-card">
+                <p class="cw-panel-kicker">Mermaid viewer</p>
+                <h3 class="cw-panel-title">Diagram-aware source preview</h3>
+                <p class="cw-panel-copy">Mermaid nodes stay typed on the canvas and can be opened with the detected diagram type still visible.</p>
+                <div class="cw-button-row">
+                    <button type="button"
+                            class="cw-button"
+                            data-tone="accent"
+                            @onclick="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.Mermaid)))">
+                        View Mermaid
+                    </button>
+                </div>
+            </div>
+        }
+
+        <div class="cw-panel-card">
+            <p class="cw-panel-kicker">Node actions</p>
+            <div class="project-structure-node-action-grid"
+                 data-testid="project-structure-node-actions">
+                @foreach (var action in selectedNode.Actions)
+                {
+                    <Button Variant="Variant.Outlined"
+                            ButtonStyle="@ResolveActionButtonStyle(action.Tone)"
+                            Class="project-structure-node-action"
+                            Click="@(() => Send(new InsightsSelectionCommand.Inspector(action.ActionId)))">
+                        <span class="project-structure-node-action__icon" aria-hidden="true">
+                            <Icon Name="@InsightsActionIcons.Resolve(action.Icon)" />
+                        </span>
+                        <span>@action.Label</span>
+                    </Button>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(selectedNode.WorkflowFeedback))
+        {
+            <div class="project-structure-inline-feedback" data-tone="@selectedNode.WorkflowFeedbackTone">
+                @selectedNode.WorkflowFeedback
+            </div>
+        }
+
+        <div class="cw-panel-card">
+            <p class="cw-panel-kicker">Create next to source</p>
+            <h3 class="cw-panel-title">Use the floating toolbox</h3>
+            <p class="cw-panel-copy">The toolbox owns the long-form block catalog now. It keeps grouping, search, and scrolling inside the canvas while placement still resolves from <strong>@selectedNode.Title</strong>.</p>
+            <div class="cw-chip-row">
+                <Pill Tone="PillTone.Info" Text="@($"Source: {selectedNode.Title}")" />
+                <Pill Tone="PillTone.Label" Text="Mode: child placement" />
+            </div>
+            <div class="cw-button-row">
+                <Button Text="Open standard blocks"
+                        ButtonStyle="ButtonStyle.Info"
+                        Click="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.Toolbox)))" />
+            </div>
+        </div>
+
+        @if (selectedNode.ShowAdvancedDetails)
+        {
+            <details class="cw-panel-card project-structure-advanced-details"
+                     data-testid="project-structure-advanced-details">
+                <summary class="project-structure-advanced-details__summary">
+                    <span class="project-structure-advanced-details__summary-copy">
+                        <span class="project-structure-advanced-details__summary-heading">
+                            <strong>Advanced details</strong>
+                            <span class="project-structure-advanced-details__help"
+                                  @onclick:stopPropagation="true"
+                                  @onclick:preventDefault="true">
+                                <HelpPopover RootClass="pf-help-popover project-structure-help-popover"
+                                             ToggleClass="pf-help-popover__toggle pf-help-popover__toggle--compact"
+                                             PanelClass="pf-help-popover__panel pf-help-popover__panel--above-end"
+                                             AriaLabel="Show advanced details help"
+                                             Title="Show advanced details help"
+                                             Heading="Advanced details"
+                                             Body="@AdvancedDetailsHelpBody"
+                                             Tip="@AdvancedDetailsHelpTip" />
+                            </span>
+                        </span>
+                    </span>
+                    <span class="project-structure-advanced-details__summary-icon" aria-hidden="true">
+                        <Icon Name="expand_more" />
+                    </span>
+                </summary>
+                <div class="project-structure-advanced-details__body">
+                    <CompactStatStrip Class="project-structure-advanced-summary-grid">
+                        <CompactStat Text="@($"Artifact {selectedNode.ArtifactKind}")"
+                                     Tone="info"
+                                     TooltipText="@($"Artifact kind: {selectedNode.ArtifactKind}")" />
+                        <CompactStat Text="@($"Location {selectedNode.LocationLabel}")"
+                                     TooltipText="@($"Location: {selectedNode.LocationLabel}")" />
+                    </CompactStatStrip>
+
+                    @if (selectedNode.DetailSections.Count > 0)
+                    {
+                        <ProjectStructureNodeDetailPreview Sections="@selectedNode.DetailSections" />
+                    }
+
+                    @if (selectedNode.Facts.Count > 0)
+                    {
+                        <div class="project-structure-facts-list"
+                             data-testid="project-structure-node-facts">
+                            @foreach (var fact in selectedNode.Facts)
+                            {
+                                <div class="project-structure-fact-row">
+                                    <span>@fact.Label</span>
+                                    <strong>@fact.Value</strong>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </details>
+        }
+    </div>
+}
+
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ProjectStructureSelectionPanelState State { get; set; } = default!;
+    [Parameter, EditorRequired] public InsightsOrigin Origin { get; set; }
+    [Parameter, EditorRequired] public EventCallback<InsightsSelectionIntent> Dispatch { get; set; }
+    [Parameter] public string AdvancedDetailsHelpBody { get; set; } = string.Empty;
+    [Parameter] public string AdvancedDetailsHelpTip { get; set; } = string.Empty;
+    private (string RenderKey, InsightsOrigin Origin, EventCallback<InsightsSelectionIntent> Receiver, string Help, string Tip)? rendered;
+    private (string, InsightsOrigin, EventCallback<InsightsSelectionIntent>, string, string) RenderIdentity
+        => (State.RenderKey, Origin, Dispatch, AdvancedDetailsHelpBody, AdvancedDetailsHelpTip);
+
+    protected override bool ShouldRender() => rendered is not { } previous || !previous.Equals(RenderIdentity);
+    protected override void OnAfterRender(bool firstRender) => rendered = RenderIdentity;
+
+    private static ButtonStyle ResolveActionButtonStyle(string tone)
+    {
+        return tone switch
+        {
+            "danger" => ButtonStyle.Danger,
+            "warn" => ButtonStyle.Warning,
+            "mint" => ButtonStyle.Success,
+            "sky" => ButtonStyle.Info,
+            _ => ButtonStyle.Base
+        };
+    }
+}

@@ -18,8 +18,8 @@ public sealed class ResourceStorageObjectPromotionTests
 
         ResourceStorageObjectPromotionResult result = await fixture.Service.PromoteAsync(fixture.Command);
 
-        Assert.True(result.Created);
-        Assert.Equal(1, result.Revision.Scope);
+        Assert.True(Assert.IsType<StorageObjectResourceWriteResult.Accepted>(result.Outcome).Created);
+        Assert.Equal(1, result.Revision!.Value.Scope);
         Assert.Equal(["activate", "context", "authorize", "save", "publish", "revoke"], events);
         StorageObjectResourceConfig config = Assert.IsType<StorageObjectResourceConfig>(fixture.Writer.Request?.Config);
         Assert.Equal(fixture.Source.Key.Value, config.SourceKey);
@@ -246,12 +246,15 @@ public sealed class ResourceStorageObjectPromotionTests
                 revisions,
                 NullLogger<ResourceStorageObjectPromotionService>.Instance);
             var projectId = Guid.NewGuid();
+            var profileId = Guid.NewGuid();
             var command = new ResourceStorageObjectPromotionCommand(
                 sourceKey,
                 itemKey,
                 projectId,
                 "Promoted report",
-                new(Guid.NewGuid(), projectId, Guid.NewGuid()));
+                new(profileId, projectId, Guid.NewGuid()),
+                new(profileId, new(Guid.NewGuid())),
+                Guid.NewGuid());
             return new PromotionFixture(
                 service,
                 source,
@@ -359,9 +362,18 @@ public sealed class ResourceStorageObjectPromotionTests
         {
             events.Add("save");
             Request = request;
-            return Exception is null
-                ? Task.FromResult(new StorageObjectResourceWriteResult(Guid.NewGuid(), true))
-                : Task.FromException<StorageObjectResourceWriteResult>(Exception);
+            if (Exception is not null) {
+                return Task.FromException<StorageObjectResourceWriteResult>(Exception);
+            }
+            var values = new ResourceMetadataStoredValues(null, null, null, request.Name, string.Empty,
+                StorageObjectResourceConnectorPlugin.PluginKey, StorageObjectResourceConnectorPlugin.SchemaVersion,
+                StorageObjectResourceConnectorPlugin.BuildStableLocation(request.Config),
+                StorageObjectResourceConnectorPlugin.Serialize(request.Config), "[]", ResourceValidationStatus.Valid,
+                request.Sensitivity, true, false);
+            var snapshot = new ResourceMetadataSnapshot(new(request.Context, request.ResourceId, new(Guid.NewGuid()),
+                new ResourceProjectBinding.Bound(request.ProjectId, request.ExpectedProjectAdmission.LifetimeId)),
+                values, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            return Task.FromResult<StorageObjectResourceWriteResult>(new StorageObjectResourceWriteResult.Accepted(snapshot, true));
         }
     }
 

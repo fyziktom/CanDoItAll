@@ -1,0 +1,94 @@
+@implements IDisposable
+
+<Stack GapScale="LayoutGap.Large" data-testid="api-access-surface">
+    @if (Session.StatusLoading) {
+        <EmptyState Title="Loading API status" Description="Authorization has not been determined." />
+    } else if (Session.Configuration is null) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="api-status-unavailable">API status is unavailable. Authorization has not been determined.</Alert>
+    } else {
+        var status = Session.Configuration;
+        <FormSection Title="API access" Icon="console" Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <Stack GapScale="LayoutGap.Small">
+                    <p class="cda-eyebrow">API</p>
+                    <StatusBadge Tone="@(status.ApiEnabled ? "success" : "warning")" Text="@(status.ApiEnabled ? "Enabled" : "Disabled")" />
+                    <p class="cda-body-muted break-all">OpenAPI: @(status.OpenApiEnabled ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
+                </Stack>
+                <Stack GapScale="LayoutGap.Small">
+                    <p class="cda-eyebrow">Authorization</p>
+                    <StatusBadge Tone="@(status.AuthorizationEnabled ? "warning" : "info")" Text="@(status.AuthorizationEnabled ? "JWT required" : "JWT disabled")" />
+                    <p class="cda-body-muted break-all">@(status.AuthorizationEnabled ? $"Issuer: {status.Issuer} / Audience: {status.Audience}" : "Bearer tokens are not required.")</p>
+                </Stack>
+            </Grid>
+            @if (!status.AuthorizationEnabled) {
+                <Alert AlertStyle="AlertStyle.Info">API authorization is disabled. User permissions do not isolate anonymously accessible business operations.</Alert>
+            } else if (!status.SigningKeyConfigured) {
+                <Alert AlertStyle="AlertStyle.Warning">JWT authorization is enabled, but no signing key is configured. Set Api:Authorization:SigningKey to at least 32 UTF-8 bytes before creating tokens.</Alert>
+            } else if (Session.ManagementLoading) {
+                <EmptyState Title="Checking administration access" Description="Verifying the current operator's permissions." />
+            } else if (Session.ManagementFailure != ApiFailure.None) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="api-token-access-denied">
+                    @(Session.ManagementFailure == ApiFailure.Denied ? "API administration requires trusted local administration or a validated administrator session." : "API status is available, but administration access could not be checked. Retry access explicitly.")
+                </Alert>
+            } else if (Session.Issuance is { } issuance && Session.Accounts is { } accounts) {
+                <ApiTokenAdministrationPanel @key="issuance" Controller="issuance" />
+                <Alert AlertStyle="AlertStyle.Info" data-testid="api-effective-configuration">
+                    User login: @(status.UserAuthenticationEnabled ? "enabled" : "disabled") (Api:UserAuthentication:Enabled).
+                    <p>@(status.AccessManagementEnabled ? "HTTP access administration is enabled and requires a configured administrator session." : "HTTP access administration is disabled. Trusted local administration is still available.")</p>
+                    <p>Api:AccessManagement:Enabled and other deployment options require configuration and restart. User sessions expire after @status.UserTokenLifetimeMinutes minutes.</p>
+                </Alert>
+                <FormSection Title="API users" Icon="group" Description="Manage instance-local accounts and explicit business capabilities.">
+                    <ApiUserAdministrationPanel @key="accounts" Controller="accounts" />
+                </FormSection>
+            }
+        </FormSection>
+    }
+    <Button Text="Retry status and access" Icon="refresh" ButtonStyle="ButtonStyle.Light" Click="Session.LoadAsync" data-testid="api-access-retry" />
+    @if (Session.Issuance is not null && Session.Receipts.Count > 0) {
+        <FormSection Title="Recent API operations" Description="Safe session receipts. Unknown acknowledgements remain locked; observations never replay writes.">
+            <Stack GapScale="LayoutGap.Small">
+                @foreach (var receipt in Session.Receipts.Reverse()) {
+                    <Cluster Gap="LayoutGap.Small" @key="receipt.OperationId" data-testid="api-operation-receipt">
+                        <StatusBadge Text="@($"{receipt.Action}: {receipt.Result.State}")" Tone="@(receipt.Result.IsCommitted ? "success" : "warning")" />
+                        <span>@(receipt.Result.State == ApiWriteState.Unknown ? "Original target or candidate:" : "Identity:") @receipt.Result.Identity</span>
+                        @if (receipt.Result.Version is { } version) {
+                            <span>Version @version</span>
+                        }
+                        @if (receipt.Result.State == ApiWriteState.Unknown && receipt.Result.Identity.HasValue) {
+                            <Button Text="Observe current state" ButtonStyle="ButtonStyle.Light" Click="() => Session.ObserveAsync(receipt.OperationId)" />
+                        }
+                    </Cluster>
+                }
+                @if (Session.ObservationMessage is { } observation) {
+                    <Alert AlertStyle="AlertStyle.Info">@observation</Alert>
+                }
+            </Stack>
+        </FormSection>
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public ApiAccessSession Session { get; set; } = default!;
+    private ApiAccessSession? subscribed;
+    private bool disposed;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribed, Session)) {
+            if (subscribed is not null) {
+                subscribed.Changed -= Changed;
+            }
+            subscribed = Session;
+            subscribed.Changed += Changed;
+        }
+    }
+    private void Changed() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
+        }
+    });
+    public void Dispose() {
+        disposed = true;
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+    }
+}

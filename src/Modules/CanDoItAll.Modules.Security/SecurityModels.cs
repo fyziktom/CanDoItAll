@@ -6,16 +6,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Security;
 
-public enum SecretKind
-{
-    ApiKey,
-    Password,
-    Token,
-    ConnectionString,
-    SshKey,
-    Generic
-}
-
 public sealed class SecretRecord
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -56,6 +46,7 @@ internal sealed class SecretRecordConfiguration : IEntityTypeConfiguration<Secre
     {
         builder.ToTable("Security_SecretRecords");
         builder.HasKey(secret => secret.Id);
+        builder.Property(secret => secret.UpdatedAtUtc).IsConcurrencyToken();
         builder.Property(secret => secret.Name).HasMaxLength(200).IsRequired();
         builder.Property(secret => secret.Scope).HasMaxLength(50).IsRequired();
         builder.Property(secret => secret.MetadataJson).HasColumnType("TEXT");
@@ -76,8 +67,6 @@ internal sealed class SecretReferenceConfiguration : IEntityTypeConfiguration<Se
     }
 }
 
-public sealed record SecretListItem(Guid Id, string Name, SecretKind Kind, string Scope, DateTimeOffset UpdatedAtUtc);
-
 public sealed record SecretBindingCreateRequest(
     Guid SecretId,
     string ConsumerType,
@@ -93,23 +82,6 @@ public sealed record SecretBindingSummary(
     string ConsumerType,
     string ConsumerId,
     string Purpose);
-
-public sealed class SecretEditorModel
-{
-    public Guid? Id { get; set; }
-
-    public string Name { get; set; } = string.Empty;
-
-    public SecretKind Kind { get; set; } = SecretKind.Generic;
-
-    public string SecretValue { get; set; } = string.Empty;
-
-    public string Scope { get; set; } = "workspace";
-
-    public string? RotationNote { get; set; }
-
-    public string MetadataJson { get; set; } = "{}";
-}
 
 public interface ISecretProtector
 {
@@ -244,7 +216,13 @@ public sealed class SecretService(
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+    public Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+        => ReadEditorAsync(id, includeValue: true, cancellationToken);
+
+    public Task<SecretEditorModel?> GetEditorAsync(Guid id, CancellationToken cancellationToken = default)
+        => ReadEditorAsync(id, includeValue: false, cancellationToken);
+
+    private async Task<SecretEditorModel?> ReadEditorAsync(Guid id, bool includeValue, CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var secret = await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
@@ -256,39 +234,61 @@ public sealed class SecretService(
         return new SecretEditorModel
         {
             Id = secret.Id,
+            ExpectedUpdatedAtUtc = secret.UpdatedAtUtc,
             Name = secret.Name,
             Kind = secret.Kind,
-            SecretValue = await ResolveSecretValueAsync(secret, cancellationToken),
+            SecretValue = includeValue ? await ResolveSecretValueAsync(secret, cancellationToken) : string.Empty,
             Scope = secret.Scope,
             RotationNote = secret.RotationNote,
             MetadataJson = secret.MetadataJson
         };
     }
 
-    public async Task<Result<Guid>> SaveAsync(SecretEditorModel model, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
+    public Task<Result<Guid>> SaveAsync(SecretEditorModel model, CancellationToken cancellationToken = default)
+        => SaveCoreAsync(model, false, cancellationToken);
+
+    public Task<Result<Guid>> SaveEditorAsync(SecretEditorModel model, CancellationToken cancellationToken = default)
+        => SaveCoreAsync(model, true, cancellationToken);
+
+    private async Task<Result<Guid>> SaveCoreAsync(SecretEditorModel model, bool requireExisting, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(model);
+        var captured = model.Copy();
+        try {
+            return await SaveCapturedAsync(captured, requireExisting, cancellationToken);
+        } finally {
+            model.ExpectedUpdatedAtUtc = captured.ExpectedUpdatedAtUtc;
+            captured.SecretValue = string.Empty;
+            captured.MetadataJson = string.Empty;
+        }
+    }
+
+    private async Task<Result<Guid>> SaveCapturedAsync(SecretEditorModel model, bool requireExisting, CancellationToken cancellationToken) {
+        if (string.IsNullOrWhiteSpace(model.Name)) {
             return Result<Guid>.Failure(Error.Validation("Secret name is required."));
         }
 
-        if (string.IsNullOrWhiteSpace(model.SecretValue))
-        {
+        var rotate = !string.IsNullOrWhiteSpace(model.SecretValue);
+        if (!rotate && (!requireExisting || !model.Id.HasValue)) {
             return Result<Guid>.Failure(Error.Validation("Secret value is required."));
         }
 
+        var id = model.Id is { } requestedId && requestedId != Guid.Empty ? requestedId : Guid.NewGuid();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, SecretMutationScopeKeys.ForSecretRecord(id), cancellationToken);
         var entity = model.Id.HasValue
-            ? await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
+            ? await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             : null;
 
-        if (entity is null)
-        {
-            entity = new SecretRecord
-            {
-                Id = model.Id is { } requestedId && requestedId != Guid.Empty
-                    ? requestedId
-                    : Guid.NewGuid(),
+        if (entity is null && (model.ExpectedUpdatedAtUtc.HasValue || requireExisting && model.Id.HasValue)) {
+            return Result<Guid>.Failure(Error.Validation("The selected secret no longer exists.", "secret.editor.missing"));
+        }
+        if (entity is not null && entity.UpdatedAtUtc != model.ExpectedUpdatedAtUtc) {
+            throw new SecretMetadataConflictException();
+        }
+
+        if (entity is null) {
+            entity = new SecretRecord {
+                Id = id,
                 CreatedAtUtc = clock.GetUtcNow()
             };
 
@@ -298,46 +298,59 @@ public sealed class SecretService(
         var oldVaultKey = SecretVaultRecordReference.TryParse(entity.EncryptedPayload, out var existingVaultKey)
             ? existingVaultKey
             : null;
-        var newVaultKey = SecretVaultRecordReference.BuildKey(entity.Id, Guid.NewGuid());
-        await vault.SetAsync(newVaultKey, model.SecretValue, cancellationToken);
+        var newVaultKey = rotate ? SecretVaultRecordReference.BuildKey(entity.Id, Guid.NewGuid()) : null;
+        if (newVaultKey is not null) {
+            await vault.SetAsync(newVaultKey, model.SecretValue, cancellationToken);
+            entity.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
+        }
 
-        entity.Name = model.Name.Trim();
-        entity.Kind = model.Kind;
-        entity.Scope = string.IsNullOrWhiteSpace(model.Scope) ? "workspace" : model.Scope.Trim();
-        entity.RotationNote = model.RotationNote?.Trim();
-        entity.MetadataJson = string.IsNullOrWhiteSpace(model.MetadataJson) ? "{}" : model.MetadataJson;
-        entity.EncryptedPayload = SecretVaultRecordReference.Create(newVaultKey);
-        entity.UpdatedAtUtc = clock.GetUtcNow();
+        var metadata = SecretEditorMetadata.Capture(model);
+        entity.Name = metadata.Name;
+        entity.Kind = metadata.Kind;
+        entity.Scope = metadata.Scope;
+        entity.RotationNote = metadata.RotationNote;
+        entity.MetadataJson = metadata.Json;
+        var now = clock.GetUtcNow();
+        const long precision = TimeSpan.TicksPerMicrosecond;
+        entity.UpdatedAtUtc = new(Math.Max(now.UtcTicks / precision * precision, entity.UpdatedAtUtc.UtcTicks + precision), TimeSpan.Zero);
 
-        try
-        {
+        try {
             await dbContext.SaveChangesAsync(cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception) {
+            throw new SecretMutationUnknownException(entity.Id);
         }
-        catch (Exception saveException) when (saveException is not OperationCanceledException)
-        {
-            await DeleteStagedVaultPayloadAsync(newVaultKey, saveException, cancellationToken);
-            throw;
-        }
+        model.ExpectedUpdatedAtUtc = entity.UpdatedAtUtc;
 
-        if (!string.IsNullOrWhiteSpace(oldVaultKey) &&
-            !string.Equals(oldVaultKey, newVaultKey, StringComparison.Ordinal))
-        {
-            await vault.DeleteAsync(oldVaultKey, cancellationToken);
-        }
+        var stage = SecretCommittedStage.Metadata;
+        try {
+            if (newVaultKey is not null && !string.IsNullOrWhiteSpace(oldVaultKey) &&
+                !string.Equals(oldVaultKey, newVaultKey, StringComparison.Ordinal)) {
+                await vault.DeleteAsync(oldVaultKey, cancellationToken);
+            }
 
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "security",
-            model.Id.HasValue ? "update-secret" : "create-secret",
-            $"{(model.Id.HasValue ? "Updated" : "Created")} secret record",
-            entity.Name,
-            ArtifactKind: "secret",
-            ArtifactId: entity.Id,
-            Route: "/settings"), cancellationToken);
+            stage = SecretCommittedStage.PayloadCleanup;
+            await activityStream.RecordAsync(new ActivityWriteRequest(
+                "security",
+                model.Id.HasValue ? "update-secret" : "create-secret",
+                $"{(model.Id.HasValue ? "Updated" : "Created")} secret record",
+                entity.Name,
+                ArtifactKind: "secret",
+                ArtifactId: entity.Id,
+                Route: "/settings"), cancellationToken);
+        } catch (Exception) {
+            throw new SecretCommittedException(entity.Id, false, stage);
+        }
         return Result<Guid>.Success(entity.Id);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        => DeleteCoreAsync(id, null, cancellationToken);
+
+    public Task DeleteReviewedAsync(SecretMetadataCondition expected, CancellationToken cancellationToken = default)
+        => DeleteCoreAsync(expected.SecretId, expected, cancellationToken);
+
+    private async Task DeleteCoreAsync(Guid id, SecretMetadataCondition? expected, CancellationToken cancellationToken) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var mutationScope = await SerializableMutationScope.BeginAsync(
             dbContext,
@@ -345,25 +358,24 @@ public sealed class SecretService(
             cancellationToken);
         using var coordination = transactions.Enter(dbContext);
         var entity = await dbContext.Set<SecretRecord>().FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (entity is null)
-        {
+        if (expected is { } original && (entity is null || entity.UpdatedAtUtc != original.UpdatedAtUtc)) {
+            throw new SecretMetadataConflictException();
+        }
+        if (entity is null) {
             return;
         }
 
         var blockingReferences = new List<SecretDeletionReference>();
-        foreach (var policy in referencePolicies)
-        {
+        foreach (var policy in referencePolicies) {
             var reference = await policy.FindReferenceAsync(
                 entity.Id,
                 cancellationToken);
-            if (reference is not null)
-            {
+            if (reference is not null) {
                 blockingReferences.Add(reference);
             }
         }
 
-        if (blockingReferences.Count > 0)
-        {
+        if (blockingReferences.Count > 0) {
             throw new SecretDeletionBlockedException(
                 entity.Id,
                 Array.AsReadOnly(blockingReferences.ToArray()));
@@ -376,20 +388,25 @@ public sealed class SecretService(
         dbContext.Remove(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
         await mutationScope.CommitAsync(cancellationToken);
-        coordination.Dispose();
-        if (!string.IsNullOrWhiteSpace(vaultKey))
-        {
-            await vault.DeleteAsync(vaultKey, cancellationToken);
-        }
+        var stage = SecretCommittedStage.Metadata;
+        try {
+            coordination.Dispose();
+            if (!string.IsNullOrWhiteSpace(vaultKey)) {
+                await vault.DeleteAsync(vaultKey, cancellationToken);
+            }
 
-        await activityStream.RecordAsync(new ActivityWriteRequest(
-            "security",
-            "delete-secret",
-            "Deleted secret record",
-            entity.Name,
-            ArtifactKind: "secret",
-            ArtifactId: entity.Id,
-            Route: "/settings"), cancellationToken);
+            stage = SecretCommittedStage.PayloadCleanup;
+            await activityStream.RecordAsync(new ActivityWriteRequest(
+                "security",
+                "delete-secret",
+                "Deleted secret record",
+                entity.Name,
+                ArtifactKind: "secret",
+                ArtifactId: entity.Id,
+                Route: "/settings"), cancellationToken);
+        } catch (Exception) {
+            throw new SecretCommittedException(entity.Id, true, stage);
+        }
     }
 
     public async Task<IReadOnlyList<SecretListItem>> ListForPickerAsync(CancellationToken cancellationToken = default)
@@ -455,20 +472,4 @@ public sealed class SecretService(
         }
     }
 
-    private async Task DeleteStagedVaultPayloadAsync(
-        string vaultKey,
-        Exception saveException,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await vault.DeleteAsync(vaultKey, cancellationToken);
-        }
-        catch (Exception cleanupException) when (cleanupException is not OperationCanceledException)
-        {
-            throw new InvalidOperationException(
-                "Secret metadata save failed and staged vault payload cleanup also failed.",
-                new AggregateException(saveException, cleanupException));
-        }
-    }
 }

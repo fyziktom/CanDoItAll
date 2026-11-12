@@ -21,7 +21,7 @@ public sealed class AgentEditorSessionTests {
         await using var harness = await CreateHarnessAsync(reads, memory);
         var cut = harness.Context.Render<AgentDetailsDialog>();
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
-        cut.Find("[data-testid='agents-catalog-name']").Change("Retained draft");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Retained draft");
         Assert.Equal(new[] { "Identity", "Runtime", "Memory", "Images", "Project Structure Access", "Workspace Tools", "Secrets", "Process Access", "Capabilities", "Voice" },
             cut.FindAll("[data-testid='agents-details-tabs'] button[role='tab']").Select(tab => tab.TextContent.Trim()));
         foreach (var section in Enum.GetValues<AgentEditorSection>()) {
@@ -128,8 +128,8 @@ public sealed class AgentEditorSessionTests {
         await using var harness = await CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>();
         var renders = cut.RenderCount;
-        await cut.InvokeAsync(() => {
-            cut.Instance.Dispose();
+        await cut.InvokeAsync(async () => {
+            await cut.Instance.DisposeAsync();
             pending.SetResult(reads.Result(new() { Id = Guid.NewGuid(), Name = "Disposed result" }));
         });
         cut.WaitForState(() => cut.RenderCount > renders);
@@ -149,7 +149,7 @@ public sealed class AgentEditorSessionTests {
         var firstContext = first.FindComponent<EditForm>().Instance.EditContext!;
         var secondContext = second.FindComponent<EditForm>().Instance.EditContext!;
         Assert.NotSame(firstContext.Model, secondContext.Model);
-        first.Find("[data-testid='agents-catalog-name']").Change("Only first draft");
+        first.Find("[data-testid='agents-catalog-name']").Input("Only first draft");
         Assert.Equal(agent.Name, ((AgentEditorModel)secondContext.Model).Name);
         Assert.Equal(agent.UpdatedAtUtc, ((AgentEditorModel)firstContext.Model).ExpectedUpdatedAtUtc);
         Assert.Equal(agent.UpdatedAtUtc, ((AgentEditorModel)secondContext.Model).ExpectedUpdatedAtUtc);
@@ -182,7 +182,7 @@ public sealed class AgentEditorSessionTests {
             : Task.FromResult<IReadOnlyList<AgentEditorProject>>([project]);
         await using var harness = await CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>();
-        cut.Find("[data-testid='agents-catalog-name']").Change("Draft survives retry");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Draft survives retry");
         var context = cut.FindComponent<EditForm>().Instance.EditContext;
         cut.Render(parameters => parameters.Add(component => component.Section, AgentEditorSection.ProjectStructureAccess));
         Assert.Equal(0, reads.ProjectReads);
@@ -205,7 +205,7 @@ public sealed class AgentEditorSessionTests {
 
     internal sealed class EmptyMemoryProfiles : IMemoryProviderProfileStore {
         public int Reads { get; private set; }
-        public Task UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
+        public Task<MemoryProviderProfile> UpsertAsync(MemoryProviderProfile profile, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("Editor rendering must not write a memory profile.");
         public Task<MemoryProviderProfile?> GetAsync(MemoryProviderInstanceId providerId, CancellationToken cancellationToken = default)
             => Task.FromResult<MemoryProviderProfile?>(null);

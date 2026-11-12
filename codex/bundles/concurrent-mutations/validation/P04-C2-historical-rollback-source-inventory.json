@@ -1,0 +1,48 @@
+{
+  "status": "source-only; no execution",
+  "expectedFullClassRows": 54,
+  "directlyAffectedRows": 24,
+  "newRows": 0,
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/LlmChatReceiptMigrationAndTransferIntegrationTests.cs",
+      "bytes": 19195,
+      "sha256": "8F03F062E6EF19943106EBA87643C1994693FDBC355373AD901431685DE60CF5"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CrmProjectionMigrationIntegrationTests.cs",
+      "bytes": 10358,
+      "sha256": "98A045F1C2337B88EE43EB66BAD97ADCB3E37150534F80A714CB915559BB309B"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectLifetimeMigrationIntegrationTests.cs",
+      "bytes": 14737,
+      "sha256": "662758763CFF3A47216B5A35F32DA0BD9B8B8858BDBAFF711F205572215C37A8"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectExternalIdentityPersistenceTests.cs",
+      "bytes": 10703,
+      "sha256": "FD76F1EF006F9A940C77E9FE3B1BC6974066450FA385367D550E954B61A0CE4C"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkflowReceiptMigrationIntegrationTests.cs",
+      "bytes": 16321,
+      "sha256": "090358857C02AD8418A83DE4D8830CE631E8B50D776A49EB956BA9192541F62F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SourceBoundExecutionAdmissionMigrationTests.cs",
+      "bytes": 25220,
+      "sha256": "2690BAE5786C8EE84689E415826B22C8AF86AC7AD3A03BE5F85FEAC3A2AFF14B"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkAssignmentMigrationIntegrationTests.cs",
+      "bytes": 24328,
+      "sha256": "2BF6BC29292D4DD6B0E89548A2E74CF7D5AE34E4E3E0A35EB6E64B52089AC0F7"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C2-historical-rollback-fixture-repair.md",
+      "bytes": 6288,
+      "sha256": "FF9766B7AE7E5B221B8D85A0B9F0A8B87FC7F079B3AA17C8137C1D2D7601520B"
+    }
+  ]
+}

@@ -407,7 +407,7 @@ public sealed class SharedProviderHybridSelectionTests(
                 SharedProviderCatalogEntityTag.FromRevision(
                     catalog.CatalogRevision),
                 Selection(publication.PublicationId),
-                SharedProviderSelectionMode.Replace));
+                SharedProviderSelectionMode.Replace, source.ConcurrencyToken, new(source.ConcurrencyToken, [])));
         Assert.Equal(
             SharedProviderReconciliationOutcome.Applied,
             reconciliation.Outcome);
@@ -574,10 +574,10 @@ public sealed class SharedProviderHybridSelectionTests(
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         var settings = await dbContext.Set<WorkspaceSettings>()
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync(item => item.IsCurrent);
         if (settings is null)
         {
-            settings = new WorkspaceSettings();
+            settings = new WorkspaceSettings { IsCurrent = true };
             dbContext.Add(settings);
         }
 
@@ -594,9 +594,9 @@ public sealed class SharedProviderHybridSelectionTests(
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         return await dbContext.Set<WorkspaceSettings>()
-            .OrderByDescending(settings => settings.UpdatedAtUtc)
+            .Where(settings => settings.IsCurrent)
             .Select(settings => settings.DefaultProviderProfileId)
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
     }
 
     private static async Task MarkSourceOfflineAsync(
@@ -654,6 +654,7 @@ public sealed class SharedProviderHybridSelectionTests(
             SharedProviderSelectionMode.AddOrReactivate)
     {
         await using var scope = application.Services.CreateAsyncScope();
+        var original = await scope.ServiceProvider.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(sourceId);
         return await scope.ServiceProvider
             .GetRequiredService<SharedProviderReconciliationCoordinator>()
             .ReconcileAsync(new SharedProviderReconciliationRequest(
@@ -662,7 +663,7 @@ public sealed class SharedProviderHybridSelectionTests(
                 SharedProviderCatalogEntityTag.FromRevision(
                     catalog.CatalogRevision),
                 selectedPublicationIds,
-                selectionMode));
+                selectionMode, original.ConcurrencyToken, original));
     }
 
     private static async Task<PersistedSharedIdentity> LoadSharedIdentityAsync(

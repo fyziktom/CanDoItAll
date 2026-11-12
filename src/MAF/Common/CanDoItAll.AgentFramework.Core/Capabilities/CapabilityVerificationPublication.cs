@@ -161,10 +161,19 @@ internal sealed class CapabilityVerificationPublication(ISandboxWorkspaceCatalog
                     Agents = current.Agents.Select(item => item.Id == agentId ? CapabilityProofReceipt.Apply(item, capabilityId, proof) : item).ToArray(),
                     Capabilities = current.Capabilities.Select(item => item.Id == capabilityId ? CapabilityProofReceipt.Apply(item, proof) : item).ToArray()
                 };
+            }, current => {
+                var currentProvider = agent.ProviderProfileId is { } providerId
+                    ? providers.CaptureProvider(providerId, new(current, current.CatalogDataRevision)) : null;
+                if (CapabilityProofReceipt.Fingerprint(currentProvider) != providerFingerprint) {
+                    throw new VerificationSupersededException();
+                }
             }, token);
             return new(CapabilityVerificationDisposition.Committed, receipt);
         } catch (VerificationSupersededException) {
             return new(CapabilityVerificationDisposition.Superseded, receipt);
+        } catch (Exception exception) when (exception is SandboxWorkspacePublicationConflictException or
+                SandboxWorkspaceConcurrencyException or NotSupportedException) {
+            return new(CapabilityVerificationDisposition.PublicationNotStarted, receipt);
         } catch (Exception) {
             return new(CapabilityVerificationDisposition.Unconfirmed, receipt);
         }

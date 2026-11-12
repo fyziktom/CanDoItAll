@@ -1,0 +1,81 @@
+<FormSection Title="Skill configuration" Description="Configure a file-backed, inline, uploaded or registered skill. Setup does not grant script authority.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+        <div>
+            <label class="cda-field-label">@(Draft.IsWizard ? "Setup mode" : "Source")</label>
+            @if (Draft.IsWizard) {
+                <InputSelect @bind-Value="Draft.SkillMode" class="cda-input" data-testid="@($"{TestId}-skill-mode")">
+                    <option value="@CapabilitySkillInputMode.FilePath">Path</option>
+                    <option value="@CapabilitySkillInputMode.Inline">Inline</option>
+                    <option value="@CapabilitySkillInputMode.Upload">Upload SKILL.md</option>
+                    <option value="@CapabilitySkillInputMode.Registered">Registered service</option>
+                </InputSelect>
+            } else {
+                <InputSelect @bind-Value="Draft.Skill.SkillSource" class="cda-input" data-testid="@($"{TestId}-skill-source")">
+                    <option value="file">File skill</option>
+                    <option value="inline">Inline skill</option>
+                    <option value="registered">Registered service</option>
+                </InputSelect>
+            }
+        </div>
+        <label class="cda-inline-option capability-authoring__inline-option">
+            <InputCheckbox @bind-Value="Draft.Skill.ScriptApproval" data-testid="@($"{TestId}-skill-approval")" />
+            Require script approval
+        </label>
+        <div>
+            <label class="cda-field-label">Trust level</label>
+            <AuthoringText @bind-Value="Draft.Skill.ScriptTrustLevel" class="cda-input" data-testid="@($"{TestId}-skill-trust")" />
+        </div>
+    </Grid>
+    @if (IsFile) {
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <div>
+                <label class="cda-field-label">Skill root or SKILL.md path</label>
+                <AuthoringText @bind-Value="Draft.Skill.SkillRoot" class="cda-input" data-testid="@($"{TestId}-skill-root")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Allowed external roots</label>
+                <AuthoringTextArea @bind-Value="Draft.Skill.AllowedExternalRootsText" class="cda-input capability-authoring__small-textarea" data-testid="@($"{TestId}-skill-roots")" />
+            </div>
+        </Grid>
+    } else if (IsRegistered) {
+        <div>
+            <label class="cda-field-label">Registered service type</label>
+            <AuthoringText @bind-Value="Draft.Skill.RegisteredSkillServiceType" class="cda-input" data-testid="@($"{TestId}-skill-registered-type")" />
+        </div>
+    } else {
+        @if (Draft.IsWizard && Draft.SkillMode == CapabilitySkillInputMode.Upload) {
+            <SurfaceCard Soft="true">
+                <label class="cda-field-label" for="@uploadId">SKILL.md file (up to 1 MiB)</label>
+                <InputFile id="@uploadId" class="cda-input" accept=".md,text/markdown,text/plain" OnChange="Upload" data-testid="@($"{TestId}-skill-file")" />
+                <p class="cda-body-muted break-all">@Draft.UploadedFileName</p>
+            </SurfaceCard>
+        }
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <div>
+                <label class="cda-field-label">Inline name</label>
+                <AuthoringText @bind-Value="Draft.Skill.InlineName" class="cda-input" data-testid="@($"{TestId}-inline-name")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Inline description</label>
+                <AuthoringText @bind-Value="Draft.Skill.InlineDescription" class="cda-input" data-testid="@($"{TestId}-inline-description")" />
+            </div>
+        </Grid>
+        <div>
+            <label class="cda-field-label">Instructions</label>
+            <AuthoringTextArea @bind-Value="Draft.Skill.InlineInstructions" class="cda-input capability-authoring__large-textarea" data-testid="@($"{TestId}-inline-instructions")" />
+        </div>
+        <div>
+            <label class="cda-field-label">Inline resources (JSON array of name, content and description)</label>
+            <AuthoringTextArea @bind-Value="Draft.Skill.ResourcesJson" class="cda-input capability-authoring__small-textarea" data-testid="@($"{TestId}-inline-resources")" />
+        </div>
+    }
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    [Parameter] public EventCallback<InputFileChangeEventArgs> Upload { get; set; }
+    private readonly string uploadId = $"capability-skill-upload-{Guid.NewGuid():N}";
+    private bool IsFile => Draft.IsWizard ? Draft.SkillMode == CapabilitySkillInputMode.FilePath : Draft.Skill.SkillSource == "file";
+    private bool IsRegistered => Draft.IsWizard ? Draft.SkillMode == CapabilitySkillInputMode.Registered : Draft.Skill.SkillSource == "registered";
+}

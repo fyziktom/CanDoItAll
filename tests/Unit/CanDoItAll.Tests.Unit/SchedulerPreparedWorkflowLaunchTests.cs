@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.SchedulerPlanner;
@@ -6,6 +7,40 @@ using CanDoItAll.Modules.SchedulerPlanner;
 namespace CanDoItAll.Tests.Unit;
 
 public sealed class SchedulerPreparedWorkflowLaunchTests {
+    [Theory]
+    [InlineData("/projects/example/structure")]
+    [InlineData("/projects/12345678-1234-1234-1234-123456789012/structure?node=asset%3A12345678-1234-1234-1234-123456789012")]
+    public async Task Asset_navigation_route_is_not_a_scheduler_outcome(string navigationRoute) {
+        var fixture = new Fixture();
+        fixture.Runtime.Events.Add(new(Guid.NewGuid(), fixture.Context.PreparedRunId!.Value, WorkflowEventKind.ExecutorCompleted,
+            new("asset"), "Asset created", JsonSerializer.Serialize(new { route = navigationRoute }), DateTimeOffset.UtcNow));
+
+        var result = await fixture.Target.LaunchAsync(fixture.Plan, fixture.Context);
+
+        Assert.Equal(SchedulerPlanRunRoutes.Processed, result.Route);
+        Assert.Equal(SchedulerPlanRunDispatchStatus.Dispatched, result.DispatchStatus);
+        Assert.Equal(fixture.Context.PreparedRunId.Value.Value, result.TargetRunId);
+        Assert.Single(fixture.Launcher.Intents);
+    }
+
+    [Theory]
+    [InlineData("processed", false, SchedulerPlanRunDispatchStatus.Dispatched)]
+    [InlineData("custom_outcome", false, SchedulerPlanRunDispatchStatus.Dispatched)]
+    [InlineData("no_messages", false, SchedulerPlanRunDispatchStatus.NoMessages)]
+    [InlineData("/projects/example/structure", true, SchedulerPlanRunDispatchStatus.NoMessages)]
+    public async Task Explicit_business_outcomes_and_summaries_keep_their_semantics(string route, bool noMessages,
+        SchedulerPlanRunDispatchStatus expectedStatus) {
+        var fixture = new Fixture();
+        fixture.Runtime.Events.Add(new(Guid.NewGuid(), fixture.Context.PreparedRunId!.Value, WorkflowEventKind.Output,
+            null, "Outcome", JsonSerializer.Serialize(new { route, noMessages, summary = "Explicit outcome summary" }), DateTimeOffset.UtcNow));
+
+        var result = await fixture.Target.LaunchAsync(fixture.Plan, fixture.Context);
+
+        Assert.Equal(noMessages ? SchedulerPlanRunRoutes.NoMessages : route, result.Route);
+        Assert.Equal(expectedStatus, result.DispatchStatus);
+        Assert.Equal("Explicit outcome summary", result.Summary);
+    }
+
     [Fact]
     public async Task Accepted_launch_observer_failure_keeps_the_exact_exception_and_prepared_run() {
         var fixture = new Fixture();
@@ -101,6 +136,7 @@ public sealed class SchedulerPreparedWorkflowLaunchTests {
         public WorkflowRunSnapshot? Run { get; set; }
         public Exception? EventFailure { get; set; }
         public List<WorkflowRunId> Lookups { get; } = [];
+        public List<WorkflowEventRecord> Events { get; } = [];
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             if (targetMethod?.Name == nameof(IWorkflowRuntimeManager.GetRunAsync)) {
@@ -108,7 +144,7 @@ public sealed class SchedulerPreparedWorkflowLaunchTests {
                 return Task.FromResult(Run);
             }
             if (targetMethod?.Name == nameof(IWorkflowRuntimeManager.ListEventsAsync)) {
-                return EventFailure is null ? Task.FromResult<IReadOnlyList<WorkflowEventRecord>>([])
+                return EventFailure is null ? Task.FromResult<IReadOnlyList<WorkflowEventRecord>>(Events)
                     : Task.FromException<IReadOnlyList<WorkflowEventRecord>>(EventFailure);
             }
             throw new InvalidOperationException($"Unexpected Workflow runtime query '{targetMethod?.Name}'; only exact-run observation is allowed.");

@@ -1,4 +1,5 @@
 @using CanDoItAll.SharedKernel
+@implements IDisposable
 
 <Stack GapScale="LayoutGap.Large">
     <Split Gap="LayoutGap.Large"
@@ -21,12 +22,13 @@
                     ButtonStyle="ButtonStyle.Info"
                     Size="ButtonSize.Small"
                     Click="PreviewImportAsync"
+                    Disabled="@(phase is PartyImportPhase.Applying or PartyImportPhase.Previewing)"
                     data-testid="crmhr-import-preview-button" />
             <Button Text="Apply import"
                     ButtonStyle="ButtonStyle.Success"
                     Size="ButtonSize.Small"
                     Click="ApplyImportAsync"
-                    Disabled="@(isApplying || preview is null || preview.ReadyRowCount == 0)"
+                    Disabled="@(phase != PartyImportPhase.Editing || preview is null || preview.ReadyRowCount == 0)"
                     data-testid="crmhr-import-apply-button" />
         </Cluster>
     </Split>
@@ -37,22 +39,18 @@
             <StatusBadge Tone="@statusTone" Text="@statusMessage" />
         </div>
     }
+    @if (exportError is not null) {
+        <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@exportError" /></Alert>
+    }
 
     <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-        <div>
-            <label class="cda-field-label">Export preview</label>
-            <InputTextArea @bind-Value="exportText"
-                           class="cda-input cda-input--textarea min-h-40"
-                           readonly
-                           data-testid="crmhr-export-textarea" />
-        </div>
-        <div>
-            <label class="cda-field-label">Import CSV</label>
-            <InputTextArea @bind-Value="importText"
-                           class="cda-input cda-input--textarea min-h-40"
-                           placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..."
-                           data-testid="crmhr-import-textarea" />
-        </div>
+        <FormField Text="Export preview">
+            <TextArea Value="@exportText" ReadOnly="true" Class="min-h-40" data-testid="crmhr-export-textarea" />
+        </FormField>
+        <FormField Text="Import CSV">
+            <TextArea Value="@importText" ValueChanged="SetImportTextAsync" Immediate="true" Class="min-h-40"
+                      Placeholder="DisplayName,PartyType,LifecycleStatus,ExternalCode,..." data-testid="crmhr-import-textarea" />
+        </FormField>
     </Grid>
 
     @if (preview is not null)
@@ -94,7 +92,11 @@
     private string importText = string.Empty;
     private string? statusMessage;
     private string statusTone = "neutral";
-    private bool isApplying;
+    private string? exportError;
+    private PartyImportPhase phase;
+    private long inputRevision;
+    private long previewGeneration;
+    private bool disposed;
 
     // The stewardship effects belong to the host: the renderer never reaches the directory owner itself.
     [Parameter, EditorRequired]
@@ -115,68 +117,142 @@
     [Parameter]
     public EventCallback ImportApplied { get; set; }
 
-    private async Task RefreshExportAsync()
-    {
-        exportText = await ExportCsv(ExportScope, ExportPartyIds);
-        statusMessage = ExportScope == PartyCsvExportScope.EntireDirectory
-            ? "Directory export refreshed."
-            : $"Export refreshed for {ExportPartyIds.Count} party row(s).";
-        statusTone = "info";
+    [Parameter]
+    public EventCallback<PartyImportStatus> StatusChanged { get; set; }
+
+    private Task ReportAsync() => disposed ? Task.CompletedTask :
+        StatusChanged.InvokeAsync(new(inputRevision, !string.IsNullOrWhiteSpace(importText), phase));
+
+    private async Task SetImportTextAsync(string? value) {
+        value ??= string.Empty;
+        if (value == importText || disposed) {
+            return;
+        }
+        importText = value;
+        inputRevision++;
+        previewGeneration++;
+        preview = null;
+        if (phase == PartyImportPhase.Previewing) {
+            phase = PartyImportPhase.Editing;
+        }
+        statusMessage = phase switch {
+            PartyImportPhase.Applying => "Import is running. Your later CSV input will be retained.",
+            PartyImportPhase.Unknown => "The earlier import result is unknown. Your CSV is retained; preview it to check current records before another apply.",
+            _ => "CSV changed. Preview it before applying."
+        };
+        statusTone = phase == PartyImportPhase.Unknown ? "warning" : "info";
+        await ReportAsync();
+    }
+
+    private Task RefreshExportAsync() => ReadExportAsync(showStatus: true);
+
+    private async Task ReadExportAsync(bool showStatus) {
+        try {
+            var content = await ExportCsv(ExportScope, ExportPartyIds);
+            if (disposed) {
+                return;
+            }
+            exportText = content;
+            exportError = null;
+            if (showStatus) {
+                statusMessage = ExportScope == PartyCsvExportScope.EntireDirectory
+                    ? "Directory export refreshed."
+                    : $"Export refreshed for {ExportPartyIds.Count} party row(s).";
+                statusTone = "info";
+            }
+        } catch (Exception) {
+            if (!disposed) {
+                exportError = "The export could not be read. Refresh the export to try again.";
+            }
+        }
     }
 
     private string ExportDescription => ExportScope == PartyCsvExportScope.EntireDirectory
         ? "Export the full party directory, or paste CSV rows for preview-first import with explicit validation and duplicate warnings."
         : "Export the selected party records, or paste CSV rows for preview-first import with explicit validation and duplicate warnings.";
 
-    private async Task PreviewImportAsync()
-    {
-        var result = await PreviewImport(importText);
-        if (result.IsFailure || result.Value is null)
-        {
-            preview = null;
-            statusMessage = string.Join(" ", result.Errors.Select(item => item.Message));
-            statusTone = "danger";
+    private async Task PreviewImportAsync() {
+        if (phase is PartyImportPhase.Applying or PartyImportPhase.Previewing || disposed) {
             return;
         }
-
-        preview = result.Value;
-        statusMessage = $"Preview prepared for {preview.Rows.Count} row(s).";
-        statusTone = "info";
+        var generation = ++previewGeneration;
+        var revision = inputRevision;
+        var csv = importText;
+        phase = PartyImportPhase.Previewing;
+        await ReportAsync();
+        try {
+            var result = await PreviewImport(csv);
+            if (disposed || generation != previewGeneration || revision != inputRevision) {
+                return;
+            }
+            preview = result.IsSuccess ? result.Value : null;
+            statusMessage = preview is null ? string.Join(" ", result.Errors.Select(item => item.Message))
+                : $"Preview prepared for {preview.Rows.Count} row(s).";
+            statusTone = preview is null ? "danger" : "info";
+        } catch (Exception) {
+            if (!disposed && generation == previewGeneration) {
+                preview = null;
+                statusMessage = "The import preview could not be read. Your CSV input is retained.";
+                statusTone = "danger";
+            }
+        } finally {
+            if (!disposed && generation == previewGeneration) {
+                phase = PartyImportPhase.Editing;
+                await ReportAsync();
+            }
+        }
     }
 
-    private async Task ApplyImportAsync()
-    {
-        // One admitted apply per preview: the rows are captured before the first await and a second dispatch is
-        // dropped while the first is in flight.
-        if (preview is null || isApplying)
-        {
+    private async Task ApplyImportAsync() {
+        if (preview is null || phase != PartyImportPhase.Editing || disposed) {
             return;
         }
-
         var rows = preview.Rows;
-        isApplying = true;
+        var submittedRevision = inputRevision;
+        phase = PartyImportPhase.Applying;
+        await ReportAsync();
         Result<int> result;
-        try
-        {
+        try {
             result = await ApplyImport(rows);
+        } catch (Exception) {
+            if (!disposed) {
+                phase = PartyImportPhase.Unknown;
+                preview = null;
+                statusMessage = "The import result could not be confirmed. Your CSV is retained. Preview it again to check current directory records before any new apply.";
+                statusTone = "warning";
+                await ReportAsync();
+            }
+            return;
         }
-        finally
-        {
-            isApplying = false;
+        if (disposed) {
+            return;
         }
-
-        if (result.IsFailure)
-        {
+        phase = PartyImportPhase.Editing;
+        preview = null;
+        if (result.IsFailure) {
             statusMessage = string.Join(" ", result.Errors.Select(item => item.Message));
             statusTone = "danger";
+            await ReportAsync();
             return;
         }
-
-        importText = string.Empty;
-        preview = null;
-        statusMessage = $"Imported {result.Value} party row(s).";
+        var laterInput = submittedRevision != inputRevision;
+        if (!laterInput) {
+            importText = string.Empty;
+            inputRevision++;
+        }
+        statusMessage = laterInput
+            ? $"Imported {result.Value} party row(s). Your later CSV input is retained; preview it before applying."
+            : $"Imported {result.Value} party row(s).";
         statusTone = "success";
-        await RefreshExportAsync();
-        await ImportApplied.InvokeAsync();
+        await ReportAsync();
+        await ReadExportAsync(showStatus: false);
+        if (!disposed) {
+            await ImportApplied.InvokeAsync();
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        previewGeneration++;
     }
 }

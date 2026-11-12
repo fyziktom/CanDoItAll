@@ -7,12 +7,6 @@ namespace CanDoItAll.Modules.Projects;
 public sealed record ProjectsAgentChatSelection(
     ProjectSummary Project);
 
-public enum ProjectsAgentChatView
-{
-    Cards,
-    Files
-}
-
 public static class ProjectsAgentChatContextBuilder
 {
     public const string SourceKind = "projects";
@@ -108,7 +102,14 @@ public static class ProjectsAgentChatContextBuilder
         return new AgentChatSurfacePosition(
             module: "projects",
             surface: "portfolio",
-            view: activeView == ProjectsAgentChatView.Files ? "files" : "cards",
+            view: activeView switch {
+                ProjectsAgentChatView.Cards => "cards",
+                ProjectsAgentChatView.Files => "files",
+                ProjectsAgentChatView.Overview => "overview",
+                ProjectsAgentChatView.Editor => "editor",
+                ProjectsAgentChatView.Hierarchy => "hierarchy",
+                _ => throw new ArgumentOutOfRangeException(nameof(activeView))
+            },
             route: "/projects",
             primarySelection: selection,
             facts: facts);

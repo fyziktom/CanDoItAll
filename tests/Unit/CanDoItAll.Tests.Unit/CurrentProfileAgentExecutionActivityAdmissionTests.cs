@@ -6,8 +6,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel.Streaming;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
@@ -280,34 +279,19 @@ public sealed class CurrentProfileAgentExecutionActivityAdmissionTests
     private static IDisposable CreateCurrentProfileService(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
-        IAgentExecutionActivityCoordinator coordinator)
-    {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        using var serviceProvider = services.BuildServiceProvider();
-        var implementationType = typeof(AgentFrameworkModuleServiceCollectionExtensions)
-            .Assembly
-            .GetType(
-                "CanDoItAll.Modules.AgentFramework.CurrentProfileAgentFrameworkWorkspaceService",
-                throwOnError: true)!;
-        var loggerType = typeof(ILogger<>).MakeGenericType(implementationType);
-        var logger = serviceProvider.GetRequiredService(loggerType);
+        IAgentExecutionActivityCoordinator coordinator) {
         var technicalAgentBridge =
             DispatchProxy.Create<IAiTechnicalAgentBridge, UnusedTechnicalAgentBridgeProxy>();
-        var constructor = Assert.Single(implementationType.GetConstructors());
-        var instance = constructor.Invoke(
-            [
-                workspaceFactory,
-                technicalAgentBridge,
-                new NoOpReferenceDataCacheInvalidator(),
-                databaseProfileRuntimeAccessor,
-                new DatabaseSwitchNotificationService(),
-                coordinator,
-                new FixedAgentExecutionProfileGenerationSource(
-                    new DatabaseProfileGeneration(0)),
-                logger
-            ]);
-        return Assert.IsAssignableFrom<IDisposable>(instance);
+        return new CurrentProfileAgentFrameworkWorkspaceService(
+            workspaceFactory,
+            technicalAgentBridge,
+            new NoOpReferenceDataCacheInvalidator(),
+            databaseProfileRuntimeAccessor,
+            new DatabaseSwitchNotificationService(),
+            coordinator,
+            new FixedAgentExecutionProfileGenerationSource(
+                new DatabaseProfileGeneration(0)),
+            NullLogger<CurrentProfileAgentFrameworkWorkspaceService>.Instance);
     }
 
     private static async Task InvokeDirectExecutionEntryAsync(

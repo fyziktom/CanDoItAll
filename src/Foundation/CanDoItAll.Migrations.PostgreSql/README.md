@@ -45,6 +45,51 @@ Create new migrations through the normal EF workflow and append them after the b
 Do not edit an applied migration. Back up authoritative data before applying schema
 changes.
 
+## Workflow catalog metadata
+
+`20261104001801_AddWorkflowCatalogMetadata` adds six derived metadata columns to workflow
+versions and backfills them from each original `DefinitionJson`. Missing or null metadata
+uses the existing empty-string convention. No graph JSON, version/head identity, revision,
+timestamp, run or prompt binding is rewritten. Invalid JSON fails the migration explicitly.
+The catalog can then read metadata without fetching graphs. New versions populate both
+representations in their existing atomic append. Downgrade removes only the derived
+columns; the original JSON remains available for a later upgrade. Native validation covers
+empty and retained databases, reopen, exact original row preservation and downgrade.
+
+## Process authoring activation and rollback
+
+`20261009124700_AddProcessAuthoring` appends three owner tables: scoped definition heads,
+immutable publications and operation receipts. The complete `AppDbContext` and the narrow
+Process context share their mapping. It does not rewrite existing projects, workflows,
+runtime plans, assignments or prepared launch records. Run the normal schema bootstrap;
+there is no separate authoring schema initializer.
+
+Before activation, preserve a consistent database backup and stop incompatible application
+and worker writers at a maintenance boundary. All readers that select executable Process
+definitions must understand the authored overlay. Older binaries still select distributed
+defaults; mixed old/new readers and writers are not supported. A switch in a new binary
+cannot make an old binary observe publications. Existing old-format prepared and accepted
+runs remain supported by the current binary's captured-plan compatibility path.
+
+Instance-local edits in an old open editor were never database records. Operators must
+preserve any still-visible work before retiring those editors; this migration cannot
+recover edits already lost by an earlier scope or process. After authoring writes begin,
+dropping the new tables or restarting an old binary is not a lossless rollback. Prefer a
+forward repair, or restore the complete compatible backup with explicit reconciliation of
+subsequent authoring and runtime activity. Retain publication and receipt history used by
+prepared launches and accepted runs.
+
+Project database/package transfer currently refuses a source containing retained Process
+authoring heads, publications or receipts, including global definitions that can affect
+project execution. The same facts block target adoption. The refusal happens before copying
+project data; copying current heads alone would lose immutable dependencies and receipt
+scope. This is an explicit transfer limit, not an automatic export/rebinding facility.
+
+The PC3 native tests apply this migration twice to an owned predecessor-schema fixture and
+compare complete stored project, workflow, prepared and accepted runtime payloads. They also
+check the canonical pending-model state. Production activation and rollback are operator
+operations; task validation never applies them to ordinary profiles.
+
 The LLM Chats schema is an append-only migration chain:
 
 - `20260814163458_AddLlmChats` creates definitions, revisions, tags, conversations, transcripts,
@@ -87,6 +132,34 @@ rejection of unsafe generic AI-provider transfer), using isolated PostgreSQL
 databases. Generate pending-model evidence and idempotent SQL into ignored
 `artifacts/providers-shared-premerge/schema`; do not apply it to a live profile as part
 of review. See [request history](../../../docs/provider-request-history.md).
+
+## Finite-operation metadata and Workspace current head
+
+`20261016233100_ExtractFiniteOperationEpochMetadata` renames the two Projects epoch/state
+tables into neutral Infrastructure metadata, preserving their rows and issued promises.
+The fixed Projects pool becomes part of each key. Projects retains its receipt table,
+payload codec and authorization; the migration does not rewrite receipt payloads.
+Preflight and postflight validate the actual PostgreSQL schema and retained history.
+Unexpected foreign keys, user triggers, incomplete active history or schema drift refuse
+the transaction. Empty databases still require the explicit activation bootstrap.
+
+The same migration adds Workspace settings revisions and a unique current-head marker.
+It retains every existing row and chooses the prior latest row by `UpdatedAtUtc DESC,
+Id ASC`. An empty Workspace table remains empty. Ordinary saves, business bootstrap and
+preference transfer all participate in the new head exclusion and revision contract.
+
+Apply this migration only at a stopped-host maintenance boundary with a compatible
+backup. The five-second lock acquisition limit bounds contention during the cutover;
+it is not a bound on total migration duration. Older binaries cannot use the renamed
+metadata or safely write Workspace settings. `Down` refuses before any DDL; rollback
+requires restoring a matching backup and binary, followed by the documented activation
+procedure. Do not create a compatibility view or restart an older writer against the
+new schema.
+
+Source review and validation are recorded in the
+[concurrent-mutations candidate](../../../codex/bundles/concurrent-mutations/validation/P04-C2-W1b-R1b-candidate.md).
+The focused migration tests cover retained-data and catalog invariants; they do not
+establish production-volume migration time or sustained maintenance capacity.
 
 ## Migration Validation
 

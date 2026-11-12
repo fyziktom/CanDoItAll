@@ -50,7 +50,8 @@ public sealed class AgentPackageImportApiIntegrationTests
         Assert.Equal(HttpStatusCode.OK, bindingResponse.StatusCode);
         Assert.NotNull(binding);
         Assert.Equal(agent.Id, binding.AgentId);
-        Assert.Equal(created.ConfigurationSha256, binding.ConfigurationVersion);
+        Assert.NotEmpty(binding.ConfigurationVersion);
+        Assert.NotEqual(created.ConfigurationSha256, binding.ConfigurationVersion);
 
         using var replayResponse = await SendImportAsync(
             host.Client,
@@ -66,6 +67,12 @@ public sealed class AgentPackageImportApiIntegrationTests
         Assert.Equal(created.AgentId, replayed.AgentId);
         Assert.Equal(created.PackageSha256, replayed.PackageSha256);
         Assert.Equal(created.ConfigurationSha256, replayed.ConfigurationSha256);
+        using var replayBindingResponse = await host.Client.GetAsync(
+            $"/api/agents/by-external-key/{AgentExternalIdentityNormalizer.PackageImportNamespace}/{externalKey}");
+        Assert.Equal(HttpStatusCode.OK, replayBindingResponse.StatusCode);
+        var replayBinding = await replayBindingResponse.Content.ReadFromJsonAsync<AgentExternalProvisioningResource>(JsonOptions);
+        Assert.NotNull(replayBinding);
+        Assert.Equal(binding.ConfigurationVersion, replayBinding.ConfigurationVersion);
 
         using var conflictResponse = await SendImportAsync(
             host.Client,

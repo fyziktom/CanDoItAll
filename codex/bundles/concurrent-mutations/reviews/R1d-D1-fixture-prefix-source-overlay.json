@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "Source only; managed test-only overlay, unbuilt/unexecuted",
+  "createdAtUtc": "2026-10-17T06:40:21.8420807+00:00",
+  "baseD1Inventory": {
+    "path": "codex\\bundles\\concurrent-mutations\\reviews\\R1d-D1-dormant-source-inventory.json",
+    "sha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07",
+    "bytes": 8673
+  },
+  "baseTransferReadiness": {
+    "path": "codex\\bundles\\concurrent-mutations\\reviews\\R1d-D1-current-main-transfer-readiness.json",
+    "sha256": "2902C0D29C09419D2F4BBF4AE3764DDF43B709F51DA3D03CDE2C5DDC14993B13",
+    "bytes": 14297
+  },
+  "sourceOverlay": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+    "mainPredecessorSha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+    "managedPredecessorSha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+    "sha256": "E3068014651473B121BCDFD7BAB51E116A1D0FDD8D50F0E0E778657D08A05B72",
+    "bytes": 12371,
+    "transfer": true,
+    "delta": "Two stable prefix literal substitutions only"
+  },
+  "preservedPredecessor": {
+    "path": ".artifacts/concurrent-mutations/candidates/r1d-d1-fixture-prefix-predecessor/AgentToolAdmissionJournalFixture.before-stable-prefix.cs.txt",
+    "sha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+    "bytes": 12411
+  },
+  "ownership": {
+    "path": ".artifacts/concurrent-mutations/candidates/r1d-d1-fixture-prefix-predecessor.ownership.json",
+    "sha256": "12605E559EDF5FE4EB014DA982ED78DB15991B4EB75DAE5B16FD9BC196B06CEF",
+    "bytes": 852
+  },
+  "proof": {
+    "path": "codex\\bundles\\concurrent-mutations\\reviews\\R1d-D1-fixture-prefix-amendment.md",
+    "sha256": "94D4BCC33111F0E84B433ED1444F010C5AA83153C99FC980FAD71934B209138D",
+    "bytes": 2490
+  },
+  "testCounts": {
+    "newFacts": 0,
+    "D1Facts": 6,
+    "Unit": 112,
+    "existingIntegration": 129,
+    "total": 247
+  },
+  "requiredValidation": [
+    "Parent guarded transfer after C3 closure",
+    "Serialized Release builds",
+    "Full portability-static review and final no-write enforcement",
+    "Seven exact discovery/execution lanes,247 rows",
+    "Actual pre/post exact fixture root and database/listener reconciliation"
+  ],
+  "limitations": [
+    "No runtime or cleanup proof",
+    "No old residue deletion",
+    "No changes to original D1 source inventory or C4 inputs"
+  ]
+}

@@ -1,0 +1,263 @@
+{
+  "SchemaVersion": 1,
+  "Kind": "D1 current-main guarded transfer readiness; source observations only",
+  "ObservedAtUtc": "2026-10-17T06:01:45.8580674+00:00",
+  "MainRoot": "C:\\repositories\\CanDoItAll",
+  "ManagedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "MainHead": "702d0a93b1081c42d5a06893e7070219aee5d089",
+  "WholeMainFreezeIndependentlyVerified": false,
+  "OriginalInventory": {
+    "Path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-dormant-source-inventory.json",
+    "Sha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07"
+  },
+  "Note": {
+    "Path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-current-main-transfer-readiness.md",
+    "Sha256": "1A01163BE41795C557E2669C448C930BDD3E07B422ECE555836976CF69492F3D",
+    "Bytes": 5329
+  },
+  "TransferPerformed": false,
+  "BuildTestScanDatabaseOrHostPerformed": false,
+  "RequiredMergeCount": 0,
+  "AdditionalSourceOverlayCount": 0,
+  "Counts": {
+    "TransferInputs": 12,
+    "Production": 9,
+    "ExistingSuccessors": 5,
+    "NewProduction": 4,
+    "TestFiles": 2,
+    "ProofNotes": 1,
+    "Facts": 6,
+    "Theories": 0,
+    "ExpectedDiscovery": 6,
+    "ExpectedExecution": 6
+  },
+  "TransferInputs": [
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolRunLease.cs",
+      "SourceSha256": "CE67E8160072E159832868ED6BCF85D3306A02D9F2B0D69CB80A007F0D0D26C4",
+      "SourceBytes": 10043,
+      "DestinationGuard": "ExactPredecessor",
+      "ObservedMainSha256": "00711FD6AE92B5212ED6E48176AAF676520C6753F64D962D4C4B449CAE81D8F5",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolRunLease.cs",
+      "SavedPredecessorSha256": "00711FD6AE92B5212ED6E48176AAF676520C6753F64D962D4C4B449CAE81D8F5"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.cs",
+      "SourceSha256": "A3D15073CFDEA6D1944E816ABCCC3528EE8A5FF5731C790FE9EB867E5764924D",
+      "SourceBytes": 38807,
+      "DestinationGuard": "ExactPredecessor",
+      "ObservedMainSha256": "87387767C254F39496720790F29348A42BA9BD48B1124C4F4E4AE9151D3F545F",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolAdmissionJournal.cs",
+      "SavedPredecessorSha256": "87387767C254F39496720790F29348A42BA9BD48B1124C4F4E4AE9151D3F545F"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolReceiptReconciliation.cs",
+      "SourceSha256": "5B3A9C8BE19CCDB6E50DE05F2387762F44BC9C576A61A32F1E1AF1F6DCD39564",
+      "SourceBytes": 3982,
+      "DestinationGuard": "ExactPredecessor",
+      "ObservedMainSha256": "A87DFD160B34D14D27BC9F5B8F779B6A2FF8CF106AB6725023114E59C0A322C9",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Core\\ToolPolicy\\AgentToolReceiptReconciliation.cs",
+      "SavedPredecessorSha256": "A87DFD160B34D14D27BC9F5B8F779B6A2FF8CF106AB6725023114E59C0A322C9"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/AgentRuntimePorts.cs",
+      "SourceSha256": "42814D2022115DAD19EEBB251304CF2D1CFC4E2646CFE2991B77676EE0BB35BC",
+      "SourceBytes": 1616,
+      "DestinationGuard": "ExactPredecessor",
+      "ObservedMainSha256": "8FD9545140C690F6014040379C5C8A7605B4452781DD4BD0CD27195904ACB48A",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Common\\CanDoItAll.AgentFramework.Runtime.Abstractions\\AgentRuntimePorts.cs",
+      "SavedPredecessorSha256": "8FD9545140C690F6014040379C5C8A7605B4452781DD4BD0CD27195904ACB48A"
+    },
+    {
+      "Path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs",
+      "SourceSha256": "3CFFD67A3308DC002067B7D04E61F755CBCC2BCAB6B3A26A001232A4B492DAEA",
+      "SourceBytes": 1231,
+      "DestinationGuard": "ExactPredecessor",
+      "ObservedMainSha256": "9A8A4D632543DB05ED59341CEDF72613524C235BF15AA941226296543ACA4DBE",
+      "SavedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\r1d-d1-predecessors\\src\\MAF\\Tools\\CanDoItAll.AgentFramework.Tooling\\IAgentRuntimeToolProvider.cs",
+      "SavedPredecessorSha256": "9A8A4D632543DB05ED59341CEDF72613524C235BF15AA941226296543ACA4DBE"
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentSavedEffectContinuationRequest.cs",
+      "SourceSha256": "373E89DA2394F5DCA4AEF2D801607EDD82D3030D43C540FF20F581A3C7F8F450",
+      "SourceBytes": 4081,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/AgentSavedEffectDispatch.cs",
+      "SourceSha256": "E5BD0E3FE195B598AD929B473FD8045FACB8F192A7BA089965A4FDC6FA154DAC",
+      "SourceBytes": 2661,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/AgentRuntimeSavedEffectTool.cs",
+      "SourceSha256": "BC7C030B8C7EC5075FABF3D9232DCEF2514828AC22B72AB91D79634E55E5947D",
+      "SourceBytes": 2520,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs",
+      "SourceSha256": "03AD3538DB8DDCACAE6BCF5D5F800E1F38B12C0301DEF30B882E3C088A4BDA49",
+      "SourceBytes": 20561,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs",
+      "SourceSha256": "61FEC6FA4F46504729C0FADCE19F94BE504A62434BB023F520AEA03103D00EC1",
+      "SourceBytes": 28120,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchFixture.cs",
+      "SourceSha256": "A2279C80B00C73238BF962674378DD55D1D7D576749D957EE8A2AEA43F8E98AE",
+      "SourceBytes": 7768,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    },
+    {
+      "Path": "codex/bundles/concurrent-mutations/validation/R1d-D1-dormant-source.md",
+      "SourceSha256": "EFFE99F5D06A4EF5CF0ABE764567CC73F2C0873776C5DE0F78FC8FD066C984D3",
+      "SourceBytes": 10405,
+      "DestinationGuard": "Absent",
+      "ObservedMainSha256": null,
+      "SavedPredecessorImage": null,
+      "SavedPredecessorSha256": null
+    }
+  ],
+  "ExistingDependencyGuards": [
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Effects.cs",
+      "MainSha256": "27C2DFDF8F81054612FCA85D95899494BBB1E17499F94A2949519EF7B5A7DB32",
+      "MainBytes": 33004,
+      "ManagedSha256": "27C2DFDF8F81054612FCA85D95899494BBB1E17499F94A2949519EF7B5A7DB32",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.ProviderDispatch.cs",
+      "MainSha256": "03461D841B99345955D49CDB980CE76171635D802A1FAFBE8E6A76CCD338CB4B",
+      "MainBytes": 7391,
+      "ManagedSha256": "03461D841B99345955D49CDB980CE76171635D802A1FAFBE8E6A76CCD338CB4B",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+      "MainSha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186",
+      "MainBytes": 17025,
+      "ManagedSha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentPendingApprovalCancellation.cs",
+      "MainSha256": "C205F3C97B6E84551E636E194A891A668F350D06681A7B8F846B5C2547E10F87",
+      "MainBytes": 3830,
+      "ManagedSha256": "C205F3C97B6E84551E636E194A891A668F350D06681A7B8F846B5C2547E10F87",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/ExecutionRunStateTransitions.cs",
+      "MainSha256": "28F024B0306CE7AF01BDC08F4680ECB4B78C5D5E4E6D171C73B18D0CC6141638",
+      "MainBytes": 9271,
+      "ManagedSha256": "28F024B0306CE7AF01BDC08F4680ECB4B78C5D5E4E6D171C73B18D0CC6141638",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolJournalModels.cs",
+      "MainSha256": "1DBC46BC84C660A21D3761D5F713755684F2ADD5BCF67014F8F6FC63FAC69C92",
+      "MainBytes": 24418,
+      "ManagedSha256": "1DBC46BC84C660A21D3761D5F713755684F2ADD5BCF67014F8F6FC63FAC69C92",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "MainSha256": "007864C9C73288EA1EDD324D6ADC6D7EAC475F248FC0C8F1821E34C7B21B5DE6",
+      "MainBytes": 98414,
+      "ManagedSha256": "007864C9C73288EA1EDD324D6ADC6D7EAC475F248FC0C8F1821E34C7B21B5DE6",
+      "Transfer": false
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+      "MainSha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+      "MainBytes": 12411,
+      "ManagedSha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj",
+      "MainSha256": "8F4639515F44F4CC5D1CB2069651D452BAE39BDA436BE191D809E0585B7CFCCE",
+      "MainBytes": 1039,
+      "ManagedSha256": "8F4639515F44F4CC5D1CB2069651D452BAE39BDA436BE191D809E0585B7CFCCE",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Runtime.Abstractions/CanDoItAll.AgentFramework.Runtime.Abstractions.csproj",
+      "MainSha256": "35A34ACDCFEB0F13AD0D0600D922A4398AE713929149C2E009DFE8227EE409E3",
+      "MainBytes": 522,
+      "ManagedSha256": "35A34ACDCFEB0F13AD0D0600D922A4398AE713929149C2E009DFE8227EE409E3",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj",
+      "MainSha256": "FDBFBED7385618DCA37E7550048B2608FBE940EC04450236C5FB38660011169B",
+      "MainBytes": 2154,
+      "ManagedSha256": "FDBFBED7385618DCA37E7550048B2608FBE940EC04450236C5FB38660011169B",
+      "Transfer": false
+    },
+    {
+      "Path": "src/MAF/Tools/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj",
+      "MainSha256": "B13DE81664937C9EAB692F3CE4BDB27C3A801CF0ACFA0D33BD3C851C64C62846",
+      "MainBytes": 824,
+      "ManagedSha256": "B13DE81664937C9EAB692F3CE4BDB27C3A801CF0ACFA0D33BD3C851C64C62846",
+      "Transfer": false
+    },
+    {
+      "Path": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "MainSha256": "9BE10D99122856FD86A5837EA2A6849E7592F92496A3579EC5525AEBE5AD841F",
+      "MainBytes": 6814,
+      "ManagedSha256": "9BE10D99122856FD86A5837EA2A6849E7592F92496A3579EC5525AEBE5AD841F",
+      "Transfer": false
+    }
+  ],
+  "FrozenTransition": {
+    "Path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+    "Sha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186"
+  },
+  "Selection": {
+    "Assembly": "CanDoItAll.Tests.Integration",
+    "Filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests",
+    "Category": "FileSystemPortability",
+    "ExpectedDiscovery": 6,
+    "ExpectedExecution": 6,
+    "Facts": [
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Full_exact_decisions_select_after_rejection_and_preserve_original_checkpoint_on_conflict",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Saved_lease_claims_one_exact_restored_effect_and_cannot_resume_the_original_provider_origin",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Competing_exact_commands_and_cancellation_cannot_replace_an_entered_effect_outcome",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Prepared_receipt_inconsistency_refuses_without_fabricated_claim_while_entered_effect_uses_existing_reconciliation",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Real_journal_publication_faults_and_lease_cleanup_preserve_exact_decisions_and_outcome",
+      "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Dormant_defaults_and_historical_journal_schemas_do_not_acquire_saved_effect_authority"
+    ]
+  },
+  "ReleaseGates": [
+    "Parent releases current C3 source/runtime checkpoint",
+    "Recheck all exact predecessors and absence guards before copy",
+    "Standard Release build and complete static procedure",
+    "Build-backed exact six-case discovery and execution",
+    "Small C4 probe only after reviewed D1 six-case pass; no C4 production activation"
+  ]
+}

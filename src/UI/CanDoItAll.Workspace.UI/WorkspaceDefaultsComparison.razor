@@ -1,0 +1,38 @@
+@namespace CanDoItAll.Workspace.UI
+@using CanDoItAll.SharedKernel
+@using System.Globalization
+<FormSection Title="@Title" Icon="compare">
+    <Stack GapScale="LayoutGap.Small">
+        <TextBlock Value="@($"Workspace name: {Values.WorkspaceName}")" />
+        <TextBlock Value="@($"Default provider: {ProviderLabel}")" />
+        <TextBlock Value="@($"Output format: {Values.DefaultPromptOutputFormat}")" />
+        <TextBlock Value="@($"Currency: {Values.CurrencyCode}; culture: {Values.CurrencyCultureName}")" />
+        <TextArea Value="@Values.Notes" ReadOnly="true" aria-label="@($"{Title} notes")" />
+        @if (PolicyDraft is { } draft) {
+            <TextBlock Value="@($"Draft policy: {draft.ReadBasisMode}; {draft.PublicationFreshness}; {draft.OnBasisChange}; replans {draft.MaximumReplans}")" />
+            <TextBlock Value="@($"Draft work duration: {draft.MaximumWorkDuration}; basis age: {draft.MaximumBasisAge}")" />
+        } else if (!PolicyKnown) {
+            <TextBlock Value="Policy not observed." />
+        } else if (Policy is { } policy) {
+            <TextBlock Value="@($"Policy: {policy.ReadBasisMode}; {policy.PublicationFreshness}; {policy.OnBasisChange}; replans {policy.Budget.MaximumReplans}")" />
+            <TextBlock Value="@($"Work duration: {policy.Budget.MaximumWorkDuration.ToString("c", CultureInfo.InvariantCulture)}; basis age: {policy.Budget.MaximumBasisAge.ToString("c", CultureInfo.InvariantCulture)}")" />
+        } else {
+            <TextBlock Value="Workspace policy is not configured." />
+        }
+    </Stack>
+</FormSection>
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public WorkspaceSettingsValues Values { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<WorkspaceProviderOption> Providers { get; set; } = [];
+
+    [Parameter] public DecisionDataPolicy? Policy { get; set; }
+    [Parameter] public WorkspaceDecisionPolicyDraft? PolicyDraft { get; set; }
+    [Parameter] public bool PolicyKnown { get; set; }
+
+    private string ProviderLabel => Values.DefaultProviderProfileId is not { } id
+        ? "None"
+        : Providers.FirstOrDefault(provider => provider.Id == id) is { } provider
+            ? provider.IsEnabled ? provider.Name : $"{provider.Name} (disabled)"
+            : "Unavailable provider";
+}

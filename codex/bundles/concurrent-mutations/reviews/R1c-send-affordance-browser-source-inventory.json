@@ -1,0 +1,59 @@
+{
+  "status": "Source frozen; one prospective browser Fact; no build or execution",
+  "inputs": [
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/AgentChatSandboxFixture.cs",
+      "managedPredecessorSha256": "9E3B169B15267F3B199C0BE397344BCA25E5F8553E1BDEC049A7D20C960A4A16",
+      "mainParentSha256": "9E3B169B15267F3B199C0BE397344BCA25E5F8553E1BDEC049A7D20C960A4A16",
+      "sha256": "28AE775CFDF1D9415BBDBC190F2D74E02B4F74B8962EAB5ED4AE6E3DEE3314C4",
+      "bytes": 7866
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor",
+      "managedPredecessorSha256": "2068684A7CAE89E8A3C098148AEB92FE949363241E2C516303BBDC2A16E97985",
+      "mainParentSha256": "2068684A7CAE89E8A3C098148AEB92FE949363241E2C516303BBDC2A16E97985",
+      "sha256": "A45F98741B9B68081330CC7D2AA3B8F456B19E7B6DE6A8C3531AE322DD202907",
+      "bytes": 1801
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/IndependentProviderSandboxHost.cs",
+      "managedPredecessorSha256": "2C604BD9FDC4551E400C2EE88F11F83151BD425D53A102F2C8B3C76136933D3B",
+      "mainParentSha256": "2C604BD9FDC4551E400C2EE88F11F83151BD425D53A102F2C8B3C76136933D3B",
+      "sha256": "28D6A4036429F5398515295045B2959D22FDC8FCFDF9DD6043D301F2F7FCCD9B",
+      "bytes": 6776
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/AgentChatSendAffordanceBrowserTests.cs",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "5F9FAE47469CE0C40869687B993138E220986232698EF2BE18369866736E5575",
+      "bytes": 7021
+    },
+    {
+      "path": "docs/architecture/components-decoupling-register.json",
+      "managedPredecessorSha256": "CC73B9E075D288FF9C3CB89B837E5504109B31B1757CFE4CF335389782A8460C",
+      "mainParentSha256": "D04D8632B21EA46885687F4E8064433C560D5DAC04B23F0D8FA80892AEBC7C46",
+      "sha256": "159494984B7A9D46361DAB76DC0D53B8B826DD231ECCD03DC9522E6752FB3172",
+      "bytes": 2033710,
+      "transfer": "One row only using renderingEntryPatch; do not transfer full managed register."
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/validation/R1c-send-affordance-browser-source.md",
+    "sha256": "6CCE68DF200F686F4F06A632ABF10E1EB54C100117D89B6AC06D558DDC534F6A"
+  },
+  "renderingEntryPatch": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1c-send-affordance-browser-rendering-entry.json",
+    "sha256": "F5DD4C9BD7F7808ED1C423DC8FF173D0BD6F6918D6FE7ADF32B553CC041F162F"
+  },
+  "expected": {
+    "discovery": 1,
+    "runtime": 1,
+    "categories": [
+      "Playwright",
+      "HostPlatform"
+    ],
+    "filter": "FullyQualifiedName=CanDoItAll.Tests.Playwright.AgentChatSendAffordanceBrowserTests.Unconfirmed_outcome_blocks_Send_without_disabling_draft_editing",
+    "executed": false
+  }
+}

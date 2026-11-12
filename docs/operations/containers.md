@@ -33,6 +33,13 @@ sibling repository has its own `.dockerignore`. The `COPY --exclude` option requ
 Dockerfile frontend 1.19 or later; the `docker/dockerfile:1` syntax directive selects the
 current stable frontend.
 
+The pinned Ubuntu runtime image installs its required packages from the Kernel.org
+[Ubuntu archive mirror](https://mirrors.kernel.org/) over HTTPS, including the security
+suite. This avoids a shared dependency on the Canonical archive DNS used by both the
+container build and Linux CI setup. Ubuntu's signing keys, certificate verification and
+package-signature verification remain enabled. An index or package download failure
+fails the build; it never produces an image with missing runtime dependencies.
+
 PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
 volume. Replacing `.secrets/db-password` does **not** rotate the role password in an
 existing database. It can instead make a recreated app use a password that PostgreSQL
@@ -145,6 +152,27 @@ publisher data and credentials, or write stale client state. After migration,
 `client-a/data` in that directory is a retained snapshot, not the client's active data.
 Read current files through the running container or the named volume. See
 [manual-client backup and rollback](backup-and-restore.md#manual-shared-provider-client).
+
+## Shared-provider test tool image
+
+The isolated shared-provider harness publishes its evidence tool once in standard
+`Release` and packages that output in
+[`CanDoItAll.SharedProviders.E2E/Dockerfile`](../../tools/SharedProviders/CanDoItAll.SharedProviders.E2E/Dockerfile).
+`Run-SharedProviderE2E.ps1` owns the build and records the image revision and source
+fingerprint alongside the application and deterministic upstream images. All four oracle
+roles use that same image; runtime data remains in the fixture's validated mounts.
+
+This is an intentional single-stage packaging exception: the input is the existing
+published tool, not source or an SDK build context. Running its many assemblies through a
+Windows host bind mount exceeded the oracle's unchanged 60-second deadline. The image
+runs as UID/GID 1654 and includes no credentials. Validate Compose mounts and all three
+image identities, execute the native consumers, and exercise timeout cleanup before
+closing a change to this harness.
+
+Each native browser oracle records a unique container name and ownership label before
+launch. On failure or timeout, it terminates and awaits the Docker client, removes only
+the matching owned container, and verifies absence. A cleanup failure remains a reported
+failure; it must not be treated as a successful oracle result.
 
 ## Workstation Web Host
 

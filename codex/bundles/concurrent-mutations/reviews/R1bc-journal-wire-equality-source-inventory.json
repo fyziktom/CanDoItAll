@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "AuthoredUnbuiltIndependentSourceReviewPassed",
+  "approvedDesignSha256": "3E2F15B792E81CF9E3B97CBCDE44ABE5C2558157A74392B5640C0F60DBB18459",
+  "mainReadOnly": true,
+  "mainBSourceFreezeSha256": "3E7E1CD00F49FB9613245F3A07698F15D1BE1077DC6100E8863183E3337B739C",
+  "files": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+      "bytes": 17025,
+      "sha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "6E0D0A9D5C7E0C05B3E2D5CC4E8E591DE14A234D886FCDEC8CD266B080EDE52F",
+      "managedPredecessorExists": true,
+      "managedPredecessorSha256": "6E0D0A9D5C7E0C05B3E2D5CC4E8E591DE14A234D886FCDEC8CD266B080EDE52F"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalWireEquality.cs",
+      "bytes": 2184,
+      "sha256": "B6FED1C578C252333AA5DD39AB3074F02AF54B2F89FFA8148BABA3B60C377EBC",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedPredecessorExists": false,
+      "managedPredecessorSha256": null
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs",
+      "bytes": 9972,
+      "sha256": "AE296D5CA1FDE6896DD2040012093EB539079F0344B07EAE75CFAFC6D92AC9B9",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedPredecessorExists": false,
+      "managedPredecessorSha256": null
+    }
+  ],
+  "documents": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/R1bc-journal-wire-comparison.md",
+      "bytes": 13089,
+      "sha256": "E0DC02F88725A036DE78F36C04D8EDF0744BAF45202612077DEDAC05D73A7CC3",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1bc-journal-wire-equality-source.md",
+      "bytes": 7090,
+      "sha256": "A834C66464E22315BA3881F003363C395E4516DB51854BFFC12302FB0D2172B0",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null
+    }
+  ],
+  "preservedBInventorySha256": "29D752E330425DD434619657488DB27E4A7206B15625A3703DE50FCE9AB9510F",
+  "bSourceAndDocumentsReverified": true,
+  "independentReview": {
+    "agent": "/root/ui_validation_architecture",
+    "result": "No source blocker",
+    "boundSourceSha256": [
+      "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186",
+      "B6FED1C578C252333AA5DD39AB3074F02AF54B2F89FFA8148BABA3B60C377EBC",
+      "AE296D5CA1FDE6896DD2040012093EB539079F0344B07EAE75CFAFC6D92AC9B9"
+    ],
+    "execution": false
+  },
+  "selection": {
+    "inheritedBSelectionSha256": "950060AD4087E0A2926F7BCD999C81F40D014564E4D51D933B024F7D739C573F",
+    "newFacts": 5,
+    "schemaFiveRows": 28,
+    "mainEffectRows": 23,
+    "focusedDiscovery": 161,
+    "focusedRuntime": 161,
+    "unitRows": 78,
+    "integrationRows": 83,
+    "disjointLanes": [
+      {
+        "id": "journal-wire-equality-unit",
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 28,
+        "expectedRuntime": 28
+      },
+      {
+        "id": "prepared-run-witness-unit",
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceRunWitnessTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 3,
+        "expectedRuntime": 3
+      },
+      {
+        "id": "prepared-run-witness-owner",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedRunWitnessTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 11,
+        "expectedRuntime": 11
+      },
+      {
+        "id": "prepared-run-existing-conflict-reads",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 19,
+        "expectedRuntime": 19
+      },
+      {
+        "id": "prepared-run-existing-recovery",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 15,
+        "expectedRuntime": 15
+      },
+      {
+        "id": "actual-effect-journal-owner",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 23,
+        "expectedRuntime": 23
+      },
+      {
+        "id": "utf8-write-unit-compatibility",
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "filter": "(FullyQualifiedName~FileSandboxWorkspaceJsonWriteCompatibilityTests|FullyQualifiedName~FileSandboxWorkspaceJsonBatchTests|FullyQualifiedName~DurableFileWriterTests|FullyQualifiedName~DurableFilePublicationTests|FullyQualifiedName~FileProviderUsageWindowTests)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 47,
+        "expectedRuntime": 47
+      },
+      {
+        "id": "utf8-write-file-owner-integration",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "(FullyQualifiedName~FileSandboxWorkspaceUsageProjectionIntegrationTests)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+        "expectedDiscovery": 15,
+        "expectedRuntime": 15
+      }
+    ],
+    "countSources": [
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "F2FE1DA33C0E2B600CCF0434048BA096AF5044B09D572B48C8F3CA6F3E1B38BF",
+        "bytes": 23023
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "09194532BDC433DB1C082E6D05801D122313D9DB559042E4715EB0DE913C96CE",
+        "bytes": 8196
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs",
+        "sourceRoot": "managed-candidate",
+        "sha256": "AE296D5CA1FDE6896DD2040012093EB539079F0344B07EAE75CFAFC6D92AC9B9",
+        "bytes": 9972
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "5E66B240547BC771440E9B75E9F7762E5E3311637CD59EB5D00EEB4D51FC4268",
+        "bytes": 18231
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "B0A245C3D9B7ED700BB98711BCCE0472833803FA08147EB27B0CA7077F50ECCD",
+        "bytes": 5579
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "995127AC4101027BF6D42323FEF791AD3722993187669E690BE2ED57DEE8890A",
+        "bytes": 10208
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "5E753C493262FA8B9EB51870D07A525CDD7A10F918A51077059BAC2C814AD5DA",
+        "bytes": 19560
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+        "sourceRoot": "frozen-main",
+        "sha256": "5722A65EFC0D748EB206DFA0A1FF3814DDD5931539ACB39F05F8B008309B6828",
+        "bytes": 17854
+      }
+    ],
+    "excludedManagedHistoricalFacts": 6,
+    "excludedManagedHistoricalPath": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+    "costFactsIncludedInWholeEffectClass": 2,
+    "dynamicProviders": 0,
+    "skips": 0,
+    "inheritedTests": 0,
+    "filteredRows": 0,
+    "unchangedPerformanceRows": 22,
+    "prospectiveTotalExecutions": 183
+  },
+  "bWithdrawal": {
+    "productionDependsOnBHelper": false,
+    "retainBaseTestPartialModifier": true,
+    "recountRequired": true,
+    "focusedIfOnlyFiveBSizeFactsOmitted": 156
+  },
+  "execution": {
+    "build": false,
+    "discovery": false,
+    "tests": false,
+    "static": false,
+    "performance": false
+  },
+  "capacityQualified": false
+}

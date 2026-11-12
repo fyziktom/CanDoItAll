@@ -33,6 +33,15 @@ internal static class LlmChatDefinitionEditorForm {
         DefinitionEditorValues values,
         out LlmChatDefinitionMutation? mutation,
         out string validationMessage) {
+        if (!string.IsNullOrEmpty(values.PendingTagInput)) {
+            return Invalid("Finish adding the pending tag or remove its unfinished text before saving.", out mutation, out validationMessage);
+        }
+        if (!TryReadNumber(values.TemperatureText, out var temperature) || temperature is < 0 or > 2) {
+            return Invalid("Temperature must be empty or a number from 0 to 2. Your unfinished entry is retained.", out mutation, out validationMessage);
+        }
+        if (!TryReadNumber(values.TimeoutText, out var timeout) || timeout is <= 0 || timeout > Definitions.LlmChatDefinitionValidation.MaximumTimeout.TotalSeconds) {
+            return Invalid("Timeout must be empty or a positive number within the supported limit. Your unfinished entry is retained.", out mutation, out validationMessage);
+        }
         if (string.IsNullOrWhiteSpace(values.Name)) {
             return Invalid("Enter a definition name.", out mutation, out validationMessage);
         }
@@ -43,10 +52,6 @@ internal static class LlmChatDefinitionEditorForm {
 
         if (string.IsNullOrWhiteSpace(values.Model)) {
             return Invalid("Select or enter a model.", out mutation, out validationMessage);
-        }
-
-        if (values.TimeoutSeconds is { } timeoutSeconds && (!double.IsFinite(timeoutSeconds) || timeoutSeconds <= 0)) {
-            return Invalid("Timeout must be a positive number of seconds.", out mutation, out validationMessage);
         }
 
         if (!IsValidJson(values.ModelParameterConfigurationJson)) {
@@ -66,10 +71,10 @@ internal static class LlmChatDefinitionEditorForm {
             values.SystemPrompt,
             providerProfileId,
             values.Model,
-            values.Temperature,
+            temperature,
             ToContract(values.ThinkingEffort),
             values.ModelParameterConfigurationJson,
-            values.TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
+            timeout is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
             ToContract(values.ResponseFormat),
             values.SchemaJson,
             values.SchemaName,
@@ -77,6 +82,18 @@ internal static class LlmChatDefinitionEditorForm {
             values.RevisionReason,
             tags.ToImmutableArray());
         validationMessage = string.Empty;
+        return true;
+    }
+
+    private static bool TryReadNumber(string text, out double? value) {
+        value = null;
+        if (text.Length == 0) {
+            return true;
+        }
+        if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed) || !double.IsFinite(parsed)) {
+            return false;
+        }
+        value = parsed;
         return true;
     }
 

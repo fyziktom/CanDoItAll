@@ -5,6 +5,12 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class BrowserRuntimeLifecycleReceiptFacts
 {
+    internal const string ExecutionGuidance = """
+        Browser host lifecycle evidence:
+        After each successful host start or restart, call browser_navigate with the exact loopback URL returned by that start, then collect the required browser proof before stopping that host with its returned startup.json receipt. The latest successful start needs its own current-execution browser and cleanup receipts, even when a restart reuses the same URL or unchanged output. Earlier screenshots do not prove a restarted host.
+        Offline/cache tests may continue after stopping a host, but do not replace its online lifecycle proof. If an update check needs a restart, navigate to the returned URL again and collect fresh proof before cleanup. Do not restart merely to restate earlier evidence. Keep all owned hosts accounted for and stopped before completing the step.
+        """;
+
     internal sealed record BrowserRuntimeLifecycleToolNames(string RunToolName, string StopToolName);
 
     internal sealed record BrowserRuntimeLifecycleReceipt(

@@ -40,6 +40,7 @@ authoritative.
 - [Provider request history](provider-request-history.md)
 - [Memory providers](memory-providers/README.md)
 - [Shared UI component boundary](ui-shared-components/README.md)
+- [Collaboration UI boundary](architecture/collaboration-ui-boundary.md)
 - [UI support scope](ui-support-scope.md)
 
 Project-level navigation begins at [`src/README.md`](../src/README.md). Repository policy

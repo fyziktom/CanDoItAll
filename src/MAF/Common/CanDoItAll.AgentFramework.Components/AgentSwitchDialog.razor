@@ -1,5 +1,6 @@
-@inject DialogService DialogService
+@implements IDisposable
 @inject NotificationService NotificationService
+@{ var renderedGeneration = generation; }
 
 <div class="agent-switch-dialog" data-testid="agent-switch-dialog">
     <ConversationParticipantPicker Participants="@ProjectedAgents"
@@ -12,8 +13,8 @@
                                          Layout="@(ParticipantCardLayout.Compact | ParticipantCardLayout.Centered)"
                                          ShellTestId="agent-switch-card-shell"
                                          SelectTestId="agent-switch-card"
-                                         Selected="SelectAgentAsync"
-                                         FavoriteToggled="ToggleFavoriteAsync" />
+                                         Selected="@(key => SelectAgentAsync(key, renderedGeneration))"
+                                         FavoriteToggled="@(key => ToggleFavoriteAsync(key, renderedGeneration))" />
         </ParticipantTemplate>
     </ConversationParticipantPicker>
 </div>
@@ -34,6 +35,9 @@
     private IReadOnlyList<AgentDefinition> localAgents = [];
     private IReadOnlyList<AgentDefinition>? previousAgents;
     private Guid? favoriteBusyAgentId;
+    private long generation;
+    private bool disposed;
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
 
     [Parameter]
     public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
@@ -79,16 +83,17 @@
         }
 
         previousAgents = Agents;
+        generation++;
+        favoriteBusyAgentId = null;
         localAgents = Agents.ToList();
     }
 
-    private Task SelectAgentAsync(ConversationPresentationKey key)
-        => DialogService.CloseAsync(ResolveAgent(key).Id);
+    private Task SelectAgentAsync(ConversationPresentationKey key, long renderedGeneration)
+        => disposed || generation != renderedGeneration ? Task.CompletedTask
+            : DialogReference?.CloseAsync(ResolveAgent(key).Id) ?? Task.CompletedTask;
 
-    private async Task ToggleFavoriteAsync(ConversationPresentationKey key)
-    {
-        if (FavoriteToggled is null)
-        {
+    private async Task ToggleFavoriteAsync(ConversationPresentationKey key, long renderedGeneration) {
+        if (disposed || generation != renderedGeneration || favoriteBusyAgentId is not null || FavoriteToggled is not { } toggle) {
             return;
         }
 
@@ -96,20 +101,32 @@
         favoriteBusyAgentId = agent.Id;
         try
         {
-            var updatedAgent = await FavoriteToggled.Invoke(agent);
+            var updatedAgent = await toggle.Invoke(agent);
+            if (disposed || generation != renderedGeneration) {
+                return;
+            }
+            if (updatedAgent.Id != agent.Id) {
+                throw new InvalidOperationException("The favorite update returned a different agent identity.");
+            }
             localAgents = localAgents
                 .Select(item => item.Id == updatedAgent.Id ? updatedAgent : item)
                 .ToList();
         }
         catch (Exception)
         {
-            NotificationService.Error("Favorite update failed", "The favorite change could not be confirmed. Reload the agent list before trying again.");
+            if (!disposed && generation == renderedGeneration) {
+                NotificationService.Error("Favorite update failed", "The favorite change could not be confirmed. Reload the agent list before trying again.");
+            }
         }
         finally
         {
-            favoriteBusyAgentId = null;
+            if (generation == renderedGeneration) {
+                favoriteBusyAgentId = null;
+            }
         }
     }
+
+    public void Dispose() => disposed = true;
 
     private AgentDefinition ResolveAgent(ConversationPresentationKey key)
         => localAgents.SingleOrDefault(agent => AgentParticipantPresentationMapper.AgentKey(agent.Id) == key)

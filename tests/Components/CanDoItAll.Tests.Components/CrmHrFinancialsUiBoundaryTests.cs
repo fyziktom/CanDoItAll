@@ -33,7 +33,7 @@ public sealed class CrmHrFinancialsUiBoundaryTests
     {
         var surface = typeof(CrmHrFinancialsSurface);
         var properties = surface.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        Assert.Empty(properties.Where(property => property.GetCustomAttribute<InjectAttribute>() is not null));
+        Assert.DoesNotContain(properties, property => property.GetCustomAttribute<InjectAttribute>() is not null);
 
         var parameterAssemblies = properties
             .Where(property => property.GetCustomAttribute<ParameterAttribute>() is not null)

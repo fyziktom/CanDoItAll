@@ -1,0 +1,1801 @@
+{
+  "recordedUtc": "2026-10-22T23:17:42.461379+00:00",
+  "status": "Failed concurrent-progress qualification; correctness settlement and five fixture regressions pass",
+  "candidate": {
+    "baseCommit": "e0918e98a08d34279239207401af903c932a8995",
+    "configuration": "Release",
+    "outputs": [
+      {
+        "bytes": 1222656,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/bin/Release/net10.0/CanDoItAll.AgentFramework.Maf.dll",
+        "sha256": "8DF6D44F1EA96FDDB656E715B4F8D29075DFE52AA482CB0BDAB7F2BAF14A2F1B"
+      },
+      {
+        "bytes": 242156,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/bin/Release/net10.0/CanDoItAll.AgentFramework.Maf.pdb",
+        "sha256": "3B3FDB2EB0277621467CDD32AA63C474DFD98A3DD6E25BA578A50D6D537F1AD6"
+      },
+      {
+        "bytes": 2564096,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+        "sha256": "1FAEB31A3EF72BC87999573E6355389C566E16F61775A62628C527BD8B8EE8FA"
+      },
+      {
+        "bytes": 494976,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb",
+        "sha256": "504ADC13C5977B4912324101A5A2C74BB243C706E9066E4D8F820E72794E2387"
+      },
+      {
+        "bytes": 975872,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+        "sha256": "C73E42F861FD2C2BAA8AA1F01C17E8A0FA83C711B6660793926CE0E816B5F8E3"
+      },
+      {
+        "bytes": 180408,
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb",
+        "sha256": "14FEC948E755125F605AE46EFD6006AF7D729561E0286897D68B7386870F2AB6"
+      },
+      {
+        "bytes": 2409472,
+        "path": "src/Processes/CanDoItAll.Processes.Application/bin/Release/net10.0/CanDoItAll.Processes.Application.dll",
+        "sha256": "04AC124300881080ADBB1912444EABA57144C2448A559E8A4966248082DE559F"
+      },
+      {
+        "bytes": 689320,
+        "path": "src/Processes/CanDoItAll.Processes.Application/bin/Release/net10.0/CanDoItAll.Processes.Application.pdb",
+        "sha256": "E7832815D69129C0A3E790B62E7E8D12FAAE31B53C3C892C9B74CC7B65193EAB"
+      },
+      {
+        "bytes": 1281024,
+        "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+        "sha256": "46B4D8C4671614E41009FEFBDC410AE52CBA2D2447C22E40792B0A006C50C46E"
+      },
+      {
+        "bytes": 175820,
+        "path": "src/Processes/CanDoItAll.Processes.Persistence/bin/Release/net10.0/CanDoItAll.Processes.Persistence.pdb",
+        "sha256": "0BFB0F52F7BDAA8668FFD7349C9D236D823C2EF0302BAFF82ABC77C0487296DC"
+      },
+      {
+        "bytes": 6096384,
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/bin/Release/net10.0/CanDoItAll.Modules.Workbench.dll",
+        "sha256": "DF758E4E8E3407C601CD70E6A62410E6A73C593313A157344DF4E1FA2832ED80"
+      },
+      {
+        "bytes": 1112884,
+        "path": "src/Modules/CanDoItAll.Modules.Workbench/bin/Release/net10.0/CanDoItAll.Modules.Workbench.pdb",
+        "sha256": "D3254F3DF1810B8BA3A8C63DDD393CBEC219A088828554DED1BBB9281C9E030D"
+      },
+      {
+        "bytes": 3452416,
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+        "sha256": "5C4D42E23854A1432C9BBDC11AA519B50F86F9503BBB64F1DD54D1AAF34C77CE"
+      },
+      {
+        "bytes": 720540,
+        "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb",
+        "sha256": "61CC103B7906C3525BA6198F84C139C0AB7D9B3F9C3BF9AD2D1E5D69E1E021D7"
+      },
+      {
+        "bytes": 1959936,
+        "path": "src/Modules/CanDoItAll.Modules.Processes/bin/Release/net10.0/CanDoItAll.Modules.Processes.dll",
+        "sha256": "03FC47C44FA7BBDDD531EBA66B2D4E5B08EE969E9C17481603433E90E6DA0B3A"
+      },
+      {
+        "bytes": 418444,
+        "path": "src/Modules/CanDoItAll.Modules.Processes/bin/Release/net10.0/CanDoItAll.Modules.Processes.pdb",
+        "sha256": "43C22970F5E28EA64949BAA9AECC56999ABFF6CA4476A27B04476900475DCD03"
+      },
+      {
+        "bytes": 203776,
+        "path": "src/App/CanDoItAll.Composition/bin/Release/net10.0/CanDoItAll.Composition.dll",
+        "sha256": "E5D538A370B84A972AA4A4DC12F89071F33CD97045DC396C1E47D8133807950B"
+      },
+      {
+        "bytes": 70432,
+        "path": "src/App/CanDoItAll.Composition/bin/Release/net10.0/CanDoItAll.Composition.pdb",
+        "sha256": "0BD1C7648F775A7180835C66AFF87CA5CCE0CD0ECBB497B70C2D8388D7C0B2AB"
+      },
+      {
+        "bytes": 6496768,
+        "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+        "sha256": "D66D7FB55428B63A0114E672155FC0212578870EC41B0CF4DD68F1A15CEFDC26"
+      },
+      {
+        "bytes": 930316,
+        "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+        "sha256": "5F61B85982628BD1466FA5A02E931B6955F618D94A1EE32C12D316B55F56BB38"
+      },
+      {
+        "bytes": 22174720,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+        "sha256": "A3F9E7D9E08D59F66669EC6AB6708DAC7B342D63100A2769B2943404EA652CC0"
+      },
+      {
+        "bytes": 3284172,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+        "sha256": "CAEBBF9E894D0D88B42D22111A8333BCE9AED3D40094F45295AC3AF225E86377"
+      },
+      {
+        "bytes": 1346048,
+        "path": "src/Modules/CanDoItAll.Modules.Projects/bin/Release/net10.0/CanDoItAll.Modules.Projects.dll",
+        "sha256": "A226A58FB757D92C21AF91B918CBEE66DBDD5139ECEA4B2D5E904698517E7E9A"
+      },
+      {
+        "bytes": 271324,
+        "path": "src/Modules/CanDoItAll.Modules.Projects/bin/Release/net10.0/CanDoItAll.Modules.Projects.pdb",
+        "sha256": "A64AE623FF5970D5B23C519CD303A72546D1E24736F717B03A33B2FC229DD849"
+      },
+      {
+        "bytes": 1222656,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Maf.dll",
+        "sha256": "8DF6D44F1EA96FDDB656E715B4F8D29075DFE52AA482CB0BDAB7F2BAF14A2F1B"
+      },
+      {
+        "bytes": 2564096,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+        "sha256": "1FAEB31A3EF72BC87999573E6355389C566E16F61775A62628C527BD8B8EE8FA"
+      },
+      {
+        "bytes": 975872,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+        "sha256": "C73E42F861FD2C2BAA8AA1F01C17E8A0FA83C711B6660793926CE0E816B5F8E3"
+      },
+      {
+        "bytes": 2409472,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Processes.Application.dll",
+        "sha256": "04AC124300881080ADBB1912444EABA57144C2448A559E8A4966248082DE559F"
+      },
+      {
+        "bytes": 1281024,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Processes.Persistence.dll",
+        "sha256": "46B4D8C4671614E41009FEFBDC410AE52CBA2D2447C22E40792B0A006C50C46E"
+      },
+      {
+        "bytes": 6096384,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.Workbench.dll",
+        "sha256": "DF758E4E8E3407C601CD70E6A62410E6A73C593313A157344DF4E1FA2832ED80"
+      },
+      {
+        "bytes": 3452416,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+        "sha256": "5C4D42E23854A1432C9BBDC11AA519B50F86F9503BBB64F1DD54D1AAF34C77CE"
+      },
+      {
+        "bytes": 1959936,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.Processes.dll",
+        "sha256": "03FC47C44FA7BBDDD531EBA66B2D4E5B08EE969E9C17481603433E90E6DA0B3A"
+      },
+      {
+        "bytes": 203776,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Composition.dll",
+        "sha256": "E5D538A370B84A972AA4A4DC12F89071F33CD97045DC396C1E47D8133807950B"
+      },
+      {
+        "bytes": 6496768,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+        "sha256": "D66D7FB55428B63A0114E672155FC0212578870EC41B0CF4DD68F1A15CEFDC26"
+      },
+      {
+        "bytes": 1346048,
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.Projects.dll",
+        "sha256": "A226A58FB757D92C21AF91B918CBEE66DBDD5139ECEA4B2D5E904698517E7E9A"
+      }
+    ],
+    "sourcePins": [
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionCancellation.cs",
+        "bytes": 4754,
+        "sha256": "29D281396F83104C3E3CB53E06E3A21D5FDC642990027D6909A82E7784B4298C"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
+        "bytes": 184389,
+        "sha256": "AFF759E87B29C81B163C7F3D944A251CAA5960C98FAD3AB4AEA7D25ED4DD2A5A"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Helpers.cs",
+        "bytes": 58271,
+        "sha256": "F62A90B5781A51319CE45EC4EA9911AD67CC2DAB5938413EF0D1C07E4243BEB5"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentParentStopProtocol.cs",
+        "bytes": 3372,
+        "sha256": "59ACF4B62FE38DDE486AE085FD7B3B2E76EB63811F75BD420C2D7A3623561F01"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.cs",
+        "bytes": 58261,
+        "sha256": "AE92B72A8B984AA8DBFFDC3C3FBB1150435130D310E90984ED4CE4A6CD6CD359"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Maf/Runtime/Execution/MafAgentExecutionAdapter.cs",
+        "bytes": 14360,
+        "sha256": "C46F69E047B802256710394ACD7B1590E95BFE4081470CF938D33335993FB62B"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionIndex.cs",
+        "bytes": 9524,
+        "sha256": "63F112F3F2543DDAE70E2C0D5ED9FEA42E81B3E733E5A1419DC3AED171E422CE"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionRunPageReader.cs",
+        "bytes": 2660,
+        "sha256": "4D033153C3EC3A3ACE2F46308EB673A976DCF59328499238BE3ACC5E368E0A17"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+        "bytes": 59756,
+        "sha256": "EABD48B1AD95BA8505F0E9005C6B366CBEAF6BBBCA42C32B87BF1520DDDECB96"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+        "bytes": 148642,
+        "sha256": "F323FDB28794BB1BEEDF68F114910B7F59C10A332D69DE398D67CE3577EEFB0E"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+        "bytes": 25662,
+        "sha256": "9E3D93D21A459CB9034D435430B4AF98374625098DAA2A763DD331EACE5B664B"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+        "bytes": 11684,
+        "sha256": "7DCA200D60EF8D1CAED4D346A92B676ACF8DE337684F17028C47E32CB8445840"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspacePublicationScope.cs",
+        "bytes": 10137,
+        "sha256": "B35CDB8FE222A52062D40DC0FAFB668636FB4F8B68F9951C4A01F796E1F6A23E"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.AgentDeletion.cs",
+        "bytes": 19230,
+        "sha256": "5A93A467CBA81BC56942D72AD2A5EA5C69EE573C963FCFF9620688750D4A04E2"
+      },
+      {
+        "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+        "bytes": 122647,
+        "sha256": "06FF3025A5B1733E87A0EF185D0852ED89554DFF807F219320935F27A457F0AA"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.Processes/Properties/AssemblyInfo.cs",
+        "bytes": 291,
+        "sha256": "F7F7500400EF7E5EF5831130867948A2A923649F2D34E2699E60994FF294800D"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessCancellationRecoveryOptions.cs",
+        "bytes": 1084,
+        "sha256": "3C4A557F782333979420D38F0A72194937742554FF27D44FD4471915CD91C190"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessCancellationRecoveryWorker.cs",
+        "bytes": 4442,
+        "sha256": "BC4650784D151F15A2A1FAF7E471385F5DE539BA9BEB95E4921640B75AAFF058"
+      },
+      {
+        "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+        "bytes": 29457,
+        "sha256": "0B815FEEC93B16C2E66EE58C83216582B480C6A552632B04A751164E4E476212"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionReader.cs",
+        "bytes": 839,
+        "sha256": "4996849F0CABDA2CDC5C70EF4DDC9B567C780FEAF550286AC4D822908BF0BE12"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationDecisionRecoveryStep.cs",
+        "bytes": 14210,
+        "sha256": "A4331D2583FC78D4D4E2EABE72B0B018C987232E3481938B17704EBDCBC3D562"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceReader.cs",
+        "bytes": 262,
+        "sha256": "0013D30683A04B729BFA896C3E2A2361C121E36CC4A6FB999993DBF448A137D4"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationQuiescenceRecoveryStep.cs",
+        "bytes": 5451,
+        "sha256": "8DC0372319311062E14FE238D550C8988B64955B38BC401F149934928ED3B20C"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryContracts.cs",
+        "bytes": 7952,
+        "sha256": "A970CE70FAD7A173169711E48366B430F4CBE7CDA49030D1DAAD3F4732493035"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryCoordinator.cs",
+        "bytes": 7854,
+        "sha256": "6A927CC4CB8719EE50033C1046A59F634FD9152F1CFE83563300C1C37DFFBE1D"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryDispatcher.cs",
+        "bytes": 1041,
+        "sha256": "986BEA4B64A89F38F01385C4E9B7981B26FC7EBEC05610BF3E096116E1023ABD"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRecoveryIntent.cs",
+        "bytes": 3940,
+        "sha256": "B891255024E4B3E798F35DCB76D7E1E42062AEB743A2EB90EAB16BF6043466F4"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeReader.cs",
+        "bytes": 958,
+        "sha256": "775A6F1BA63D89ECA05D147B1BCFDCD8C810ED938B4ADAD8AB7FC9C20DE3788D"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeReceipt.cs",
+        "bytes": 1942,
+        "sha256": "6D5BDE7B0380EAD794735928DFFD513A6E4E92BD06549A45AC7AA59DB5D49215"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationRuntimeRecoveryStep.cs",
+        "bytes": 7254,
+        "sha256": "E47AB86DB0BE4141881DA1AE13AACC8E1043579F8D986205D13FC1DF0ED7717C"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Application/ProcessCancellationScopeRecoveryStep.cs",
+        "bytes": 8499,
+        "sha256": "E5CF8D80EB7810D8302F8BC592252A7032415E2425B6502C9428393C08E437C8"
+      },
+      {
+        "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessCancellationRecoveryQueue.cs",
+        "bytes": 10820,
+        "sha256": "45F2556EF3B3D4B52E6B6235FDBBB8AF0922D9493BFCD5E63147310FDB2FEBA7"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+        "bytes": 12508,
+        "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs",
+        "bytes": 12651,
+        "sha256": "87C1D90B054B61DAC93A2E40A205CCA7471091E0AF1EAC70DEE2EE309CE154B8"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexIntegrationTests.cs",
+        "bytes": 16750,
+        "sha256": "0A4D1FD0A9EA6DE5CE690D4EBAAFA2CDE5B41E0601DE6DDC3A1112CFF76026E2"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexReuseTests.cs",
+        "bytes": 12650,
+        "sha256": "30BE0CBA1CEB105F4D5475752308F118F509D4DE0A85FD4C141B6675A8B763CF"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessPageIntegrationTests.cs",
+        "bytes": 19692,
+        "sha256": "2797E1EE83DDFC5B94CF906F73147C659D8B0F8F7BD2CE906A46D40F97DC9DDF"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessQueryIntegrationTests.cs",
+        "bytes": 7921,
+        "sha256": "B801742D2A0651C6C3DC5D855E0AF38C9B016EC794360DB4812EEBD2338BBEE6"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePublicationRecoveryTests.cs",
+        "bytes": 27419,
+        "sha256": "D92FECB7160A640C9B091D44253C420B2C9618083EF498048D112EBBD0A612FA"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationCompletionIntegrationTests.cs",
+        "bytes": 6792,
+        "sha256": "D5B700A40F3155EE23FFB2C295108B44AEECC0DA3F120F3BA4581708779674E7"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationDecisionRecoveryTests.cs",
+        "bytes": 6859,
+        "sha256": "616F5A59D21B57A81CAA8209DABAC2E87D83286122140A3279AECA39585820D3"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationQuiescenceRecoveryTests.cs",
+        "bytes": 6671,
+        "sha256": "2202E5F578E04C9A84C17FAB9B6B92CECF6F67DDDE8BA2607BEAC43F0C066F7D"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryBacklogTests.cs",
+        "bytes": 8797,
+        "sha256": "145DF1E30CC11FD6BE3DBD19C1A594097D50DB88E80AF426A7E1099E44942DD0"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryContentionTests.cs",
+        "bytes": 15140,
+        "sha256": "28E85A61ADF43D876BCE64EBA7964E25CA6278A993D418C54B35AE81D6FAF84A"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryFixture.cs",
+        "bytes": 4149,
+        "sha256": "25A94F181501CCC5D5FE841BD4C6B57720358E26F8CC0A8E92DFA5BFC8F8687C"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRecoveryMigrationTests.cs",
+        "bytes": 14018,
+        "sha256": "7924D7F2BBD20A2F8503BEFC76B0C66B606B5E9813A169F7E7E336318EF53A64"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationRuntimeRecoveryTests.cs",
+        "bytes": 8302,
+        "sha256": "2CAF1BBAF7BD1E236C255772F2F4933A1DB8C0132B5F85D768007BE001058790"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCancellationScopeRecoveryTests.cs",
+        "bytes": 3759,
+        "sha256": "DBA063F3272814414B752FC1FD322657F6109A5C45E33CFA85A439595479535C"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessExecutionAuthorityPersistenceTests.cs",
+        "bytes": 26398,
+        "sha256": "D99BED89F6B86EC3F7189092414EEE3378B9F6B5835AE4E7E0BF45843F749CAE"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessPlanningReviewApiTests.cs",
+        "bytes": 20787,
+        "sha256": "A315BBA894AEB9E3523E8C3FB2F87F1C1F5CFB15DA2D7C1A76C3CC8F52C6281C"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRootCancellationFixture.cs",
+        "bytes": 4668,
+        "sha256": "E06EE6E7F2D114C7A0215E64909A340856EC2B6F476CB740A75DE67E75641B50"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessRootMaterialFixture.cs",
+        "bytes": 5730,
+        "sha256": "7DE58C420064C116039094F60139633F35AA1DFBD5D235107C83AEFA72A07685"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessStepMaterialFixture.cs",
+        "bytes": 4131,
+        "sha256": "3C786226EC1EC979045F7AD1B54B70C8C7DF2146B6A8906AD82B48A8AF47581A"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanAgentFixture.cs",
+        "bytes": 12418,
+        "sha256": "47316F73C9945B976AF25D0C92B2655D3F24599B736AD2E5D46D203C564C66A4"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanExecutionEntryTests.cs",
+        "bytes": 14221,
+        "sha256": "B0EFBABACADD0B85D1F1CDC447BB9BA80BB210DA19F8D38B512EDFCB4F1009EF"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+        "bytes": 15040,
+        "sha256": "9BF9899264D33BE8535A2478A788EDED4BA4398FE03C9409EB9D5FF1132ECD28"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewFixture.cs",
+        "bytes": 15979,
+        "sha256": "E8740F3B0F6DC9A136E2FFDB8AE2500BA57C9F1C424091B4C1862364966B16F2"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanScenarioClock.cs",
+        "bytes": 3715,
+        "sha256": "FB58B2C40B65BCD73319C79203D233A0F4CCBBA9A83E4B4A7E5FCE1851073383"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanScenarioClockTests.cs",
+        "bytes": 3118,
+        "sha256": "B99A6457E04B42D017DA2525899E03A76B86F8647110C1399EEB78CEF801934A"
+      },
+      {
+        "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+        "bytes": 2321,
+        "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationBarrierTests.cs",
+        "bytes": 4085,
+        "sha256": "E6F2E085649BECABF57F9C996567DD61BB41F767B37BDF0B294DF974923CAFF7"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationDecisionRecoveryStepTests.cs",
+        "bytes": 15451,
+        "sha256": "F125CAA711D9EF7618FF0670BEA6E9C309235F4C8CDECD507D43FDB5F932C214"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationQuiescenceRecoveryStepTests.cs",
+        "bytes": 11296,
+        "sha256": "E1A11950315A377FE17D4E2F00469CC732F12BA9914BFD084DE475AF0AA7BABF"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryContractTests.cs",
+        "bytes": 14563,
+        "sha256": "0BE6CD788BB8072C9A1D433EE2AA069EEEA2866B0D3336D0AD31496F1187C3A3"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRecoveryCoordinatorTests.cs",
+        "bytes": 19642,
+        "sha256": "4AA0444DFF3CA0D9F6C98DF3C935137BB157E044C823753E77E653901111A783"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationRuntimeRecoveryStepTests.cs",
+        "bytes": 15006,
+        "sha256": "896A4475B015C85717716F19A169773BA1A2399D35BFE5D9F9F6D5DA822728A8"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessCancellationScopeRecoveryStepTests.cs",
+        "bytes": 11754,
+        "sha256": "E4DBCF252401941CBDB9A3F24850E4E8BFB3792880172A7BC61F48FCBE5FAACB"
+      },
+      {
+        "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessSelectionRevisionTests.cs",
+        "bytes": 1427,
+        "sha256": "FB32650754291D9B156C8C2B646DF83C589549870A84783FD67AD8D7137C7454"
+      }
+    ],
+    "localLibraries": true
+  },
+  "candidateVerified": {
+    "outputsUnchanged": true,
+    "verifiedUtc": "2026-10-22T23:14:15.4577820+00:00",
+    "outputCount": 35,
+    "sourcePinsUnchanged": true
+  },
+  "sourceSnapshots": [
+    {
+      "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/ProcessCancellationRecoveryContentionTests.cs.txt",
+      "bytes": 15140,
+      "sha256": "28E85A61ADF43D876BCE64EBA7964E25CA6278A993D418C54B35AE81D6FAF84A"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/ProjectTaskPlanReviewFixture.cs.txt",
+      "bytes": 15979,
+      "sha256": "E8740F3B0F6DC9A136E2FFDB8AE2500BA57C9F1C424091B4C1862364966B16F2"
+    }
+  ],
+  "discovery": {
+    "lanes": [
+      {
+        "actualDiscovery": 6,
+        "sourceMethodsMatched": true,
+        "testNames": [
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 1)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 8)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 32)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 1)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 8)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 32)"
+        ],
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "sourceMethods": [
+          "Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children"
+        ],
+        "id": "Integration-ProcessCancellationRecoveryContentionTests",
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.",
+        "expectedDiscovery": 6
+      },
+      {
+        "actualDiscovery": 2,
+        "sourceMethodsMatched": true,
+        "testNames": [
+          "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: StepSnapshot)",
+          "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: RunSnapshot)"
+        ],
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "sourceMethods": [
+          "Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement"
+        ],
+        "id": "Integration-ProcessCancellationCompletionIntegrationTests",
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+        "expectedDiscovery": 2
+      },
+      {
+        "actualDiscovery": 3,
+        "sourceMethodsMatched": true,
+        "testNames": [
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Real_periodic_timer_coalesces_elapsed_ticks_and_releases_its_waiter_on_disposal",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Periodic_observation_preserves_one_shot_work_deadlines_and_change_semantics",
+          "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Invalid_period_or_deadline_cannot_leave_an_active_timer"
+        ],
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "sourceMethods": [
+          "Real_periodic_timer_coalesces_elapsed_ticks_and_releases_its_waiter_on_disposal",
+          "Periodic_observation_preserves_one_shot_work_deadlines_and_change_semantics",
+          "Invalid_period_or_deadline_cannot_leave_an_active_timer"
+        ],
+        "id": "Integration-ProjectTaskPlanScenarioClockTests",
+        "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.",
+        "expectedDiscovery": 3
+      }
+    ],
+    "expectedTotal": 11.0,
+    "actualTotal": 11.0
+  },
+  "results": [
+    {
+      "trx": {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/Integration-ProcessCancellationCompletionIntegrationTests.trx",
+        "bytes": 5082,
+        "sha256": "009E55F2970304C207F3F3DD72E8180A1B4DE46F680E6D56F8787A62A17AA208"
+      },
+      "counters": {
+        "total": "2",
+        "executed": "2",
+        "passed": "2",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: StepSnapshot)",
+          "outcome": "Passed",
+          "duration": "00:00:27.2115695",
+          "failure": null,
+          "measurements": []
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.Registered_stages_stop_the_real_child_settle_original_work_and_close_root_after_lost_acknowledgement(mode: RunSnapshot)",
+          "outcome": "Passed",
+          "duration": "00:00:15.8430442",
+          "failure": null,
+          "measurements": []
+        }
+      ]
+    },
+    {
+      "trx": {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/Integration-ProcessCancellationRecoveryContentionTests.trx",
+        "bytes": 46893,
+        "sha256": "BC64792C9FB28C538AF425150DC36063691FDE856830747D55ADC6BEFDA42BCE"
+      },
+      "counters": {
+        "total": "6",
+        "executed": "6",
+        "passed": "1",
+        "failed": "5",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 8)",
+          "outcome": "Failed",
+          "duration": "00:01:35.0065231",
+          "failure": "The healthy child did not durably cancel before the competing finite writer batch ended.",
+          "measurements": [
+            {
+              "mode": 0,
+              "writers": 8,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": false,
+              "finishedAtSiblingStop": 0,
+              "siblingStopMilliseconds": null,
+              "elapsedMilliseconds": 17669.5431,
+              "allocatedBytes": 4719007024,
+              "writeMilliseconds": {
+                "p50": 854.0322,
+                "p95": 4464.1628,
+                "p99": 5830.6867
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 4,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 5,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 32)",
+          "outcome": "Failed",
+          "duration": "00:01:55.0375158",
+          "failure": "The healthy child did not durably cancel before the competing finite writer batch ended.",
+          "measurements": [
+            {
+              "mode": 0,
+              "writers": 32,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": false,
+              "finishedAtSiblingStop": 0,
+              "siblingStopMilliseconds": null,
+              "elapsedMilliseconds": 21563.7786,
+              "allocatedBytes": 5152411680,
+              "writeMilliseconds": {
+                "p50": 4818.1767,
+                "p95": 16611.7038,
+                "p99": 19079.2349
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 5,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 5,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 1)",
+          "outcome": "Passed",
+          "duration": "00:01:33.2939572",
+          "failure": null,
+          "measurements": [
+            {
+              "mode": 1,
+              "writers": 1,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": true,
+              "finishedAtSiblingStop": 83,
+              "siblingStopMilliseconds": 14972.6532,
+              "elapsedMilliseconds": 17922.3607,
+              "allocatedBytes": 4583259872,
+              "writeMilliseconds": {
+                "p50": 165.0228,
+                "p95": 248.8801,
+                "p99": 336.0629
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 4,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 3,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: RunSnapshot, writers: 1)",
+          "outcome": "Failed",
+          "duration": "00:01:35.6064247",
+          "failure": "The healthy child did not durably cancel before the competing finite writer batch ended.",
+          "measurements": [
+            {
+              "mode": 0,
+              "writers": 1,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": false,
+              "finishedAtSiblingStop": 0,
+              "siblingStopMilliseconds": null,
+              "elapsedMilliseconds": 17400.4972,
+              "allocatedBytes": 4517223632,
+              "writeMilliseconds": {
+                "p50": 164.8382,
+                "p95": 221.7645,
+                "p99": 235.7266
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 4,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 5,
+                  "ProgressRevision": 15,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 8)",
+          "outcome": "Failed",
+          "duration": "00:01:33.6416007",
+          "failure": "The healthy child did not durably cancel before the competing finite writer batch ended.",
+          "measurements": [
+            {
+              "mode": 1,
+              "writers": 8,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": false,
+              "finishedAtSiblingStop": 0,
+              "siblingStopMilliseconds": null,
+              "elapsedMilliseconds": 17270.005,
+              "allocatedBytes": 4653869536,
+              "writeMilliseconds": {
+                "p50": 473.2379,
+                "p95": 4384.749,
+                "p99": 5865.5391
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 4,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 3,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.Native_worker_stops_a_sibling_under_workspace_load_and_settles_both_original_children(mode: StepSnapshot, writers: 32)",
+          "outcome": "Failed",
+          "duration": "00:01:35.8864237",
+          "failure": "The healthy child did not durably cancel before the competing finite writer batch ended.",
+          "measurements": [
+            {
+              "mode": 1,
+              "writers": 32,
+              "historyCount": 2000,
+              "attemptedWrites": 100,
+              "acceptedWrites": 100,
+              "conflictingWrites": 0,
+              "siblingObservedDuringLoad": false,
+              "finishedAtSiblingStop": 0,
+              "siblingStopMilliseconds": null,
+              "elapsedMilliseconds": 20659.6308,
+              "allocatedBytes": 5165486848,
+              "writeMilliseconds": {
+                "p50": 4630.6752,
+                "p95": 17006.8722,
+                "p99": 19575.1527
+              },
+              "conflictMilliseconds": {
+                "p50": null,
+                "p95": null,
+                "p99": null
+              },
+              "recovery": [
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 4,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                },
+                {
+                  "Completed": true,
+                  "Pending": 0,
+                  "LeaseGeneration": 3,
+                  "ProgressRevision": 11,
+                  "PositionJson": "{\"version\":1,\"stage\":4}"
+                }
+              ],
+              "scope": "Real children and registered worker; default two-second slice; five-second test lease; finite single-attempt load; cache uncontrolled."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trx": {
+        "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/Integration-ProjectTaskPlanScenarioClockTests.trx",
+        "bytes": 6291,
+        "sha256": "43B1A1ACC97124E78251DF8C101E16F79E360FA4BBF8A74C70D367D167751266"
+      },
+      "counters": {
+        "total": "3",
+        "executed": "3",
+        "passed": "3",
+        "failed": "0",
+        "error": "0",
+        "timeout": "0",
+        "aborted": "0",
+        "inconclusive": "0",
+        "passedButRunAborted": "0",
+        "notRunnable": "0",
+        "notExecuted": "0",
+        "disconnected": "0",
+        "warning": "0",
+        "completed": "0",
+        "inProgress": "0",
+        "pending": "0"
+      },
+      "cases": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Periodic_observation_preserves_one_shot_work_deadlines_and_change_semantics",
+          "outcome": "Passed",
+          "duration": "00:00:00.0101852",
+          "failure": null,
+          "measurements": []
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Real_periodic_timer_coalesces_elapsed_ticks_and_releases_its_waiter_on_disposal",
+          "outcome": "Passed",
+          "duration": "00:00:00.0008592",
+          "failure": null,
+          "measurements": []
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.Invalid_period_or_deadline_cannot_leave_an_active_timer",
+          "outcome": "Passed",
+          "duration": "00:00:00.0005752",
+          "failure": null,
+          "measurements": []
+        }
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-Integration-1",
+        "Arguments": [
+          "build",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T23:00:52.0361366+00:00",
+        "State": "Completed",
+        "RunnerPid": 22384,
+        "ChildPid": 61416,
+        "ChildStartedUtc": "2026-10-22T23:00:52.0740791Z",
+        "ExitCode": 1,
+        "Seconds": 20.2737902,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 41158,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/build-Integration-1.stdout.log",
+          "bytes": 41158,
+          "sha256": "F8DB871B7BC39CF4AB2CCD30A198C60896E012934BC277D59E9A31BA1C09E648"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/build-Integration-1.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "build-Integration-2",
+        "Arguments": [
+          "build",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-restore",
+          "--no-dependencies",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1"
+        ],
+        "StartedUtc": "2026-10-22T23:01:35.2581567+00:00",
+        "State": "Completed",
+        "RunnerPid": 57224,
+        "ChildPid": 28332,
+        "ChildStartedUtc": "2026-10-22T23:01:35.2979110Z",
+        "ExitCode": 0,
+        "Seconds": 22.8071871,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 161842,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/build-Integration-2.stdout.log",
+          "bytes": 161842,
+          "sha256": "BBE8DE5FF0816404DEC3949C8122E73E19D2342C8FBB24576973C420FCA91B8D"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/build-Integration-2.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationCompletionIntegrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T23:02:22.0664638+00:00",
+        "State": "Completed",
+        "RunnerPid": 50568,
+        "ChildPid": 28252,
+        "ChildStartedUtc": "2026-10-22T23:02:22.0751508Z",
+        "ExitCode": 0,
+        "Seconds": 3.6486645,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 617,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProcessCancellationCompletionIntegrationTests.stdout.log",
+          "bytes": 617,
+          "sha256": "881D1CD525BAED98F678B0EF30444F95FE8561DEAF7E51137872E1625E9E9F2D"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProcessCancellationCompletionIntegrationTests.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProcessCancellationRecoveryContentionTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T23:02:18.1588446+00:00",
+        "State": "Completed",
+        "RunnerPid": 50568,
+        "ChildPid": 26312,
+        "ChildStartedUtc": "2026-10-22T23:02:18.2000143Z",
+        "ExitCode": 0,
+        "Seconds": 3.8173621,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1385,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProcessCancellationRecoveryContentionTests.stdout.log",
+          "bytes": 1385,
+          "sha256": "1F34B18ED5E242B12A97830122D0175944993F9A83B46744A92E8EF1CA3B8341"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProcessCancellationRecoveryContentionTests.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "discover-readonly-1-Integration-ProjectTaskPlanScenarioClockTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.",
+          "--list-tests"
+        ],
+        "StartedUtc": "2026-10-22T23:02:25.7372431+00:00",
+        "State": "Completed",
+        "RunnerPid": 50568,
+        "ChildPid": 39532,
+        "ChildStartedUtc": "2026-10-22T23:02:25.7667669Z",
+        "ExitCode": 0,
+        "Seconds": 3.6393569,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 632,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProjectTaskPlanScenarioClockTests.stdout.log",
+          "bytes": 632,
+          "sha256": "EB4BCF5DC9F490E8BD9BE8B5D646BDA099882952F3CD4ECE110888A2AB238A11"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/discover-readonly-1-Integration-ProjectTaskPlanScenarioClockTests.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationCompletionIntegrationTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationCompletionIntegrationTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationCompletionIntegrationTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-contention"
+        ],
+        "StartedUtc": "2026-10-22T23:12:48.3092416+00:00",
+        "State": "Completed",
+        "RunnerPid": 44300,
+        "ChildPid": 49376,
+        "ChildStartedUtc": "2026-10-22T23:12:48.3326517Z",
+        "ExitCode": 0,
+        "Seconds": 47.5165938,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1348,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProcessCancellationCompletionIntegrationTests.stdout.log",
+          "bytes": 1348,
+          "sha256": "6FEBADF815F97AA72058C209F243F053D12246F2749E997E3A70489DA5F31EBF"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProcessCancellationCompletionIntegrationTests.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProcessCancellationRecoveryContentionTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProcessCancellationRecoveryContentionTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProcessCancellationRecoveryContentionTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-contention"
+        ],
+        "StartedUtc": "2026-10-22T23:02:55.9846060+00:00",
+        "State": "Completed",
+        "RunnerPid": 44300,
+        "ChildPid": 51356,
+        "ChildStartedUtc": "2026-10-22T23:02:56.0250111Z",
+        "ExitCode": 1,
+        "Seconds": 592.2437786,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 33785,
+        "StderrRetainedBytes": 1165,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProcessCancellationRecoveryContentionTests.stdout.log",
+          "bytes": 33785,
+          "sha256": "78D5B472F52B67E1D4370B894B037BBD02D411B2D7924535DA1456CB3B8BA655"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProcessCancellationRecoveryContentionTests.stderr.log",
+          "bytes": 1165,
+          "sha256": "3A383D20B333CE51F8C35A1A9BD0A67516C759D4813FD4912C108CCB72A75B37"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 900,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "execute-Integration-ProjectTaskPlanScenarioClockTests",
+        "Arguments": [
+          "test",
+          "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "--configuration",
+          "Release",
+          "--no-build",
+          "--no-restore",
+          "-p:UseLocalCanDoItAllLibraries=true",
+          "/m:1",
+          "--filter",
+          "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectTaskPlanScenarioClockTests.",
+          "--logger",
+          "trx;LogFileName=Integration-ProjectTaskPlanScenarioClockTests.trx",
+          "--logger",
+          "console;verbosity=normal",
+          "--results-directory",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-contention"
+        ],
+        "StartedUtc": "2026-10-22T23:13:35.8601514+00:00",
+        "State": "Completed",
+        "RunnerPid": 44300,
+        "ChildPid": 58220,
+        "ChildStartedUtc": "2026-10-22T23:13:35.8775088Z",
+        "ExitCode": 0,
+        "Seconds": 4.6951709,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 1372,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProjectTaskPlanScenarioClockTests.stdout.log",
+          "bytes": 1372,
+          "sha256": "0007698876389C482CD5BC27D1F9E0577D4B611957975E03B942D2BD2B79D201"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/execute-Integration-ProjectTaskPlanScenarioClockTests.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    },
+    {
+      "record": {
+        "DeadlineSeconds": 3660,
+        "ResourceClosure": "ParentReconciliationRequired",
+        "Name": "observer-product-planning-v2-1",
+        "Arguments": [
+          "-NoProfile",
+          "-File",
+          "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-recovery-contention\\Observe-BrowserV2.ps1",
+          "-DeadlineSeconds",
+          "3600"
+        ],
+        "StartedUtc": "2026-10-22T23:02:38.3462027+00:00",
+        "State": "Completed",
+        "RunnerPid": 57780,
+        "ChildPid": 48420,
+        "ChildStartedUtc": "2026-10-22T23:02:38.3855879Z",
+        "ExitCode": 0,
+        "Seconds": 663.9045286,
+        "DeadlineExceeded": false,
+        "OutputPumpFailures": [],
+        "CleanupFailures": [],
+        "DeadlineFailureType": null,
+        "StdoutRetainedBytes": 55,
+        "StderrRetainedBytes": 0,
+        "StdoutDiscardedBytes": 0,
+        "StderrDiscardedBytes": 0
+      },
+      "logs": [
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/observer-product-planning-v2-1.stdout.log",
+          "bytes": 55,
+          "sha256": "0043E317EA8C27B4685D10DDD08A0C6E0BFCFAE25EB2AC5068AA9DEEFC2A4527"
+        },
+        {
+          "path": ".artifacts/concurrent-mutations/validation/c4-recovery-contention/observer-product-planning-v2-1.stderr.log",
+          "bytes": 0,
+          "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+        }
+      ]
+    }
+  ],
+  "resourceReconciliation": {
+    "postgres": [
+      "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+      "cditall_primary_40a332c695a94161a74b78718c28b907|0",
+      "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+      "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+      "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+      "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+      "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1|0",
+      "postgres|1"
+    ],
+    "previousHttpBlockedCleanup": {
+      "state": "BlockedByAutomaticApprovalReview",
+      "database": "cditall_primary_40a332c695a94161a74b78718c28b907",
+      "reason": "Observed API-test host finalizer crash; exact original run metadata binds this fixture directory to its new primary database. All observed processes exited.",
+      "activeConnections": 0,
+      "recordedUtc": "2026-10-21T13:19:09.6396158-04:00",
+      "sourceEvidence": [
+        {
+          "sha256": "3D27E32BCE667F2802FF368DE5BE67ED72016BD091F6C7CF21223E5F46FA8EF0",
+          "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/6f716289a47642e590153bef907eadc2/run.json"
+        },
+        {
+          "sha256": "8113A3D3E76338D0E0E3F3C70AA78A4C5FD5C5FF6673BC60A866096AA30C9FE4",
+          "path": "profiles/primary/workspace/data/scopes/organization/66cc772888bff51801bd1b153bb3fcbc/execution/runs/a46b7f22c3468762959f3308ae040e76/run.json"
+        }
+      ],
+      "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+      "root": "C:\\Users\\lucys\\AppData\\Local\\Temp\\candoitall-api-tests\\069475322dcc45a2816c596f2d8beb24",
+      "rejection": "The combined exact DROP DATABASE and Remove-Item command was rejected before execution: blocked by policy. Neither action executed; no alternative route will be attempted."
+    },
+    "historicalCleanupDenials": "Earlier denials remain. Automatic approval review additionally rejected c4-process-owner-outcome-verified and c4-process-owner-outcome-final cleanup with blocked by policy. Both remain; no denied resource was retried.",
+    "inheritedBlockedCleanup": {
+      "requiredAction": "Manual cleanup or an explicit approval-system change is required for these exact resources. They remain excluded from subsequent cleanup attempts.",
+      "journalSha256": "8A8165E2B2250EED621740669396B6870172ABF8D4E10CEB7859BBAB7CCCFD6F",
+      "reason": "Automatic approval review rejected the combined exact test database and temporary-directory removal with blocked by policy before execution. No deletion was attempted through another route.",
+      "source": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanReviewCompletionTests.cs:159",
+      "recordedUtc": "2026-10-21T08:05:31.9832225-04:00",
+      "evidence": "The sole new isolated database has the declared reviewed-completion profile prefix and is named inside this exact pending-run journal. The test command and its observed child processes have exited. The latest database observation has zero active connections.",
+      "state": "CleanupRejected",
+      "test": "ProjectTaskPlanReviewCompletionTests.Lost_commit_acknowledgement_replays_after_full_host_restart_without_another_outcome_read",
+      "containerId": "306f31947bed401ec0cd098e421af2aca31a88033f90df97840e33b632ed14f2",
+      "path": "C:/Users/lucys/AppData/Local/Temp/process-reviewed-completion/6ea9ebeae3b74434ab0dfcda9483bd27",
+      "database": "cditall_reviewed_completion_f781aff6e4c54a4697b39dde1c4016a1"
+    },
+    "databaseNameDelta": [],
+    "temporaryDeltasPreservedWithoutOwnership": [],
+    "recordedUtc": "2026-10-22T23:14:16.1576810+00:00",
+    "ownedValidationDirectory": "Retained for producer integration: small reviewed logs, source/runtime manifests and shared validation helpers; no new compiled outputs or host.",
+    "remainingObservedProcesses": []
+  },
+  "observationCoverage": {
+    "commands": [
+      {
+        "startedUtc": "2026-10-22T19:12:48.3092416-04:00",
+        "endedUtc": "2026-10-22T19:13:35.8258354-04:00",
+        "command": "execute-Integration-ProcessCancellationCompletionIntegrationTests",
+        "covered": true
+      },
+      {
+        "startedUtc": "2026-10-22T19:02:55.9846060-04:00",
+        "endedUtc": "2026-10-22T19:12:48.2283846-04:00",
+        "command": "execute-Integration-ProcessCancellationRecoveryContentionTests",
+        "covered": true
+      },
+      {
+        "startedUtc": "2026-10-22T19:13:35.8601514-04:00",
+        "endedUtc": "2026-10-22T19:13:40.5553222-04:00",
+        "command": "execute-Integration-ProjectTaskPlanScenarioClockTests",
+        "covered": true
+      }
+    ],
+    "observerEndedUtc": "2026-10-22T19:13:41.9795708-04:00",
+    "observerStartedUtc": "2026-10-22T19:02:39.3548186-04:00",
+    "allCovered": true
+  },
+  "compatibilityCleanupFollowup": {
+    "cleanup-approved-retry-outcome.json": {
+      "recordedUtc": "2026-10-22T22:57:52.167735+00:00",
+      "userAuthorization": "Retry these exact targets separately",
+      "targets": [
+        {
+          "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-cost-baseline\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessIndexHistoricalBinaryHandoffProbe.cs",
+          "exists": false
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessIndexHistoricalBinaryHandoffProbe.cs",
+          "exists": false
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-index-legacy-handoff\\JournalPersisted",
+          "exists": true
+        },
+        {
+          "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-index-legacy-handoff\\ExecutionIndexPersisted",
+          "exists": true
+        }
+      ],
+      "sourceRemovalsConfirmed": true,
+      "blockedByAutomaticApproval": [
+        "JournalPersisted",
+        "ExecutionIndexPersisted",
+        "C:/cm-cost"
+      ],
+      "reason": "blocked by policy",
+      "archiveDeferredUntilAliasRemoved": true
+    },
+    "output-restore-verification.json": {
+      "verifiedUtc": "2026-10-22T22:57:52.091309+00:00",
+      "head": "e0918e98a08d34279239207401af903c932a8995",
+      "previousIdentityCommit": "37688bb050478ce2e427bb77f9fa242ce73a1f5e",
+      "temporaryProbeSourceAbsent": true,
+      "productionAndCopiedOutputsUnchanged": true,
+      "rebuiltIntegrationIdentityChanged": [
+        "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+        "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb"
+      ],
+      "checks": [
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionIndex.cs",
+          "sha256": "63F112F3F2543DDAE70E2C0D5ED9FEA42E81B3E733E5A1419DC3AED171E422CE",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileProcessExecutionRunPageReader.cs",
+          "sha256": "4D033153C3EC3A3ACE2F46308EB673A976DCF59328499238BE3ACC5E368E0A17",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceChatProjectionStore.cs",
+          "sha256": "EABD48B1AD95BA8505F0E9005C6B366CBEAF6BBBCA42C32B87BF1520DDDECB96",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+          "sha256": "F323FDB28794BB1BEEDF68F114910B7F59C10A332D69DE398D67CE3577EEFB0E",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+          "sha256": "9E3D93D21A459CB9034D435430B4AF98374625098DAA2A763DD331EACE5B664B",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceMutationWitness.cs",
+          "sha256": "7DCA200D60EF8D1CAED4D346A92B676ACF8DE337684F17028C47E32CB8445840",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspacePublicationScope.cs",
+          "sha256": "B35CDB8FE222A52062D40DC0FAFB668636FB4F8B68F9951C4A01F796E1F6A23E",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.AgentDeletion.cs",
+          "sha256": "5A93A467CBA81BC56942D72AD2A5EA5C69EE573C963FCFF9620688750D4A04E2",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+          "sha256": "06FF3025A5B1733E87A0EF185D0852ED89554DFF807F219320935F27A457F0AA",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+          "sha256": "81DB10A4BA3DBE6F6407ECEFF25E7317D000B0129381E2BD365F2DB918448248",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ApiTestHost.cs",
+          "sha256": "87C1D90B054B61DAC93A2E40A205CCA7471091E0AF1EAC70DEE2EE309CE154B8",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexIntegrationTests.cs",
+          "sha256": "0A4D1FD0A9EA6DE5CE690D4EBAAFA2CDE5B41E0601DE6DDC3A1112CFF76026E2",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessIndexReuseTests.cs",
+          "sha256": "30BE0CBA1CEB105F4D5475752308F118F509D4DE0A85FD4C141B6675A8B763CF",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessPageIntegrationTests.cs",
+          "sha256": "2797E1EE83DDFC5B94CF906F73147C659D8B0F8F7BD2CE906A46D40F97DC9DDF",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceProcessQueryIntegrationTests.cs",
+          "sha256": "B801742D2A0651C6C3DC5D855E0AF38C9B016EC794360DB4812EEBD2338BBEE6",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePublicationRecoveryTests.cs",
+          "sha256": "D92FECB7160A640C9B091D44253C420B2C9618083EF498048D112EBBD0A612FA",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessPlanningReviewApiTests.cs",
+          "sha256": "A315BBA894AEB9E3523E8C3FB2F87F1C1F5CFB15DA2D7C1A76C3CC8F52C6281C",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/TestApplication.cs",
+          "sha256": "817AA75DEDD2564AD55158B6EAE35EDEDE454DC0B7D7AAB7D845DC63737536D3",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ProcessSelectionRevisionTests.cs",
+          "sha256": "FB32650754291D9B156C8C2B646DF83C589549870A84783FD67AD8D7137C7454",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+          "sha256": "C73E42F861FD2C2BAA8AA1F01C17E8A0FA83C711B6660793926CE0E816B5F8E3",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.pdb",
+          "sha256": "14FEC948E755125F605AE46EFD6006AF7D729561E0286897D68B7386870F2AB6",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+          "sha256": "1FAEB31A3EF72BC87999573E6355389C566E16F61775A62628C527BD8B8EE8FA",
+          "matches": true
+        },
+        {
+          "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.pdb",
+          "sha256": "504ADC13C5977B4912324101A5A2C74BB243C706E9066E4D8F820E72794E2387",
+          "matches": true
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+          "sha256": "5C4D42E23854A1432C9BBDC11AA519B50F86F9503BBB64F1DD54D1AAF34C77CE",
+          "matches": true
+        },
+        {
+          "path": "src/Modules/CanDoItAll.Modules.AgentFramework/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.pdb",
+          "sha256": "61CC103B7906C3525BA6198F84C139C0AB7D9B3F9C3BF9AD2D1E5D69E1E021D7",
+          "matches": true
+        },
+        {
+          "path": "src/App/CanDoItAll.Composition/bin/Release/net10.0/CanDoItAll.Composition.dll",
+          "sha256": "E5D538A370B84A972AA4A4DC12F89071F33CD97045DC396C1E47D8133807950B",
+          "matches": true
+        },
+        {
+          "path": "src/App/CanDoItAll.Composition/bin/Release/net10.0/CanDoItAll.Composition.pdb",
+          "sha256": "0BD1C7648F775A7180835C66AFF87CA5CCE0CD0ECBB497B70C2D8388D7C0B2AB",
+          "matches": true
+        },
+        {
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "sha256": "D66D7FB55428B63A0114E672155FC0212578870EC41B0CF4DD68F1A15CEFDC26",
+          "matches": true
+        },
+        {
+          "path": "src/App/CanDoItAll.Web/bin/Release/net10.0/CanDoItAll.Web.pdb",
+          "sha256": "5F61B85982628BD1466FA5A02E931B6955F618D94A1EE32C12D316B55F56BB38",
+          "matches": true
+        },
+        {
+          "path": "tests/Support/CanDoItAll.Tests.Support/bin/Release/net10.0/CanDoItAll.Tests.Support.dll",
+          "sha256": "24199EFAD6BC4A2A15069E8388B0348CE6D8D2E4EC0792D6A45EC0F64EA4F0B2",
+          "matches": true
+        },
+        {
+          "path": "tests/Support/CanDoItAll.Tests.Support/bin/Release/net10.0/CanDoItAll.Tests.Support.pdb",
+          "sha256": "BFE806E0A24AB5DEA0F5564699BA4BD15AB7AAE0F5526D15ACAFED349947D4D6",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Tests.Unit.dll",
+          "sha256": "7E2CC9EC01B7A8D1CB69A52CDBE2324E178DB1FE3E1F7DB70176AF27C5A39652",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Tests.Unit.pdb",
+          "sha256": "A876E5164BCF420637E2DDA0D06657B6CA943D537E0F4BA6729BC023FC872548",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+          "sha256": "E64286337344839E955B12298C578D3C57EA0BBA288810F5EFC0D4D0D98CF014",
+          "matches": false
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+          "sha256": "0DB613BFEB4DDC8BA7EDD902EFED05A951AFAB4E2D53550036C5D8C81FDDC075",
+          "matches": false
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+          "sha256": "C73E42F861FD2C2BAA8AA1F01C17E8A0FA83C711B6660793926CE0E816B5F8E3",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+          "sha256": "1FAEB31A3EF72BC87999573E6355389C566E16F61775A62628C527BD8B8EE8FA",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+          "sha256": "5C4D42E23854A1432C9BBDC11AA519B50F86F9503BBB64F1DD54D1AAF34C77CE",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Composition.dll",
+          "sha256": "E5D538A370B84A972AA4A4DC12F89071F33CD97045DC396C1E47D8133807950B",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "sha256": "D66D7FB55428B63A0114E672155FC0212578870EC41B0CF4DD68F1A15CEFDC26",
+          "matches": true
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/bin/Release/net10.0/CanDoItAll.Tests.Support.dll",
+          "sha256": "24199EFAD6BC4A2A15069E8388B0348CE6D8D2E4EC0792D6A45EC0F64EA4F0B2",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Persistence.dll",
+          "sha256": "C73E42F861FD2C2BAA8AA1F01C17E8A0FA83C711B6660793926CE0E816B5F8E3",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.AgentFramework.Core.dll",
+          "sha256": "1FAEB31A3EF72BC87999573E6355389C566E16F61775A62628C527BD8B8EE8FA",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Modules.AgentFramework.dll",
+          "sha256": "5C4D42E23854A1432C9BBDC11AA519B50F86F9503BBB64F1DD54D1AAF34C77CE",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Composition.dll",
+          "sha256": "E5D538A370B84A972AA4A4DC12F89071F33CD97045DC396C1E47D8133807950B",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Web.dll",
+          "sha256": "D66D7FB55428B63A0114E672155FC0212578870EC41B0CF4DD68F1A15CEFDC26",
+          "matches": true
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Support.dll",
+          "sha256": "24199EFAD6BC4A2A15069E8388B0348CE6D8D2E4EC0792D6A45EC0F64EA4F0B2",
+          "matches": true
+        }
+      ],
+      "buildLog": "build-after-probe-removal.log"
+    }
+  },
+  "limitations": [
+    "Finite batch and one native host, not a sustained-capacity or cross-host guarantee.",
+    "All six final settlements passed; five failed the separate before-batch-end cancellation requirement.",
+    "Initial build failed for a missing test namespace import; corrected test build passed; no production repair yet.",
+    "Automatic approval review still blocks the two handoff directories and baseline junction."
+  ]
+}

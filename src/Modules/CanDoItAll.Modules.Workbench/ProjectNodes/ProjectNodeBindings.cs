@@ -267,6 +267,97 @@ internal static class ProjectNodeBindingStorage
     private static readonly IReadOnlySet<string> LegacyTopLevelMetadataPropertyNames =
         new HashSet<string>(["markerSet"], StringComparer.OrdinalIgnoreCase);
 
+    internal sealed class PreparedPlainTaskBinding {
+        private readonly ProjectObjectRecord node;
+        private readonly (Guid Id, Guid Project, string Title, string Notes, int Priority, double X, double Y,
+            DateTimeOffset Created, DateTimeOffset Updated) original;
+        private bool staged;
+
+        internal PreparedPlainTaskBinding(ProjectObjectRecord node, ProjectNodeBindingPersistencePlan plan) {
+            this.node = node;
+            original = Snapshot(node);
+            Plan = plan;
+        }
+
+        internal ProjectNodeBindingPersistencePlan Plan { get; }
+
+        internal void RequireUnchanged(ProjectObjectRecord candidate) {
+            if (staged || !ReferenceEquals(node, candidate) || original != Snapshot(candidate)) {
+                throw new InvalidOperationException("A plain-task binding requires its unchanged prepared row exactly once.");
+            }
+            var current = PrepareNewPlainTaskBinding(candidate).Plan;
+            if (current.SanitizedMetadataJson != Plan.SanitizedMetadataJson || current.Binding != Plan.Binding ||
+                    Plan.References.Count != 0) {
+                throw new InvalidOperationException("The prepared plain-task binding changed before staging.");
+            }
+        }
+
+        internal void MarkStaged() => staged = true;
+
+        private static (Guid, Guid, string, string, int, double, double, DateTimeOffset, DateTimeOffset)
+            Snapshot(ProjectObjectRecord row) => (row.Id, row.ProjectId, row.Title, row.Notes, row.Priority,
+                row.PositionX, row.PositionY, row.CreatedAtUtc, row.UpdatedAtUtc);
+    }
+
+    internal static PreparedPlainTaskBinding PrepareNewPlainTaskBinding(ProjectObjectRecord node) {
+        ArgumentNullException.ThrowIfNull(node);
+        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress("Draft");
+        if (node.Id == Guid.Empty || node.ProjectId == Guid.Empty ||
+                node.NodeKey != $"{ProjectWorkbenchGraphConventions.CustomNodePrefix}{node.Id:N}" ||
+                node.ParentNodeKey != ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(node.ProjectId) ||
+                node.ObjectType != ProjectObjectType.WorkItem || node.ObjectSubtype != ProjectObjectSubtypePolicy.Task ||
+                node.IsSystemManaged || string.IsNullOrWhiteSpace(node.Title) || node.Title != node.Title.Trim() ||
+                node.Title.Length > ProjectTaskPlanProposal.MaximumTitleCharacters || node.Notes is null ||
+                node.Notes != node.Notes.Trim() || node.Priority is < 0 or > 6 || node.Subtitle != "Task" ||
+                node.Status != "Draft" || node.ProgressMode != progress.Mode || node.ProgressPercent != progress.Percent ||
+                node.MarkersJson != "[]" || node.StartUtc is not null || node.EndUtc is not null ||
+                node.DurationSeconds is not null || node.CreatedAtUtc == default || node.CreatedAtUtc.Offset != TimeSpan.Zero ||
+                node.UpdatedAtUtc != node.CreatedAtUtc || node.UpdatedAtUtc.Offset != TimeSpan.Zero ||
+                !double.IsFinite(node.PositionX) || !double.IsFinite(node.PositionY) ||
+                node.NodeReferences?.Entries is not { Count: 0 } || node.Binding != ProjectNodeBindingState.Empty) {
+            throw new InvalidOperationException("Only a new canonical plain task may use local binding staging.");
+        }
+        ProjectTaskPlanBasisLimits.TextBytes(node.Title);
+        ProjectTaskPlanBasisLimits.TextBytes(node.Notes);
+        ProjectTaskPlanBasisLimits.TextBytes(node.MetadataJson);
+        var metadata = ProjectObjectMetadataSerializer.Parse(node.MetadataJson);
+        var description = metadata.WorkItem?.Description;
+        if (description is null || description != description.Trim()) {
+            throw new InvalidOperationException("A plain task requires normalized canonical metadata.");
+        }
+        var expected = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope {
+            WorkItem = new() {
+                WorkItemKind = ProjectWorkItemKind.Task,
+                Description = description,
+                ExpectedEffortUnit = ProjectWorkItemEffortUnit.Hours,
+                ExecutionState = ProjectTaskExecutionState.NotStarted
+            }
+        });
+        if (!string.Equals(node.MetadataJson, expected, StringComparison.Ordinal)) {
+            throw new InvalidOperationException("Plain-task metadata must contain only its canonical default fields.");
+        }
+        var plan = CreatePersistencePlan(node);
+        var binding = new ProjectNodeBindingState($"/projects/{node.ProjectId}/structure", nameof(ProjectObjectType.WorkItem),
+            null, string.Empty, string.Empty, string.Empty, string.Empty);
+        if (plan.Binding != binding || plan.References.Count != 0 || plan.SanitizedMetadataJson != expected) {
+            throw new InvalidOperationException("A plain task cannot claim external bindings or references.");
+        }
+        return new(node, plan);
+    }
+
+    internal static void StageNewPlainTaskBinding(DbContext context, ProjectObjectRecord node,
+        PreparedPlainTaskBinding prepared) {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(prepared);
+        if (context.Entry(node).State != EntityState.Added) {
+            throw new InvalidOperationException("A plain-task binding requires an Added owner row.");
+        }
+        prepared.RequireUnchanged(node);
+        UpsertBindingRecord(context, null, node, prepared.Plan);
+        Apply(node, prepared.Plan);
+        prepared.MarkStaged();
+    }
+
     public static async Task LoadAsync(
         DbContext dbContext,
         IReadOnlyCollection<ProjectObjectRecord> nodes,

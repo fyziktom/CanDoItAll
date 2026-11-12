@@ -16,5 +16,6 @@ public sealed record ProcessProjectAdmission {
 }
 
 public interface IProcessProjectAdmissionPolicy {
+    Task AcquireMutationGatesAsync(IReadOnlyCollection<ProcessProjectAdmission> admissions, CancellationToken cancellationToken = default);
     Task RequireForMutationAsync(ProcessProjectAdmission admission, CancellationToken cancellationToken = default);
 }

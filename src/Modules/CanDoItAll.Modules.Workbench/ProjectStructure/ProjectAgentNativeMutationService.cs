@@ -45,6 +45,7 @@ public sealed class ProjectAgentMutationAdmission {
     internal bool CanCreateProjects { get; }
     internal bool CanCreateSubprojects { get; }
     internal ProjectCreationReservation? CreatedProjectReservation { get; private init; }
+    internal ImmutableArray<ProjectCreationReservation> PriorCreatedProjects { get; private init; } = [];
     internal bool CanWriteTasks { get; }
     internal bool CanWriteStructure { get; }
     internal bool AllowAllProjects { get; }
@@ -63,14 +64,39 @@ public sealed class ProjectAgentMutationAdmission {
             CanRead = CanRead, CanWriteTasks = CanWriteTasks, CanWriteNonTaskStructure = CanWriteStructure,
             CanCreateProjects = CanCreateProjects, CanCreateSubprojects = CanCreateSubprojects, AllowAllProjects = AllowAllProjects,
             AllowedProjectIds = ProjectIds.ToList(), AllowedProjectLifetimes = ProjectLifetimes.ToList()
-        }, Governance, Domain, Operation, SourceProject) { CreatedProjectReservation = reservation };
+        }, Governance, Domain, Operation, SourceProject) {
+            CreatedProjectReservation = reservation, PriorCreatedProjects = PriorCreatedProjects
+        };
     }
+
+    internal ProjectCreationReservation? FindCreatedProject(ProjectWriteAdmission target)
+        => CreatedProjectReservation is { } primary && Matches(primary, target) ? primary
+            : PriorCreatedProjects.SingleOrDefault(item => Matches(item, target));
+
+    internal ProjectAgentMutationAdmission WithPriorCreations(ImmutableArray<ProjectCreationReservation> reservations) {
+        if (reservations.IsDefault || reservations.Length > 3 || reservations.Any(item => item.DatabaseProfileId != DatabaseProfileId ||
+                item.RequesterId != AgentId || item.Id == Guid.Empty || item.LifetimeId == Guid.Empty || item.ProjectId == Guid.Empty) ||
+                reservations.Select(item => item.ProjectId).Distinct().Count() != reservations.Length) {
+            throw new InvalidOperationException("Prior creations must retain at most three distinct targets of this original Agent source.");
+        }
+        return new(AgentId, DatabaseProfileId, new() {
+            CanRead = CanRead, CanWriteTasks = CanWriteTasks, CanWriteNonTaskStructure = CanWriteStructure,
+            CanCreateProjects = CanCreateProjects, CanCreateSubprojects = CanCreateSubprojects, AllowAllProjects = AllowAllProjects,
+            AllowedProjectIds = ProjectIds.ToList(), AllowedProjectLifetimes = ProjectLifetimes.ToList()
+        }, Governance, Domain, Operation, SourceProject) {
+            CreatedProjectReservation = CreatedProjectReservation, PriorCreatedProjects = reservations
+        };
+    }
+
+    private static bool Matches(ProjectCreationReservation reservation, ProjectWriteAdmission target)
+        => reservation.DatabaseProfileId == target.DatabaseProfileId && reservation.ProjectId == target.ProjectId &&
+            reservation.LifetimeId == target.LifetimeId;
 }
 
 public sealed class ProjectAgentNativeMutationService(ICanonicalRuntimeDatabase database, IAgentCatalogReadLeaseStore catalog,
     IAgentExecutionProfileGenerationSource generations, ProjectWriteAdmissionService projects,
     CoordinatedDatabaseTransaction transactions) {
-    private readonly ProjectAgentSourceMutationAuthority source = new(database, catalog, generations);
+    private readonly ProjectAgentSourceMutationAuthority source = new(database, catalog, generations, projects);
 
     internal async Task RequirePreparationAsync(ProjectAgentMutationAdmission admission, ProjectWriteAdmission expected,
         CancellationToken cancellationToken) {
@@ -89,9 +115,11 @@ public sealed class ProjectAgentNativeMutationService(ICanonicalRuntimeDatabase 
             throw new InvalidOperationException("Agent catalog authority must be acquired before the native transaction starts.");
         }
         var held = await source.AcquireAsync(admission, new(ProjectMutationPurpose.ExistingWrite, expected[0].ProjectId, expected, admission.CreatedProjectReservation), cancellationToken);
+        expected = expected.Concat(held.SourceProjects).Distinct().ToImmutableArray();
         SerializableMutationScope? mutation = null;
         try {
-            mutation = await SerializableMutationScope.BeginAsync(context, keys, cancellationToken);
+            mutation = await SerializableMutationScope.BeginAsync(context,
+                keys.Concat(expected.Select(item => ProjectStructureSerializableMutationScope.ForProject(item.ProjectId))).Distinct().ToArray(), cancellationToken);
             using (transactions.Enter(context)) {
                 await projects.RequireManyForMutationAsync(expected, cancellationToken);
                 if (admission.CreatedProjectReservation is { } reservation) {

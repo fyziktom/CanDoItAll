@@ -34,6 +34,7 @@ internal static class LlmChatConversationPresentationMapper
                 || string.IsNullOrWhiteSpace(draft),
             DraftPrompt = draft, ComposerKey = composerKey, ErrorMessage = controller.ErrorMessage,
             OperationStatus = controller.ActiveOperation is null ? null : controller.OperationStatusText,
+            ActiveOperationId = controller.ActiveOperation?.OperationId,
             Selected = selected is null ? null : new(selected.ConversationId, selected.Title, selected.DefinitionName, ToHeader(selected)),
             Threads = controller.Conversations.Select(item => ToThread(item, selected?.ConversationId, controller.IsLoading || controller.IsMutating)).ToImmutableArray(),
             Messages = messages, TransientMessages = transient.ToImmutable(),

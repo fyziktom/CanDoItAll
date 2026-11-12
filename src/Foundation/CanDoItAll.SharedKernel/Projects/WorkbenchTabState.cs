@@ -20,6 +20,11 @@ public static class WorkbenchTabHistoryPolicy
     public const int RecentTabCapacity = 12;
 }
 
+public static class WorkbenchNavigation
+{
+    public const string OpenTabHistoryState = "cda-workbench:open-tab";
+}
+
 public sealed record WorkbenchTabDescriptor(
     string TabId,
     string Title,

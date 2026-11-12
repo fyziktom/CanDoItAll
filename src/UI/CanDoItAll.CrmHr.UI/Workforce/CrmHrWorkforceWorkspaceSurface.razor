@@ -1,3 +1,4 @@
+@using CanDoItAll.Editing
 @namespace CanDoItAll.CrmHr.UI.Workforce
 @inherits CrmHrWorkspaceSurface<ICrmHrWorkforceWorkspaceView>
 
@@ -42,9 +43,11 @@
                                     data-testid="crmhr-workforce-new-delivery-unit" />
                         </Actions>
                     </ListPanelHeader>
-                    <WorkforceRecordBrowser @key="View.WorkforceBrowserVersion"
+                    <WorkforceRecordBrowser RefreshVersion="@(View.WorkforceBrowserVersion + CatalogRefreshVersion)"
                                             SelectedPartyId="View.SelectedWorkspace?.PartyId"
                                             SelectionChanged="View.SelectPartyAsync"
+                                            Query="@View.CatalogQuery"
+                                            QueryChanged="View.HandleCatalogQueryChangedAsync"
                                             LoadFailed="View.HandleWorkforceBrowserLoadFailedAsync"
                                             PageSize="12"
                                             ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
@@ -56,11 +59,11 @@
                 </Stack>
             </SurfaceCard>
 
-            @if (View.IsRecordDialogOpen && View.SelectedWorkspace is not null)
+            @if (View.IsRecordDialogOpen && View.SelectedWorkspace is { } workspaceModel)
             {
                 <Dialog IsOpen="true"
                         Eyebrow="Workforce record"
-                        Title="@View.SelectedWorkspace.DisplayName"
+                        Title="@workspaceModel.DisplayName"
                         Subtitle="Profile, skills, allocation-driven availability, and workforce history."
                         Size="ModalSize.Full"
                         DenseChrome="true"
@@ -68,15 +71,16 @@
                         TestId="crmhr-workforce-record-dialog"
                         OnClose="View.CloseRecordDialogAsync">
                     <ChildContent>
+                        @RecordUpdates
                         <SurfaceCard Soft="true">
                             <Split Gap="LayoutGap.Medium"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
                                     <p class="cda-eyebrow">Selected workforce record</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@View.SelectedWorkspace.DisplayName</h2>
-                                    @if (!string.IsNullOrWhiteSpace(View.SelectedWorkspace.Summary))
+                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@workspaceModel.DisplayName</h2>
+                                    @if (!string.IsNullOrWhiteSpace(workspaceModel.Summary))
                                     {
-                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@View.SelectedWorkspace.Summary</p>
+                                        <p class="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">@workspaceModel.Summary</p>
                                     }
                                     <p class="mt-2 text-sm font-medium text-slate-700"
                                        data-testid="crmhr-workforce-availability-message">
@@ -87,10 +91,10 @@
                                     <StatusBadge Tone="@View.SelectedClassificationTone"
                                                  Text="@View.SelectedClassificationLabel"
                                                  data-testid="crmhr-workforce-classification" />
-                                    <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveLifecycleTone(View.SelectedWorkspace.LifecycleStatus)"
-                                                 Text="@View.SelectedWorkspace.LifecycleStatus.ToString()"
+                                    <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveLifecycleTone(workspaceModel.LifecycleStatus)"
+                                                 Text="@workspaceModel.LifecycleStatus.ToString()"
                                                  data-testid="crmhr-workforce-lifecycle" />
-                                    @if (View.SelectedWorkspace.Profile.Id.HasValue)
+                                    @if (workspaceModel.Profile.Id.HasValue)
                                     {
                                         <StatusBadge Tone="@CrmHrWorkforceWorkspacePresentation.ResolveStatusTone(View.ProfileEditor.Status)"
                                                      Text="@View.ProfileEditor.Status" />
@@ -127,7 +131,7 @@
                         {
                         <Tabs SelectedIndex="@View.SelectedDetailTabIndex"
                               SelectedIndexChanged="View.HandleDetailTabChangedAsync"
-                              RenderMode="TabRenderMode.Server"
+                              RenderMode="TabRenderMode.Client"
                               Variant="TabsVariant.WorkspaceSecondary"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="Workforce record sections"
@@ -137,9 +141,9 @@
                                       data-testid="crmhr-workforce-tab-overview">
                                 <Stack GapScale="LayoutGap.Medium"
                                        AlignItems="AlignItems.Stretch">
-                                    <SensitiveDataCallout IsSensitive="View.SelectedWorkspace.IsSensitive"
-                                                         LastChangedBy="@View.SelectedWorkspace.LastChangedBy"
-                                                         UpdatedAtUtc="View.SelectedWorkspace.UpdatedAtUtc"
+                                    <SensitiveDataCallout IsSensitive="workspaceModel.IsSensitive"
+                                                         LastChangedBy="@workspaceModel.LastChangedBy"
+                                                         UpdatedAtUtc="workspaceModel.UpdatedAtUtc"
                                                          DataTestId="crmhr-workforce-sensitive-callout"
                                                          StandardDescription="Use this summary before staffing or line-management changes so ownership and broad visibility stay explicit."
                                                          SensitiveDescription="Sensitive workforce records stay out of global search while still preserving assignment, manager, and capacity context for trusted operators." />
@@ -148,20 +152,20 @@
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Home unit</p>
                                             <p class="mt-1 text-sm font-medium text-slate-950"
-                                               data-testid="crmhr-workforce-summary-home-unit">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.HomeUnitName)</p>
+                                               data-testid="crmhr-workforce-summary-home-unit">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.HomeUnitName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Manager</p>
                                             <p class="mt-1 text-sm font-medium text-slate-950"
-                                               data-testid="crmhr-workforce-summary-manager">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.ManagerName)</p>
+                                               data-testid="crmhr-workforce-summary-manager">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.ManagerName)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Primary email</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.PrimaryEmail)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.PrimaryEmail)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Primary phone</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(View.SelectedWorkspace.PrimaryPhone)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(workspaceModel.PrimaryPhone)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Available now</p>
@@ -175,11 +179,11 @@
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Contract end</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatDate(View.SelectedWorkspace.Profile.EndDate)</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatDate(workspaceModel.Profile.EndDate)</p>
                                         </SurfaceCard>
                                         <SurfaceCard Soft="true">
                                             <p class="cda-eyebrow">Searchable skills</p>
-                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(CrmHrWorkforceWorkspacePresentation.BuildSkillCoverage(View.SelectedWorkspace.Skills))</p>
+                                            <p class="mt-1 text-sm font-medium text-slate-950">@CrmHrWorkforceWorkspacePresentation.FormatValue(CrmHrWorkforceWorkspacePresentation.BuildSkillCoverage(workspaceModel.Skills))</p>
                                         </SurfaceCard>
                                     </Grid>
                                 </Stack>
@@ -188,169 +192,21 @@
                             <TabsItem Text="Profile"
                                       Icon="badge"
                                       data-testid="crmhr-workforce-tab-profile">
-                            <EditForm id="crmhr-workforce-profile-form"
-                                      EditContext="@ContextFor(ref profileContext, View.ProfileEditor)"
-                                      OnValidSubmit="View.SaveWorkforceProfileAsync">
-                                <FormSection Title="Workforce profile"
-                                             Description="Keep employment type, commercial rate context, and org-structure metadata attached to the same Party identity used by CRM and project flows.">
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                        <div>
-                                            <label class="cda-field-label">Workforce kind</label>
-                                            <InputSelect @bind-Value="View.ProfileEditor.WorkforceKind"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-kind">
-                                                @foreach (var workforceKind in View.AvailableWorkforceKinds)
-                                                {
-                                                    <option value="@workforceKind">@workforceKind</option>
-                                                }
-                                            </InputSelect>
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Status</label>
-                                            <InputSelect @bind-Value="View.ProfileEditor.Status"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-status">
-                                                @foreach (var status in CrmHrWorkforceWorkspacePresentation.WorkforceStatuses)
-                                                {
-                                                    <option value="@status">@status</option>
-                                                }
-                                            </InputSelect>
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Employee code</label>
-                                            <InputText @bind-Value="View.ProfileEditor.EmployeeCode"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-employee-code" />
-                                        </div>
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
-                                        <div>
-                                            <label class="cda-field-label">Job title</label>
-                                            <InputText @bind-Value="View.ProfileEditor.JobTitle"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-job-title" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Discipline</label>
-                                            <InputText @bind-Value="View.ProfileEditor.Discipline"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-discipline" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Seniority</label>
-                                            <InputSelect @bind-Value="View.ProfileEditor.Seniority"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-seniority">
-                                                @foreach (var seniority in CrmHrWorkforceWorkspacePresentation.SeniorityValues)
-                                                {
-                                                    <option value="@seniority">@seniority</option>
-                                                }
-                                            </InputSelect>
-                                        </div>
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
-                                        <PartyPicker Label="Home unit"
-                                                     TestIdPrefix="crmhr-workforce-home-unit"
-                                                     SelectedPartyId="@View.ProfileEditor.HomeUnitPartyId"
-                                                     SelectedPartyIdChanged="View.HandleHomeUnitChangedAsync"
-                                                     ExcludedPartyId="@View.SelectedWorkspace.PartyId"
-                                                     AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                                     InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)" />
-                                        <PartyPicker Label="Manager"
-                                                     TestIdPrefix="crmhr-workforce-manager"
-                                                     SelectedPartyId="@View.ProfileEditor.ManagerPartyId"
-                                                     SelectedPartyIdChanged="View.HandleManagerChangedAsync"
-                                                     ExcludedPartyId="@View.SelectedWorkspace.PartyId"
-                                                     AllowedScope="PartyRecordScope.People"
-                                                     InitialScope="PartyRecordScope.People" />
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
-                                        <div>
-                                            <label class="cda-field-label">Start date</label>
-                                            <InputDate @bind-Value="View.ProfileEditor.StartDate"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-start-date" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">End date</label>
-                                            <InputDate @bind-Value="View.ProfileEditor.EndDate"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-end-date" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Capacity hours / week</label>
-                                            <InputNumber @bind-Value="View.ProfileEditor.CapacityHoursPerWeek"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-capacity" />
-                                        </div>
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
-                                        <div>
-                                            <label class="cda-field-label">Location</label>
-                                            <InputText @bind-Value="View.ProfileEditor.Location"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-location" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Time zone</label>
-                                            <InputText @bind-Value="View.ProfileEditor.TimeZone"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-workforce-timezone" />
-                                        </div>
-                                    </Grid>
-
-                                    <Grid Gap="LayoutGap.Large" ColumnsMd="4" Class="mt-5">
-                                        <div>
-                                            <label class="cda-field-label">Internal cost rate</label>
-                                            <InputNumber @bind-Value="View.ProfileEditor.InternalCostRate"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-internal-rate" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">External billing rate</label>
-                                            <InputNumber @bind-Value="View.ProfileEditor.ExternalBillingRate"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-external-rate" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Rate unit</label>
-                                            <InputSelect @bind-Value="View.ProfileEditor.RateUnit"
-                                                         class="cda-input"
-                                                         data-testid="crmhr-workforce-rate-unit">
-                                                <option value="@ProjectResourceRateUnit.Hour">Per hour</option>
-                                                <option value="@ProjectResourceRateUnit.ManDay">Per man-day</option>
-                                            </InputSelect>
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Rate currency</label>
-                                            <InputText @bind-Value="View.ProfileEditor.RateCurrencyCode"
-                                                       class="cda-input"
-                                                       maxlength="3"
-                                                       data-testid="crmhr-workforce-rate-currency" />
-                                        </div>
-                                    </Grid>
-
-                                    <div class="mt-5">
-                                        <label class="cda-field-label">Notes</label>
-                                        <InputTextArea @bind-Value="View.ProfileEditor.Notes"
-                                                       class="cda-input cda-input--textarea min-h-[9rem]"
-                                                       data-testid="crmhr-workforce-notes" />
-                                    </div>
-
-                                </FormSection>
-                            </EditForm>
+                                <WorkforceProfileForm @key="View.ProfileEditor" @ref="profileForm" Model="View.ProfileEditor"
+                                                      WorkforceKinds="View.AvailableWorkforceKinds" Submit="SaveProfileAsync"
+                                                      InputChanged="ProfileInputChanged" PickerChanged="ProfilePickerChanged">
+                                    <Editing>@ProfileEditing</Editing>
+                                </WorkforceProfileForm>
                             </TabsItem>
 
                             <TabsItem Text="Skills"
                                       Icon="psychology"
-                                      BadgeText="@View.SelectedWorkspace.Skills.Count.ToString()"
+                                      BadgeText="@workspaceModel.Skills.Count.ToString()"
                                       data-testid="crmhr-workforce-tab-skills">
-                                <SkillMatrixPanel SkillCatalog="View.SelectedWorkspace.SkillCatalog"
-                                                  Skills="View.SelectedWorkspace.Skills"
+                                <SkillMatrixPanel @key="View.SkillEditor" SkillCatalog="workspaceModel.SkillCatalog"
+                                                  SkillSelected="SkillSelected" SkillInputChanged="SkillInputChanged" DefinitionInputChanged="DefinitionInputChanged" Editing="SkillEditing"
+                                                  WritesDisabled="RecordWritesDisabled" SkillSaveDisabled="SkillSaveDisabled" DefinitionSaveDisabled="DefinitionSaveDisabled"
+                                                  Skills="workspaceModel.Skills"
                                                   SkillDraft="View.SkillEditor"
                                                   SkillDefinitionDraft="View.SkillDefinitionEditor"
                                                   SavePartySkill="View.SavePartySkillAsync"
@@ -363,7 +219,7 @@
                                       BadgeText="@View.AllocationBadgeText"
                                       data-testid="crmhr-workforce-tab-allocations">
                                 <div data-testid="crmhr-workforce-allocations-panel">
-                                    @if (View.IsCapacityWorkspaceLoading)
+                                    @if (View.IsCapacityWorkspaceLoading && View.CapacityWorkspace is null)
                                     {
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-loading">
@@ -373,7 +229,7 @@
                                             </p>
                                         </SurfaceCard>
                                     }
-                                    else if (!string.IsNullOrWhiteSpace(View.CapacityWorkspaceError))
+                                    else if (!string.IsNullOrWhiteSpace(View.CapacityWorkspaceError) && View.CapacityWorkspace is null)
                                     {
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-error">
@@ -389,7 +245,11 @@
                                     }
                                     else if (View.CapacityWorkspace is { } loadedCapacityWorkspace)
                                     {
-                                        <CapacityTimelinePanel CapacitySummary="loadedCapacityWorkspace.CapacitySummary"
+                                        @if (!string.IsNullOrWhiteSpace(View.CapacityWorkspaceError)) {
+                                            <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@View.CapacityWorkspaceError" /><Button Text="Retry capacity refresh" Click="View.RetryCapacityWorkspaceAsync" /></Alert>
+                                        }
+                                        <CapacityTimelinePanel @key="View.CapacityBlockEditor" CapacitySummary="loadedCapacityWorkspace.CapacitySummary"
+                                                               InputChanged="CapacityInputChanged" WritesDisabled="RecordWritesDisabled" SaveDisabled="CapacitySaveDisabled"
                                                                CapacityBlocks="loadedCapacityWorkspace.CapacityBlocks"
                                                                ProjectAllocations="loadedCapacityWorkspace.ProjectAllocations"
                                                                CapacityBlockDraft="View.CapacityBlockEditor"
@@ -445,6 +305,7 @@
                                 {
                                     <Button Text="Save workforce profile"
                                             Click="SaveProfileFromFooterAsync"
+                                            Disabled="@(ProfileSaveDisabled || profileForm is null)"
                                             data-testid="crmhr-workforce-save-button" />
                                 }
                             </Cluster>
@@ -455,6 +316,7 @@
 
             @if (View.IsDeliveryUnitDialogOpen)
             {
+                var deliveryDraft = View.DeliveryUnitEditor;
                 <Dialog IsOpen="true"
                         Eyebrow="Workforce"
                         Title="New delivery unit"
@@ -466,23 +328,24 @@
                         TestId="crmhr-workforce-delivery-unit-dialog"
                         OnClose="View.CloseDeliveryUnitDialogAsync">
                     <ChildContent>
-                        <EditForm Model="View.DeliveryUnitEditor" OnValidSubmit="View.CreateDeliveryUnitAsync">
+                        @DeliveryEditing
+                        <EditForm @key="deliveryDraft" Model="deliveryDraft" OnValidSubmit="SubmitDeliveryAsync" data-testid="crmhr-delivery-unit-form">
                             <Stack GapScale="LayoutGap.Medium">
                                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                     <FormField Text="Unit name">
-                                        <InputText @bind-Value="View.DeliveryUnitEditor.Name"
+                                        <NativeValueInput TValue="string" @bind-Value="deliveryDraft.DisplayName" PendingChanged="@(_ => DeliveryTextAsync(deliveryDraft, CanDoItAll.CrmHr.UI.Parties.PartyEditableField.DisplayName))"
                                                    class="cda-input"
                                                    data-testid="crmhr-delivery-unit-name" />
                                     </FormField>
                                     <FormField Text="External code">
-                                        <InputText @bind-Value="View.DeliveryUnitEditor.ExternalCode"
+                                        <NativeValueInput TValue="string" @bind-Value="deliveryDraft.ExternalCode" PendingChanged="@(_ => DeliveryTextAsync(deliveryDraft, CanDoItAll.CrmHr.UI.Parties.PartyEditableField.ExternalCode))"
                                                    class="cda-input"
                                                    data-testid="crmhr-delivery-unit-code" />
                                     </FormField>
                                 </Grid>
 
                                 <FormField Text="Summary">
-                                    <InputTextArea @bind-Value="View.DeliveryUnitEditor.Summary"
+                                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="deliveryDraft.Summary" PendingChanged="@(_ => DeliveryTextAsync(deliveryDraft, CanDoItAll.CrmHr.UI.Parties.PartyEditableField.Summary))"
                                                    class="cda-input cda-input--textarea min-h-[7rem]"
                                                    data-testid="crmhr-delivery-unit-summary" />
                                 </FormField>
@@ -492,9 +355,9 @@
                                             ButtonStyle="ButtonStyle.Light"
                                             Disabled="@View.IsDeliveryUnitSaving"
                                             Click="View.CloseDeliveryUnitDialogAsync" />
-                                    <Button Text="Create delivery unit"
+                                    <Button Text="@(deliveryDraft.Id.HasValue ? "Save delivery unit" : "Create delivery unit")"
                                             Type="submit"
-                                            Disabled="@View.IsDeliveryUnitSaving"
+                                            Disabled="@(View.IsDeliveryUnitSaving || DeliverySaveDisabled)"
                                             IsBusy="@View.IsDeliveryUnitSaving"
                                             data-testid="crmhr-delivery-unit-save-button" />
                                 </Cluster>
@@ -509,10 +372,42 @@
 </PageScaffold>
 
 @code {
-    private EditContext? profileContext;
+    [Parameter] public long CatalogRefreshVersion { get; set; }
+    [Parameter] public RenderFragment? SkillEditing { get; set; }
+    [Parameter] public RenderFragment? DeliveryEditing { get; set; }
+    [Parameter] public bool DeliverySaveDisabled { get; set; }
+    [Parameter] public EventCallback<CanDoItAll.CrmHr.UI.Parties.PartyEditableField> DeliveryInputChanged { get; set; }
+    private Task SubmitDeliveryAsync(EditContext context) => View.IsDeliveryUnitDialogOpen && ReferenceEquals(context.Model, View.DeliveryUnitEditor) && !DeliverySaveDisabled
+        ? View.CreateDeliveryUnitAsync() : Task.CompletedTask;
+    private Task DeliveryTextAsync(CanDoItAll.CrmHr.UI.Parties.PartyEditorViewModel model, CanDoItAll.CrmHr.UI.Parties.PartyEditableField field) {
+        if (!View.IsDeliveryUnitDialogOpen || !ReferenceEquals(model, View.DeliveryUnitEditor)) {
+            return Task.CompletedTask;
+        }
+
+        return DeliveryInputChanged.InvokeAsync(field);
+    }
+
+    [Parameter] public EventCallback<Guid> SkillSelected { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceSkillField>> SkillInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceDefinitionField>> DefinitionInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<WorkforceCapacityField>> CapacityInputChanged { get; set; }
+    [Parameter] public bool RecordWritesDisabled { get; set; }
+    [Parameter] public bool SkillSaveDisabled { get; set; }
+    [Parameter] public bool DefinitionSaveDisabled { get; set; }
+    [Parameter] public bool CapacitySaveDisabled { get; set; }
+
+    [Parameter] public RenderFragment? RecordUpdates { get; set; }
+    private WorkforceProfileForm? profileForm;
+    [Parameter] public RenderFragment? ProfileEditing { get; set; }
+    [Parameter] public bool ProfileSaveDisabled { get; set; }
+    [Parameter] public EventCallback<WorkforceProfileInput> ProfileInputChanged { get; set; }
+    [Parameter] public EventCallback<bool> ProfilePickerChanged { get; set; }
 
     // The footer button sits outside the form element: it validates the same form before the host saves.
-    private Task SaveProfileFromFooterAsync() => SubmitAsync(profileContext, View.SaveWorkforceProfileAsync);
+    private Task SaveProfileFromFooterAsync() => profileForm?.SubmitAsync() ?? Task.CompletedTask;
+
+    private Task SaveProfileAsync(WorkforceProfileEditorModel model) => ReferenceEquals(model, View.ProfileEditor)
+        ? View.SaveWorkforceProfileAsync() : Task.CompletedTask;
 
     // Host-owned region: the host composes its adapter here.
     [Parameter]

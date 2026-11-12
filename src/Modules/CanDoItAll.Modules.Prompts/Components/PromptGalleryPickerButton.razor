@@ -7,7 +7,7 @@
         ButtonStyle="@ButtonStyle"
         Variant="@Variant"
         Size="@Size"
-        Disabled="@Disabled"
+        Disabled="@(Disabled || interaction is not null)"
         Click="Open"
         aria-label="@EffectiveAriaLabel"
         title="@EffectiveAriaLabel"
@@ -225,6 +225,9 @@
             if (ReferenceEquals(interaction, current))
             {
                 interaction = null;
+                if (!disposed) {
+                    await InvokeAsync(StateHasChanged);
+                }
             }
         }
     }

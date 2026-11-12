@@ -1,0 +1,36 @@
+{
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\3tabd3be.gtd",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_50244_20261018_174315_472.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\1a1pvojh.z3s",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\o3bv2rbd.cm3",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_49432_20261018_174310_537.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\2jlxgkhu.n5k",
+      "family": "shared-temp-directory-entries"
+    }
+  ],
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "outcome": "37 unit and 7 integration cases passed; exclusion primitives and source/owner recovery capture verified",
+  "recordedUtc": "2026-10-18T21:44:12.7536989+00:00",
+  "databaseNameDelta": [],
+  "remainingObservedProcesses": []
+}

@@ -53,7 +53,7 @@ public sealed class CrmHrAccountSummarySurfaceTests
         Assert.Equal("success", Assert.Single(badges, badge => badge.Instance.Text == "Active").Instance.Tone);
         var stats = cut.FindComponents<CompactStat>().Select(stat => (stat.Instance.Label, stat.Instance.Value)).ToArray();
         Assert.Equal(
-            new[]
+            new (string, string?)[]
             {
                 ("email", "accounts@aurora.example"),
                 ("phone", CrmHrAccountText.NotSetValue),

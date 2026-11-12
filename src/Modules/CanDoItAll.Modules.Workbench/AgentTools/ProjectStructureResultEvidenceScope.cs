@@ -157,6 +157,14 @@ internal sealed class ProjectStructureResultEvidenceScope(
             case ProjectSummary project:
                 observed.Add(project.Id);
                 break;
+            case ProjectDefinitionSnapshot definition:
+                Record(definition.Expectation.Project);
+                observed.Add(definition.Expectation.Project.ProjectId);
+                break;
+            case ProjectDefinitionScalarsAcknowledgement accepted:
+                Record(accepted.Definition.Project);
+                observed.Add(accepted.Definition.Project.ProjectId);
+                break;
             case ProjectHierarchySnapshot hierarchy:
                 observed.Add(hierarchy.ProjectId);
                 observed.UnionWith(hierarchy.ParentProjects.Concat(hierarchy.ChildProjects).Select(project => project.Id));

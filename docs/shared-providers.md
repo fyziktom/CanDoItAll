@@ -2,6 +2,12 @@
 
 A publisher exposes selected models from a local provider profile. A consumer registers that publisher as a source, synchronizes its catalog, and imports a publication. The import remains linked to its source and publication identity; it is not an independent copy of the publisher's credentials.
 
+Local provider health checks retain the complete discovered model list. The publication
+eligibility boundary separately enforces its 128-model limit, including the default
+model. A larger local catalog can be saved and used locally, but cannot be published
+as one catalog exceeding that limit. Health persistence does not truncate discovery or
+relax the publication protocol.
+
 ## Configure and operate
 
 1. Configure and test the publisher's local provider and secret through provider administration. Only eligible connector/capability combinations can be published.

@@ -1,0 +1,11 @@
+{
+  "recordedUtc": "2026-10-18T22:12:17.9965471+00:00",
+  "limits": [
+    "First candidate had two assertion failures because EF wrapped the expected 55P03; test-only successor passed both.",
+    "Offline coordinator, explicit profile resolver and command remain unfinished.",
+    "Unowned temporary paths preserved."
+  ],
+  "failedAssertionsRepaired": 2,
+  "scope": "Real native preparation, bounded data-only Agent and Workbench inspection, exact binding, missing/foreign/unbound/oversized refusal, PostgreSQL NOWAIT contention",
+  "passed": 8
+}

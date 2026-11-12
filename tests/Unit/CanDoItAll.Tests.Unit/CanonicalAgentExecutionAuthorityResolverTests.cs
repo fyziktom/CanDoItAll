@@ -390,7 +390,8 @@ public sealed partial class CanonicalAgentExecutionAuthorityResolverTests
         context.Entry(project).Property(item => item.LegacyAgentAccessBindingEligible).CurrentValue = true;
         context.SaveChanges();
         var profile = new FixedDatabaseProfileRuntimeAccessor(ProfileId);
-        return new(factory, options, CoordinatedDatabaseTransaction.ForProfile(profile.ResolveCurrentProfile()), profile);
+        return new(factory, options, CoordinatedDatabaseTransaction.ForProfile(profile.ResolveCurrentProfile()), profile,
+            CanDoItAll.Tests.Support.DatabaseTransferTestSupport.UnconfiguredActivation());
     }
 
     private static CanonicalAgentExecutionAuthorityResolver CreateResolver(

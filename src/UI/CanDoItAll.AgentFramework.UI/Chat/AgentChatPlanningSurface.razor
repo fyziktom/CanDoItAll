@@ -1,0 +1,90 @@
+@using CanDoItAll.SharedKernel
+@{ var rendered = State; }
+
+@if (rendered.PlanningReview is { } review) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="agents-chat-planning-status">
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <TextBlock Value="@($"{Status(review.State)} · generation {review.Expected.Generation}")" />
+            <Button Text="Review plan" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                    Click="@(() => SendAsync(rendered, AgentChatAction.OpenPlanningReview))" data-testid="agents-chat-planning-open" />
+        </Cluster>
+    </Alert>
+    @if (rendered.PlanningReviewOpen) {
+        <Dialog IsOpen="true" Title="Review task plan" Eyebrow="Original planning decision" Size="ModalSize.Wide"
+                DenseChrome="true" CloseOnBackdrop="false" TestId="agents-chat-planning-dialog"
+                @key="review.Expected" OnClose="@(() => SendAsync(rendered, AgentChatAction.ClosePlanningReview))">
+            <ChildContent>
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="@($"Original run: {review.Expected.ExecutionRunId:D}; generation {review.Expected.Generation}.")" />
+                    <TextBlock Value="@PolicyText(review.Policy)" />
+                    <TextBlock Value="@($"Basis captured: {review.BasisCapturedAtUtc?.UtcDateTime.ToString("u") ?? "not captured"}. Observed: {review.ObservedAtUtc.UtcDateTime:u}.")" />
+                    <TextBlock Value="@($"Recorded work: {review.ChargedWork:c}; remaining work: {review.RemainingWork?.ToString("c") ?? "unconfirmed"}. Automatic replans: {review.AutomaticReplans}/{review.Policy.Budget.MaximumReplans}.")" />
+                    @if (review.HasUnsettledWork || rendered.PlanningActionUnconfirmed) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-chat-planning-unconfirmed">
+                            The outcome is unresolved. Reload the original run before taking another action; reloading does not retry publication.
+                        </Alert>
+                    }
+                    @if (review.Publication is { } publication) {
+                        <TextBlock Value="@publication.Content" Style="white-space:pre-wrap;overflow-wrap:anywhere;" data-testid="agents-chat-planning-content" />
+                    } else {
+                        <TextBlock Value="No publication is available for approval in this observation." />
+                    }
+                </Stack>
+            </ChildContent>
+            <Footer>
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    @foreach (var action in review.AvailableActions) {
+                        var selected = action;
+                        <Button Text="@ActionText(selected)" Disabled="@(rendered.Busy || rendered.PlanningActionUnconfirmed || review.HasUnsettledWork)"
+                                ButtonStyle="@(selected == AgentPlanningAction.Approve ? ButtonStyle.Primary : ButtonStyle.Secondary)"
+                                Click="@(() => ApplyAsync(rendered, selected))" data-testid="@($"agents-chat-planning-{selected.ToString().ToLowerInvariant()}")" />
+                    }
+                    <Button Text="Reload review" ButtonStyle="ButtonStyle.Light" Disabled="@rendered.Busy"
+                            Click="@(() => SendAsync(rendered, AgentChatAction.ReloadPlanningReview))" data-testid="agents-chat-planning-reload" />
+                    <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => SendAsync(rendered, AgentChatAction.ClosePlanningReview))" />
+                </Cluster>
+            </Footer>
+        </Dialog>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public AgentChatActionState State { get; set; } = default!;
+    [Parameter] public EventCallback<AgentChatActionIntent> Intent { get; set; }
+
+    private Task SendAsync(AgentChatActionState rendered, AgentChatAction action)
+        => Intent.InvokeAsync(new(rendered.Origin, action) { PlanningExpectation = rendered.PlanningReview!.Expected });
+
+    private Task ApplyAsync(AgentChatActionState rendered, AgentPlanningAction action) {
+        var review = rendered.PlanningReview!;
+        if (rendered.Busy || rendered.PlanningActionUnconfirmed || review.HasUnsettledWork || !review.AvailableActions.Contains(action)) {
+            return Task.CompletedTask;
+        }
+        var publication = action == AgentPlanningAction.Approve ? review.Publication : null;
+        return Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.ApplyPlanningAction) {
+            PlanningRequest = new(action, review.ChatSessionId, review.Expected, publication?.Binding, publication?.ApprovalId)
+        });
+    }
+
+    private static string ActionText(AgentPlanningAction action) => action switch {
+        AgentPlanningAction.Approve => "Publish reviewed tasks",
+        AgentPlanningAction.Refresh => "Reload data and replan",
+        AgentPlanningAction.Cancel => "Cancel decision",
+        _ => throw new ArgumentOutOfRangeException(nameof(action))
+    };
+
+    private static string Status(AgentPlanningGenerationState state) => state switch {
+        AgentPlanningGenerationState.AwaitingApproval => "Plan ready for review",
+        AgentPlanningGenerationState.PausedBasisChanged => "Task data changed; review required",
+        AgentPlanningGenerationState.Completed => "Planning completed",
+        AgentPlanningGenerationState.Cancelled => "Planning cancelled",
+        AgentPlanningGenerationState.Failed => "Planning stopped",
+        AgentPlanningGenerationState.Superseded => "A newer planning generation exists",
+        _ => "Planning in progress"
+    };
+
+    private static string PolicyText(DecisionDataPolicy policy)
+        => $"Read basis: {(policy.ReadBasisMode == ReadBasisMode.RunSnapshot ? "start snapshot" : "reload before each step")}. " +
+            $"Publication: {(policy.PublicationFreshness == PublicationFreshness.RequireCurrent ? "requires current data" : "pinned observation")}. " +
+            $"If data changes: {policy.OnBasisChange switch { OnBasisChange.Fail => "stop", OnBasisChange.PauseForReview => "pause for review", _ => "bounded automatic replan" }}.";
+}

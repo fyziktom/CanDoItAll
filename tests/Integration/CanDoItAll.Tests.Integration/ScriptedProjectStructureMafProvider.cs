@@ -52,6 +52,7 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
     private const string NodeCreateCallId = "project-node-create";
     private const string NodesCopyCallId = "project-nodes-copy";
     private const string StructureReadCallId = "project-structure-read";
+    private const string StructureOriginReadCallId = "project-structure-origin-read";
     private const string LeaseReleaseCallId = "project-lease-release";
     private const string CompletionText = "Deterministic Project Structure tool loop completed.";
 
@@ -181,9 +182,22 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
             // own lease, and explicit lease tools are deliberately not exposed
             // for this purpose (explicit lease choreography belongs to governed
             // process automation).
-            return Task.FromResult(responseIndex++ switch
+            var turn = responseIndex++;
+            if (configuredScenario is NodesCopyScenario) {
+                if (turn == 0) {
+                    return Task.FromResult(CreateFunctionCallResponse(
+                        StructureOriginReadCallId, StructureReadToolName, new Dictionary<string, object?> {
+                            ["projectId"] = configuredScenario.ProjectId,
+                            ["request"] = new ProjectStructureReadRequest(Source: ProjectStructureReadSource.CanonicalCurrent) {
+                                IncludeMutationGraph = true
+                            }
+                        }));
+                }
+                turn--;
+            }
+            return Task.FromResult(turn switch
             {
-                0 => CreateMutationCallResponse(configuredScenario),
+                0 => CreateMutationCallResponse(configuredScenario, messageSnapshot),
                 1 => CreateReadCallResponse(messageSnapshot, configuredScenario),
                 2 => CreateCompletionResponse(messageSnapshot),
                 _ => throw new InvalidOperationException("The scripted Project Structure scenario received an unexpected provider turn.")
@@ -215,12 +229,12 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
     {
     }
 
-    private ChatResponse CreateMutationCallResponse(Scenario configuredScenario)
+    private ChatResponse CreateMutationCallResponse(Scenario configuredScenario, IReadOnlyList<ChatMessage> messages)
     {
         return configuredScenario switch
         {
             NodeCreateScenario nodeCreate => CreateNodeCallResponse(nodeCreate),
-            NodesCopyScenario nodesCopy => CreateNodesCopyCallResponse(nodesCopy),
+            NodesCopyScenario nodesCopy => CreateNodesCopyCallResponse(nodesCopy, messages),
             _ => throw new InvalidOperationException("The scripted Project Structure scenario type is unsupported.")
         };
     }
@@ -242,7 +256,7 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
                     LeaseToken: null)
             });
 
-    private ChatResponse CreateNodesCopyCallResponse(NodesCopyScenario configuredScenario)
+    private ChatResponse CreateNodesCopyCallResponse(NodesCopyScenario configuredScenario, IReadOnlyList<ChatMessage> messages)
         => CreateFunctionCallResponse(
             NodesCopyCallId,
             NodesCopyToolName,
@@ -252,7 +266,10 @@ internal sealed class ScriptedProjectStructureChatClient : IChatClient
                 ["request"] = new ProjectStructureNodesCopyInput(
                     configuredScenario.SourceNodeIds,
                     configuredScenario.DestinationParentNodeId,
-                    LeaseToken: null)
+                    LeaseToken: null) {
+                    ExpectedGraph = ReadFunctionResult<ProjectStructureReadToolData>(messages, StructureOriginReadCallId).ExpectedGraph
+                        ?? throw new InvalidOperationException("The canonical tool read omitted the mutation graph.")
+                }
             });
 
     private ChatResponse CreateReadCallResponse(

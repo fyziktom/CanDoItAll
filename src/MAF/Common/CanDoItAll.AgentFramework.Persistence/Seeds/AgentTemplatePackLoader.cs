@@ -22,10 +22,12 @@ internal sealed class AgentTemplatePackLoader
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<AgentTemplatePack> pack;
+    private readonly Func<string, string> readText;
 
-    public AgentTemplatePackLoader(string? packRoot = null)
+    public AgentTemplatePackLoader(string? packRoot = null, Func<string, string>? readText = null)
     {
         configuredPackRoot = packRoot;
+        this.readText = readText ?? File.ReadAllText;
         pack = new Lazy<AgentTemplatePack>(LoadCore, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -53,7 +55,7 @@ internal sealed class AgentTemplatePackLoader
         return new AgentTemplatePack(root, manifest, teams);
     }
 
-    private static IReadOnlyList<AgentTemplateMember> LoadMembers(
+    private IReadOnlyList<AgentTemplateMember> LoadMembers(
         AgentTemplateTeam team,
         string teamRoot,
         HashSet<string> memberKeys)
@@ -80,7 +82,7 @@ internal sealed class AgentTemplatePackLoader
                 memberReference.Key,
                 memberReference.RelativePath.Replace("\\", "/"),
                 memberRoot,
-                File.ReadAllText(instructionsPath).Trim(),
+                readText(instructionsPath).Trim(),
                 settings,
                 skills));
         }
@@ -88,12 +90,12 @@ internal sealed class AgentTemplatePackLoader
         return members;
     }
 
-    private static T ReadJson<T>(string path)
+    private T ReadJson<T>(string path)
         where T : class, new()
     {
         try
         {
-            return JsonFileLoader.ReadRequired<T>(path, JsonOptions);
+            return JsonSerializer.Deserialize<T>(readText(path), JsonOptions) ?? new T();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {

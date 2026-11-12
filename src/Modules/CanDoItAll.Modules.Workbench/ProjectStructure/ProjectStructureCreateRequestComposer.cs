@@ -1,3 +1,4 @@
+using System.Globalization;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
 
@@ -266,10 +267,13 @@ internal static class ProjectStructureCreateRequestComposer
         }
     }
 
-    private static DateTimeOffset? ParseDateTimeOffset(IReadOnlyDictionary<string, string> inputValues, string key)
-        => inputValues.TryGetValue(key, out var value) && DateTimeOffset.TryParse(value, out var parsed)
-            ? parsed
-            : null;
+    private static DateTimeOffset? ParseDateTimeOffset(IReadOnlyDictionary<string, string> inputValues, string key) {
+        if (!inputValues.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value)) {
+            return null;
+        }
+        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed)
+            ? parsed.ToUniversalTime() : throw new ArgumentException($"{key} must be a date and time.", nameof(inputValues));
+    }
 
     private static int ParseInt(IReadOnlyDictionary<string, string> inputValues, string key)
         => ParseNullableInt(inputValues, key) ?? 0;

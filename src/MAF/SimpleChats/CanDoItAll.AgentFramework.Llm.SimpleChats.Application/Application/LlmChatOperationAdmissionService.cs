@@ -25,6 +25,7 @@ public sealed class LlmChatOperationAdmissionService(
         CancellationToken cancellationToken)
         => unitOfWork.ExecuteAsync(async token =>
         {
+            await LlmChatWriteAdmission.RequireTargetAsync(command.ConversationId.Value, token, LlmChatWriteResource.ConversationOperation);
             var turnState = await turnStateRepository.LockAsync(command.ConversationId, token)
                 .ConfigureAwait(false);
             if (!turnState.Exists)

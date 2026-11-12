@@ -39,6 +39,9 @@ public sealed class LocalOperatorUiAccessTests {
         Assert.True(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.ReadLlmChats));
         Assert.True(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.ManageLlmChats));
         Assert.True(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.ExecuteLlmChats));
+        Assert.True(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.ReadProcesses));
+        Assert.True(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.ExecuteProcesses));
+        Assert.False(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.WriteProcesses));
         Assert.False(ApiAuthorizationPolicies.HasScope(principal, ApiAccessScopeNames.Api));
         Assert.False(context.User.Identity?.IsAuthenticated);
     }

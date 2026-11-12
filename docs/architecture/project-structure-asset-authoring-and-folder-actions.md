@@ -9,6 +9,20 @@ This gate covers two related Project Structure interaction defects:
 
 The scoped evidence pass used direct source and test inspection because the CodeAnalytics and shared-components MCP tools were unavailable in this session. The existing FileTools browser, storage-placement pipeline, BaseLib dialog, and BaseLib file-upload components remain the implementation authorities.
 
+## Projected file identity and process asset admission
+
+Opening a file rechecks the original project lifetime, node kind, parent, artifact identity
+and storage reference before and after acquiring the FileTools interaction. Persisted
+nodes also retain their record identity. System-managed projections, including process
+screenshots and run folders, are rebuilt on reads and have transient record IDs; those IDs
+must not invalidate an otherwise unchanged projected file. A changed source or project
+lifetime still rejects the opening.
+
+Process asset admission accepts the same named enum values as the agent tool contract.
+It normalizes them into the existing numeric proposal representation, preserving the
+semantic digest and approval identity for equivalent requests. Unknown properties,
+duplicate properties and unsupported asset kinds remain rejected.
+
 ## Responsibility inventory
 
 | Current owner | Current responsibility | Problem |

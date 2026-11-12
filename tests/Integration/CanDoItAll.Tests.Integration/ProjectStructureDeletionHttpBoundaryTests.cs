@@ -62,7 +62,7 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
         var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(
             host.Client,
             $"/api/project-structure/projects/{projectId:D}/structure/read",
-            new ProjectStructureReadRequest());
+            new ProjectStructureReadRequest { IncludeMutationGraph = true });
         Assert.NotNull(displayed.ExpectedProjectAdmission);
 
         var singleResult = await PostAndReadAsync<ProjectStructureDeletionResult>(
@@ -70,7 +70,8 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
             $"/api/project-structure/projects/{projectId:D}/nodes/{singleNode.Id}/delete",
             new ProjectStructureNodeDeleteInput(
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
-                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission
+                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission,
+                ExpectedGraph = displayed.ExpectedGraph
             });
         Assert.Equal(1, singleResult.DeletedNodeCount);
 
@@ -80,7 +81,8 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
             new ProjectStructureNodeDeleteBatchInput(
                 [firstBatchNode.Id, secondBatchNode.Id],
                 ProjectStructureManagedStorageDisposition.RetainManagedFiles) {
-                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission
+                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission,
+                ExpectedGraph = displayed.ExpectedGraph
             });
         Assert.Equal(2, batchResult.DeletedNodeCount);
 
@@ -88,7 +90,8 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
             $"/api/project-structure/projects/{projectId:D}/nodes/{invalidManagedNode.Id}/delete",
             new ProjectStructureNodeDeleteInput(
                 ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles) {
-                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission
+                ExpectedProjectAdmission = displayed.ExpectedProjectAdmission,
+                ExpectedGraph = displayed.ExpectedGraph
             });
         Assert.Equal(HttpStatusCode.Conflict, invalidDeleteResponse.StatusCode);
         var invalidDeleteError = await ReadAsync<ApiErrorResponse>(invalidDeleteResponse);
@@ -127,7 +130,7 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
         }
         var projectPath = $"/api/project-structure/projects/{original.ProjectId:D}";
         var displayed = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
-            projectPath + "/structure/read", new ProjectStructureReadRequest());
+            projectPath + "/structure/read", new ProjectStructureReadRequest { IncludeMutationGraph = true });
         Assert.Equal(original, displayed.ExpectedProjectAdmission);
         using (var missing = await DeleteAsync(null)) {
             Assert.Equal(HttpStatusCode.Conflict, missing.StatusCode);
@@ -149,25 +152,27 @@ public sealed class ProjectStructureDeletionHttpBoundaryTests
             node = await CreateNoteAsync(scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>(),
                 original.ProjectId, "Replacement node");
         }
-        using (var stale = await DeleteAsync(displayed.ExpectedProjectAdmission)) {
+        using (var stale = await DeleteAsync(displayed)) {
             Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
         }
         var fresh = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
-            projectPath + "/structure/read", new ProjectStructureReadRequest());
+            projectPath + "/structure/read", new ProjectStructureReadRequest { IncludeMutationGraph = true });
         Assert.Contains(fresh.Nodes, item => item.Id == node.Id);
         Assert.NotEqual(original.LifetimeId, fresh.ExpectedProjectAdmission!.LifetimeId);
-        using var accepted = await DeleteAsync(fresh.ExpectedProjectAdmission);
+        using var accepted = await DeleteAsync(fresh);
         accepted.EnsureSuccessStatusCode();
         Assert.Equal(1, (await ReadAsync<ProjectStructureDeletionResult>(accepted)).DeletedNodeCount);
 
-        Task<HttpResponseMessage> DeleteAsync(ProjectWriteAdmission? expected) => batch
+        Task<HttpResponseMessage> DeleteAsync(ProjectStructureReadResponse? expected) => batch
             ? host.Client.PostAsJsonAsync(projectPath + "/nodes/delete",
                 new ProjectStructureNodeDeleteBatchInput([node.Id], ProjectStructureManagedStorageDisposition.RetainManagedFiles) {
-                    ExpectedProjectAdmission = expected
+                    ExpectedProjectAdmission = expected?.ExpectedProjectAdmission,
+                    ExpectedGraph = expected?.ExpectedGraph
                 })
             : host.Client.PostAsJsonAsync(projectPath + $"/nodes/{node.Id}/delete",
                 new ProjectStructureNodeDeleteInput(ProjectStructureManagedStorageDisposition.RetainManagedFiles) {
-                    ExpectedProjectAdmission = expected
+                    ExpectedProjectAdmission = expected?.ExpectedProjectAdmission,
+                    ExpectedGraph = expected?.ExpectedGraph
                 });
     }
 

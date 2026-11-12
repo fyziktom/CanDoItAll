@@ -1,3 +1,4 @@
+using CanDoItAll.Application.UI.Dashboard;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

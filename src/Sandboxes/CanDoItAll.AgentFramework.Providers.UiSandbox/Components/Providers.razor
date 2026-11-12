@@ -1,0 +1,76 @@
+@page "/"
+@page "/providers/{Scenario}"
+@implements IDisposable
+
+<PageTitle>Provider profiles sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Medium" Class="provider-sandbox" data-testid="provider-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()" data-scenario="@selected">
+    <Cluster Gap="LayoutGap.Medium">
+        <h1>Provider profiles sandbox</h1>
+        <label>Scenario
+            <select class="cda-input" value="@selected" @onchange="ChangeScenario" data-testid="provider-scenario">
+                @foreach (var value in Enum.GetValues<ProviderScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <Button Text="Second editor" Click="@(() => secondOpen = true)" data-testid="open-second-editor" />
+        @if (selected == ProviderScenario.Held) {
+            <Button Text="Release held operation" Click="@(() => session.Release())" data-testid="release-held" />
+        }
+    </Cluster>
+    <Alert AlertStyle="AlertStyle.Info">Deterministic local fixtures. Sharing, request History and source connections remain native host integrations; they are deferred in this independent sandbox.</Alert>
+    <p role="status" data-testid="fixture-outcome">@session.Outcome</p>
+    <ProviderProfilesSurface @key="session" View="session">
+        <SharingSlot><Alert AlertStyle="AlertStyle.Info">Sharing is supplied by the native host.</Alert></SharingSlot>
+        <HistorySlot><Alert AlertStyle="AlertStyle.Info">Request History is supplied by the native host.</Alert></HistorySlot>
+        <ConnectionsSlot>
+            <Dialog IsOpen="true" Title="Source connections — native host integration" OnClose="@(() => session.SetSharedConnectionsOpen(false))">
+                <ChildContent>Source connections are intentionally deferred in this fixture.</ChildContent>
+            </Dialog>
+        </ConnectionsSlot>
+        <SourceRefreshSlot><span>Source refresh is supplied by the native host.</span></SourceRefreshSlot>
+    </ProviderProfilesSurface>
+</Stack>
+@if (secondOpen) {
+    <Dialog IsOpen="true" Title="Independent second editor" Size="ModalSize.Full" OnClose="@(() => secondOpen = false)" TestId="provider-second-editor">
+        <ChildContent><ProviderProfilesSurface View="second" /></ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public string? Scenario { get; set; }
+    private ProviderScenario selected;
+    private ProviderScenarioSession session = new();
+    private readonly ProviderScenarioSession second = new();
+    private bool secondOpen;
+    private bool interactive;
+    protected override void OnInitialized() => session.Changed += Changed;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    protected override void OnParametersSet() {
+        if (Enum.TryParse<ProviderScenario>(Scenario, true, out var value) && value != selected) {
+            selected = value;
+            ReplaceSession();
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) {
+        selected = Enum.Parse<ProviderScenario>(args.Value!.ToString()!);
+        ReplaceSession();
+    }
+    private void ReplaceSession() {
+        session.Changed -= Changed;
+        session.Release();
+        session = new(selected);
+        session.Changed += Changed;
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        session.Changed -= Changed;
+        session.Release();
+        second.Release();
+    }
+}

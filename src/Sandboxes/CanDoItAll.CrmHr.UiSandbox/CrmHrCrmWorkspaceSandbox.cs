@@ -1,3 +1,4 @@
+using CanDoItAll.AppComponents;
 using CanDoItAll.CrmHr.UI.Activity;
 using CanDoItAll.CrmHr.UI.Crm;
 using CanDoItAll.Modules.CrmHr;
@@ -68,7 +69,8 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
 
     public CrmOpportunityEditorModel OpportunityEditor { get; private set; } = new();
 
-    public CrmOpportunityConversionEditorModel OpportunityConversionEditor { get; private set; } = new();
+    public OpportunityConversionState ConversionState { get; } = new();
+    public CrmOpportunityConversionEditorModel OpportunityConversionEditor => ConversionState.Draft;
 
     public int AccountCount => partyStore.Snapshot().Count(party => party.PartyType == PartyType.Organization);
 
@@ -95,6 +97,9 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
     public bool IsOpportunityConversionBusy { get; private set; }
 
     public int SelectedCrmRecordTabIndex { get; private set; }
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<PartyRecordScope>? CatalogQuery => null;
 
     public IReadOnlyList<PartyOptionModel> ParticipantOptions => ConnectedRecordEditors
         .Where(editor => editor.RelatedPartyId != Guid.Empty)
@@ -195,6 +200,8 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         return Task.CompletedTask;
     }
 
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => Task.CompletedTask;
+
     public Task RetryAccountActivityAsync()
     {
         AccountActivityFailureMessage = null;
@@ -227,7 +234,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
 
     public void AddConnectedRecord()
     {
-        ConnectedRecordEditors.Add(new CrmAccountConnectionEditorModel());
+        ConnectedRecordEditors.Add(new CrmAccountConnectionEditorModel { Id = Guid.NewGuid() });
         Log("Add connected record");
     }
 
@@ -276,7 +283,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         Log($"Clear connection party: {index}");
     }
 
-    public void UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds)
+    public Task UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds)
     {
         if (index >= 0 && index < ConnectedRecordEditors.Count)
         {
@@ -284,6 +291,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         }
 
         Log($"Update connected record projects: {index} ({projectIds.Count})");
+        return Task.CompletedTask;
     }
 
     public string ResolveConnectionPartyLabel(Guid partyId)
@@ -335,13 +343,13 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         return Task.CompletedTask;
     }
 
-    public Task AdvanceOpportunityStageAsync(Guid opportunityId)
+    public Task AdvanceOpportunityStageAsync(CrmOpportunityStageAdvance intent)
     {
+        var opportunityId = intent.OpportunityId;
         var record = opportunityStore.Find(opportunityId);
-        if (record is not null)
+        if (record is not null && record.UpdatedAtUtc == intent.ExpectedUpdatedAtUtc && record.Stage == intent.DisplayedStage)
         {
-            var nextStage = record.Stage == OpportunityStage.Lost ? record.Stage : record.Stage + 1;
-            opportunityStore.Upsert(record with { Stage = nextStage, UpdatedAtUtc = DateTimeOffset.UtcNow });
+            opportunityStore.Upsert(record with { Stage = intent.NextStage, UpdatedAtUtc = DateTimeOffset.UtcNow });
             OpportunityPipelineRefreshVersion++;
             if (SelectedOpportunityId == opportunityId)
             {
@@ -353,12 +361,20 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         return Task.CompletedTask;
     }
 
-    public void OpenOpportunityCreateDialog()
+    public Task SelectOpportunityProjectAsync(Guid projectId) {
+        OpportunityEditor.LinkedProjectId = projectId;
+        OpportunityEditor.LinkedProjectAdmission = new(ProjectDatabaseProfileId, projectId, projectId);
+        Log($"Observe scenario opportunity project: {projectId:D}");
+        return Task.CompletedTask;
+    }
+
+    public Task OpenOpportunityCreateDialog()
     {
         OpportunityEditor = new CrmOpportunityEditorModel { AccountPartyId = SelectedAccount?.AccountPartyId ?? Guid.Empty };
         IsOpportunityCreateDialogOpen = true;
         Message = null;
         Log("Open opportunity create dialog");
+        return Task.CompletedTask;
     }
 
     public Task CloseOpportunityCreateDialogAsync()
@@ -375,7 +391,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         return Task.CompletedTask;
     }
 
-    public void OpenOpportunityEditDialog()
+    public Task OpenOpportunityEditDialog()
     {
         if (SelectedOpportunity is { } opportunity)
         {
@@ -386,6 +402,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         IsOpportunityEditDialogOpen = true;
         Message = null;
         Log("Open opportunity edit dialog");
+        return Task.CompletedTask;
     }
 
     public Task CloseOpportunityEditDialogAsync()
@@ -399,13 +416,13 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
     {
         if (SelectedOpportunity is { } opportunity)
         {
-            OpportunityConversionEditor = new CrmOpportunityConversionEditorModel
+            ConversionState.Open(new CrmOpportunityConversionEditorModel
             {
                 OpportunityId = opportunity.Id,
                 ExpectedUpdatedAtUtc = opportunity.UpdatedAtUtc,
                 ProjectName = opportunity.Title,
                 ProjectDescription = opportunity.Summary
-            };
+            }, opportunity);
         }
 
         IsOpportunityDetailDialogOpen = false;
@@ -418,6 +435,7 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
     public Task CloseOpportunityConversionDialogAsync()
     {
         IsOpportunityConversionDialogOpen = false;
+        ConversionState.Clear();
         Log("Close opportunity conversion dialog");
         return Task.CompletedTask;
     }
@@ -438,6 +456,35 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
         IsOpportunityConversionDialogOpen = false;
         IsOpportunityConversionBusy = false;
         Log($"Save opportunity conversion: {model.ProjectName}");
+        return Task.CompletedTask;
+    }
+
+    public Task ReviewConversionBasisAsync() {
+        if (SelectedOpportunity is { } current) {
+            ConversionState.SetReview(current, null, false, ConversionState.HintRevision, ConversionState.InputRevision);
+            Log("Review local scenario conversion basis; no native owner or authority is exercised");
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ApplyConversionBasisAsync() {
+        ConversionState.ApplyReview();
+        Log("Accept local scenario conversion basis");
+        return Task.CompletedTask;
+    }
+
+    public Task CancelConversionReviewAsync() {
+        ConversionState.CancelReview();
+        Log("Cancel local scenario conversion review");
+        return Task.CompletedTask;
+    }
+
+    public Task ObserveScenarioConversionProjectAsync() {
+        if (OpportunityConversionEditor.ExpectedProjectAdmission is { } project) {
+            OpportunityConversionEditor.ExpectedProjectBasis = new(OpportunityConversionEditor.OpportunityId,
+                OpportunityConversionEditor.ExpectedUpdatedAtUtc!.Value, project, []) { ProjectName = "Scenario project (synthetic observation)" };
+            Log("Observe synthetic scenario target; this is not native project admission proof");
+        }
         return Task.CompletedTask;
     }
 
@@ -464,24 +511,6 @@ public sealed class CrmHrCrmSandboxView(CrmHrSandboxPartyStore partyStore, CrmHr
     {
         Log($"Open linked project: {SelectedOpportunity?.LinkedProjectName}");
         return Task.CompletedTask;
-    }
-
-    public void ToggleInteractionParticipant(Guid partyId, ChangeEventArgs args)
-    {
-        var isChecked = args.Value is bool value && value;
-        if (isChecked)
-        {
-            if (!InteractionEditor.ParticipantPartyIds.Contains(partyId))
-            {
-                InteractionEditor.ParticipantPartyIds.Add(partyId);
-            }
-        }
-        else
-        {
-            InteractionEditor.ParticipantPartyIds.Remove(partyId);
-        }
-
-        Log($"Toggle interaction participant: {ResolveConnectionPartyLabel(partyId)}");
     }
 
     public void OpenAgentChats() => Log("Open agent chats");

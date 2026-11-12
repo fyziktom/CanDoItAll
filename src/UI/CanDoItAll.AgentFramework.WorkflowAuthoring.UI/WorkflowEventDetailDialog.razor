@@ -1,0 +1,49 @@
+<HeadContent><link rel="stylesheet" href="_content/CanDoItAll.AgentFramework.Workflows.UI/workflows.css" /></HeadContent>
+                <Dialog IsOpen="true"
+                        Title="@Presentation.Event.Kind"
+                        Eyebrow="Event detail"
+                        Subtitle="@Presentation.Event.CreatedAt"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="Closed"
+                        TestId="workflows-event-detail-dialog">
+                    <div class="workflows-detail-dialog">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="3">
+                            <div class="workflows-fact">
+                                <span>Event</span>
+                                <strong>@Presentation.Event.Kind</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Run</span>
+                                <strong>@FormatShortId(Presentation.RunId.Value)</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Node</span>
+                                <strong>@(Presentation.NodeId?.Value ?? "None")</strong>
+                            </div>
+                        </Grid>
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Message" />
+                            <pre class="workflows-detail-pre">@Presentation.Summary</pre>
+                        </div>
+
+                        @if (Presentation.Payload.Length > 0) {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Payload JSON" />
+                                <pre class="workflows-detail-pre">@Presentation.Payload</pre>
+                            </div>
+                        }
+                        @if (Presentation.TechnicalDetail.Length > 0) {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Technical details" />
+                                <pre class="workflows-detail-pre">@Presentation.TechnicalDetail</pre>
+                            </div>
+                        }
+                    </div>
+                </Dialog>
+@code {
+    [Parameter, EditorRequired] public WorkflowEventDetailPresentation Presentation { get; set; } = default!;
+    [Parameter] public EventCallback Closed { get; set; }
+    private static string FormatShortId(Guid value) => value.ToString("N")[..8];
+}

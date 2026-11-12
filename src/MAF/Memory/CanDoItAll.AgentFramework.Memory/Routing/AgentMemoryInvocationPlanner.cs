@@ -51,6 +51,11 @@ public static class AgentMemoryInvocationPlanner
                 : AgentMemoryInvocationPlan.Reject("This agent does not allow prompt-forced memory invocation.");
         }
 
+        if (access.InvocationMode == AgentMemoryInvocationMode.ExplicitDirective && directive.ProviderAliases.Count == 0) {
+            return AgentMemoryInvocationPlan.Skip(
+                $"Memory is prompt-forced for this agent. Start the prompt with '{MemoryDirectiveParser.Prefix}<alias>' to invoke it.");
+        }
+
         if (string.IsNullOrWhiteSpace(directive.Query))
         {
             return AgentMemoryInvocationPlan.Reject("Memory invocation requires a non-empty query after its directives.");
@@ -73,11 +78,6 @@ public static class AgentMemoryInvocationPlanner
             selected = access.ProviderBindings
                 .Where(binding => requestedAliases.Contains(binding.Alias))
                 .ToArray();
-        }
-        else if (access.InvocationMode == AgentMemoryInvocationMode.ExplicitDirective)
-        {
-            return AgentMemoryInvocationPlan.Skip(
-                $"Memory is prompt-forced for this agent. Start the prompt with '{MemoryDirectiveParser.Prefix}<alias>' to invoke it.");
         }
         else
         {

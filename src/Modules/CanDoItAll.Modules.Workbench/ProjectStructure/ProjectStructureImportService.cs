@@ -22,6 +22,13 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
             ? $"project:{request.ProjectId}"
             : request.ParentNodeKey.Trim();
         var warnings = new List<string>();
+        if (request.RequireSourceKeys && request.SourceKind != ProjectStructureImportSourceKind.JsonOutline) {
+            throw new ProjectStructureAgentException(400, "ImportSourceKeysUnsupported", "requireSourceKeys is supported only for JsonOutline imports.");
+        }
+        var plan = BuildImportPlan(request, warnings);
+        if (request.SourceAsset is not null) {
+            ValidateBase64Payload(request.SourceAsset.Base64Data);
+        }
 
         var container = await projectWorkbenchService.CreateObjectAsync(
             request.ProjectId,
@@ -47,7 +54,6 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         string? sourceNodeId = null;
         if (request.SourceAsset is not null)
         {
-            ValidateBase64Payload(request.SourceAsset.Base64Data);
             var sourceAssetNode = await projectWorkbenchService.CreateObjectAsync(
                 request.ProjectId,
                 new ProjectObjectCreateRequest(
@@ -71,7 +77,6 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
             sourceNodeId = sourceAssetNode.Id;
         }
 
-        var plan = BuildImportPlan(request, warnings);
         var createdNodeIds = new List<string> { container.Id };
         if (!string.IsNullOrWhiteSpace(sourceNodeId))
         {
@@ -84,6 +89,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
             await CreateImportedNodeAsync(
                 request,
                 rootNode,
+                container.Id,
                 container.Id,
                 createdNodeIds,
                 mappedNodeIds,
@@ -109,7 +115,11 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
 
         if (createdNodeIds.Count > 1)
         {
-            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken, mutationOwner);
+            var layoutOrigin = await projectWorkbenchService.GetStructureAsync(request.ProjectId, cancellationToken);
+            var layoutOwner = (mutationOwner ?? new ProjectStructureAgentContext("import", "Import", "", "", "", "")) with {
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(layoutOrigin)
+            };
+            var recompositionResult = await projectWorkbenchService.RecomposeSubtreeAsync(request.ProjectId, container.Id, cancellationToken, layoutOwner);
             if (recompositionResult is null)
             {
                 warnings.Add("Imported nodes were created, but the initial layout could not be recomposed automatically.");
@@ -123,6 +133,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         ProjectStructureImportRequest request,
         ImportedNodeDraft draft,
         string parentNodeId,
+        string containerNodeId,
         ICollection<string> createdNodeIds,
         IDictionary<string, string> mappedNodeIds,
         CancellationToken cancellationToken,
@@ -143,7 +154,9 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 null,
                 hasChildren ? request.ContainerBlockSubtype : request.LeafWorkItemSubtype,
                 null,
-                null) {
+                draft.SourceKey is { } sourceKey
+                    ? new ProjectStructureImportSourceIdentity(sourceKey, request.SourceKind, containerNodeId).ToMetadataJson()
+                    : null) {
                 ExpectedProjectAdmission = mutationOwner?.ExpectedProjectAdmission,
                 ProcessMutationAdmission = mutationOwner?.ProcessMutationAdmission,
                 AgentMutationAdmission = mutationOwner?.AgentMutationAdmission
@@ -159,6 +172,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
                 request,
                 child,
                 createdNode.Id,
+                containerNodeId,
                 createdNodeIds,
                 mappedNodeIds,
                 cancellationToken, mutationOwner);
@@ -278,16 +292,17 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         var sourceText = ResolveRequiredSourceText(request);
         using var document = JsonDocument.Parse(sourceText);
         var rootNodes = new List<ImportedNodeDraft>();
+        var sourceKeys = new HashSet<string>(StringComparer.Ordinal);
         if (document.RootElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in document.RootElement.EnumerateArray())
             {
-                rootNodes.Add(ParseJsonOutlineNode(item));
+                rootNodes.Add(ParseJsonOutlineNode(item, sourceKeys, request.RequireSourceKeys));
             }
         }
         else if (document.RootElement.ValueKind == JsonValueKind.Object)
         {
-            rootNodes.Add(ParseJsonOutlineNode(document.RootElement));
+            rootNodes.Add(ParseJsonOutlineNode(document.RootElement, sourceKeys, request.RequireSourceKeys));
         }
         else
         {
@@ -366,7 +381,7 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         return rootNodes;
     }
 
-    private static ImportedNodeDraft ParseJsonOutlineNode(JsonElement element)
+    private static ImportedNodeDraft ParseJsonOutlineNode(JsonElement element, ISet<string> sourceKeys, bool requireSourceKeys)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
@@ -386,13 +401,14 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
         var notes = element.TryGetProperty("notes", out var notesElement)
             ? notesElement.GetString() ?? string.Empty
             : string.Empty;
-        var node = new ImportedNodeDraft(CreateImportNodeKey(title), title.Trim(), notes.Trim(), []);
+        var sourceKey = ProjectStructureImportSourceIdentity.ReadOptionalKey(element, sourceKeys, requireSourceKeys);
+        var node = new ImportedNodeDraft(sourceKey ?? CreateImportNodeKey(title), title.Trim(), notes.Trim(), [], sourceKey);
         if (element.TryGetProperty("children", out var childrenElement) &&
             childrenElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var child in childrenElement.EnumerateArray())
             {
-                node.Children.Add(ParseJsonOutlineNode(child));
+                node.Children.Add(ParseJsonOutlineNode(child, sourceKeys, requireSourceKeys));
             }
         }
 
@@ -656,5 +672,5 @@ public sealed class ProjectStructureImportService(ProjectWorkbenchService projec
 
     private sealed record ProjectStructureImportPlan(IReadOnlyList<ImportedNodeDraft> RootNodes, IReadOnlyList<ImportedLinkDraft> Links);
 
-    private sealed record ImportedNodeDraft(string Key, string Title, string Notes, List<ImportedNodeDraft> Children);
+    private sealed record ImportedNodeDraft(string Key, string Title, string Notes, List<ImportedNodeDraft> Children, string? SourceKey = null);
 }

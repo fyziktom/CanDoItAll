@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using Microsoft.Playwright;
 using Xunit.Sdk;
 
@@ -8,9 +9,9 @@ namespace CanDoItAll.Tests.Playwright;
 public sealed class LocalSimpleChatBrowserAccessTests {
     [Theory]
     [Trait("Category", "ExternalRealSharedProviderUi")]
-    [InlineData(false, "UI Shared OpenAI Chat", "gpt-5.4-mini", "LOCAL_OPENAI_OK")]
+    [InlineData(false, "UI Shared OpenAI Chat", OpenAiModelIds.Gpt6Sol, "LOCAL_OPENAI_OK")]
     [InlineData(false, "UI Shared Ollama", "gemma3:4b", "4")]
-    [InlineData(true, "UI Shared OpenAI Chat", "gpt-5.4-mini", "LOCAL_SOURCE_OK")]
+    [InlineData(true, "UI Shared OpenAI Chat", OpenAiModelIds.Gpt6Sol, "LOCAL_SOURCE_OK")]
     public async Task LOCAL_UI_ACCESS_plain_browser_creates_and_runs_chat_while_API_stays_protected(
         bool source, string providerName, string model, string answer) {
         var url = Required(source ? "CANDOITALL_REAL_SHARED_URL" : "CANDOITALL_REAL_CLIENT_URL");
@@ -51,16 +52,27 @@ public sealed class LocalSimpleChatBrowserAccessTests {
         Assert.Equal(0, Volatile.Read(ref authorizedRequests));
 
         using var http = new HttpClient();
-        http.DefaultRequestHeaders.Add("X-Forwarded-For", "127.0.0.1");
         using var api = await http.GetAsync($"{url}/api/llm-chats");
         using var files = await http.GetAsync($"{url}/authorized-files/content");
         Assert.Equal(HttpStatusCode.Unauthorized, api.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, files.StatusCode);
+        http.DefaultRequestHeaders.Add("X-Forwarded-For", "127.0.0.1");
+        using var spoofedApi = await http.GetAsync($"{url}/api/llm-chats");
+        using var spoofedFiles = await http.GetAsync($"{url}/authorized-files/content");
+        var spoofedStatus = new Uri(url).Scheme == Uri.UriSchemeHttps
+            ? HttpStatusCode.Unauthorized : HttpStatusCode.BadRequest;
+        Assert.Equal(spoofedStatus, spoofedApi.StatusCode);
+        Assert.Equal(spoofedStatus, spoofedFiles.StatusCode);
+        if (spoofedStatus == HttpStatusCode.BadRequest) {
+            using var refusal = JsonDocument.Parse(await spoofedApi.Content.ReadAsStringAsync());
+            Assert.Equal("api.https-required", refusal.RootElement.GetProperty("errors")[0].GetProperty("code").GetString());
+        }
         await File.WriteAllTextAsync(Path.Combine(evidence, $"{label}-result.json"), JsonSerializer.Serialize(new {
             Invariants = new[] { "LOCAL-UI-ACCESS", "API-BOUNDARY" }, Url = url, Provider = providerName,
             Model = model, ExpectedAnswer = answer, ConversationUrl = conversationUrl,
             BrowserAuthorizationRequests = authorizedRequests, ApiStatus = (int)api.StatusCode,
-            AuthorizedFileStatus = (int)files.StatusCode, CompletedAtUtc = DateTimeOffset.UtcNow
+            AuthorizedFileStatus = (int)files.StatusCode, SpoofedApiStatus = (int)spoofedApi.StatusCode,
+            SpoofedFileStatus = (int)spoofedFiles.StatusCode, CompletedAtUtc = DateTimeOffset.UtcNow
         }));
     }
 

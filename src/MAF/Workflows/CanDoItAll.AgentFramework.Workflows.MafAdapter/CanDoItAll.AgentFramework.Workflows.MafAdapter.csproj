@@ -3,6 +3,7 @@
   <Import Project="..\..\MicrosoftAgentFramework.Packages.props" />
 
   <ItemGroup>
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Workflows.Definitions\CanDoItAll.AgentFramework.Workflows.Definitions.csproj" />
     <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Llm.Abstractions\CanDoItAll.AgentFramework.Llm.Abstractions.csproj" />
     <ProjectReference Include="..\..\Common\CanDoItAll.AgentFramework.Llm.ProviderRuntime\CanDoItAll.AgentFramework.Llm.ProviderRuntime.csproj" />

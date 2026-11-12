@@ -16,6 +16,7 @@ public sealed class StorageFileBrowserProvider :
     private readonly StorageFileBrowserKeyCodec _keyCodec;
     private readonly StorageFileBrowserItemAuthorizer _itemAuthorizer;
     private readonly FileToolsBrowseSourceActionAvailability _actionAvailability;
+    private readonly Func<CancellationToken, ValueTask>? _authorizeRead;
 
     public StorageFileBrowserProvider(
         FileToolsSemanticScope scope,
@@ -32,7 +33,8 @@ public sealed class StorageFileBrowserProvider :
         StorageDriverInput storage,
         IStorageBrowseDriver listingDriver,
         IStorageBrowseDriver authorityDriver,
-        FileToolsBrowseSourceActionAvailability actionAvailability = default)
+        FileToolsBrowseSourceActionAvailability actionAvailability = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(binding);
@@ -51,6 +53,7 @@ public sealed class StorageFileBrowserProvider :
         _limits = binding.WorkLimits;
         _root = binding.Root;
         _actionAvailability = actionAvailability;
+        _authorizeRead = authorizeRead;
         FileBrowserSourceId sourceId = CreateSourceId(scope, storage.Id, _root);
         _keyCodec = new StorageFileBrowserKeyCodec(sourceId);
         _itemAuthorizer = new StorageFileBrowserItemAuthorizer(
@@ -84,12 +87,15 @@ public sealed class StorageFileBrowserProvider :
 
     public bool SupportsDownload => _actionAvailability.SupportsDownload;
 
-    public ValueTask<FileBrowserItem> GetRootAsync(
+    public async ValueTask<FileBrowserItem> GetRootAsync(
         FileBrowserMetadataRequest metadata,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult(new FileBrowserItem(
+        if (_authorizeRead is not null) {
+            await _authorizeRead(cancellationToken);
+        }
+        return new FileBrowserItem(
             _keyCodec.Root,
             parentKey: null,
             Descriptor.DisplayName,
@@ -102,7 +108,7 @@ public sealed class StorageFileBrowserProvider :
                 FileBrowserMetadataFields.DisplayPath |
                 FileBrowserMetadataFields.Kind |
                 FileBrowserMetadataFields.ChildState),
-            capabilities: FileBrowserItemCapabilities.Select | FileBrowserItemCapabilities.Navigate));
+            capabilities: FileBrowserItemCapabilities.Select | FileBrowserItemCapabilities.Navigate);
     }
 
     public async ValueTask<IReadOnlyList<FileBrowserItem>> GetPathAsync(
@@ -110,6 +116,9 @@ public sealed class StorageFileBrowserProvider :
         FileBrowserMetadataRequest metadata,
         CancellationToken cancellationToken = default)
     {
+        if (_authorizeRead is not null) {
+            await _authorizeRead(cancellationToken);
+        }
         StorageFileBrowserKeyState state = _keyCodec.Decode(itemKey);
         StorageBrowseContainer container = ResolveContainer(state);
         try
@@ -154,6 +163,9 @@ public sealed class StorageFileBrowserProvider :
                 parent = key;
             }
 
+            if (_authorizeRead is not null) {
+                await _authorizeRead(cancellationToken);
+            }
             return path;
         }
         catch (StorageBrowseException exception)
@@ -167,6 +179,9 @@ public sealed class StorageFileBrowserProvider :
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (_authorizeRead is not null) {
+            await _authorizeRead(cancellationToken);
+        }
         ValidateRequest(request);
         StorageFileBrowserKeyState parentState = _keyCodec.Decode(request.ParentKey);
         if (parentState.Kind == StorageFileBrowserKeyKind.Item)
@@ -191,6 +206,9 @@ public sealed class StorageFileBrowserProvider :
                     StorageFileBrowserMapping.MapMetadata(request.Metadata),
                     CreateBudget()),
                 cancellationToken);
+            if (_authorizeRead is not null) {
+                await _authorizeRead(cancellationToken);
+            }
             FileBrowserItem[] items = nativePage.Entries
                 .Select(entry => StorageFileBrowserMapping.MapItem(
                     _keyCodec,

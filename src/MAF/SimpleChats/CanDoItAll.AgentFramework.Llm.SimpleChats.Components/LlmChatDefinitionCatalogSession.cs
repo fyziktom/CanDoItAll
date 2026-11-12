@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging;
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
 public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway definitions,
-    Func<LlmChatDefinitionListItem, DefinitionCatalogCard> project, ILogger<LlmChatDefinitionCatalogSession> logger) : IDisposable {
+    Func<LlmChatDefinitionListItem, DefinitionCatalogCard> project, ILogger<LlmChatDefinitionCatalogSession> logger,
+    Func<CancellationToken, ValueTask> authorize) : IDisposable {
     private static readonly TimeSpan SearchDebounce = TimeSpan.FromMilliseconds(250);
     public static DefinitionCatalogFilterLimits Limits { get; } = new(LlmChatDefinitionQuery.MaximumSearchLength,
         LlmChatDefinitionQuery.MaximumTagFilters, LlmChatDefinitionValidation.MaximumTagLength);
@@ -17,6 +18,7 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
     private CancellationTokenSource? debounce;
     private LlmChatDefinitionCursor? nextCursor;
     private long generation;
+    private long changeRevision;
     private bool disposed;
     public LlmChatUiAuthorizationSnapshot? Authorization { get; private set; }
     public LlmChatDefinitionQuery? AppliedQuery { get; private set; }
@@ -35,7 +37,17 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
 
     public void FailAuthorization() {
         if (!disposed) {
-            Presentation = Presentation with { Phase = DefinitionCatalogPhase.Failed, Failure = DefinitionCatalogFailure.AuthorizationUnavailable };
+            CancelDebounce();
+            CancelList();
+            Presentation = Presentation with { CanRead = false, CanManage = false, Cards = [], Phase = DefinitionCatalogPhase.Failed, Failure = DefinitionCatalogFailure.AuthorizationUnavailable };
+            Changed?.Invoke();
+        }
+    }
+
+    public void MarkChanged() {
+        if (!disposed) {
+            changeRevision++;
+            Presentation = Presentation with { NeedsRefresh = true };
             Changed?.Invoke();
         }
     }
@@ -46,6 +58,8 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
         }
         var filters = Presentation.Filters;
         switch (intent) {
+            case DefinitionCatalogIntent.Refresh:
+                return ReloadAsync();
             case DefinitionCatalogIntent.SearchChanged search:
                 return ReplaceFiltersAsync(filters with { Search = search.Value }, delay: true);
             case DefinitionCatalogIntent.TagsChanged tags:
@@ -98,6 +112,7 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
     private async Task LoadAsync(bool append) {
         CancelList();
         var requested = ++generation;
+        var coveredChanges = changeRevision;
         using var owner = new CancellationTokenSource();
         active = owner;
         Presentation = Presentation with { Failure = null,
@@ -115,7 +130,12 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
                 Presentation = Presentation with { Failure = DefinitionCatalogFailure.InvalidFilters, Phase = DefinitionCatalogPhase.Failed };
                 return;
             }
+            await authorize(owner.Token);
             var result = await definitions.ListPageAsync(AppliedQuery, owner.Token);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            await authorize(owner.Token);
             if (!IsCurrent(owner)) {
                 return;
             }
@@ -127,7 +147,12 @@ public sealed class LlmChatDefinitionCatalogSession(ILlmChatDefinitionUiGateway 
             var cards = result.Value!.Items.Select(project).Select(card => card with { Tags = card.Tags.ToImmutableArray() }).ToImmutableArray();
             nextCursor = result.Value.NextCursor;
             Presentation = Presentation with { Cards = append ? Presentation.Cards.AddRange(cards) : cards,
-                HasMore = nextCursor is not null, Phase = DefinitionCatalogPhase.Ready };
+                HasMore = nextCursor is not null, Phase = DefinitionCatalogPhase.Ready,
+                NeedsRefresh = append ? Presentation.NeedsRefresh : coveredChanges != changeRevision };
+        } catch (UnauthorizedAccessException) {
+            if (IsCurrent(owner)) {
+                FailAuthorization();
+            }
         } catch (OperationCanceledException) when (owner.IsCancellationRequested) {
         } catch (Exception exception) {
             if (IsCurrent(owner)) {

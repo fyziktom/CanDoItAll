@@ -15,11 +15,22 @@ namespace CanDoItAll.Web.Api;
 
 internal static class AgentsApi
 {
+    private const string AgentConfigurationConflictCode = "agents.configuration-conflict";
+    private const string TeamConfigurationConflictCode = "agents.team-configuration-conflict";
+    private const string CapabilityConfigurationConflictCode = "agents.capability-configuration-conflict";
+    private const string InvalidTeamEdit = "The team name, identity, or supplied metadata expectation is invalid.";
+    private const string TeamEditConflict = "The team or its reviewed metadata changed, or the original expectation is missing. Read the current team before saving.";
+    private const string InvalidTeamMembers = "The membership request or its team identifier is invalid.";
+    private const string TeamMembersConflict = "The reviewed team revision is missing or no longer matches. Read the current team before replacing members.";
+    private const string CapabilityEditConflict = "The capability fingerprint is missing or no longer matches. Read the current capability before writing.";
     public static RouteGroupBuilder MapAgentsApi(this RouteGroupBuilder group)
     {
         var agents = group.MapGroup("/agents").WithApiSection(ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents)
             .WithTags("Agents");
         agents.MapUsage();
+        agents.MapAgentHistoricalReceiptsApi();
+        agents.MapAgentPlanningActionsApi();
+        agents.MapAgentDecisionPolicyApi();
 
         agents.MapGet("/", ListAgentsAsync)
             .WithName("ListAgents")
@@ -38,12 +49,15 @@ internal static class AgentsApi
 
         agents.MapPost("/", SaveAgentAsync)
             .WithName("SaveAgent")
+            .WithDescription("Creates a new agent or conditionally replaces its complete configuration. Existing agents require the original expectedUpdatedAtUtc from GET; missing, changed or deleted originals return 409 without saving.")
             .Accepts<AgentEditorModel>("application/json")
             .Produces<Guid>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
                 StatusCodes.Status401Unauthorized,
-                StatusCodes.Status403Forbidden);
+                StatusCodes.Status403Forbidden,
+                StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The original agent revision is missing or no longer matches. Read the current agent before saving.");
 
         agents.MapDelete("/{agentId:guid}", DeleteAgentAsync)
             .WithName("DeleteAgent")
@@ -103,23 +117,37 @@ internal static class AgentsApi
 
         agents.MapPost("/teams", SaveAgentTeamAsync)
             .WithName("SaveAgentTeam")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamEdit)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamEditConflict);
 
         agents.MapPut("/teams/{teamId:guid}", UpdateAgentTeamAsync)
             .WithName("UpdateAgentTeam")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamEdit)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamEditConflict);
 
         agents.MapPost("/teams/{teamId:guid}/members", UpdateAgentTeamMembersAsync)
             .WithName("UpdateAgentTeamMembers")
-            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK);
+            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamMembers)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamMembersConflict);
 
         agents.MapPut("/teams/{teamId:guid}/members", ReplaceAgentTeamMembersAsync)
             .WithName("ReplaceAgentTeamMembers")
-            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK);
+            .Produces<AgentTeamDefinition>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status400BadRequest, InvalidTeamMembers)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, TeamMembersConflict);
 
         agents.MapDelete("/teams/{teamId:guid}", DeleteAgentTeamAsync)
             .WithName("DeleteAgentTeam")
-            .Produces<ApiAck>(StatusCodes.Status200OK);
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, "The reviewed team revision is missing or no longer matches. Read the current team before deleting.");
     }
 
     private static void MapProviderEndpoints(RouteGroupBuilder agents)
@@ -171,7 +199,7 @@ internal static class AgentsApi
         agents.MapPost("/providers/{providerId:guid}/ollama-modelfile", CreateAgentProviderModelMaintenanceAsync)
             .WithName("CreateAgentProviderModelMaintenance").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ProviderModelMaintenanceEditorResult>(StatusCodes.Status200OK)
-            .Produces<ProviderCommittedApiResponse>(StatusCodes.Status202Accepted)
+            .Produces<ProviderModelMaintenancePersistenceApiResponse>(StatusCodes.Status202Accepted)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound,
                 StatusCodes.Status409Conflict, StatusCodes.Status503ServiceUnavailable);
     }
@@ -188,11 +216,15 @@ internal static class AgentsApi
 
         agents.MapPost("/capabilities", SaveAgentCapabilityAsync)
             .WithName("SaveAgentCapability")
-            .Produces<Guid>(StatusCodes.Status200OK);
+            .Produces<Guid>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, CapabilityEditConflict);
 
         agents.MapDelete("/capabilities/{capabilityId:guid}", DeleteAgentCapabilityAsync)
             .WithName("DeleteAgentCapability")
-            .Produces<ApiAck>(StatusCodes.Status200OK);
+            .Produces<ApiAck>(StatusCodes.Status200OK)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .DescribeApiResponse(StatusCodes.Status409Conflict, CapabilityEditConflict);
 
         agents.MapPost("/{agentId:guid}/capabilities/{capabilityId:guid}/verify", VerifyAgentCapabilityAsync)
             .WithName("VerifyAgentCapability").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
@@ -240,7 +272,11 @@ internal static class AgentsApi
 
         agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync)
             .WithName("RenameAgentChatSession")
-            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
+            .WithMetadata(new ApiEndpointDocumentation("Chat session with its accepted title.", "Desired nonblank title and the exact original displayed title."))
+            .WithSummary("Conditionally rename the selected chat session.")
+            .WithDescription("Requires expectedTitle from the displayed session. A missing expectation is refused before mutation; a changed title returns 409. Only the title changes; transcript, approval and runtime state are preserved. The requested title is normalized to at most 96 characters. Read the selected session after an unconfirmed response before another action.")
+            .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK)
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict, StatusCodes.Status428PreconditionRequired);
 
         agents.MapGet("/{agentId:guid}/chat-workspace", GetAgentChatWorkspaceAsync)
             .WithName("GetAgentChatWorkspace")
@@ -523,15 +559,12 @@ internal static class AgentsApi
     /// concurrency check. An <c>id</c> that does not exist yet creates the agent with that identifier.
     ///
     /// The server trims text, derives the template key from <c>templateKey</c> or, when blank, from <c>name</c>, drops
-    /// unknown capability identifiers and duplicate tags, replaces <c>permissions.allowedSecrets</c> with
+    /// duplicate tags, replaces <c>permissions.allowedSecrets</c> with
     /// <c>allowedSecretReferences</c>, and writes each typed access setting over its key in <c>configurationJson</c>
     /// (a value that is not a JSON object is replaced by an empty object). Saved configuration never attaches runtime
     /// tools by itself: each run still applies the agent's permissions, capabilities, access settings and invocation
     /// policy.
     ///
-    /// The agent is committed before the CRM/HR directory projection is refreshed. If that refresh fails, the request
-    /// fails with a generic HTTP 500 although the agent is saved; list the agents before retrying, because a repeated
-    /// create is then rejected for its already used template key.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
@@ -598,12 +631,17 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentAsync(
         Guid agentId,
+        [Description("Original agent updatedAtUtc from the reviewed agent read. Required for deletion of an existing agent.")] DateTimeOffset? expectedUpdatedAtUtc,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
         try
         {
-            await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
+            if (expectedUpdatedAtUtc is { } expected) {
+                await workspaceService.DeleteAgentAsync(agentId, expected, cancellationToken);
+            } else {
+                await workspaceService.DeleteAgentAsync(agentId, cancellationToken);
+            }
             return Results.Ok(new ApiAck(true));
         }
         catch (AgentDeletionConflictException exception)
@@ -613,6 +651,9 @@ internal static class AgentsApi
                 exception.Kind == AgentDeletionConflictKind.ManagedSeedAgent
                     ? "agents.delete-managed-seed"
                     : "agents.delete-active-execution");
+        }
+        catch (AgentCatalogConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, AgentConfigurationConflictCode);
         }
     }
 
@@ -629,7 +670,7 @@ internal static class AgentsApi
     ///
     /// An unknown source, a name without any letter or digit, or a name whose derived template key already belongs to
     /// another agent is not translated into the error envelope: the request fails with a generic HTTP 500 and nothing
-    /// is created. The clone is committed before the CRM/HR directory projection is refreshed; if that refresh fails,
+    /// is created. The clone is committed before the CRM/HR directory projection is refreshed;
     /// HTTP 500 is returned although the clone exists, so list the agents before retrying.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
@@ -645,7 +686,7 @@ internal static class AgentsApi
         AgentCloneApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.CloneAgentAsync(agentId, request.CloneName, cancellationToken));
+        await AgentCatalogApiResults.CopyAsync(() => workspaceService.CloneAgentAsync(agentId, request.CloneName, cancellationToken));
 
     /// <summary>
     /// Create a template agent from an existing agent, leaving the source agent unchanged.
@@ -660,8 +701,6 @@ internal static class AgentsApi
     /// belong to another agent or template. A blank key falls back to the source name, which normally collides with
     /// the source agent's own key, so send an explicit key. An unknown agent or an unusable or duplicate key is not
     /// translated into the error envelope: the request fails with a generic HTTP 500 and nothing is created. The
-    /// template is committed before the CRM/HR directory projection is refreshed; if that refresh fails, HTTP 500 is
-    /// returned although the template exists, so list the agents with <c>includeTemplates=true</c> before retrying.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
@@ -676,7 +715,7 @@ internal static class AgentsApi
         AgentTemplateConversionApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.ConvertToTemplateAsync(agentId, request.TemplateKey, cancellationToken));
+        await AgentCatalogApiResults.CopyAsync(() => workspaceService.ConvertToTemplateAsync(agentId, request.TemplateKey, cancellationToken));
 
     /// <summary>
     /// Write an export package of an agent on the server and return the package's server path.
@@ -877,7 +916,8 @@ internal static class AgentsApi
         AgentTeamEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken));
+        await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
+            accepted => Results.Ok(accepted.Id));
 
     /// <summary>
     /// Replace an agent team's name, description, icon and members.
@@ -910,7 +950,8 @@ internal static class AgentsApi
         CancellationToken cancellationToken)
     {
         request.Id = teamId;
-        return Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken));
+        return await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
+            accepted => Results.Ok(accepted.Id));
     }
 
     /// <summary>
@@ -943,7 +984,7 @@ internal static class AgentsApi
         AgentTeamMembersApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken));
+        await ReplaceTeamMembersAsync(teamId, request, workspaceService, cancellationToken);
 
     /// <summary>
     /// Replace the member list of an agent team.
@@ -975,7 +1016,7 @@ internal static class AgentsApi
         AgentTeamMembersApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken));
+        await ReplaceTeamMembersAsync(teamId, request, workspaceService, cancellationToken);
 
     /// <summary>
     /// Delete an agent team without affecting its member agents.
@@ -996,11 +1037,18 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentTeamAsync(
         Guid teamId,
+        [Description("Original team updatedAtUtc from the reviewed team read. Required for deletion of an existing team.")] DateTimeOffset? expectedUpdatedAtUtc,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
-        await workspaceService.DeleteAgentTeamAsync(teamId, cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        return await TeamWriteAsync(async () => {
+            if (expectedUpdatedAtUtc is { } expected) {
+                await workspaceService.DeleteAgentTeamAsync(teamId, expected, cancellationToken);
+            } else {
+                await workspaceService.DeleteAgentTeamAsync(teamId, cancellationToken);
+            }
+            return Results.Ok(new ApiAck(true));
+        });
     }
 
     /// <summary>
@@ -1201,6 +1249,7 @@ internal static class AgentsApi
     /// </response>
     internal static async Task<IResult> DeleteAgentProviderAsync(
         Guid providerId,
+        [Description("Original configuration token returned by the provider editor read. Required for deleting an existing provider.")] Guid? expectedConcurrencyToken,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
         CancellationToken cancellationToken) =>
@@ -1208,7 +1257,11 @@ internal static class AgentsApi
             context,
             async () =>
             {
-                await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
+                if (expectedConcurrencyToken is { } expected) {
+                    await providerAdministration.DeleteProviderAsync(providerId, expected, cancellationToken);
+                } else {
+                    await providerAdministration.DeleteProviderAsync(providerId, cancellationToken);
+                }
                 return Results.Ok(new ApiAck(true));
             },
             _ => Results.Ok(new ApiAck(true)));
@@ -1356,12 +1409,13 @@ internal static class AgentsApi
         ProviderModelMaintenanceEditorRequest request,
         HttpContext context,
         IProviderRuntimeAdministrationService providerAdministration,
+        ProviderModelMaintenanceHttpAccess access,
         CancellationToken cancellationToken) =>
-        await ProviderApiResults.ExecuteAsync(context, async () =>
+        await ProviderApiResults.ExecuteAsync(context, () => access.ExecuteAsync(providerId, context, async () =>
             Results.Ok(await providerAdministration.CreateOrUpdateProviderModelAsync(
                 providerId,
                 request,
-                cancellationToken)));
+                cancellationToken)), cancellationToken));
 
     /// <summary>
     /// List the capability catalog of the current workspace.
@@ -1414,8 +1468,7 @@ internal static class AgentsApi
     /// <remarks>
     /// Create: send <c>id</c> and <c>expectedFingerprint</c> as null; the server assigns the identifier. Update: read
     /// <c>GET /api/agents/capabilities/{capabilityId}/editor</c>, change the members you intend to change, and send
-    /// the whole form with its <c>id</c> and <c>expectedFingerprint</c>. With a fingerprint the save is rejected when
-    /// the stored capability changed since the read; without one the update overwrites without a check. The proof
+    /// the whole form with its <c>id</c> and <c>expectedFingerprint</c>. The proof
     /// fields are kept. Changing the kind or key also updates every agent's assignment of the capability and advances
     /// those agents' revisions.
     ///
@@ -1424,9 +1477,7 @@ internal static class AgentsApi
     /// kind Memory is retired and rejected. Skill configuration must be a JSON object; the configuration of other
     /// kinds is stored as sent and is not validated.
     ///
-    /// Every rejection, including a fingerprint mismatch, an unknown <c>id</c>, a fingerprint sent on create, a
-    /// duplicate key or a null text member, is not translated into the error envelope: the request fails with a generic
-    /// HTTP 500 and nothing is saved. Capabilities shipped with the product are restored to their shipped definition
+    /// Capabilities shipped with the product are restored to their shipped definition
     /// when the catalog is written, so edits to them can report success without being kept. Read the editor form
     /// again after every save.
     ///
@@ -1438,11 +1489,12 @@ internal static class AgentsApi
     /// The save completed. The body is the capability identifier as a JSON string (a GUID); read the editor form for
     /// the stored values and the new fingerprint.
     /// </response>
+    [Description("Creates a capability or conditionally replaces its configuration. Existing capabilities require their original expectedFingerprint; missing or stale originals return HTTP409 with agents.capability-configuration-conflict. Proof metadata is preserved.")]
     internal static async Task<IResult> SaveAgentCapabilityAsync(
         CapabilityEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.SaveCapabilityAsync(request, cancellationToken));
+        await CapabilityWriteAsync(async () => Results.Ok(await workspaceService.SaveCapabilityAsync(request, cancellationToken)));
 
     /// <summary>
     /// Delete a catalog capability and remove it from every agent that has it assigned.
@@ -1450,24 +1502,31 @@ internal static class AgentsApi
     /// <remarks>
     /// Removes the capability from the catalog and its assignment from every agent, advancing those agents' revisions;
     /// assignments do not block the delete. Deleting an identifier that does not exist succeeds, so a repeated delete
-    /// is harmless. Capabilities shipped with the product are restored by the same catalog write, so deleting one
-    /// reports success but it remains.
+    /// is harmless.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
     /// </remarks>
     /// <param name="capabilityId">Identifier of the capability to delete.</param>
     /// <response code="200">
-    /// The delete completed: the capability is gone, or it never existed, unless it is shipped with the product. The
+    /// The delete completed: the capability is gone, or it never existed. The
     /// body is <c>{ "ok": true }</c>.
     /// </response>
+    [Description("Deletes a capability and its assignments only when expectedFingerprint matches the reviewed configuration. Missing or stale originals return HTTP409; built-in capabilities are refused.")]
     internal static async Task<IResult> DeleteAgentCapabilityAsync(
         Guid capabilityId,
+        [Description("Original configuration fingerprint returned by the capability editor read. Required for deletion.")] string? expectedFingerprint,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
-        await workspaceService.DeleteCapabilityAsync(capabilityId, cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        return await CapabilityWriteAsync(async () => {
+            if (expectedFingerprint is null) {
+                await workspaceService.DeleteCapabilityAsync(capabilityId, cancellationToken);
+            } else {
+                await workspaceService.DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
+            }
+            return Results.Ok(new ApiAck(true));
+        });
     }
 
     /// <summary>
@@ -1763,36 +1822,26 @@ internal static class AgentsApi
         Results.Ok(AgentApiResponseMapper.ToChatSession(
             await workspaceService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken)));
 
-    /// <summary>
-    /// Rename an agent's chat session.
-    /// </summary>
-    /// <remarks>
-    /// Replaces the session title: runs of white space are collapsed to single spaces and titles longer than 96
-    /// characters are cut. A rename made while a run of the session is still active can be overwritten when that run
-    /// finishes; read the session afterwards to confirm the title.
-    ///
-    /// A blank or null title, an unknown session, or a session of another agent is not translated into the error
-    /// envelope: the request fails with a generic HTTP 500.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="agentId">Identifier of the agent that owns the session.</param>
-    /// <param name="chatSessionId">Identifier of the session to rename.</param>
-    /// <param name="request">The new title.</param>
-    /// <response code="200">The renamed session with its transcript.</response>
     internal static async Task<IResult> RenameAgentChatSessionAsync(
-        Guid agentId,
-        Guid chatSessionId,
+        [Description("Agent owning the selected chat session.")] Guid agentId,
+        [Description("Original chat session ID whose displayed title is conditionally replaced.")] Guid chatSessionId,
         ChatSessionRenameApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToChatSession(
-            await workspaceService.RenameChatSessionAsync(
-                agentId,
-                chatSessionId,
-                request.Title,
-                cancellationToken)));
+        CancellationToken cancellationToken) {
+        if (request.ExpectedTitle is null) {
+            return Results.Json(new ApiErrorResponse([new("chat.title_precondition_required", "The original thread title is required.", CanDoItAll.SharedKernel.ErrorSeverity.Warning)]),
+                statusCode: StatusCodes.Status428PreconditionRequired);
+        }
+        if (agentId == Guid.Empty || chatSessionId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title)) {
+            return ApiEndpointResults.BadRequest("A valid agent, session and title are required.", "chat.title_invalid");
+        }
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToChatSession(await workspaceService.RenameChatSessionAsync(
+                agentId, chatSessionId, request.Title, request.ExpectedTitle, cancellationToken)));
+        } catch (ChatSessionTitleConflictException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, "chat.title_conflict");
+        }
+    }
 
     /// <summary>
     /// Read an agent's chat workspace: its session list, the selected session and its latest runs.
@@ -2025,6 +2074,9 @@ internal static class AgentsApi
         {
             return AgentActivityApiResults.FromAdmissionException(context, exception, executionRunId: executionRunId);
         }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
         catch (AgentToolAdmissionException exception)
         {
             return ApiEndpointResults.AgentValidationFailure(
@@ -2226,6 +2278,12 @@ internal static class AgentsApi
                 context,
                 exception,
                 executionRunId: executionRunId);
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+        catch (AgentToolAdmissionException exception) {
+            return ApiEndpointResults.AgentValidationFailure(context, exception.Message, exception.Code, executionRunId: executionRunId);
         }
         catch (AgentApprovalDecisionMismatchException exception)
         {
@@ -2497,12 +2555,16 @@ internal static class AgentsApi
     /// Identifier of the agent execution run, as returned by a run command or a run search.
     /// </param>
     /// <response code="200">The run and its evidence.</response>
-    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(
-        Guid executionRunId,
-        IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
-            await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+    internal static async Task<IResult> GetAgentExecutionRunDetailAsync(Guid executionRunId, HttpContext context,
+        IAgentFrameworkWorkspaceService workspaceService, CancellationToken cancellationToken) {
+        context.Response.Headers.CacheControl = "no-store";
+        try {
+            return Results.Ok(AgentApiResponseMapper.ToExecutionRunDetail(
+                await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken)));
+        } catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
+        }
+    }
 
     /// <summary>
     /// Read an execution run of a given agent with its log, metrics, approvals, artifacts, checkpoints, tool receipts
@@ -2532,14 +2594,11 @@ internal static class AgentsApi
     internal static async Task<IResult> GetAgentScopedExecutionRunDetailAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        await GetAgentExecutionRunPartAsync(
-            agentId,
-            executionRunId,
-            workspaceService,
-            AgentApiResponseMapper.ToExecutionRunDetail,
-            cancellationToken);
+        await GetAgentExecutionRunPartAsync(agentId, executionRunId, context, workspaceService,
+            AgentApiResponseMapper.ToExecutionRunDetail, cancellationToken);
 
     /// <summary>
     /// List the artifacts produced by an agent execution run.
@@ -2581,11 +2640,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionArtifactsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToArtifacts(detail.Artifacts),
             cancellationToken);
@@ -2632,11 +2693,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionCheckpointsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToCheckpoints(detail.Checkpoints),
             cancellationToken);
@@ -2685,11 +2748,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionToolReceiptsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToToolReceipts(detail.ToolReceipts),
             cancellationToken);
@@ -2713,11 +2778,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionLogAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionLog(detail.ExecutionLog),
             cancellationToken);
@@ -2742,11 +2809,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionMetricsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToMetrics(detail.Metrics),
             cancellationToken);
@@ -2770,11 +2839,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ListAgentScopedExecutionApprovalsAsync(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
         await GetAgentExecutionRunPartAsync(
             agentId,
             executionRunId,
+            context,
             workspaceService,
             detail => AgentApiResponseMapper.ToExecutionApprovals(detail.Approvals),
             cancellationToken);
@@ -2948,18 +3019,60 @@ internal static class AgentsApi
         try
         {
             return Results.Ok(await workspaceService.SaveAgentAsync(request, cancellationToken));
-        }
-        catch (ArgumentException exception)
-        {
+        } catch (AgentDirectoryProjectionSynchronizationException exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.AgentId));
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.Accepted.Id));
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(
+                exception.Message,
+                AgentApiRequestValidation.InvalidRequestCode);
+        } catch (AgentCatalogConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, AgentConfigurationConflictCode);
+        } catch (InvalidOperationException exception) {
             return ApiEndpointResults.BadRequest(
                 exception.Message,
                 AgentApiRequestValidation.InvalidRequestCode);
         }
-        catch (InvalidOperationException exception)
-        {
-            return ApiEndpointResults.BadRequest(
-                exception.Message,
-                AgentApiRequestValidation.InvalidRequestCode);
+    }
+
+    private static Task<IResult> ReplaceTeamMembersAsync(Guid teamId, AgentTeamMembersApiRequest request,
+        IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken)
+        => TeamWriteAsync(async () => Results.Ok(request.ExpectedUpdatedAtUtc is { } expected
+            ? await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, expected, cancellationToken)
+            : await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)),
+            accepted => Results.Ok(accepted));
+
+    private static async Task<IResult> TeamWriteAsync(Func<Task<IResult>> write,
+        Func<AgentTeamDefinition, IResult>? committedResponse = null) {
+        try {
+            return await write();
+        } catch (AgentCatalogCommittedException<AgentTeamDefinition> exception) when (committedResponse is not null) {
+            return AgentCatalogApiResults.Committed(committedResponse(exception.Accepted));
+        } catch (AgentCatalogCommittedException<Guid>) {
+            return AgentCatalogApiResults.Committed(Results.Ok(new ApiAck(true)));
+        } catch (AgentTeamConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, TeamConfigurationConflictCode);
+        } catch (AgentTeamMetadataRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        }
+    }
+
+    private static async Task<IResult> CapabilityWriteAsync(Func<Task<IResult>> write) {
+        try {
+            return await write();
+        } catch (AgentCatalogCommittedException<CapabilityEditorModel> exception) {
+            return AgentCatalogApiResults.Committed(Results.Ok(exception.Accepted.Id));
+        } catch (AgentCatalogCommittedException<Guid>) {
+            return AgentCatalogApiResults.Committed(Results.Ok(new ApiAck(true)));
+        } catch (CapabilityCatalogRejectedException exception) when (exception.IsConcurrencyConflict) {
+            return ApiEndpointResults.Conflict(exception.Message, CapabilityConfigurationConflictCode);
+        } catch (CapabilityCatalogRejectedException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
+        } catch (ArgumentException exception) {
+            return ApiEndpointResults.BadRequest(exception.Message, AgentApiRequestValidation.InvalidRequestCode);
         }
     }
 
@@ -2975,10 +3088,12 @@ internal static class AgentsApi
     private static async Task<IResult> GetAgentExecutionRunPartAsync<T>(
         Guid agentId,
         Guid executionRunId,
+        HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
         Func<ExecutionRunDetail, T> select,
         CancellationToken cancellationToken)
     {
+        context.Response.Headers.CacheControl = "no-store";
         try
         {
             var detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
@@ -2987,6 +3102,9 @@ internal static class AgentsApi
                 : ApiEndpointResults.NotFound(
                     "Agent execution run was not found.",
                     "agents.execution-run-not-found");
+        }
+        catch (Exception exception) when (AgentEffectRecoveryApiResults.Handles(exception)) {
+            return AgentEffectRecoveryApiResults.ToHttp(context, exception, executionRunId);
         }
         catch (InvalidOperationException)
         {
@@ -3037,7 +3155,8 @@ internal sealed record AgentImportApiRequest(string PackagePath);
 /// existing agent; empty identifiers and duplicates are dropped. Always send this member: an empty array, and also an
 /// omitted or null list, removes all members.
 /// </param>
-internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
+internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds,
+    [property: Description("Original team updatedAtUtc. Required for replacing the saved membership set; omission never bypasses concurrency checks.")] DateTimeOffset? ExpectedUpdatedAtUtc = null);
 
 /// <summary>
 /// New title of an agent chat session, sent to <c>POST /api/agents/{agentId}/chat-sessions/{chatSessionId}/rename</c>.
@@ -3045,7 +3164,7 @@ internal sealed record AgentTeamMembersApiRequest(IReadOnlyList<Guid> AgentIds);
 /// <param name="Title">
 /// The title. Runs of white space become single spaces and text beyond 96 characters is cut. It must not be blank.
 /// </param>
-internal sealed record ChatSessionRenameApiRequest(string Title);
+internal sealed record ChatSessionRenameApiRequest(string Title, string? ExpectedTitle = null);
 
 /// <summary>
 /// Chat message to an agent, sent to <c>POST /api/agents/{agentId}/chat</c> and to its streaming variant

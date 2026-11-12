@@ -1,0 +1,157 @@
+@implements IDisposable
+
+<EditForm EditContext="Context" OnValidSubmit="HandleSubmitAsync" data-testid="crmhr-interaction-form">
+    <Stack GapScale="LayoutGap.Large" @oninput="InputChanged" @onchange="InputChanged">
+        @if (Message is not null) {
+            <Alert AlertStyle="@(Unknown ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-interaction-outcome"><TextBlock Value="@Message" /></Alert>
+        }
+        <FormSection Title="Interaction journal"
+                     Description="Record calls, meetings, emails, and messages against the account so recent context survives handoffs and reloads.">
+            <Grid Gap="LayoutGap.Large" ColumnsMd="3">
+                <div>
+                    <label class="cda-field-label">Interaction type</label>
+                    <InputSelect @bind-Value="Model.InteractionType"
+                                 class="cda-input"
+                                 data-testid="crmhr-interaction-type">
+                        @foreach (var interactionType in Enum.GetValues<InteractionType>())
+                        {
+                            <option value="@interactionType">@interactionType</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div>
+                    <label class="cda-field-label">Occurred on</label>
+                    <InputDate @bind-Value="Model.OccurredOn"
+                               class="cda-input"
+                               data-testid="crmhr-interaction-occurred-on" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Linked opportunity</label>
+                    <InputSelect @bind-Value="Model.RelatedOpportunityId"
+                                 class="cda-input"
+                                 data-testid="crmhr-interaction-opportunity">
+                        <option value="">No linked opportunity</option>
+                        @if (SelectedOpportunity is { } selectedOpportunity)
+                        {
+                            <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
+                        }
+                        @if (Model.RelatedOpportunityId is Guid retained && retained != SelectedOpportunity?.Id) {
+                            <option value="@retained">@opportunityNames.GetValueOrDefault(retained, $"Previously selected opportunity ({retained:D})")</option>
+                        }
+                    </InputSelect>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                        Select an opportunity from the paged Opportunities tab before linking it here.
+                    </p>
+                </div>
+            </Grid>
+
+            <div class="mt-5">
+                <label class="cda-field-label">Subject</label>
+                <NativeValueInput TValue="string" @bind-Value="Model.Subject" PendingChanged="@(_ => SetInteractionTextAsync())"
+                           class="cda-input"
+                           data-testid="crmhr-interaction-subject" />
+            </div>
+
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
+                <div>
+                    <label class="cda-field-label">Summary</label>
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Summary" PendingChanged="@(_ => SetInteractionTextAsync())"
+                                   class="cda-input cda-input--textarea min-h-[9rem]"
+                                   data-testid="crmhr-interaction-summary" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Notes</label>
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => SetInteractionTextAsync())"
+                                   class="cda-input cda-input--textarea min-h-[9rem]"
+                                   data-testid="crmhr-interaction-notes" />
+                </div>
+            </Grid>
+
+            <div class="mt-5">
+                <p class="cda-field-label">Participants</p>
+                @if (ParticipantOptions.Count == 0)
+                {
+                    <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                        Save at least one connected record to expose reusable participant shortcuts here.
+                    </div>
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Small" ColumnsMd="2">
+                        @foreach (var option in ParticipantOptions)
+                        {
+                            <label class="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700"
+                                   data-testid="@($"crmhr-interaction-participant-option-{option.Id:N}")">
+                                <input type="checkbox"
+                                       checked="@Model.ParticipantPartyIds.Contains(option.Id)"
+                                       @onchange="args => ToggleParticipant(option.Id, args)"
+                                       data-testid="@($"crmhr-interaction-participant-{option.Id:N}")" />
+                                <span>@option.DisplayName (@option.PartyType)</span>
+                            </label>
+                        }
+                    </Grid>
+                }
+            </div>
+        </FormSection>
+
+        <NextActionEditor Model="Model"
+                          InputChanged="InputChanged"
+                          SelectedOwnerLabel="@(Model.NextActionOwnerPartyId is Guid id ? PartyLabel?.Invoke(id) : null)"
+                          OwnerOptions="OwnerOptions" />
+
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Log interaction"
+                    Disabled="Disabled"
+                    data-testid="crmhr-interaction-save-button"
+                    Type="submit" />
+        </Cluster>
+    </Stack>
+</EditForm>
+
+@code {
+    private bool disposed;
+    private readonly Dictionary<Guid, string> opportunityNames = [];
+    [Parameter, EditorRequired] public CrmInteractionEditorModel Model { get; set; } = default!;
+    [Parameter] public CrmOpportunityDetailModel? SelectedOpportunity { get; set; }
+    [Parameter] public IReadOnlyList<PartyOptionModel> ParticipantOptions { get; set; } = [];
+    [Parameter] public IReadOnlyList<PartyOptionModel> OwnerOptions { get; set; } = [];
+    [Parameter] public EventCallback InputChanged { get; set; }
+    [Parameter] public EventCallback Submit { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Unknown { get; set; }
+    [Parameter] public Func<Guid, string>? PartyLabel { get; set; }
+    private EditContext Context { get; set; } = default!;
+    protected override void OnInitialized() => Context = new(Model);
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(Context.Model, Model)) {
+            throw new InvalidOperationException("A new journal model requires a new renderer lifetime.");
+        }
+        if (SelectedOpportunity is { } selected) {
+            opportunityNames[selected.Id] = selected.Title;
+        }
+        foreach (var id in opportunityNames.Keys.Where(id => id != SelectedOpportunity?.Id && id != Model.RelatedOpportunityId).ToArray()) {
+            opportunityNames.Remove(id);
+        }
+    }
+    private Task HandleSubmitAsync() => disposed ? Task.CompletedTask : Submit.InvokeAsync();
+    private Task ToggleParticipant(Guid id, ChangeEventArgs args) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        if (args.Value is true) {
+            if (!Model.ParticipantPartyIds.Contains(id)) {
+                Model.ParticipantPartyIds.Add(id);
+            }
+        } else {
+            Model.ParticipantPartyIds.Remove(id);
+        }
+        Context.NotifyFieldChanged(new(Model, nameof(CrmInteractionEditorModel.ParticipantPartyIds)));
+        return InputChanged.InvokeAsync();
+    }
+    private enum InteractionTextField { Subject, Summary, Notes }
+
+    private Task SetInteractionTextAsync() => disposed ? Task.CompletedTask : InputChanged.InvokeAsync();
+
+    public void Dispose() => disposed = true;
+}

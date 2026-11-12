@@ -117,7 +117,9 @@ public sealed record AiTechnicalAgentSaveResult(
     Guid? TechnicalAgentId,
     AiResourceBindingStatus BindingStatus,
     string BindingSummary,
-    string AgentsRoute);
+    string AgentsRoute) {
+    public AiStewardProfileObservation? CreatedBusinessProfile { get; init; }
+}
 
 public sealed record AiAgentStaffingFactModel(
     Guid PartyId,
@@ -141,6 +143,10 @@ public interface IAiTechnicalAgentBridge
     Task SynchronizeDirectoryProjectionAsync(
         CancellationToken cancellationToken = default);
 
+    Task SynchronizeDirectoryProjectionAsync(AgentExecutionActivityWorkspaceIdentity expectedWorkspace,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This bridge does not support a refresh bound to the original workspace.");
+
     Task<IReadOnlyDictionary<Guid, AiTechnicalAgentDirectorySummary>> GetDirectorySummariesAsync(
         IReadOnlyList<Guid> partyIds,
         CancellationToken cancellationToken = default);
@@ -161,7 +167,8 @@ public interface IAiTechnicalAgentBridge
 internal sealed class LegacyAiTechnicalAgentBridge(
     IDbContextFactory<CrmHrDbContext> dbContextFactory,
     IProviderAdministrationService providers,
-    IClock clock) : IAiTechnicalAgentBridge
+    IClock clock,
+    IAiAgentCreationGuard creation) : IAiTechnicalAgentBridge
 {
     public Task SynchronizeDirectoryProjectionAsync(
         CancellationToken cancellationToken = default)
@@ -309,69 +316,71 @@ internal sealed class LegacyAiTechnicalAgentBridge(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(model);
+        model = model.Snapshot();
+        var committed = false;
+        try {
+            var opened = await creation.OpenAsync(model, cancellationToken);
+            if (opened.IsFailure) {
+                return Result<AiTechnicalAgentSaveResult>.Failure(opened.Errors);
+            }
+            await using var admission = opened.Value!;
+            var dbContext = admission.Context;
+            ProviderProfileSummary? provider = null;
+            if (model.ProviderProfileId is Guid providerProfileId)
+            {
+                provider = (await providers.ListProviderProfilesAsync(cancellationToken))
+                    .SingleOrDefault(item => item.Id == providerProfileId);
+                if (provider is null)
+                {
+                    return Result<AiTechnicalAgentSaveResult>.Failure(
+                        Error.Validation("Provider profile must reference an existing provider.", "crmhr.ai-agent.provider-invalid"));
+                }
+            }
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        ProviderProfileSummary? provider = null;
-        if (model.ProviderProfileId is Guid providerProfileId)
-        {
-            provider = (await providers.ListProviderProfilesAsync(cancellationToken))
-                .SingleOrDefault(item => item.Id == providerProfileId);
-            if (provider is null)
+            var profile = new AiAgentProfile { PartyId = model.PartyId };
+            dbContext.Set<AiAgentProfile>().Add(profile);
+
+            var normalizedExtendedData = NormalizeJson(model.ExtendedDataJson, "{}");
+            if (normalizedExtendedData is null)
             {
                 return Result<AiTechnicalAgentSaveResult>.Failure(
-                    Error.Validation("Provider profile must reference an existing provider.", "crmhr.ai-agent.provider-invalid"));
+                    Error.Validation("Extended data must be valid JSON.", AiStewardEditingErrors.InvalidTechnicalJson));
             }
-        }
 
-        var profile = await dbContext.Set<AiAgentProfile>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (profile is null)
-        {
-            profile = new AiAgentProfile
-            {
-                PartyId = model.PartyId
-            };
-            dbContext.Set<AiAgentProfile>().Add(profile);
-        }
+            profile.ProviderProfileId = model.ProviderProfileId;
+            profile.DefaultModel = ResolveDefaultModel(model.DefaultModel, provider?.DefaultModel);
+            profile.ExecutionMode = model.ExecutionMode;
+            profile.CapabilityJson = SerializeCapabilities(model.Capabilities);
+            profile.ExtendedDataJson = normalizedExtendedData;
 
-        var normalizedExtendedData = NormalizeJson(model.ExtendedDataJson, "{}");
-        if (normalizedExtendedData is null)
-        {
-            return Result<AiTechnicalAgentSaveResult>.Failure(
-                Error.Validation("Extended data must be valid JSON.", "crmhr.ai-agent.extended-data-invalid"));
-        }
-
-        profile.ProviderProfileId = model.ProviderProfileId;
-        profile.DefaultModel = ResolveDefaultModel(model.DefaultModel, provider?.DefaultModel);
-        profile.ExecutionMode = model.ExecutionMode;
-        profile.CapabilityJson = SerializeCapabilities(model.Capabilities);
-        profile.ExtendedDataJson = normalizedExtendedData;
-
-        var binding = await dbContext.Set<AiResourceBinding>()
-            .SingleOrDefaultAsync(item => item.PartyId == model.PartyId, cancellationToken);
-        if (binding is null)
-        {
-            binding = new AiResourceBinding
-            {
+            var binding = new AiResourceBinding {
                 PartyId = model.PartyId,
                 CreatedAtUtc = clock.GetUtcNow()
             };
             dbContext.Set<AiResourceBinding>().Add(binding);
+
+            binding.TechnicalAgentId ??= profile.Id;
+            binding.BindingStatus = AiResourceBindingStatus.PendingBackfill;
+            binding.BindingReason = "Legacy CRM-HR technical profile pending AgentFramework backfill.";
+            binding.LastError = string.Empty;
+            binding.UpdatedAtUtc = clock.GetUtcNow();
+
+            await admission.DemandCommitAsync(cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await admission.DemandCommitAsync(cancellationToken);
+            await admission.CommitAsync(cancellationToken);
+            committed = true;
+
+            return Result<AiTechnicalAgentSaveResult>.Success(new AiTechnicalAgentSaveResult(
+                binding.TechnicalAgentId,
+                binding.BindingStatus,
+                binding.BindingReason,
+                binding.TechnicalAgentId.HasValue ? $"/agents?tab=agents&agentId={binding.TechnicalAgentId.Value:D}" : "/agents?tab=agents") {
+                CreatedBusinessProfile = AiStewardEditValues.Observe(model.PartyId, PartyType.AiAgent, profile)
+            });
+        } catch (Exception exception) when (!committed && AiStewardEditValues.IsConflict(exception)) {
+            return Result<AiTechnicalAgentSaveResult>.Failure(AiStewardEditValues.Conflict());
         }
-
-        binding.TechnicalAgentId ??= profile.Id;
-        binding.BindingStatus = AiResourceBindingStatus.PendingBackfill;
-        binding.BindingReason = "Legacy CRM-HR technical profile pending AgentFramework backfill.";
-        binding.LastError = string.Empty;
-        binding.UpdatedAtUtc = clock.GetUtcNow();
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return Result<AiTechnicalAgentSaveResult>.Success(new AiTechnicalAgentSaveResult(
-            binding.TechnicalAgentId,
-            binding.BindingStatus,
-            binding.BindingReason,
-            binding.TechnicalAgentId.HasValue ? $"/agents?tab=agents&agentId={binding.TechnicalAgentId.Value:D}" : "/agents?tab=agents"));
     }
 
     private static (Guid? TechnicalAgentId, AiResourceBindingStatus BindingStatus, string BindingSummary, string AgentsRoute) ResolveBinding(

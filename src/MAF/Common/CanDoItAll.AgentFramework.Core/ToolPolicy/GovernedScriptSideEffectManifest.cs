@@ -4,6 +4,7 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Core;
 
+[JsonConverter(typeof(JsonStringEnumConverter<GovernedScriptSideEffectMode>))]
 public enum GovernedScriptSideEffectMode
 {
     Unspecified = 0,
@@ -13,6 +14,7 @@ public enum GovernedScriptSideEffectMode
     ProductMutation
 }
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record GovernedScriptSideEffectManifest
 {
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();

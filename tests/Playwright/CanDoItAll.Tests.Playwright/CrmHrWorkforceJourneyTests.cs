@@ -171,7 +171,7 @@ public sealed class CrmHrWorkforceJourneyTests
             await page.GetByTestId("crmhr-skill-definition-save-button").ClickAsync();
             await CrmHrWorkspaceJourneySupport.ExpectToastAsync(page, "Skill definition saved.");
 
-            var definition = Assert.Single((await ListSkillCatalogAsync(owner)).Where(item => string.Equals(item.Name, seed.SkillName, StringComparison.Ordinal)));
+            var definition = Assert.Single(await ListSkillCatalogAsync(owner), item => string.Equals(item.Name, seed.SkillName, StringComparison.Ordinal));
             Assert.Equal("Delivery", definition.Category);
             Assert.True(definition.IsActive);
 

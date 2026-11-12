@@ -3,6 +3,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -254,8 +255,14 @@ public sealed class AgentChatEffectOwnershipTests {
         await cut.InvokeAsync(() => Workspace(cut).DraftPromptChanged.InvokeAsync("Old composer"));
         await cut.InvokeAsync(() => Workspace(cut).VoiceRecordingToggled.InvokeAsync());
         var generation = Workspace(cut).SelectionGeneration;
-        await cut.InvokeAsync(() => Workspace(cut).NavigationIntent.InvokeAsync(new(generation,
+        Task OpenThreadAsync() => cut.InvokeAsync(() => Workspace(cut).NavigationIntent.InvokeAsync(new(generation,
             CanDoItAll.AgentFramework.UI.Chat.AgentChatNavigationAction.NewThread)));
+        await OpenThreadAsync();
+        Assert.Equal(first.Id, Workspace(cut).Session!.Id);
+        Assert.Equal("Old composer", Workspace(cut).DraftPrompt);
+        Assert.Equal(0, creates);
+        await cut.InvokeAsync(() => Workspace(cut).DraftPromptChanged.InvokeAsync(string.Empty));
+        await OpenThreadAsync();
         Assert.Equal(second.Id, Workspace(cut).Session!.Id);
         Assert.True(Workspace(cut).SelectionGeneration > generation);
         Assert.Empty(Workspace(cut).DraftPrompt);
@@ -304,9 +311,37 @@ public sealed class AgentChatEffectOwnershipTests {
         pending.SetResult(first with { Title = "Captured title" });
         await rename;
         Assert.Equal((agent.Id, first.Id, "Captured title"), Assert.Single(mutations));
+        Assert.Equal(first.Title, reads.ExpectedRenameTitle);
         Assert.Equal(2, reads.WorkspaceCalls);
         Assert.Equal(second.Id, Workspace(cut).Session!.Id);
         Assert.False(Workspace(cut).IsBusy);
+    }
+
+    [Fact]
+    public async Task Conflicting_rename_keeps_displayed_session_without_refresh_or_retry() {
+        var (service, reads, agent, first, _) = Reads();
+        var calls = 0;
+        reads.Rename = (_, _, _) => {
+            calls++;
+            throw new ChatSessionTitleConflictException(first.Id);
+        };
+        using var context = Context(service, out _);
+        var cut = Render(context, agent, first);
+
+        var editor = cut.FindComponent<Editable<ChatThreadTitleDraft>>();
+        var draft = editor.Instance.Item;
+        Assert.NotNull(draft);
+        draft.Title = "Proposed title";
+        await cut.InvokeAsync(() => editor.Instance.ItemChanged.InvokeAsync(draft));
+
+        Assert.Equal(1, calls);
+        Assert.Equal(first.Title, reads.ExpectedRenameTitle);
+        Assert.Equal(first.Title, Workspace(cut).Session!.Title);
+        Assert.Equal("Proposed title", editor.Instance.Item?.Title);
+        Assert.Equal(1, reads.WorkspaceCalls);
+        Assert.False(Workspace(cut).IsBusy);
+        Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages,
+            message => message.Detail.Contains("Reload before trying again", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -492,21 +527,30 @@ public sealed class AgentChatEffectOwnershipTests {
     }
 
     public class EffectsProxy : DispatchProxy {
+        private readonly AgentExecutionActivityStreamId activityPartition = CreateActivityStreamId();
         public Queue<TaskCompletionSource<AgentChatRunResult>> Sends { get; } = [];
         public TaskCompletionSource<AgentChatRunResult> Approval { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Func<Guid, Guid, Guid, CancellationToken, (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion)>? CancelPending { get; set; }
         public TaskCompletionSource<AgentVoiceTranscriptionResult> Transcription { get; } = new();
         public Func<CancellationToken, Task<AgentVoiceTranscriptionResult>>? ReadTranscription { get; set; }
         public TaskCompletionSource<AgentChatAttachmentStagingResult> Upload { get; set; } = new();
         public int SendCalls { get; private set; }
         public List<AgentChatSendRequest> Requests { get; } = [];
+        public AgentExecutionActivityStreamId CreateOperationStream()
+            => new(activityPartition.DatabaseProfileId, activityPartition.WorkspaceScope,
+                activityPartition.DatabaseProfileGeneration, AgentExecutionOperationId.New());
+
         protected override object? Invoke(MethodInfo? method, object?[]? args) {
             switch (method?.Name) {
                 case nameof(IAgentChatExecutionOrchestrator.StartApprovalContinuation):
-                    return new AgentChatOperationHandle(CreateActivityStreamId(), Approval.Task);
+                    return new AgentChatOperationHandle(CreateOperationStream(), Approval.Task);
+                case nameof(IAgentChatExecutionOrchestrator.StartPendingApprovalCancellation):
+                    return (CancelPending ?? throw new NotSupportedException(method.Name))(
+                        (Guid)args![0]!, (Guid)args[1]!, (Guid)args[2]!, (CancellationToken)args[3]!);
                 case nameof(IAgentChatExecutionOrchestrator.StartSendMessage):
                     SendCalls++;
                     Requests.Add((AgentChatSendRequest)args![0]!);
-                    return new AgentChatOperationHandle(CreateActivityStreamId(), Sends.Dequeue().Task);
+                    return new AgentChatOperationHandle(CreateOperationStream(), Sends.Dequeue().Task);
                 case nameof(IAgentVoiceService.TranscribeAsync):
                     return ReadTranscription?.Invoke(args!.OfType<CancellationToken>().Single()) ?? Transcription.Task;
                 case nameof(IAgentChatAttachmentStagingService.StageImageAsync):

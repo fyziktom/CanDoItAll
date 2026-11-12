@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
@@ -37,6 +38,8 @@ public sealed class EfLlmChatUnitOfWork(
 
         _postCommitCallbacks.Clear();
         _nestedFailure = null;
+        var committed = false;
+        T? accepted = default;
         try {
             var result = await commitFence.ExecuteAsync(async fenceCancellationToken => {
                 await using var transaction = dbContext.Database.IsRelational()
@@ -51,27 +54,48 @@ public sealed class EfLlmChatUnitOfWork(
                     }
 
                     await SaveChangesAsync(fenceCancellationToken).ConfigureAwait(false);
+                    await LlmChatWriteAdmission.RequireCommitAsync(fenceCancellationToken).ConfigureAwait(false);
                     if (transaction is not null) {
                         await transaction.CommitAsync(fenceCancellationToken).ConfigureAwait(false);
                     }
-
+                    accepted = transactionResult;
+                    committed = true;
                     return transactionResult;
                 } finally {
                     _executionDepth--;
                 }
             }, cancellationToken).ConfigureAwait(false);
-            var callbacks = _postCommitCallbacks.ToArray();
-            _postCommitCallbacks.Clear();
-            foreach (var callback in callbacks) {
-                callback();
-            }
+            PublishCallbacks();
 
             return result;
+        } catch (Exception exception) when (committed) {
+            try {
+                PublishCallbacks();
+            } catch (Exception notificationFailure) {
+                exception = new AggregateException(exception, notificationFailure);
+            }
+            throw new LlmChatCommittedException<T>(accepted!, exception);
         } catch {
             _postCommitCallbacks.Clear();
             throw;
         } finally {
             _nestedFailure = null;
+        }
+    }
+
+    private void PublishCallbacks() {
+        var callbacks = _postCommitCallbacks.ToArray();
+        _postCommitCallbacks.Clear();
+        List<Exception>? failures = null;
+        foreach (var callback in callbacks) {
+            try {
+                callback();
+            } catch (Exception exception) {
+                (failures ??= []).Add(exception);
+            }
+        }
+        if (failures is not null) {
+            throw new AggregateException("Simple Chat commit notifications require reconciliation.", failures);
         }
     }
 

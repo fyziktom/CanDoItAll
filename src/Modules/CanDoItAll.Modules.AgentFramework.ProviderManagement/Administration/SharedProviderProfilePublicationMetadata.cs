@@ -163,13 +163,6 @@ public static class SharedProviderProfilePublicationMetadataWriter
             }
 
             normalized.Add(candidate);
-            if (normalized.Count + 1 >
-                SharedProviderProfilePublicationMetadataSchema.MaximumModels)
-            {
-                throw new ArgumentException(
-                    $"A provider can publish at most {SharedProviderProfilePublicationMetadataSchema.MaximumModels} models.",
-                    nameof(suggestedModels));
-            }
         }
 
         return Array.AsReadOnly(normalized.ToArray());

@@ -1,0 +1,31 @@
+{
+  "status": "source-only; unbuilt; unexecuted",
+  "owner": "/root/agent_process_architecture",
+  "predecessorInventorySha256": "F30FBCE0147771A8CCDC019F18A0274203BEF649337E2CD1EEE1586802EDF3C2",
+  "testRows": 2,
+  "source": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartFixture.cs",
+      "predecessorPath": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-restart-routing-predecessors\\AgentHistoricalReceiptRestartFixture.cs.txt",
+      "predecessorSha256": "131A7CF909FAAC22C13926F201FDFCAE17FDAD1CAD167769003AD7F04D3F4D1D",
+      "sha256": "F3FF5399A05BBE09BF487211FFD6837EB267CAB0D05DB2F8CC9FB88AEC99608F",
+      "change": "Add normal framework routing services immediately before AddCanDoItAllApi; all other bytes unchanged"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/Program.cs",
+      "predecessorPath": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-restart-routing-predecessors\\Program.cs.txt",
+      "predecessorSha256": "0F2D4D0473E980C0AC7D0EF958E60AD54F2363EBBDD00E3DF1C6AE834C12CDCC",
+      "sha256": "D4861B3471DE4F77F36959649961F9706B8C1B3EA6F52F9D83DAD194F049A3B3",
+      "change": "Add normal framework routing services immediately before AddCanDoItAllApi; all other bytes unchanged"
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-restart-routing-repair.md",
+    "sha256": "438A735C049130613546C788526101EE9FA66F63B46743812561F734F775441C"
+  },
+  "validation": [
+    "Mechanical exact restoration after removing only AddRouting lines",
+    "Normal framework routing registration verified from ASP.NET Core v10.0.0 primary source",
+    "No build/test/runtime execution"
+  ]
+}

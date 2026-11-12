@@ -10,6 +10,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     private readonly object gate = new();
     private readonly SemaphoreSlim settingsLoadGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly CancellationToken lifetimeToken;
     private readonly IAgentFrameworkWorkspaceService workspaceService;
     private readonly IActiveAgentChatRegistry activeChatRegistry;
     private readonly IAgentChatPreparationPool preparationPool;
@@ -17,6 +18,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     private readonly TimeProvider timeProvider;
     private readonly ILogger<FloatingAgentChatCoordinator> logger;
     private readonly IAgentConversationContextService? conversationContextService;
+    private readonly AgentChatRecoveryService? recovery;
     private readonly Dictionary<AgentChatHandleId, Guid> activeExecutionRunIds = [];
     private readonly HashSet<AgentChatHandleId> activeOperations = [];
     private bool isCatalogVisible;
@@ -34,15 +36,21 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         IFloatingAgentChatSettingsService settingsService,
         TimeProvider timeProvider,
         ILogger<FloatingAgentChatCoordinator> logger,
-        IAgentConversationContextService? conversationContextService = null)
+        IAgentConversationContextService? conversationContextService = null,
+        AgentChatRecoveryService? recovery = null)
     {
         this.workspaceService = workspaceService;
+        lifetimeToken = lifetimeCts.Token;
         this.activeChatRegistry = activeChatRegistry;
         this.preparationPool = preparationPool;
         this.settingsService = settingsService;
         this.timeProvider = timeProvider;
         this.logger = logger;
         this.conversationContextService = conversationContextService;
+        this.recovery = recovery;
+        if (recovery is not null) {
+            recovery.Changed += HandleActiveChatsChanged;
+        }
         activeChatRegistry.Changed += HandleActiveChatsChanged;
         workspaceService.ExecutionUpdated += HandleExecutionUpdated;
     }
@@ -79,13 +87,24 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await EnsureSettingsLoadedAsync(cancellationToken);
-        PruneExpired();
+        using var initialization = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+        var initializationToken = initialization.Token;
+        await EnsureSettingsLoadedAsync(initializationToken);
+        if (recovery is not null) {
+            await recovery.InitializeAsync(initializationToken);
+        }
+        lock (gate) {
+            initializationToken.ThrowIfCancellationRequested();
+            if (isDisposed) {
+                throw new OperationCanceledException(lifetimeToken);
+            }
+            PruneExpired();
+        }
         try
         {
-            await preparationPool.WarmAsync(cancellationToken);
+            await preparationPool.WarmAsync(initializationToken);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (initializationToken.IsCancellationRequested)
         {
             throw;
         }
@@ -98,6 +117,7 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 CurrentSettings.MaximumPreparedAgents);
         }
 
+        initializationToken.ThrowIfCancellationRequested();
         EnsureMaintenanceLoopRunning();
     }
 
@@ -154,9 +174,15 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         return activeChatRegistry.KeepActive(handleId);
     }
 
+    public void SetDraftPending(AgentChatHandleId handleId, bool pending) {
+        ThrowIfDisposed();
+        activeChatRegistry.SetDraftPending(handleId, pending);
+    }
+
     public void Stop(AgentChatHandleId handleId)
     {
         ThrowIfDisposed();
+        var chat = activeChatRegistry.Snapshot().FirstOrDefault(item => item.HandleId == handleId);
         activeChatRegistry.Stop(handleId);
         lock (gate)
         {
@@ -165,6 +191,9 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         }
 
         conversationContextService?.Remove(AgentConversationKey.ForHandle(handleId));
+        if (chat?.ChatSessionId is { } sessionId) {
+            conversationContextService?.Remove(AgentConversationKey.ForSession(sessionId));
+        }
     }
 
     public ActiveAgentChat SetRunState(
@@ -172,8 +201,12 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         ActiveAgentChatRunState runState)
     {
         ThrowIfDisposed();
+        var recovered = activeChatRegistry.Snapshot().FirstOrDefault(chat => chat.HandleId == handleId);
         lock (gate)
         {
+            if (recovered?.ActivityStreamId is not null && !activeOperations.Contains(handleId)) {
+                return recovered;
+            }
             if (runState == ActiveAgentChatRunState.Idle && activeOperations.Contains(handleId))
             {
                 return activeChatRegistry.Snapshot()
@@ -217,6 +250,9 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         lock (gate)
         {
             activeOperations.Remove(handleId);
+            if (activeChatRegistry.Snapshot().Any(chat => chat.HandleId == handleId && chat.ActivityStreamId is not null)) {
+                return;
+            }
             if (activeExecutionRunIds.ContainsKey(handleId))
             {
                 return;
@@ -279,13 +315,16 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
     public async ValueTask DisposeAsync()
     {
-        if (isDisposed)
-        {
-            return;
+        lock (gate) {
+            if (isDisposed) {
+                return;
+            }
+            isDisposed = true;
         }
-
-        isDisposed = true;
         activeChatRegistry.Changed -= HandleActiveChatsChanged;
+        if (recovery is not null) {
+            recovery.Changed -= HandleActiveChatsChanged;
+        }
         workspaceService.ExecutionUpdated -= HandleExecutionUpdated;
         await lifetimeCts.CancelAsync();
         Task? loopTask;
@@ -315,6 +354,9 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         }
 
         await EnsureSettingsLoadedAsync(cancellationToken);
+        if (recovery is not null) {
+            await recovery.InitializeAsync(cancellationToken);
+        }
         var agent = await preparationPool.AcquireAsync(agentId, cancellationToken);
         if (agent is null || agent.Status != AgentLifecycleStatus.Active || agent.IsTemplate)
         {
@@ -407,6 +449,10 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 await settingsService.GetSettingsAsync(cancellationToken));
             lock (gate)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (isDisposed) {
+                    throw new OperationCanceledException(lifetimeToken);
+                }
                 if (!settingsLoaded && settingsVersion == versionBeforeLoad)
                 {
                     currentSettings = loadedSettings;
@@ -414,9 +460,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
                 }
 
                 loadedSettings = currentSettings;
+                preparationPool.Configure(loadedSettings);
             }
-
-            preparationPool.Configure(loadedSettings);
             return loadedSettings;
         }
         finally
@@ -451,7 +496,11 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
             ExecutionState.Preparing or
             ExecutionState.Running or
             ExecutionState.Persisting => ActiveAgentChatRunState.Running,
-            ExecutionState.WaitingOnTool => ActiveAgentChatRunState.AwaitingApproval,
+            ExecutionState.WaitingOnTool when AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(entry.State, entry.Phase)
+                == AgentExecutionActivityPhase.AwaitingApproval => ActiveAgentChatRunState.AwaitingApproval,
+            ExecutionState.WaitingOnTool when AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(entry.State, entry.Phase)
+                == AgentExecutionActivityPhase.AwaitingContinuation => ActiveAgentChatRunState.AwaitingContinuation,
+            ExecutionState.WaitingOnTool => ActiveAgentChatRunState.Running,
             _ => ActiveAgentChatRunState.Idle
         };
         lock (gate)
@@ -527,9 +576,12 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
 
         lock (gate)
         {
+            if (isDisposed) {
+                return;
+            }
             if (pruneLoopTask is null or { IsCompleted: true })
             {
-                pruneLoopTask = RunPruneLoopAsync(lifetimeCts.Token);
+                pruneLoopTask = RunPruneLoopAsync(lifetimeToken);
             }
         }
     }

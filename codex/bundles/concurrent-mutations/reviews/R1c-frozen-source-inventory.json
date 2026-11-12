@@ -1,0 +1,379 @@
+{
+  "status": "source-only frozen for parent review; no R1c build, discovery or execution performed",
+  "workspace": "C:/Users/lucys/.codex/worktrees/concurrent-mutations-runtime/CanDoItAll",
+  "sourceInputs": 49,
+  "newRows": {
+    "Unit": 9,
+    "Integration": 15,
+    "Components": 4,
+    "total": 28
+  },
+  "notes": [
+    "R1b original 22-path F592 inventory remains historical and unchanged; changed shared owner files here carry exact current main base hashes.",
+    "AcquireInterruptedReconciliationAsync cleanup knowledge repair is a deliberate R1c delta from frozen R1b.",
+    "Native inventory and combined rendering register are current; no source rows are inferred from test discovery.",
+    "Producer activation, saved effect dispatcher, reopen admission, cleanup recovery, cancellation migration and runtime policy activation remain open."
+  ],
+  "tests": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs",
+      "rows": 4,
+      "methods": [
+        "Normal_results_reject_missing_metric_or_chat_message",
+        "Effect_factory_requires_typed_waiting_and_never_provider_output",
+        "Legacy_result_and_activity_serialization_remain_compatible",
+        "Awaiting_continuation_phase_roundtrips_and_rejects_invalid_terminal_pairs"
+      ]
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs",
+      "rows": 5,
+      "methods": [
+        "Chat_mapper_preserves_the_original_effect_checkpoint_without_fabricating_a_message_or_usage",
+        "Process_recovery_retains_the_original_run_and_refuses_a_transient_replacement_dispatch",
+        "Narrative_generation_defers_the_same_source_instead_of_parsing_saved_effects_as_provider_output",
+        "Recovery_orchestrator_suspends_original_activity_without_publishing_context_completion",
+        "Prepared_only_readback_keeps_the_original_intent_and_does_not_request_provider_input_or_dispatch"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs",
+      "rows": 9,
+      "methods": [
+        "Recovery_precedes_attachment_provider_and_checkpoint_access",
+        "Interactive_write_revocation_allows_current_read_without_replacing_original_authority",
+        "Current_read_revocation_before_or_during_lookup_blocks_disclosure",
+        "Changed_agent_profile_or_generation_cannot_rebind_original_intent",
+        "Confirmed_summary_stays_known_committed_without_querying_expired_detail",
+        "Checkpoint_failure_preserves_exact_intent_and_reports_no_durable_waiting_promotion",
+        "Prepared_receipt_noop_and_unsupported_approval_dispatch_preserve_decisions",
+        "Cancelled_runs_remain_on_separate_no_dispatch_reconciliation",
+        "Startup_preserves_valid_effect_journal_including_zero_segments_without_sdk_work"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs",
+      "rows": 5,
+      "methods": [
+        "Rest_recovery_returns_typed_waiting_without_metric_or_assistant",
+        "Run_detail_reconstructs_sanitized_continuation_without_journal_payload",
+        "Rest_recovery_and_existing_activity_stream_preserve_truthful_waiting",
+        "Denied_or_unavailable_receipt_response_cannot_disclose_cached_bytes_or_offer_retry",
+        "Disconnected_recovery_does_not_erase_confirmed_effect_or_publish_task_completion"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectApplication.cs",
+      "rows": 1,
+      "methods": [
+        "Expired_process_dispatch_can_read_original_receipt_through_application_without_new_effect"
+      ]
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+      "rows": 4,
+      "methods": [
+        "Native_recovery_distinguishes_known_commitment_from_uncertainty_and_access_denial",
+        "Native_recovery_keeps_original_draft_and_profile_generation_fence",
+        "Voice_and_scenario_surfaces_require_actual_assistant_output",
+        "Awaiting_continuation_never_renders_as_approval_or_success"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-R1c-application-reconciliation.md",
+      "bytes": 29751,
+      "sha256": "D6B96D3755D2263EC124D6BF833B58E4179935D7B177146E710B767FFDB2B0F2",
+      "mainBaseSha256": "BC71B6997E9069226D46AD7A666B433571C70BAD71B7F0FD060A0FCD381D5286"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P02b-R1c-application-source.md",
+      "bytes": 8622,
+      "sha256": "C791485CDD343DF88EDB356FF99C120DB0DF46AD5D76210CA1AD3A6D55F47304",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P02b-R1c-native-source-inventory.json",
+      "bytes": 3351,
+      "sha256": "92334BDC03C3D94A288D3C6ACB8FD01C78E03A053C7C75A557872EAD7B6C174C",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P02b-R1c-native-source.md",
+      "bytes": 8058,
+      "sha256": "EFE9CBA35DCDB4461A2147CEC02EA2F0C9642FB75BBFCBEADECCFF37BA543293",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-consumer-source.md",
+      "bytes": 2931,
+      "sha256": "F94662FC03842D42A0571AA780A5506C01D7ECC8E7C57684FDA286C45B588A8D",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "docs/architecture/components-decoupling-register.json",
+      "bytes": 2028912,
+      "sha256": "194BB0BC360189A886ADE6F1DC258EA6B73D0EB059B560B22C7483AB04BF269D",
+      "mainBaseSha256": "549CB94EF5162F7AE259EE5F35397DDE8735443B47F95D99184AA992D36A3259"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentApiResponseContracts.cs",
+      "bytes": 51776,
+      "sha256": "2807BE2EEA9763C075DF83128B2966D9C95CC4FC0A83018C06E0D587E14DE0FC",
+      "mainBaseSha256": "0CF1B456588E6235CB35A54932EFDF6D7F510A92D29A0602C9CCEB03CC40380B"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentEffectRecoveryApiResults.cs",
+      "bytes": 5231,
+      "sha256": "F742D51F46C3350C830CE32A3DAA924D8C4D729F9F0124E3AB69F318F84F93F3",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentEventContracts.cs",
+      "bytes": 8609,
+      "sha256": "02903E2BF69EF0324BB805039ADFAB82B3D3D0444B1A52CA1F0144E9E9992F9F",
+      "mainBaseSha256": "C692CC0992563E20175F2269F8B1FAAB0B21E0A9A708638ECB06BCE8EF0525B7"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentEventsApi.cs",
+      "bytes": 60483,
+      "sha256": "342F66ABF5B0593A5AC0DFB1B63E7EFF6E620DFA483327EF40D0FD4A3C3522CE",
+      "mainBaseSha256": "57CDF9E4FE500C09B7345292F4222171AAFEAC7EAC552A04B92E7DA277A42701"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "bytes": 192179,
+      "sha256": "379DDAD200B306B9043ECAEE2538951362074AEFBB4C489D4A9F31667D5E824A",
+      "mainBaseSha256": "B3F83AA913A744835D72FF24FFAC011E15A426069E092EE028F51C1F74D364F7"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ApiEndpointResults.cs",
+      "bytes": 14390,
+      "sha256": "BFCE8F79D94CEBD118C0E2F4C40347F7543C4B9FD66047C1DD9C14E8BFF78DF9",
+      "mainBaseSha256": "15D9BB3CF2CA66B5F656D6A1694222B9C34B92EC736019610B8883B559B91599"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/DevelopmentDiagnosticsEndpoints.cs",
+      "bytes": 52113,
+      "sha256": "215876441472FECDCBEB1F27A55C6557B3CDD85244E2F3B8910994DC44DEBEFC",
+      "mainBaseSha256": "747F10284F4A4E496AA0C263A355A690826F308DFFC72C3350F447DE6DC36C78"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/AgentExecutionActivityStatus.razor.cs",
+      "bytes": 11530,
+      "sha256": "A500A0D99121A1AEBF5604FCFBFE8FC9284496E6176C3894454858058DDB1EF3",
+      "mainBaseSha256": "C23429884AF3D2834189113D509FF9A814715879B262EFC0021F2A0B83E61656"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionActivityCoordinator.cs",
+      "bytes": 16505,
+      "sha256": "A2E63C783654601582A90482E38CF5D72CF172F38A3FECC4061BEE3E88CA1173",
+      "mainBaseSha256": "619C68FFD3D24EC4559112056CA46EFC4D3F54B78D714091D8A3E0B28E53A8C3"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionActivityTransitionRules.cs",
+      "bytes": 4926,
+      "sha256": "778D192FD330D2AA54568A2AAEF5476FA56CE79914BAC85AC4907A86BBDBEA18",
+      "mainBaseSha256": "528FCCBF860896988A1A3444752D5FC1275C44C045C85A8192022D2D6719B7BD"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentExecutionEffectReconciliation.cs",
+      "bytes": 11500,
+      "sha256": "20E206F5E46BED6ED8D4E1CCF0587BB34E33CF60CC9443AB8C03060748E10774",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
+      "bytes": 165622,
+      "sha256": "2685A8B69E9F138B101EB43CDA31EA9C26D8A26790D85FC6F9FC511A87B05E9D",
+      "mainBaseSha256": "B9851A02079385F526CC8B284AFB3CB735CA447E2DC009AE2C3F7008A4197E37"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Chat.cs",
+      "bytes": 26656,
+      "sha256": "F21D8B06370026DF3A107D8AAFE8C738CCD88DC2E8ADB3C610B976EB55998129",
+      "mainBaseSha256": "F7C2E344F8617CC436C60DD8FDC957771FC980F3E9C575446EA2F6D939030424"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.Effects.cs",
+      "bytes": 33004,
+      "sha256": "27C2DFDF8F81054612FCA85D95899494BBB1E17499F94A2949519EF7B5A7DB32",
+      "mainBaseSha256": "9370CCB77F3DAC567559E7A9CAFF99E4CEDDF12E16E34A9F5CE0A2CE1D165279"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/AgentModels.cs",
+      "bytes": 20579,
+      "sha256": "CD1E6EFF9460E24D22A01483DEA861A1189709726B53DC2F4084AC750E1BD3B6",
+      "mainBaseSha256": "880F7F2E3EE0B820192C737128C770D7797D2C625BBCC65D6CF4F7F66C22C3B9"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/AgentExecutionActivityModels.cs",
+      "bytes": 10312,
+      "sha256": "3807B1D30E1A8084295501281A665F8F2A8F719EDFDDD5A2F2BD73B45987489B",
+      "mainBaseSha256": "3375E8D865F99617EC4C58754D8C0484E5F7E0C2F9727E3A520AC7B0217F7D2D"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/ConversationModels.cs",
+      "bytes": 40746,
+      "sha256": "1D3361061F81406DD4DA66CC1331C35826152F45E0E3CBF1538E9F0E77715DCE",
+      "mainBaseSha256": "628610DEA84AAEBC78D21AE0520C9BE5BDE7A0FEE62694C3505A3739C9026450"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/FloatingAgentChatModels.cs",
+      "bytes": 36523,
+      "sha256": "02848C9853C45F8E2434353B3C3282F922BD589303C46B171F56416BD274BD28",
+      "mainBaseSha256": "189264F04A8906F4B57A4B93C597227EF3837FA9BCB928490F279A7FB981D84F"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentEffectContinuation.cs",
+      "bytes": 7558,
+      "sha256": "256D7A42BED4C86F2FC008FC9D1F2AF116B098380D161AC53C750857CB9BCD2A",
+      "mainBaseSha256": "128F88B7AE68B812471ED0E7C4D969AE0565BC89D83312D2A9136DF82BBE2FCE"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Execution/AgentFrameworkExecutionRecoveryService.cs",
+      "bytes": 13009,
+      "sha256": "F41EB827FFF034CC51DCDC2E1FA66578EF083BE87E37BB396B4F4E0FE12D7609",
+      "mainBaseSha256": "5175BD3BC9C0B1494DB8B053A9A57FF36899FA7C23831105A1127EF5A408BC26"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Hosting/ScenarioHarnessSupport.cs",
+      "bytes": 20384,
+      "sha256": "F2B944520FFA0B2F550B795254F710245018873FAEA967D4259892EF2DDC7473",
+      "mainBaseSha256": "BC1F25535C346B7426DD8024F9B8D4730CF98751B3C3C87651059BFC7213179B"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.EffectRecovery.cs",
+      "bytes": 6090,
+      "sha256": "B0111ECA8F0A0E4A39D9E6255DFF65B367E2E0FC2B4F68BB501B2F368F340208",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "bytes": 87168,
+      "sha256": "94E5E62CD31EF14FEDEBE9A1320CF8F420957B29E1271FDCD5E38D00A6951D09",
+      "mainBaseSha256": "57962B432FA4FE62E8B2E08E29194487BEF81A68F688F0B5CEADCB75F9C4FEDF"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+      "bytes": 13019,
+      "sha256": "7AE249A098D8347E76B42D52F8A382C4D86FA016A7DB99958DC03A805CBA5759",
+      "mainBaseSha256": "7F0D60BB9DE72AE205F03A44AD5D814D611A8B8B8BB40670E3CD0D6A2F625C92"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor.cs",
+      "bytes": 5542,
+      "sha256": "85547A57B9DA2ABC5BE915E8785C71216BD218DC73984B8F470CF16C637A26C2",
+      "mainBaseSha256": "73FD2FB61688070E2A741910AA70A7F6DA35558AAB0A2580B49F6B2C7DE37950"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/FloatingAgentChatCoordinator.cs",
+      "bytes": 18624,
+      "sha256": "9239FB11E34846F7BACB6A355C6E6AE29E0A39FA929EBF47A833B4710E6DA3CA",
+      "mainBaseSha256": "67D847C3F835D74585CCD1CAEFCF15E6FFCD7C5C5EF736C7BA7F327E3426EA1B"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor",
+      "bytes": 126099,
+      "sha256": "F017ADC7720C34FE42DE93D6EB60C70226806AE4039041480C67C3FEDC10F111",
+      "mainBaseSha256": "1AE0D232861684F9CF9C803687D36C34447402B85D9A3205D893158B66F12B72"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessRunNarrativeGenerator.cs",
+      "bytes": 18481,
+      "sha256": "35254E18FD8554A12EE1E84E8F44D983B486E30D57290B6F1D6E5D0720F686A3",
+      "mainBaseSha256": "EC086714AE9D36219A957C1297DDFA5FD5FB7CE9ABBBC550CC1A53C5208A8002"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/AgentFrameworkProcessStepExecutor.cs",
+      "bytes": 32233,
+      "sha256": "41543B1014F4EEDC2936EFC83E61E8F7F353F480A62BD70CD386CF35157ABA56",
+      "mainBaseSha256": "AC1DE667808AE29670049029A5E7885167D08C7045907F08A57426924E215907"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessAgentExecutionRecoveryPolicy.cs",
+      "bytes": 27079,
+      "sha256": "1A817307A625DDFB12E211E01257AE3420B3B376C1F3DB7D0E23C21B75544B88",
+      "mainBaseSha256": "4369BBB98C0F9B9FB388FBD93E4542BD6C89655284E909FF9A11AB4CF5BCA9B5"
+    },
+    {
+      "path": "src/Processes/Drivers/CanDoItAll.Processes.Drivers.Abstractions/ProcessExecutionAdapterDiagnosticCodes.cs",
+      "bytes": 1260,
+      "sha256": "D6DD80146879C401D08B2F22D9BD1BB037A3C3FD936275ABA5009A08F32FE659",
+      "mainBaseSha256": "254B1DFE5BC7728280855B0C39040106BD30C6266B1C9A390FD09FD558FA54DC"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatActionState.cs",
+      "bytes": 861,
+      "sha256": "551391368332183F605459187D68BAFB9572B3084EC72C1751A1D0DFEE003365",
+      "mainBaseSha256": "E7AC3E89DDD74B02B161184E6635F406B120FFC21AACBF78E1EE534AD7A6EB0C"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatEffectRecovery.cs",
+      "bytes": 2557,
+      "sha256": "0F868495612336E5318C23D8299ABBD3FB393976FAC9861A6348B711B79E33C4",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "bytes": 2791,
+      "sha256": "470892B0EFEA2606A354881BCAFB07A30AD4BF7F2AC4355D7712FB528C78E40B",
+      "mainBaseSha256": "E6FDCF2B14A701189F39F72FAF1AED71FE66299D4BC040F68FFD3FDB6648269E"
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentScenarioCompletionPresentation.cs",
+      "bytes": 1222,
+      "sha256": "253868E64190455277F11904EB7DC801E61914F2AB8883F7F051D5409B9F84FC",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+      "bytes": 19036,
+      "sha256": "82002C1F660731E28ABF623712BD2C55185ECF0360A8C14302CC12C33D7E1527",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs",
+      "bytes": 79730,
+      "sha256": "B81739A0C8504C8A230F8099E9E83F4968F0656542A844DC0F12EC34A9B76261",
+      "mainBaseSha256": "11BD9F15574B07BB1B674508DA47C3FC4BFBE8447AE184F29E91399657B55F07"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs",
+      "bytes": 17463,
+      "sha256": "04C5B795766B370A221DB9012132C520F6EC04B6A111F644B5E101FAE321BCDF",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs",
+      "bytes": 21009,
+      "sha256": "BCC9B62B8A00F795403B32039984C5090B91EF3F146D723F7DD959AFC015D87B",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryFixture.cs",
+      "bytes": 11607,
+      "sha256": "E39FBC5D1E9CC5C24F83A9361058535563C0BB0A9F660545B3D8E579DD1D8B2B",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectApplication.cs",
+      "bytes": 10054,
+      "sha256": "07D31F28205DDF53EA291FC1B85943815C4219BAB384E2656D27262032331B31",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs",
+      "bytes": 21092,
+      "sha256": "9CF9301578E18238C76D520C0A1634787DD39F76F6E7C65A0C3E135CB2D5F033",
+      "mainBaseSha256": null
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs",
+      "bytes": 6947,
+      "sha256": "28B84D08DC09F31C89E59D004D6BD49DCBAC85F6BB602D07FBBE5249F712FC0D",
+      "mainBaseSha256": null
+    }
+  ]
+}

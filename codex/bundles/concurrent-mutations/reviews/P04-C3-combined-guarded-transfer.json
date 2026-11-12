@@ -1,0 +1,811 @@
+{
+  "schemaVersion": 1,
+  "kind": "C3 combined guarded source transfer",
+  "observedAtUtc": "2026-10-17T01:24:31.9950833-04:00",
+  "managedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "parentRoot": "C:\\repositories\\CanDoItAll",
+  "sourceOnly": true,
+  "transferPerformed": false,
+  "mainEdited": false,
+  "buildOrTestPerformed": false,
+  "databaseAccessPerformed": false,
+  "mainFreezeContext": {
+    "parentReportedSourcePaths": 8727,
+    "wholeMainManifestIndependentlyVerified": false,
+    "releaseGate": "Parent releases frozen main after Process restart proof."
+  },
+  "inventoryBindings": [
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-source-inventory.json",
+      "sha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+      "bytes": 7673
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-inventory.json",
+      "sha256": "4B37BEF865C2FC7C882B1C219A403ACDEB6B00B9032F76B2D758AB570A2C9E25",
+      "bytes": 7374
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-source-inventory.json",
+      "sha256": "3388DA806696D05CFA88C4B97F47E4449B1ECA9F022976DF734D9DB07F7C4BED",
+      "bytes": 14094
+    }
+  ],
+  "counts": {
+    "uniqueTransferEntries": 53,
+    "production": 14,
+    "test": 14,
+    "proofAndPredecessor": 25,
+    "add": 40,
+    "replace": 13,
+    "delete": 0,
+    "originalOwnerEntries": 25,
+    "newParentSeamPaths": 5,
+    "uncertaintyOverlays": 4,
+    "confirmedSeamOverlap": 5,
+    "sharedHistoricalRegistrationMerge": 1,
+    "resourceOverlap": 0,
+    "D1OrC4Entries": 0
+  },
+  "entries": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperation.cs",
+      "sha256": "1C00592BAFBE308046A78A5D5763685F40AFB17635C4FBF967F2B56C76919038",
+      "bytes": 10824,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperationCodec.cs",
+      "sha256": "85C68D6B9A76A152A8538A02F9EF1DFAFC448F09F0CAA95AB652D9109D5F960D",
+      "bytes": 10395,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanReceiptRecord.cs",
+      "sha256": "4D576C70656EA7D7FB46C619849EC512E96C129839909F740C9ABA849E006B21",
+      "bytes": 3306,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperationProtocol.cs",
+      "sha256": "8387A209DEFA2316CEC6BAF1A9E3FA8112158CF78F99059DD460E8246A7EC4EC",
+      "bytes": 4193,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanReceiptReader.cs",
+      "sha256": "CE15C369C057720B7A23BD3FBC17F5AB827D382EF3C39DA62AFB05A5442AE14F",
+      "bytes": 13326,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "receipt-uncertainty-3388"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublisher.cs",
+      "sha256": "59B1613121A02134D82469DF377AFA744EBAA0FA055E184AC2E80A5E9FBC74C9",
+      "bytes": 14242,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "receipt-uncertainty-3388"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublicationAuthority.cs",
+      "sha256": "D0DC01C10CD167E32F4B2731FF302BC978FB32BF1265B8719BD6E12EDF8AD57E",
+      "bytes": 1441,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/WorkbenchTaskPlanFiniteOperations.cs",
+      "sha256": "54B9E19E806FA72106EB8F12FA0FCAA41843FC22C16860322935CF3D07171633",
+      "bytes": 9754,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanBasis.cs",
+      "sha256": "505733E1088ED625A51EFF9B3DC1714D07B10F495475E09F9F3FA1D611CEA612",
+      "bytes": 6472,
+      "operation": "replace",
+      "expectedMainSha256": "ADEC878FF714C550F0B6D48DFECAB3DD4F7E354F45FD71F02D75628040F6E832",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Persistence/WorkbenchDbContext.cs",
+      "sha256": "5EAF44F81F3702A4F8039067539074A14B36E0A05843B0C50B5B169D7DC0FA63",
+      "bytes": 2911,
+      "operation": "replace",
+      "expectedMainSha256": "1DED64CDA1D230CA625816A114417E5A7C64CFDF669A49DDA6D876F621FBFC88",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+      "sha256": "51C85F83CD3BA029B598D73612D33DBD81644B366E13D546BFB0CB014B63A60C",
+      "bytes": 18322,
+      "operation": "replace",
+      "expectedMainSha256": "E7EBF686B7489C9792FB9C28C6C759ED262E51E0E7A735C083771C1C373CB428",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/WorkbenchProjectTransferTargetStateParticipant.cs",
+      "sha256": "445492580C49098B1A0F3081EDC1C60E0760E53862EA48C30E7024C3166A6ADA",
+      "bytes": 5012,
+      "operation": "replace",
+      "expectedMainSha256": "48844FD833DFA1A3F9A9A7E99D433323796FA0D946863BF8C1C85A2BE0FAEF0D",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanOperationContractTests.cs",
+      "sha256": "5820E72EC2AC62FE466BB023BC0AF1E8BE62EAF592C865EC54E5C1231D0C1EF9",
+      "bytes": 14427,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationTests.cs",
+      "sha256": "BD32CF8B71327F985570F49EBCF8BC5398028678C8F705D212F79E4DD0F53BF0",
+      "bytes": 27439,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "receipt-uncertainty-3388"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanCurrentnessTests.cs",
+      "sha256": "0E779345606AD3804932148664AC190190D585C162FA6B588106B73E13FFA707",
+      "bytes": 16757,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanRetentionTests.cs",
+      "sha256": "C769CE4C633B46C7D8E7B117C9A8246B06D97D9091F4F9F0B59810CC4FA1C66D",
+      "bytes": 21942,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "receipt-uncertainty-3388"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+      "sha256": "4B59BA27C56A0334925FA7BFC2F45B98126AF9A02734A3FEA4A5411F50D1EF3E",
+      "bytes": 14424,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationPerformanceTests.cs",
+      "sha256": "0796CE9A68F63525F3D3543CA7B79F1E83A5344ED11479EF50A7BD826F7363AB",
+      "bytes": 10476,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTransferTargetStateArchitectureTests.cs",
+      "sha256": "C9507945024E82EECD0A9168741DF44AF436DF26030E28AA678FAC9848252814",
+      "bytes": 13380,
+      "operation": "replace",
+      "expectedMainSha256": "6940A6FEEE908A20733B8E3FB20F0EDF77D88B0BAB4159937E6A58C9E6D0761D",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "parent-seam-4B37-confirmed-overlap"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkbenchOwnerPersistenceTests.cs",
+      "sha256": "5B01AC873D61CB7D49C8E8A3260CC63394CB63FDD92AFF5B4D328F98DEF7CDE7",
+      "bytes": 24598,
+      "operation": "replace",
+      "expectedMainSha256": "7E57FD61AF24BF8AE68F5DA6751421D3400DC71FACBAE586C144F010FF207B6D",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "parent-seam-4B37-confirmed-overlap"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferOwnerInspectionTests.cs",
+      "sha256": "8A8EF1B38D9F57707E2B52E966B302E11F621527E66A9DA76509B7B58A3B674B",
+      "bytes": 26815,
+      "operation": "replace",
+      "expectedMainSha256": "B29F964B1D941DBB091836638CBEEDAB06166D5518911A06E09E5F66A69DBCB7",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "parent-seam-4B37-confirmed-overlap"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+      "sha256": "F5F5212326398718AFE86D1224D53501EBEE76AC3A6C990E4AB7397B6D8FBE85",
+      "bytes": 16974,
+      "operation": "replace",
+      "expectedMainSha256": "084D5EB670C4E3C5951307F446ED1887E84010D2005657546AF6F47D9C80883B",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "parent-seam-4B37-confirmed-overlap"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalProjectMigrationAssertions.cs",
+      "sha256": "1004F8CB322530197E17D041BD5F1B65F14B3BE4E22A702BF00935ABA3AF7356",
+      "bytes": 1649,
+      "operation": "replace",
+      "expectedMainSha256": "84E04E102ABCB477B10B802D365EE0E93816A1F6BA05F7FB7C25D8171F95F1AA",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "owner-8B3",
+        "parent-seam-4B37-confirmed-overlap"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C3-task-plan-publisher.md",
+      "sha256": "736E04F325B27DE14F769B346792F1218968319D3ABFF5F020C5A0FF0CA0BB61",
+      "bytes": 43228,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-dormant-source-review.md",
+      "sha256": "1D506B3251C7A9A93D59DBE890DF5364B0B89F7C142A2177B581E69F4F739D37",
+      "bytes": 8866,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "owner-8B3"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/FiniteOperationComposition.cs",
+      "sha256": "B1A019E479911BF6A8A614BF89E3A48E306E654234E2929800B61C3A02FF57B9",
+      "bytes": 8235,
+      "operation": "replace",
+      "expectedMainSha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "parent-seam-4B37"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs",
+      "sha256": "1309989A874398956320036D341BF527C82E231F47ECC603494E0E474BF9A3CC",
+      "bytes": 8186,
+      "operation": "replace",
+      "expectedMainSha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "parent-seam-4B37"
+      ],
+      "kind": "production"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCommandProcessTests.cs",
+      "sha256": "D1DD712AEA79D7C64AD27416865809659B637B7CD86B66C78082141A8F5AA226",
+      "bytes": 19396,
+      "operation": "replace",
+      "expectedMainSha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "parent-seam-4B37"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationMigrationTests.cs",
+      "sha256": "8C45DD222DF2412BB56E9501302E3C832198A657FBEFAF631D52E142409ECC49",
+      "bytes": 25905,
+      "operation": "replace",
+      "expectedMainSha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+      "expectedMainState": "present",
+      "inventoryOrigins": [
+        "parent-seam-4B37"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanMigrationTests.cs",
+      "sha256": "D0E5C8F4D01477A97624F4BA5B914814700E5C1E09D49A65AA9BAF43C6D40BF5",
+      "bytes": 27252,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "parent-seam-4B37"
+      ],
+      "kind": "test"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-counts.json",
+      "sha256": "010363CF48712D0E1A7DD506659434E82FF784108A52912DA49A47A8F5C0B8F5",
+      "bytes": 18652,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-parent-seams-source.md",
+      "sha256": "A5D1DA61CC1B8481F3FF9A3DDEFF4857C273FEC26387736E9C6A85F5B73AB54F",
+      "bytes": 8011,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/inventory.json",
+      "sha256": "6D749631835736D20FD5382DD036A867056C80F8AAD70DC3BC9F86039EB7AFE3",
+      "bytes": 1604,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationComposition.cs.txt",
+      "sha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+      "bytes": 8034,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommand.cs.txt",
+      "sha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+      "bytes": 7752,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommandProcessTests.cs.txt",
+      "sha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+      "bytes": 16900,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationMigrationTests.cs.txt",
+      "sha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+      "bytes": 22872,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-inventory.before-peer.json",
+      "sha256": "674A30A17A4940221B5D3D401F8EFE6F55091A9D653DE35535867153AAD5E584",
+      "bytes": 5774,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-counts.before-peer.json",
+      "sha256": "E3F7A1B48142EEB8E927D51EC612832D80382F4839F53B621B6B7C849C11366B",
+      "bytes": 18652,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/P04-C3-parent-seams-source.before-peer.md",
+      "sha256": "CF464FCF5A5CA3EB2739F842F60A92D207458D23755870700F511304A16EB025",
+      "bytes": 6226,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/ProjectTaskPlanMigrationTests.before-peer.cs.txt",
+      "sha256": "FAC6F304681502D1AE15B3B260D2DF81957C2334158B890C1B3AFBF5657BDC7F",
+      "bytes": 25288,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/ProjectTaskPlanMigrationTests.before-corruption-expansion.cs.txt",
+      "sha256": "E803FC2E9DD0242F9DD8640AFA6979ADA9090F44F30EE3922884F5BFA7E66AB2",
+      "bytes": 25277,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/P04-C3-source-inventory.json.txt",
+      "sha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+      "bytes": 7673,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanOperationTests.cs.txt",
+      "sha256": "9D2C378F8FC0D211CF894FC1AA0D478AD9ACA49DA70B2C75D30D016B6C97DC60",
+      "bytes": 24278,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanPublisher.cs.txt",
+      "sha256": "DD852268A6CA1A14FDA180B51BF1878124662332CBFFE5F0C3272FF0D8894D3B",
+      "bytes": 14172,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanReceiptReader.cs.txt",
+      "sha256": "F7437BE60551A816C9FF38F77E67ED6280D374628BC4518836FC1A11B081054C",
+      "bytes": 13116,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanRetentionTests.cs.txt",
+      "sha256": "5F5BBB16AA460CE66CA8680AB89F713858D772F59DF3C4A879499722DE3B9717",
+      "bytes": 16884,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-receipt-uncertainty-amendment.md",
+      "sha256": "65A92B423CC0A4159EB3DAEF5ED13BDCF23DEEEE2E02A357D1A9EDC80433DB85",
+      "bytes": 4747,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "proof-and-preserved-predecessor"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-source-inventory.json",
+      "sha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+      "bytes": 7673,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "source-inventory"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-inventory.json",
+      "sha256": "4B37BEF865C2FC7C882B1C219A403ACDEB6B00B9032F76B2D758AB570A2C9E25",
+      "bytes": 7374,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "source-inventory"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-source-inventory.json",
+      "sha256": "3388DA806696D05CFA88C4B97F47E4449B1ECA9F022976DF734D9DB07F7C4BED",
+      "bytes": 14094,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "source-inventory"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C3-schema-execution-readiness.md",
+      "sha256": "7F521C40C1049427D91FBBAAEC67CCFD013F5642C906A077332EFBC8E6412558",
+      "bytes": 23256,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "parent-generation-readiness"
+      ],
+      "kind": "proof-or-predecessor"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-migration-guard-install-proposal.md",
+      "sha256": "6FE9C6748E5C51EC6253768D0A686E09E87F8F94B4F8633FDA0B3EA8902BAA58",
+      "bytes": 19277,
+      "operation": "add",
+      "expectedMainSha256": null,
+      "expectedMainState": "absent",
+      "inventoryOrigins": [
+        "parent-generation-sql-review"
+      ],
+      "kind": "proof-or-predecessor"
+    }
+  ],
+  "sharedMerge": {
+    "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+    "mainSha256": "E7EBF686B7489C9792FB9C28C6C759ED262E51E0E7A735C083771C1C373CB428",
+    "successorSha256": "51C85F83CD3BA029B598D73612D33DBD81644B366E13D546BFB0CB014B63A60C",
+    "originalOwnerSha256": "54DB12820CB973123F26CC66A13049C6DE9CC59E8190E000B6C1B42E9E355F4E",
+    "delta": "Six added C3 options/retention lines; historical registration retained.",
+    "peer": "Persistence read-only PASS; native author exact diff reviewed."
+  },
+  "excludedResourceModelGuards": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "expectedMainSha256": "ADC12BD0E78453281C8BF06C746B5623F80297A2D5C7B432F57102EF58DAC368",
+      "transfer": false
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Persistence/ResourcesDbContext.cs",
+      "expectedMainSha256": "71FC60D3B778A7ACBA6772CD0910EFE53F8665EBF95AC90D323AFB78229C8878",
+      "transfer": false
+    }
+  ],
+  "resourceNoOverlapReference": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-combined-transfer-preflight.json",
+    "sha256": "4947CBAF5AE9E479E53DED60090CA8D8E9240792E233A772E66C6314BC5B1544",
+    "bytes": 94509
+  },
+  "unchangedMainTestInputs": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanBasisTests.cs",
+      "sha256": "5219F0BD3683F1FE86BF218C86D74151ECDB6D22D1D5C8D031FD79FF3DA2F0BA",
+      "bytes": 16256
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanTaskStagingTests.cs",
+      "sha256": "AEDD2836FA296F62714E3EFB119B387E9BE2BD5E7BF83AB2BA10F2F59A51B6B7",
+      "bytes": 14883
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FiniteOperationContractTests.cs",
+      "sha256": "E0D4357112B04D9D2B0D3952F5E9269CE9EF1FB92A3E41E5EA895DD4A9FBD42E",
+      "bytes": 15180
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DatasetActivationCommandTests.cs",
+      "sha256": "532D7D80976C642F7D86978507CAD782FEDE41FF3458980CA7FAF4107984484F",
+      "bytes": 3437
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DatabaseCanonicalityArchitectureTests.cs",
+      "sha256": "97663717B6F7A801BDDBAEEBA14C053876C6E4F76C7087A5DDF82DE68999F0CC",
+      "bytes": 10856
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanBasisCaptureTests.cs",
+      "sha256": "E76CCD790A53FCDE0C6F3407CD778110F97B329E211A3F04FDF338A9FED8CE2D",
+      "bytes": 21293
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanStagingPersistenceTests.cs",
+      "sha256": "05EA03BA7FAB42F02E9A509F1360DA729D3DA76ABF135017B369EC3D85AF5545",
+      "bytes": 19166
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SourceBoundExecutionAdmissionMigrationTests.cs",
+      "sha256": "486DDCA082537FAE1DCC4D3BF68A2DC6DB516F0AF8ED7D8ACCB32C388506C294",
+      "bytes": 25931
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkAssignmentMigrationIntegrationTests.cs",
+      "sha256": "635916BF983A28AC54C5A185495590BCBA86B0EC7A41BA1072507B8A1CE3E9B4",
+      "bytes": 25039
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkflowReceiptMigrationIntegrationTests.cs",
+      "sha256": "47F6C2B60AF49B78381BF241DF7D6D934E0D31B3933269B35F2B8EF9DFF8F8E7",
+      "bytes": 15579
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationPersistenceTests.cs",
+      "sha256": "D5D3EE8F3D491849908E9C80DD0BF2D3E7BAB9ECC80320A40DA475E63DA91212",
+      "bytes": 30252
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.cs",
+      "sha256": "17A4C9D9ABA5EC1CBC81DE0DBC8CB1059CF678F1EDDDFDE23AA84335CF661C59",
+      "bytes": 16075
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.PoolFence.cs",
+      "sha256": "1B5AD4EFFD2A9B91A9899E64AD23B6AE52C5AE35652FAFB62372935EE477545F",
+      "bytes": 18287
+    }
+  ],
+  "selectors": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-combined-transfer-selections.json",
+    "sha256": "C886D7C8C4443AE38453D2F2FB4AAAB793C5E6047C710C1F15793B3248543034",
+    "bytes": 83954
+  },
+  "instructions": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-combined-guarded-transfer.md",
+    "sha256": "7AE92515CBE6DB78EAF4F63B1CDFEE639E9746AF84CACE71D0FFDCBC5C41EA9D",
+    "bytes": 3822
+  },
+  "artifactTransferInstructions": "Manifest, selectors and instructions are three additional required-absent review artifacts. Zero deletions. Preserve prior inventories verbatim.",
+  "migration": {
+    "canonicalEntityCount": 169,
+    "workbenchEntityCount": 16,
+    "generated": false,
+    "fromCheckout": "MAIN after C3 transfer, before Resource transfer",
+    "newEntity": "ProjectTaskPlanReceiptRecord",
+    "predecessor": "20261016233100_ExtractFiniteOperationEpochMetadata",
+    "expectedNameSuffix": "AddWorkbenchTaskPlanReceipts",
+    "resourceModelIncluded": false,
+    "mixedVersionAdmission": "Stopped-host explicit migration/activation; no auto-heal or mixed old-host admission."
+  }
+}

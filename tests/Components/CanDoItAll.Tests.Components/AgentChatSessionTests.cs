@@ -9,6 +9,61 @@ using ProviderService = CanDoItAll.Modules.AgentFramework.ProviderManagement.IPr
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSessionTests {
+    [Fact]
+    public async Task Planning_review_requires_the_open_exact_view_and_is_cleared_before_a_same_target_failed_read() {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        var detail = CreatePlanningDetail(agent, chat);
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, chat, detail.Run));
+        reads.Detail = (_, _) => Task.FromResult(detail);
+        using var session = Session(service);
+        Assert.True(await session.LoadAsync(agent.Id, chat.Id, false));
+        var review = detail.PlanningReview!;
+        var request = PlanningAction(review, AgentPlanningAction.Approve);
+        Assert.False(session.CanApplyPlanningAction(request));
+        session.SetPlanningReviewOpen(review.Expected, true);
+        Assert.True(session.CanApplyPlanningAction(request));
+        Assert.False(session.CanApplyPlanningAction(new(AgentPlanningAction.Approve, chat.Id, review.Expected,
+            request.Binding, "another-approval")));
+        Assert.False(session.CanApplyPlanningAction(new(AgentPlanningAction.Cancel, Guid.NewGuid(), review.Expected)));
+        session.MarkPlanningActionUnconfirmed(session.Generation);
+        Assert.False(session.CanApplyPlanningAction(request));
+        var pending = new TaskCompletionSource<ExecutionRunDetail>(TaskCreationOptions.RunContinuationsAsynchronously);
+        reads.Detail = (_, _) => pending.Task;
+        var reload = session.LoadAsync(agent.Id, chat.Id, false);
+        Assert.Null(session.PlanningReview);
+        Assert.False(session.PlanningReviewOpen);
+        pending.SetException(new AgentToolReceiptAccessDeniedException());
+        Assert.False(await reload);
+        Assert.Null(session.PlanningReview);
+        Assert.False(session.CanApplyPlanningAction(request));
+        Assert.NotEmpty(session.ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_foreign_or_stale_planning_projection_is_not_accepted(bool foreignRun) {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var chat = CreateSession(agent.Id);
+        var detail = CreatePlanningDetail(agent, chat);
+        var expected = detail.PlanningReview!.Expected;
+        detail = detail with { PlanningReview = detail.PlanningReview with {
+            Expected = new(foreignRun ? Guid.NewGuid() : expected.ExecutionRunId, foreignRun ? expected.RunRevision : expected.RunRevision + 1,
+                expected.JournalRevision, expected.DecisionId, expected.Generation)
+        } };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, chat, detail.Run));
+        reads.Detail = (_, _) => Task.FromResult(detail);
+        using var session = Session(service);
+        Assert.False(await session.LoadAsync(agent.Id, chat.Id, false));
+        Assert.Null(session.PlanningReview);
+        Assert.Contains("does not match", session.ErrorMessage, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(ProfileReadStage.Catalog)]
     [InlineData(ProfileReadStage.Workspace)]
@@ -218,6 +273,55 @@ public sealed class AgentChatSessionTests {
     }
 
     [Fact]
+    public async Task Run_detail_completion_reconciles_the_transcript_from_an_earlier_workspace_read() {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var thread = CreateSession(agent.Id);
+        var running = CreateRunningRun(agent.Id, thread.Id);
+        var message = new ChatMessageRecord(Guid.NewGuid(), ChatMessageRole.Assistant, "The approved mutation was saved.", DateTimeOffset.UtcNow, 1);
+        var messages = new List<ChatMessageRecord> { message };
+        var completedThread = thread with { Messages = messages, UpdatedAtUtc = message.CreatedAtUtc, LatestExecutionRunId = running.Id };
+        var completed = running with { State = ExecutionState.Completed, CompletedAtUtc = message.CreatedAtUtc };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, thread, running));
+        reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(completed, completedThread, [], []));
+        using var session = Session(service);
+
+        Assert.True(await session.LoadAsync(agent.Id, thread.Id, false));
+        messages.Clear();
+
+        Assert.Equal(ExecutionState.Completed, session.Workspace!.SelectedRun!.State);
+        Assert.Equal(message, Assert.Single(session.Workspace.SelectedSession!.Messages));
+        Assert.Equal(completedThread.UpdatedAtUtc, session.Workspace.SelectedSession.UpdatedAtUtc);
+        Assert.Empty(thread.Messages);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Run_detail_cannot_supply_a_missing_transcript_or_one_from_another_agent_or_thread(bool? differentAgent) {
+        var (service, reads) = CreateReads();
+        var agent = CreateAgent();
+        var thread = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, thread.Id);
+        var unrelated = differentAgent switch {
+            true => thread with { AgentId = Guid.NewGuid() },
+            false => thread with { Id = Guid.NewGuid() },
+            null => null
+        };
+        reads.Agents = [agent];
+        reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, thread, run));
+        reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(run, unrelated, [], []));
+        using var session = Session(service);
+
+        Assert.False(await session.LoadAsync(agent.Id, thread.Id, false));
+
+        Assert.Null(session.Workspace);
+        Assert.Contains("run is not available", session.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Explicit_missing_session_never_relabels_the_fallback_session() {
         var (service, reads) = CreateReads();
         var agent = CreateAgent();
@@ -328,8 +432,8 @@ public sealed class AgentChatSessionTests {
         public Func<bool, CancellationToken, Task<IReadOnlyList<AgentDefinition>>>? Catalog { get; set; }
         public Func<Guid, Guid?, CancellationToken, Task<ChatAgentWorkspaceSnapshot>>? Workspace { get; set; }
         public Func<Guid, CancellationToken, Task<ExecutionRunDetail>>? Detail { get; set; }
-        public Func<Guid, CancellationToken, Task<ExecutionRunDetail>>? CancelPending { get; set; }
         public Func<Guid, Guid, string, Task<ChatSessionRecord>>? Rename { get; set; }
+        public string? ExpectedRenameTitle { get; private set; }
         public Func<Guid, Task<ChatSessionRecord>>? CreateThread { get; set; }
         public Func<Guid, Task<AgentEditorModel>>? Editor { get; set; }
         public Func<Guid, CancellationToken, Task<AgentEditorModel>>? EditorWithToken { get; set; }
@@ -348,9 +452,8 @@ public sealed class AgentChatSessionTests {
                     return Workspace!((Guid)args![0]!, (Guid?)args![1], (CancellationToken)args![2]!);
                 case nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync):
                     return Detail!((Guid)args![0]!, (CancellationToken)args![1]!);
-                case nameof(IAgentFrameworkWorkspaceService.CancelPendingExecutionApprovalsAsync):
-                    return CancelPending!((Guid)args![0]!, args.OfType<CancellationToken>().Single());
                 case nameof(IAgentFrameworkWorkspaceService.RenameChatSessionAsync):
+                    ExpectedRenameTitle = (string)args![3]!;
                     return Rename!((Guid)args![0]!, (Guid)args![1]!, (string)args![2]!);
                 case nameof(IAgentFrameworkWorkspaceService.GetOrCreateChatSessionAsync):
                     return CreateThread!((Guid)args![0]!);

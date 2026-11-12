@@ -56,6 +56,61 @@ public sealed class LlmChatUiAuthorizationFacadeTests
 
 public sealed class LlmChatDefinitionUiGatewayTests
 {
+    public enum DefinitionMutation { Create, Update, Status }
+
+    [Theory]
+    [InlineData(DefinitionMutation.Create)]
+    [InlineData(DefinitionMutation.Update)]
+    [InlineData(DefinitionMutation.Status)]
+    public async Task Native_known_acceptance_is_returned_with_a_warning_and_never_replayed(DefinitionMutation command) {
+        var details = CreateDefinitionDetails("Exact accepted prompt");
+        var service = new StubDefinitionService(details) {
+            WriteFailure = new LlmChatCommittedException<Result<LlmChatDefinitionDetails>>(Result<LlmChatDefinitionDetails>.Success(details), new IOException("Private observer failure."))
+        };
+        var gateway = new LlmChatDefinitionUiGateway(service, new FixedAuthorizationFacade(true, true, false),
+            new LlmChatDefinitionCatalogInvalidationHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
+        LlmChatDefinitionListItem accepted;
+        string? warning;
+        if (command == DefinitionMutation.Status) {
+            var result = await gateway.ChangeStatusAsync(details.Definition.Id.Value, LlmChatDefinitionStatus.Active, 3);
+            Assert.True(result.IsSuccess);
+            accepted = result.Value!;
+            warning = result.Warning;
+        } else {
+            var result = command == DefinitionMutation.Create ? await gateway.CreateAsync(CreateMutation())
+                : await gateway.UpdateAsync(details.Definition.Id.Value, CreateMutation(), 3);
+            Assert.True(result.IsSuccess);
+            Assert.Equal("Exact accepted prompt", result.Value!.SystemPrompt);
+            accepted = result.Value.Definition;
+            warning = result.Warning;
+        }
+        Assert.Equal(details.Definition.Id.Value, accepted.DefinitionId);
+        Assert.Equal(details.Definition.ConcurrencyToken, accepted.ConcurrencyToken);
+        Assert.NotNull(warning);
+        Assert.DoesNotContain("Private", warning, StringComparison.Ordinal);
+        Assert.Equal(1, service.Writes);
+        Assert.Equal(0, service.GetCalls);
+    }
+
+    [Fact]
+    public async Task Local_notification_failure_attempts_later_subscribers_and_retains_the_accepted_result() {
+        var details = CreateDefinitionDetails("Exact accepted prompt");
+        var service = new StubDefinitionService(details);
+        var hub = new LlmChatDefinitionCatalogInvalidationHub();
+        var observed = 0;
+        hub.Invalidated += (_, _) => throw new IOException("Private local failure.");
+        hub.Invalidated += (_, _) => observed++;
+        var gateway = new LlmChatDefinitionUiGateway(service, new FixedAuthorizationFacade(true, true, false), hub,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
+        var result = await gateway.UpdateAsync(details.Definition.Id.Value, CreateMutation(), 3);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Warning);
+        Assert.Equal(details.Definition.ConcurrencyToken, result.Value!.Definition.ConcurrencyToken);
+        Assert.Equal(1, service.Writes);
+        Assert.Equal(1, observed);
+        Assert.Equal(0, service.GetCalls);
+    }
+
     [Fact]
     public async Task Read_projection_never_exposes_system_prompt()
     {
@@ -64,7 +119,7 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var gateway = new LlmChatDefinitionUiGateway(
             service,
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false),
-            new LlmChatDefinitionCatalogInvalidationHub());
+            new LlmChatDefinitionCatalogInvalidationHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
 
         var result = await gateway.ListPageAsync(new LlmChatDefinitionQuery());
 
@@ -87,7 +142,7 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var gateway = new LlmChatDefinitionUiGateway(
             service,
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: false),
-            new LlmChatDefinitionCatalogInvalidationHub());
+            new LlmChatDefinitionCatalogInvalidationHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
 
         var result = await gateway.GetEditorAsync(Guid.NewGuid());
 
@@ -105,7 +160,7 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var gateway = new LlmChatDefinitionUiGateway(
             service,
             new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: true),
-            new LlmChatDefinitionCatalogInvalidationHub());
+            new LlmChatDefinitionCatalogInvalidationHub(), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
 
         var result = await gateway.GetEditorAsync(Guid.NewGuid());
 
@@ -127,7 +182,7 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var gateway = new LlmChatDefinitionUiGateway(
             new StubDefinitionService(details),
             new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: false),
-            invalidator);
+            invalidator, Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
         var mutation = CreateMutation();
 
         var created = await gateway.CreateAsync(mutation);
@@ -157,7 +212,7 @@ public sealed class LlmChatDefinitionUiGatewayTests
         var gateway = new LlmChatDefinitionUiGateway(
             new StubDefinitionService(failure),
             new FixedAuthorizationFacade(canRead: true, canManage: true, canExecute: false),
-            invalidator);
+            invalidator, Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatDefinitionUiGateway>.Instance);
         var mutation = CreateMutation();
         var definitionId = Guid.NewGuid();
 
@@ -241,21 +296,27 @@ public sealed class LlmChatDefinitionUiGatewayTests
         }
 
         public int GetCalls { get; private set; }
+        public int Writes { get; private set; }
+        public Exception? WriteFailure { get; init; }
+        private Task<Result<LlmChatDefinitionDetails>> WriteResult() {
+            Writes++;
+            return WriteFailure is { } failure ? Task.FromException<Result<LlmChatDefinitionDetails>>(failure) : Task.FromResult(result);
+        }
 
         public Task<Result<LlmChatDefinitionDetails>> CreateAsync(
             CreateLlmChatDefinitionCommand command,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(result);
+            => WriteResult();
 
         public Task<Result<LlmChatDefinitionDetails>> UpdateAsync(
             UpdateLlmChatDefinitionCommand command,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(result);
+            => WriteResult();
 
         public Task<Result<LlmChatDefinitionDetails>> ChangeStatusAsync(
             ChangeLlmChatDefinitionStatusCommand command,
             CancellationToken cancellationToken = default)
-            => Task.FromResult(result);
+            => WriteResult();
 
         public Task<Result<LlmChatDefinitionDetails>> GetAsync(
             LlmChatDefinitionId definitionId,
@@ -289,6 +350,24 @@ public sealed class LlmChatDefinitionUiGatewayTests
 public sealed class LlmChatOperationUiGatewayTests
 {
     [Fact]
+    public async Task Known_admission_warning_returns_the_native_operation_identity_without_repeating_send() {
+        var operations = new CapturingOperationService { WarnAfterAdmission = true };
+        var gateway = new LlmChatOperationUiGateway(operations, new FixedAuthorizationFacade(true, false, true),
+            new StubWorkspaceScopeAccessor((WorkspaceScopeDescriptor?)null), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatOperationUiGateway>.Instance);
+        var operationId = Guid.NewGuid();
+        var conversationId = Guid.NewGuid();
+
+        var result = await gateway.SendAsync(operationId, conversationId, 2, "Admitted message");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(operationId, result.Value!.OperationId);
+        Assert.Equal(conversationId, result.Value.ConversationId);
+        Assert.NotNull(result.Warning);
+        Assert.DoesNotContain("PRIVATE_ADMISSION", result.Warning, StringComparison.Ordinal);
+        Assert.Equal(1, operations.SendCount);
+    }
+
+    [Fact]
     public async Task Send_captures_the_typed_workspace_scope_at_admission()
     {
         var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
@@ -296,7 +375,7 @@ public sealed class LlmChatOperationUiGatewayTests
         var gateway = new LlmChatOperationUiGateway(
             operations,
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: true),
-            new StubWorkspaceScopeAccessor(projectScope));
+            new StubWorkspaceScopeAccessor(projectScope), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatOperationUiGateway>.Instance);
 
         await gateway.SendAsync(Guid.NewGuid(), Guid.NewGuid(), 2, "hello");
 
@@ -311,7 +390,7 @@ public sealed class LlmChatOperationUiGatewayTests
         var gateway = new LlmChatOperationUiGateway(
             operations,
             new FixedAuthorizationFacade(canRead: true, canManage: false, canExecute: true),
-            new StubWorkspaceScopeAccessor("SCOPE_PRIVATE_SENTINEL /agents?token=private-scope"));
+            new StubWorkspaceScopeAccessor("SCOPE_PRIVATE_SENTINEL /agents?token=private-scope"), Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmChatOperationUiGateway>.Instance);
 
         var result = await gateway.SendAsync(Guid.NewGuid(), Guid.NewGuid(), 2, "hello");
 
@@ -353,6 +432,7 @@ public sealed class LlmChatOperationUiGatewayTests
 
     private sealed class CapturingOperationService : ILlmChatOperationApplicationService
     {
+        public bool WarnAfterAdmission { get; init; }
         public int SendCount { get; private set; }
 
         public SendLlmChatTurnCommand? LastSend { get; private set; }
@@ -363,6 +443,13 @@ public sealed class LlmChatOperationUiGatewayTests
         {
             SendCount++;
             LastSend = command;
+            if (WarnAfterAdmission) {
+                var operation = new LlmChatOperation(command.OperationId, command.ConversationId, LlmChatOperationKind.SendTurn,
+                    new(new string('a', 64)), command.ExpectedTranscriptRevision, LlmChatOperationStatus.Pending, DateTimeOffset.UnixEpoch, 0);
+                var accepted = Result<LlmChatOperationDetails>.Success(new(operation, null, []));
+                return Task.FromException<Result<LlmChatOperationDetails>>(new LlmChatCommittedException<Result<LlmChatOperationDetails>>(
+                    accepted, new IOException("PRIVATE_ADMISSION notification failure")));
+            }
             return FailedAsync();
         }
 
@@ -637,7 +724,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
 
         var presentationDirectory = Path.Combine(root, "src", "MAF", "SimpleChats", "CanDoItAll.AgentFramework.Llm.SimpleChats.UI");
         var presentationProject = XDocument.Load(Path.Combine(presentationDirectory, "CanDoItAll.AgentFramework.Llm.SimpleChats.UI.csproj"));
-        Assert.Equal(["CanDoItAll.Conversations.Components"], presentationProject.Descendants("ProjectReference")
+        Assert.Equal(["CanDoItAll.Conversations.Components", "CanDoItAll.Editing.UI"], presentationProject.Descendants("ProjectReference")
             .Select(element => ResolveProjectReferenceName(presentationDirectory, element)));
         Assert.Equal(["CanDoItAll.Components.BaseLib", "Microsoft.AspNetCore.Components.Web"], presentationProject.Descendants("PackageReference")
             .Select(element => element.Attribute("Include")!.Value).Order(StringComparer.Ordinal));
@@ -684,7 +771,7 @@ public sealed class LlmChatUiRegistrationAndArchitectureTests
             "LlmChatsCompatibilityRedirect.razor");
         var compatibilitySource = File.ReadAllText(compatibilityRoute);
         Assert.Contains("@page \"/chats\"", compatibilitySource, StringComparison.Ordinal);
-        Assert.Contains("AgentWorkspaceRouteState.BuildCompatibilityRedirect", compatibilitySource, StringComparison.Ordinal);
+        Assert.Contains("AgentsUrlCodec.BuildChatsCompatibilityRedirect", compatibilitySource, StringComparison.Ordinal);
     }
 
     [Fact]

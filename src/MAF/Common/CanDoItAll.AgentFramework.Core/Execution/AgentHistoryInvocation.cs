@@ -3,8 +3,8 @@ using CanDoItAll.AgentFramework.ProviderHistory;
 
 namespace CanDoItAll.AgentFramework.Core.Execution;
 
-internal static class AgentHistoryInvocation {
-    internal static HistoryInvocationContext Create(ExecutionRunRecord run, WorkspaceScopeDescriptor? contextScope) {
+public static class AgentHistoryInvocation {
+    public static HistoryInvocationContext Create(ExecutionRunRecord run, WorkspaceScopeDescriptor? contextScope) {
         var requestId = ProviderRequestId.New();
         return new(requestId, string.IsNullOrEmpty(run.ProcessRunId) ? HistoryWorkload.Agent : HistoryWorkload.Process,
             run.HistoryCaller ?? new(HistoryAuthenticationKind.Unknown),

@@ -8,6 +8,23 @@ namespace CanDoItAll.Tests.Components.Workspace;
 
 public sealed class StoragePlacementRecoveryDialogTests {
     [Fact]
+    public async Task Confirmed_file_progress_survives_a_failed_follow_up_read_without_replaying_the_command() {
+        var source = new RecoverySource { FailReadAfterCommand = true };
+        using var context = CreateContext(source);
+        var dialog = context.Render<StoragePlacementRecoveryDialog>();
+        Inspect(dialog, source.Pending);
+        await dialog.InvokeAsync(() => dialog.Find("[data-testid='storage-recovery-reconcile']").ClickAsync(new()));
+        dialog.WaitForElement("[data-testid='storage-recovery-error']");
+        Assert.Contains(source.Pending.Identity.IntentId.Value.ToString(),
+            dialog.Find("[data-testid='storage-recovery-selected-intent']").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Recorded", dialog.Markup, StringComparison.Ordinal);
+        Assert.Single(source.Commands);
+        source.FailReadAfterCommand = false;
+        await dialog.InvokeAsync(() => dialog.Find("[data-testid='storage-recovery-refresh']").ClickAsync(new()));
+        Assert.Single(source.Commands);
+    }
+
+    [Fact]
     public void Loading_selecting_and_refreshing_only_observe_both_pending_feeds() {
         var source = new RecoverySource();
         using var context = CreateContext(source);
@@ -144,6 +161,7 @@ public sealed class StoragePlacementRecoveryDialogTests {
         internal StoragePlacementOwnerContinuationAction OwnerAction { get; init; }
         internal bool ChangeContextOnCommand { get; init; }
         internal bool EmptyContinuationPage { get; init; }
+        internal bool FailReadAfterCommand { get; set; }
         internal int PendingReads { get; private set; }
         internal int ContinuationReads { get; private set; }
         internal List<int> ContinuationOffsets { get; } = [];
@@ -158,6 +176,9 @@ public sealed class StoragePlacementRecoveryDialogTests {
             CancellationToken cancellationToken = default) {
             Assert.Equal(Context, query.Context);
             PendingReads++;
+            if (FailReadAfterCommand && Commands.Count > 0) {
+                throw new IOException("Controlled follow-up read failure.");
+            }
             return Task.FromResult(new StoragePlacementRecoveryPage([Pending with { Context = Context }], null));
         }
 
@@ -188,6 +209,10 @@ public sealed class StoragePlacementRecoveryDialogTests {
             if (ChangeContextOnCommand) {
                 Context = new(Guid.NewGuid(), 2);
                 throw new StoragePlacementRecoveryException(StoragePlacementRecoveryFailure.StaleContext);
+            }
+            if (FailReadAfterCommand) {
+                Pending = Pending with { StorageState = StorageStablePlacementState.Completed,
+                    StorageReceiptPresent = true, AvailableAction = StoragePlacementRecoveryAction.None };
             }
             return GetAsync(request, cancellationToken);
         }

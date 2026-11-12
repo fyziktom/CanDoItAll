@@ -7,10 +7,12 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Operators.UI.Secrets;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +24,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePageActionLifetimeTests {
+public sealed partial class ProjectStructurePageActionLifetimeTests {
     public enum SummaryAction { Status, Workbook, Gantt }
 
     [Theory]
@@ -53,25 +55,26 @@ public sealed class ProjectStructurePageActionLifetimeTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Summary_export_keeps_its_original_parent_and_leaves_a_new_dialog_open(bool gantt) {
-        var gate = new MutationGate();
-        var generator = new TextGeneratorGate();
-        await using var harness = await CreateHarnessAsync(gate, generator: generator);
+        var gate = new ContentWriteHold(afterCommit: true);
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(gate), ServiceLifetime.Singleton));
         var original = await CreateTargetAsync(harness, "First export");
         var next = await CreateTargetAsync(harness, "Second export");
         var cut = Render(harness, original.ProjectId);
         await ContextActionAsync(cut, original.Node.Id, "summary");
-        if (gantt) {
-            generator.Armed = true;
-        } else {
-            gate.Arm(original.ProjectId, ProjectObjectType.File);
-        }
-        var pending = Button(cut, gantt ? "Export Gantt" : "Export XLSX").ClickAsync(new MouseEventArgs());
+        gate.Project = original.ProjectId;
+        gate.Armed = true;
+        var pending = cut.InvokeAsync(() => Button(cut, gantt ? "Export Gantt" : "Export XLSX").ClickAsync(new MouseEventArgs()));
         try {
-            await (gantt ? generator.Entered.Task : gate.Entered.Task).WaitAsync(TimeSpan.FromSeconds(20));
+            await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await using (var database = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
+                var committed = Assert.Single(await database.Set<ProjectObjectRecord>().AsNoTracking()
+                    .Where(node => node.ProjectId == original.ProjectId && node.ObjectType == ProjectObjectType.File).ToListAsync());
+                Assert.Equal(original.Node.Id, committed.ParentNodeKey);
+            }
             Navigate(harness, cut, next.ProjectId);
             await ContextActionAsync(cut, next.Node.Id, "summary");
         } finally {
-            generator.Release.TrySetResult();
             gate.Release.TrySetResult();
         }
         await pending;
@@ -96,30 +99,37 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.update", _ => true).SetResult(true);
         var cut = Render(harness, original.ProjectId);
         await SelectAsync(cut, original.Node.Id);
-        var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => true);
-        var pending = cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSelectionPanel>().Instance.ExecuteInspectorActionAsync.InvokeAsync("export-image"));
+        var captureEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var capture = harness.Context.JSInterop.Setup<string?>("CanDoItAll.canvasWorkbench.exportImageData", _ => {
+            captureEntered.TrySetResult();
+            return true;
+        });
+        var beforeCompletion = string.Empty;
+        var pending = InvokeSelectionAsync(cut, new CanDoItAll.Workbench.Insights.UI.InsightsSelectionCommand.Inspector("export-image"));
         try {
-            cut.WaitForAssertion(() => Assert.Single(capture.Invocations));
+            await captureEntered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await cut.InvokeAsync(() => Assert.Single(capture.Invocations));
             if (recreate) {
                 await RecreateProjectAsync(harness, original);
             }
             Navigate(harness, cut, next.ProjectId);
             await SelectAsync(cut, next.Node.Id);
+            beforeCompletion = await CaptureContentRowsAsync(harness, original.ProjectId);
         } finally {
             capture.SetResult("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5+Rf0AAAAASUVORK5CYII=");
         }
         await pending;
 
         var images = (await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes.Where(node => node.ObjectType == ProjectObjectType.ImageAsset).ToList();
-        if (recreate) {
-            Assert.Empty(images);
-            Assert.Contains(original.Admission.LifetimeId.ToString("D"), cut.Markup, StringComparison.Ordinal);
-        } else {
-            var image = Assert.Single(images);
-            Assert.Equal(original.Node.Id, image.ParentId);
-            Assert.Equal($"{original.Node.Title} mindmap image", image.Title);
-            Assert.Equal("original-image-node-mindmap.png", image.MediaOriginalFileName);
-        }
+        Assert.Empty(images);
+        Assert.Equal(beforeCompletion, await CaptureContentRowsAsync(harness, original.ProjectId));
+        var outcome = Assert.Single(cut.Instance.AuthoringOutcomes);
+        Assert.Equal(original.Admission, outcome.Project);
+        Assert.Equal(original.Node.Id, outcome.SourceNodeId);
+        Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, outcome.Kind);
+        Assert.Null(outcome.Node);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary.StartsWith("Structure", StringComparison.Ordinal));
         Assert.DoesNotContain((await Workbench(harness).GetStructureAsync(next.ProjectId)).Nodes, node => node.ObjectType == ProjectObjectType.ImageAsset);
         AssertNavigation(harness, next.ProjectId);
     }
@@ -134,6 +144,8 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         var next = await CreateTargetAsync(harness, "Next page");
         var cut = Render(harness, original.ProjectId);
         gate.Arm(original.ProjectId, ProjectObjectType.Transcript, afterCommit: true);
+        Guid scaffoldRecordId = default;
+        var beforeCompletion = string.Empty;
         var pending = ContextActionAsync(cut, original.Node.Id, "transcript:create");
         try {
             await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
@@ -141,6 +153,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
                 var scaffold = Assert.Single(await database.Set<ProjectObjectRecord>().AsNoTracking()
                     .Where(node => node.ProjectId == original.ProjectId && node.ObjectType == ProjectObjectType.Transcript).ToListAsync());
                 Assert.Equal(original.Node.Id, scaffold.ParentNodeKey);
+                scaffoldRecordId = scaffold.Id;
                 Assert.False(await database.Set<ProjectObjectLinkRecord>().AnyAsync(link =>
                     link.ProjectId == original.ProjectId && link.LinkKind == ProjectObjectLinkKind.DerivedFrom));
             }
@@ -148,23 +161,33 @@ public sealed class ProjectStructurePageActionLifetimeTests {
                 await RecreateProjectAsync(harness, original).WaitAsync(TimeSpan.FromSeconds(20));
             }
             Navigate(harness, cut, next.ProjectId);
+            beforeCompletion = await CaptureContentRowsAsync(harness, original.ProjectId);
         } finally {
             gate.Release.TrySetResult();
         }
         await pending.WaitAsync(TimeSpan.FromSeconds(20));
 
         var first = await Workbench(harness).GetStructureAsync(original.ProjectId);
+        Assert.Equal(beforeCompletion, await CaptureContentRowsAsync(harness, original.ProjectId));
+        Assert.DoesNotContain(first.Links, link => link.Kind == ProjectObjectLinkKind.DerivedFrom);
+        var outcome = cut.Instance.AuthoringOutcomes.Last();
+        Assert.Equal(original.Admission, outcome.Project);
+        Assert.Equal(ProjectStructureAuthoringResultKind.PartialCommit, outcome.Kind);
+        Assert.Equal(scaffoldRecordId, outcome.Node?.RecordId);
+        Assert.Null(outcome.Link);
+        Assert.All(cut.Instance.AuthoringOutcomes, receipt => {
+            Assert.Equal(outcome.SubmissionId, receipt.SubmissionId);
+            Assert.Equal(original.Admission, receipt.Project);
+            Assert.Equal(scaffoldRecordId, receipt.Node?.RecordId);
+        });
         if (recreate) {
-            Assert.DoesNotContain(first.Links, link => link.Kind == ProjectObjectLinkKind.DerivedFrom);
-            cut.WaitForAssertion(() => {
-                Assert.Contains("was saved", cut.Markup, StringComparison.Ordinal);
-                Assert.Contains(original.Admission.LifetimeId.ToString("D"), cut.Markup, StringComparison.Ordinal);
-            });
+            Assert.DoesNotContain(first.Nodes, node => node.ObjectType == ProjectObjectType.Transcript);
         } else {
             var transcript = Assert.Single(first.Nodes, node => node.ObjectType == ProjectObjectType.Transcript);
             Assert.Equal(original.Node.Id, transcript.ParentId);
-            Assert.Contains(first.Links, link => link.SourceId == original.Node.Id && link.TargetId == transcript.Id && link.Kind == ProjectObjectLinkKind.DerivedFrom);
         }
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary.StartsWith("Structure", StringComparison.Ordinal));
         Assert.DoesNotContain((await Workbench(harness).GetStructureAsync(next.ProjectId)).Nodes, node => node.ObjectType == ProjectObjectType.Transcript);
         AssertNavigation(harness, next.ProjectId);
     }
@@ -179,6 +202,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         var next = await CreateTargetAsync(harness, "Next transcript", ProjectObjectType.Transcript);
         var cut = Render(harness, original.ProjectId);
         await ContextActionAsync(cut, original.Node.Id, "transcript:summarize");
+        var beforeCompletion = string.Empty;
         var pending = Button(cut, "Send request").ClickAsync(new MouseEventArgs());
         try {
             await provider.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
@@ -187,6 +211,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
             }
             Navigate(harness, cut, next.ProjectId);
             await ContextActionAsync(cut, next.Node.Id, "transcript:find-my-tasks");
+            beforeCompletion = await CaptureContentRowsAsync(harness, original.ProjectId);
         } finally {
             provider.Release.TrySetResult();
         }
@@ -196,34 +221,39 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         Assert.Contains(original.Node.Title, provider.Request!.Prompt, StringComparison.Ordinal);
         var stored = Assert.Single((await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes, node => node.Id == original.Node.Id);
         var metadata = ProjectObjectMetadataSerializer.Parse(stored.MetadataJson);
-        if (recreate) {
-            Assert.True(string.IsNullOrWhiteSpace(metadata.Transcript?.SummaryText));
-            Assert.Contains("provider request completed", cut.Markup, StringComparison.OrdinalIgnoreCase);
-        } else {
-            Assert.Equal("Original provider answer", metadata.Transcript?.SummaryText);
-            Assert.Equal(ProjectLlmActionKind.Summarize, metadata.Transcript?.LastActionKind);
-        }
+        Assert.Equal(beforeCompletion, await CaptureContentRowsAsync(harness, original.ProjectId));
+        Assert.True(string.IsNullOrWhiteSpace(metadata.Transcript?.SummaryText));
+        var outcome = Assert.Single(cut.Instance.AuthoringOutcomes);
+        Assert.Equal(original.Admission, outcome.Project);
+        Assert.Equal(ProjectStructureAuthoringResultKind.PartialCommit, outcome.Kind);
+        Assert.Equal(ProjectStructureExternalEffectState.Completed, outcome.ExternalEffect);
+        Assert.Equal("Original provider answer", outcome.TranscriptResponse?.OutputText);
+        Assert.Null(outcome.Node);
+        Assert.DoesNotContain(harness.Context.Services.GetRequiredService<CanDoItAll.Components.BaseLib.NotificationService>().Messages,
+            message => message.Summary.StartsWith("Structure", StringComparison.Ordinal));
         var nextStored = Assert.Single((await Workbench(harness).GetStructureAsync(next.ProjectId)).Nodes, node => node.Id == next.Node.Id);
         Assert.True(string.IsNullOrWhiteSpace(ProjectObjectMetadataSerializer.Parse(nextStored.MetadataJson).Transcript?.SummaryText));
         cut.WaitForAssertion(() => Assert.Equal(ProjectLlmActionKind.FindMyTasks,
             cut.FindComponent<ProjectStructureSupportDialogs>().Instance.PendingTranscriptAction!.ActionKind));
+        Assert.Empty(cut.FindComponent<ProjectStructureSupportDialogs>().Instance.PendingTranscriptAction!.Error);
         AssertNavigation(harness, next.ProjectId);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Secret_creation_keeps_original_form_and_reference_after_await(bool recreate) {
+    public async Task Secret_creation_retains_original_vault_receipt_without_post_retirement_reference(bool recreate) {
         var vault = new VaultGate();
         await using var harness = await CreateHarnessAsync(vault: vault);
         var original = await CreateTargetAsync(harness, "Original secret project");
         var next = await CreateTargetAsync(harness, "Next secret project");
         var cut = Render(harness, original.ProjectId);
         await OpenSecretCreateAsync(cut, original.Node.Id);
-        cut.Find("[data-testid='project-structure-secret-purpose']").Input("Original purpose");
-        cut.Find("[data-testid='project-structure-secret-external-reference']").Input("Original note");
-        cut.Find("[data-testid='project-structure-secret-create-name']").Change("Original UI secret");
-        cut.Find("input[data-testid='project-structure-secret-create-value']").Change("synthetic-component-secret");
+        var opening = cut.FindComponent<SecretReferenceEditor>().Instance.State;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-purpose']").InputAsync(new ChangeEventArgs { Value = "Original purpose" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-external-reference']").InputAsync(new ChangeEventArgs { Value = "Original note" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-create-name']").InputAsync(new ChangeEventArgs { Value = "Original UI secret" }));
+        await cut.InvokeAsync(() => cut.Find("input[data-testid='project-structure-secret-create-value']").ChangeAsync(new ChangeEventArgs { Value = "synthetic-component-secret" }));
         vault.Armed = true;
         var pending = cut.Find("[data-testid='project-structure-secret-create-use']").ClickAsync(new MouseEventArgs());
         try {
@@ -233,8 +263,8 @@ public sealed class ProjectStructurePageActionLifetimeTests {
             }
             Navigate(harness, cut, next.ProjectId);
             await OpenSecretCreateAsync(cut, next.Node.Id);
-            cut.Find("[data-testid='project-structure-secret-purpose']").Input("New purpose");
-            cut.Find("[data-testid='project-structure-secret-create-name']").Change("New unfinished secret");
+            await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-purpose']").InputAsync(new ChangeEventArgs { Value = "New purpose" }));
+            await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-create-name']").InputAsync(new ChangeEventArgs { Value = "New unfinished secret" }));
         } finally {
             vault.Release.TrySetResult();
         }
@@ -245,17 +275,19 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         Assert.NotEqual(Guid.Empty, secret.Id);
         Assert.False(await security.Set<SecretRecord>().AnyAsync(row => row.Name == "New unfinished secret"));
         var references = (await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes.Where(node => node.ObjectType == ProjectObjectType.SecretReference).ToList();
-        if (recreate) {
-            Assert.Empty(references);
-            Assert.Contains($"Secret {secret.Id:D} was created", cut.Markup, StringComparison.Ordinal);
-        } else {
-            var reference = Assert.Single(references);
-            var metadata = ProjectObjectMetadataSerializer.Parse(reference.MetadataJson).SecretReference!;
-            Assert.Equal(secret.Id, metadata.SecretId);
-            Assert.Equal("Original purpose", metadata.Purpose);
-            Assert.Equal("Original note", metadata.ExternalReference);
-            Assert.Equal(original.Node.Id, reference.ParentId);
-        }
+        Assert.Empty(references);
+        Assert.True(opening.IsRetired);
+        var receipt = Assert.IsType<SecretReferenceReceipt>(opening.Receipt);
+        Assert.Equal(SecretReferencePhase.VaultCommitted, receipt.Phase);
+        Assert.Equal(secret.Id, receipt.SecretId);
+        Assert.Null(receipt.NodeId);
+        Assert.False(opening.CanFinishReference);
+        Assert.Equal("Original purpose", opening.Draft.Purpose);
+        Assert.Equal("Original note", opening.Draft.Note);
+        Assert.Empty(opening.Draft.Create.SecretValue);
+        var successor = cut.FindComponent<SecretReferenceEditor>().Instance.State;
+        Assert.NotSame(opening, successor);
+        Assert.Null(successor.Receipt);
         Assert.DoesNotContain((await Workbench(harness).GetStructureAsync(next.ProjectId)).Nodes, node => node.ObjectType == ProjectObjectType.SecretReference);
         cut.WaitForAssertion(() => {
             Assert.Equal("New purpose", cut.Find("[data-testid='project-structure-secret-purpose']").GetAttribute("value"));
@@ -268,7 +300,7 @@ public sealed class ProjectStructurePageActionLifetimeTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Secret_reference_edit_preserves_original_node_or_denies_its_recreated_lifetime(bool recreate) {
+    public async Task Secret_reference_edit_preserves_original_node_after_retirement_or_project_recreation(bool recreate) {
         var gate = new MutationGate();
         await using var harness = await CreateHarnessAsync(gate);
         var secretResult = await harness.Context.Services.GetRequiredService<SecretService>().SaveAsync(new() {
@@ -279,15 +311,18 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         var next = await CreateTargetAsync(harness, "Other reference project");
         var cut = Render(harness, original.ProjectId);
         await SelectAsync(cut, original.Node.Id);
-        await cut.InvokeAsync(() => cut.FindComponent<ProjectStructureSelectionPanel>().Instance.ExecuteInspectorActionAsync.InvokeAsync("edit"));
+        await InvokeSelectionAsync(cut, new CanDoItAll.Workbench.Insights.UI.InsightsSelectionCommand.Inspector("edit"));
         cut.WaitForElement("[data-testid='project-structure-secret-dialog']");
-        cut.Find("[data-testid='project-structure-secret-select']").Change(secretResult.Value.ToString("D"));
-        cut.Find("[data-testid='project-structure-secret-purpose']").Input("Original edit purpose");
+        var opening = cut.FindComponent<SecretReferenceEditor>().Instance.State;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-select']").ChangeAsync(new ChangeEventArgs { Value = secretResult.Value.ToString("D") }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-purpose']").InputAsync(new ChangeEventArgs { Value = "Original edit purpose" }));
+        var retainedInput = opening.Draft.Capture();
         if (recreate) {
             await RecreateProjectAsync(harness, original);
         } else {
             gate.Arm(original.ProjectId, ProjectObjectType.SecretReference);
         }
+        var beforeSave = Assert.Single((await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes, node => node.Id == original.Node.Id);
         var pending = cut.Find("[data-testid='project-structure-secret-use-selected']").ClickAsync(new MouseEventArgs());
         if (!recreate) {
             try {
@@ -300,12 +335,17 @@ public sealed class ProjectStructurePageActionLifetimeTests {
         }
         await pending;
         var stored = Assert.Single((await Workbench(harness).GetStructureAsync(original.ProjectId)).Nodes, node => node.Id == original.Node.Id);
+        Assert.Equal(beforeSave.Title, stored.Title);
+        Assert.Equal(beforeSave.Notes, stored.Notes);
+        Assert.Equal(beforeSave.MetadataJson, stored.MetadataJson);
+        Assert.Equal(retainedInput, opening.Draft.Capture());
+        Assert.Equal(SecretReferencePhase.Refused, Assert.IsType<SecretReferenceReceipt>(opening.Receipt).Phase);
         if (recreate) {
-            Assert.Equal(original.Node.Title, stored.Title);
             Assert.Contains(original.Admission.LifetimeId.ToString("D"), cut.Markup, StringComparison.Ordinal);
         } else {
-            Assert.Equal(secretResult.Value, ProjectObjectMetadataSerializer.Parse(stored.MetadataJson).SecretReference!.SecretId);
-            Assert.Equal("Original edit purpose", stored.Notes);
+            Assert.True(opening.IsRetired);
+            Assert.Equal(secretResult.Value, opening.Draft.SelectedId);
+            Assert.Equal("Original edit purpose", opening.Draft.Purpose);
             cut.WaitForElement("[data-testid='project-structure-secret-create-use']");
             AssertNavigation(harness, next.ProjectId);
         }
@@ -395,7 +435,12 @@ public sealed class ProjectStructurePageActionLifetimeTests {
 
     private static async Task RecreateProjectAsync(ComponentTestHarness harness, Target original) {
         var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original.Admission);
+        Assert.Equal(original.Admission, (await Workbench(harness).GetStructureAsync(original.ProjectId)).ExpectedProjectAdmission);
+        var native = harness.Context.Services.GetRequiredService<ProjectNativeLifecycleOperations>();
+        var context = await native.GetContextAsync();
+        var deletion = native.Freeze(new ProjectLifecycleCommand.Delete((await projects.GetAsync(original.ProjectId)).ExpectedDefinition!),
+            ProjectNativeLifecycleOperations.Scope(context), context, Guid.NewGuid());
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(await native.DispatchAsync(deletion.Submission));
         Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Unrelated replacement" })).IsSuccess);
         await using var db = await harness.Context.Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         db.Set<ProjectObjectRecord>().Add(new() {

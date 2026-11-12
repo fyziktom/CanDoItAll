@@ -177,6 +177,7 @@ internal static class TestControlEndpointRouteBuilderExtensions
     public static IEndpointRouteBuilder MapTestControlEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/_test");
+        group.MapResponseScript();
         group.MapGet("/control", (TestControlState state) => TypedResults.Ok(state.Get()));
         group.MapPut("/control", (TestControlRequest request, TestControlState state) =>
         {

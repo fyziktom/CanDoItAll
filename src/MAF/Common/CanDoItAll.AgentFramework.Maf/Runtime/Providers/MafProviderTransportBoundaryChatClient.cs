@@ -172,7 +172,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
             }
             catch (Exception exception)
             {
-                primaryFailure = CreateTransportException(exception);
+                primaryFailure = CreateRequestFailure(exception, cancellationToken);
             }
         }
         finally
@@ -225,7 +225,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
             }
             catch (Exception exception)
             {
-                primaryFailure = CreateTransportException(exception);
+                primaryFailure = CreateRequestFailure(exception, cancellationToken);
             }
 
             while (primaryFailure is null && enumerator is not null)
@@ -277,7 +277,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
                 catch (Exception exception)
                 {
                     inFlightMoveNext = null;
-                    primaryFailure = CreateTransportException(exception);
+                    primaryFailure = CreateRequestFailure(exception, cancellationToken);
                     break;
                 }
 
@@ -650,6 +650,13 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         primaryFailure.Data[dataKey] = isProviderDisposal
             ? MafProviderTransportException.ResolveDiagnosticFailureType(secondaryFailure)
             : secondaryFailure.GetType().FullName ?? secondaryFailure.GetType().Name;
+    }
+
+    private Exception CreateRequestFailure(Exception exception, CancellationToken cancellationToken) {
+        var failure = CreateTransportException(exception);
+        return exception is ObjectDisposedException && cancellationToken.IsCancellationRequested
+            ? new OperationCanceledException("The provider request was cancelled while reading its response.", failure, cancellationToken)
+            : failure;
     }
 
     private MafProviderTransportException CreateTransportException(

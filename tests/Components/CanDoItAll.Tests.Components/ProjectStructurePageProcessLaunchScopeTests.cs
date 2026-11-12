@@ -23,9 +23,91 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
-public sealed class ProjectStructurePageProcessLaunchScopeTests {
+public sealed partial class ProjectStructurePageProcessLaunchScopeTests {
     private static readonly Guid DefinitionId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
         new ProcessDefinitionCatalogItemKey("customer-onboarding")).Value;
+
+    [Fact]
+    public async Task Opening_context_must_finish_before_continue_can_prepare_a_launch() {
+        var probe = new ProcessLaunchProbe();
+        await using var harness = await CreateHarnessAsync(probe);
+        var target = await CreateTargetAsync(harness, "Pending launch context");
+        var pending = harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true);
+        var cut = RenderProject(harness, target);
+        var opening = OpenStartDialogAsync(cut, target);
+        Guid openingId;
+        try {
+            cut.WaitForAssertion(() => Assert.Single(pending.Invocations));
+            var dialog = GetStartDialog(cut);
+            openingId = dialog.DialogId;
+            Assert.True(dialog.IsBusy);
+            Assert.Null(dialog.LaunchVariables);
+            Assert.True(cut.Find("[data-testid='project-structure-process-start-continue']").HasAttribute("disabled"));
+            await cut.InvokeAsync(() => cut.FindComponent<CanDoItAll.Workbench.Execution.UI.Processes.ProcessStartDialog>()
+                .Instance.Actions.Submit());
+            Assert.Empty(probe.ResolutionRequests);
+            Assert.Empty(GetStartDialog(cut).Error);
+        } finally {
+            pending.SetResult(null);
+            await opening;
+        }
+        cut.WaitForAssertion(() => {
+            var ready = GetStartDialog(cut);
+            Assert.Equal(openingId, ready.DialogId);
+            Assert.False(ready.IsBusy);
+            Assert.NotNull(ready.LaunchVariables);
+            Assert.NotNull(ready.LaunchAuthority);
+            Assert.False(cut.Find("[data-testid='project-structure-process-start-continue']").HasAttribute("disabled"));
+        });
+        await cut.Find("[data-testid='project-structure-process-start-continue']").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() => Assert.Equal(ProjectStructureProcessStartStage.Staffing, GetStartDialog(cut).Stage));
+        AssertOrigin(Assert.Single(probe.ResolutionRequests), target);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Late_opening_context_cannot_replace_a_reopened_or_new_project_dialog(bool navigate) {
+        var probe = new ProcessLaunchProbe();
+        await using var harness = await CreateHarnessAsync(probe);
+        var first = await CreateTargetAsync(harness, "Original opening");
+        var second = navigate ? await CreateTargetAsync(harness, "Replacement opening") : first;
+        var hold = true;
+        var pending = harness.Context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => hold);
+        var cut = RenderProject(harness, first);
+        var opening = OpenStartDialogAsync(cut, first);
+        Guid currentId;
+        try {
+            cut.WaitForAssertion(() => Assert.Single(pending.Invocations));
+            var oldId = GetStartDialog(cut).DialogId;
+            hold = false;
+            if (navigate) {
+                NavigateToProject(harness, cut, second);
+            } else {
+                await cut.InvokeAsync(() => cut.FindComponent<CanDoItAll.Workbench.Execution.UI.Processes.ProcessStartDialog>()
+                    .Instance.Actions.Close());
+            }
+            await OpenStartDialogAsync(cut, second);
+            var current = GetStartDialog(cut);
+            currentId = current.DialogId;
+            Assert.NotEqual(oldId, currentId);
+            Assert.False(current.IsBusy);
+            Assert.NotNull(current.LaunchVariables);
+        } finally {
+            pending.SetResult(null);
+            await opening;
+        }
+        cut.WaitForAssertion(() => {
+            var current = GetStartDialog(cut);
+            Assert.Equal(currentId, current.DialogId);
+            Assert.Equal(second.ProjectId, current.ProjectId);
+            Assert.Equal(second.ProjectId.ToString("D"), current.LaunchVariables!["ProjectId"]);
+            Assert.False(current.IsBusy);
+            Assert.Empty(current.Error);
+            AssertCurrentNavigation(harness, second);
+        });
+        Assert.Empty(probe.ResolutionRequests);
+    }
 
     [Theory]
     [InlineData(true, false)]
@@ -455,9 +537,9 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
             services.Replace(ServiceDescriptor.Singleton<IProcessLaunchArtifactInitializer>(probe));
             services.AddSingleton<IProcessLaunchVariableContributor>(probe);
             if (saveGate is not null) {
-                services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new PooledDbContextFactory<WorkbenchDbContext>(
+                services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider => new ProcessLinkReadFactory(new PooledDbContextFactory<WorkbenchDbContext>(
                     new DbContextOptionsBuilder<WorkbenchDbContext>(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
-                        .AddInterceptors(saveGate).Options));
+                        .AddInterceptors(saveGate).Options), saveGate));
             }
         });
 
@@ -548,6 +630,18 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
     private sealed record LaunchTarget(Guid ProjectId, string ProjectName, string TargetNodeId, string ProcessNodeId);
 
     private sealed class ProcessLinkSaveGate : SaveChangesInterceptor {
+        public bool FailReadAfterSave { get; set; }
+        public bool ReadFailurePending { get; set; }
+
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+            CancellationToken cancellationToken = default) {
+            if (FailReadAfterSave) {
+                FailReadAfterSave = false;
+                ReadFailurePending = true;
+            }
+            return ValueTask.FromResult(result);
+        }
+
         public Guid? ProjectId { get; set; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -561,6 +655,19 @@ public sealed class ProjectStructurePageProcessLaunchScopeTests {
                 await Release.Task.WaitAsync(cancellationToken);
             }
             return result;
+        }
+    }
+
+    private sealed class ProcessLinkReadFactory(IDbContextFactory<WorkbenchDbContext> inner, ProcessLinkSaveGate gate)
+        : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => inner.CreateDbContext();
+
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            if (gate.ReadFailurePending) {
+                gate.ReadFailurePending = false;
+                throw new IOException("Injected read failure after the original Process link was saved.");
+            }
+            return inner.CreateDbContextAsync(cancellationToken);
         }
     }
 

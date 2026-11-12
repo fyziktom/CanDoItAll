@@ -248,7 +248,10 @@ public sealed class SharedProviderStreamingIntegrationTests(
             HttpCompletionOption.ResponseHeadersRead);
         await using var bodyStream = await response.Content.ReadAsStreamAsync();
         using var reader = new StreamReader(bodyStream);
+        Assert.False(upstreamStream.TimeoutObserved.IsCompleted);
         string? body = await reader.ReadLineAsync().WaitAsync(TestTimeout);
+        Assert.False(upstreamStream.TimeoutObserved.IsCompleted);
+        upstreamStream.ReleaseTimeout();
         var readFailure = await Record.ExceptionAsync(() => reader.ReadToEndAsync().WaitAsync(TestTimeout));
         Assert.True(readFailure is IOException or HttpRequestException);
         Assert.NotNull(body);
@@ -1024,8 +1027,12 @@ internal sealed class ChunkSequenceStream : Stream
 internal sealed class PrefixThenTimeoutStream(byte[] prefix) : Stream
 {
     private int offset;
+    private readonly TaskCompletionSource<bool> timeoutReleased = new(
+        TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> timeoutObserved = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void ReleaseTimeout() => timeoutReleased.TrySetResult(true);
 
     public Task TimeoutObserved => timeoutObserved.Task;
 
@@ -1073,7 +1080,7 @@ internal sealed class PrefixThenTimeoutStream(byte[] prefix) : Stream
             return copied;
         }
 
-        await Task.Yield();
+        await timeoutReleased.Task.WaitAsync(cancellationToken);
         timeoutObserved.TrySetResult(true);
         throw new TimeoutException("The deterministic upstream stream became idle.");
     }

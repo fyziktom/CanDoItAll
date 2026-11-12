@@ -19,7 +19,8 @@ public sealed class DatabaseCanonicalityArchitectureTests(ITestOutputHelper outp
         "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferService.cs",
         "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
         "src/Modules/CanDoItAll.Modules.Workspace/Database/DatabaseProfileWorkspaceService.cs",
-        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferOperationRunner.cs"
+        "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseTransferOperationRunner.cs",
+        "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs"
     ];
 
     // Product-module types that may reference the complete AppDbContext, each with its owning maintenance reason.

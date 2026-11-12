@@ -1,0 +1,6 @@
+.authoring-sandbox {
+    width: min(108rem, calc(100vw - 4rem));
+    margin: 1rem auto;
+    height: calc(100vh - 2rem);
+    overflow-y: auto;
+}

@@ -1,13 +1,11 @@
-using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Conversations.Shell;
-using CanDoItAll.Modules.Workbench.ProjectStructure;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
 public partial class ProjectStructurePage {
-    protected override void OnInitialized() {
-        ConversationShellCoordinator.Changed += HandleConversationShellChanged;
-    }
+    [Inject] private IFloatingAgentChatCoordinator FloatingAgentChats { get; set; } = default!;
 
     private Task ToggleAgentWindowAsync() {
         if (ConversationShellCoordinator.Snapshot().IsCatalogVisible) {
@@ -19,19 +17,14 @@ public partial class ProjectStructurePage {
         return Task.CompletedTask;
     }
 
-    private async Task HandleAgentExecutionCompletedAsync(AgentChatExecutionCompleted notification) {
-        if (!string.Equals(
-                notification.Source.Kind.Value,
-                ProjectStructureAgentChatContextBuilder.SourceKind,
-                StringComparison.Ordinal) ||
-            !Guid.TryParse(notification.Source.Id.Value, out var sourceProjectId) ||
-            sourceProjectId != ProjectId) {
-            return;
-        }
-
-        await ReloadSurfaceAsync();
-        await InvokeAsync(StateHasChanged);
-    }
+    private bool CanAutoRefreshAgentChange(ProjectStructureChange change) =>
+        change.ChatOrigin is { } chat && chat.ProjectId == ProjectId &&
+        surface is { } current && current.ProjectId == ProjectId && !deferredCompletionCts.IsCancellationRequested &&
+        composerOpening is null && quickActionDialog is null && imageOpening is null && textAssetOpening is null &&
+        projectCreateOpening is null && projectCreateParentOpening is null && hierarchyOpening is null && blockOpening is null && transferOpening is null &&
+        processLinkDialog is null && processStartDialog is null && workflowAddOpening is null && workflowStartOpening is null &&
+        authoringOperations.Count == 0 && !TaskEditingSessions.HasOpenEditor(current.ExpectedProjectAdmission) &&
+        FloatingAgentChats.Snapshot().VisibleChat?.ChatSessionId == chat.ChatSessionId;
 
     private void HandleConversationShellChanged(object? sender, EventArgs eventArgs)
         => _ = InvokeAsync(StateHasChanged);

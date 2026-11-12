@@ -1,0 +1,266 @@
+[
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Unknown_case_facts_are_reprobed_for_existing_descendants",
+    "outcome": "Passed",
+    "duration": "00:00:00.0263298"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Disposed_lease_cannot_write_and_releases_the_control_plane_coordination",
+    "outcome": "Passed",
+    "duration": "00:00:00.1900386"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Project_text_and_complete_encoded_bounds_refuse_without_truncating_original_evidence",
+    "outcome": "Passed",
+    "duration": "00:00:00.0286635"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_coordination_excludes_a_normal_writer_and_cancellation_leaves_no_extra_files",
+    "outcome": "Passed",
+    "duration": "00:00:00.2672939"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Explicit_alias_attachment_preserves_the_SQL_namespace_and_maintenance_identity",
+    "outcome": "Passed",
+    "duration": "00:00:00.0946690"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Interrupted_write_preserves_complete_previous_content_and_cleans_temporary_file",
+    "outcome": "Passed",
+    "duration": "00:00:00.0381296"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Cancellation_after_flush_preserves_previous_content",
+    "outcome": "Passed",
+    "duration": "00:00:00.0304546"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Concurrent_writers_commit_one_complete_payload_without_temporary_residue",
+    "outcome": "Passed",
+    "duration": "00:00:00.1509728"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Invocation_retains_both_original_locations_and_refuses_malformed_scope(kind: Sandbox, key: \"\")",
+    "outcome": "Passed",
+    "duration": "00:00:00.0006074"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Case_variant_descendants_keep_fresh_policy_probes",
+    "outcome": "Passed",
+    "duration": "00:00:00.0457322"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Ordinary_origin_round_trip_retains_original_operation_revision_and_caller",
+    "outcome": "Passed",
+    "duration": "00:00:00.0027404"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_coordination_cancellation_before_admission_creates_no_lock",
+    "outcome": "Passed",
+    "duration": "00:00:00.0013563"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Existing_activation_exclusion_refuses_missing_directories_and_preserves_the_original_active_record",
+    "outcome": "Passed",
+    "duration": "00:00:00.2199056"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Crashed_process_preserves_previous_content_and_next_writer_recovers_stale_temporary_file",
+    "outcome": "Passed",
+    "duration": "00:00:00.4051452"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Active_binding_cache_is_profile_scoped_avoids_file_locks_and_invalidates_on_explicit_activation",
+    "outcome": "Passed",
+    "duration": "00:00:00.3636161"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_coordination_never_recreates_a_missing_root_or_parent(missingRoot: True)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0045959"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Interrupted_file_replacement_preserves_the_exact_previous_recovery_record(completing: False)",
+    "outcome": "Passed",
+    "duration": "00:00:00.2394285"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Root_link_swap_after_callback_fails_closed_without_touching_outside_target",
+    "outcome": "Passed",
+    "duration": "00:00:00.0007266"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Compensation_requires_exact_original_reservation_parent_and_fingerprint",
+    "outcome": "Passed",
+    "duration": "00:00:00.0051625"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Recreated_root_after_callback_does_not_receive_a_stale_temporary_payload",
+    "outcome": "Passed",
+    "duration": "00:00:00.0007098"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle",
+    "outcome": "Passed",
+    "duration": "00:00:00.1356873"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Invocation_retains_both_original_locations_and_refuses_malformed_scope(kind: Project, key: \"original-project\")",
+    "outcome": "Passed",
+    "duration": "00:00:00.0028202"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Prepared_plan_survives_restart_and_only_exact_completion_can_activate_it",
+    "outcome": "Passed",
+    "duration": "00:00:00.2613824"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Creating_root_and_descendants_refreshes_unknown_and_known_case_facts",
+    "outcome": "Passed",
+    "duration": "00:00:00.0471289"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Interrupted_file_replacement_preserves_the_exact_previous_recovery_record(completing: True)",
+    "outcome": "Passed",
+    "duration": "00:00:00.1833363"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Write_creates_missing_managed_root_and_revalidates_it",
+    "outcome": "Passed",
+    "duration": "00:00:00.0237493"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Backup_contains_previous_complete_version",
+    "outcome": "Passed",
+    "duration": "00:00:00.0300812"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Private_write_applies_and_verifies_owner_only_unix_modes",
+    "outcome": "Passed",
+    "duration": "00:00:00.0004585"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Parent_link_swap_before_commit_fails_closed_without_touching_outside_target",
+    "outcome": "Passed",
+    "duration": "00:00:00.0228342"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Corrupt_or_mismatched_files_fail_explicitly_without_replacing_recovery_evidence(corruption: Oversize)",
+    "outcome": "Passed",
+    "duration": "00:00:00.1007089"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Corrupt_or_mismatched_files_fail_explicitly_without_replacing_recovery_evidence(corruption: Malformed)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0890380"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.DatasetActivationServiceTests.Corrupt_or_mismatched_files_fail_explicitly_without_replacing_recovery_evidence(corruption: WrongProfile)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0822015"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 6)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0456387"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_exact_descendants_do_not_add_case_probes_or_payload_commits(depth: 12)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0945735"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.ProjectDeletionRecoveryCodecTests.Retained_unicode_source_is_exact_and_unknown_or_noncanonical_json_is_refused",
+    "outcome": "Passed",
+    "duration": "00:00:00.0034751"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Callback_case_fact_change_is_reprobed_before_commit",
+    "outcome": "Passed",
+    "duration": "00:00:00.0147311"
+  },
+  {
+    "lane": "offline-exclusion-unit",
+    "name": "CanDoItAll.Tests.Unit.Storage.DurableFileWriterTests.Existing_coordination_never_recreates_a_missing_root_or_parent(missingRoot: False)",
+    "outcome": "Passed",
+    "duration": "00:00:00.0016021"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.DatasetLifecyclePersistenceTests.Offline_deletion_recovery_refuses_an_active_owner_without_waiting_and_holds_exclusion_until_rollback",
+    "outcome": "Passed",
+    "duration": "00:00:00.2237134"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.Runtime.AgentToolPriorInvocationObservationTests.Offline_workspace_exclusion_blocks_the_original_execution_writer_without_loading_or_changing_data(kind: Project)",
+    "outcome": "Passed",
+    "duration": "00:00:01.6407879"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.DatasetLifecyclePersistenceTests.Offline_deletion_recovery_refuses_a_replaced_namespace_without_changing_the_current_binding",
+    "outcome": "Passed",
+    "duration": "00:00:00.1932746"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.Runtime.AgentToolPriorInvocationObservationTests.Offline_workspace_exclusion_blocks_the_original_execution_writer_without_loading_or_changing_data(kind: Sandbox)",
+    "outcome": "Passed",
+    "duration": "00:00:01.2387706"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.Runtime.AgentToolPriorInvocationObservationTests.Offline_workspace_exclusion_does_not_decode_or_repair_catalog_and_refuses_missing_or_invalid_scopes",
+    "outcome": "Passed",
+    "duration": "00:00:01.8576454"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.Runtime.ProjectStructureResultDisclosureIntegrationTests.Held_governed_source_retains_catalog_and_original_execution_locations_in_owner_completion",
+    "outcome": "Passed",
+    "duration": "00:00:13.7206361"
+  },
+  {
+    "lane": "offline-exclusion-owner",
+    "name": "CanDoItAll.Tests.Integration.Runtime.AgentToolPriorInvocationObservationTests.Offline_workspace_exclusion_blocks_the_original_execution_writer_without_loading_or_changing_data(kind: Organization)",
+    "outcome": "Passed",
+    "duration": "00:00:01.5103108"
+  }
+]

@@ -11,6 +11,42 @@ namespace CanDoItAll.Tests.Components.Conversations;
 public sealed class ConversationFloatingComponentsTests
 {
     [Fact]
+    public async Task A_queued_active_action_keeps_the_version_the_operator_clicked() {
+        using var context = CreateContext();
+        var item = new ConversationActiveItemPresentation(new("conversation"), "Original title", [],
+            [new(new("archive"), "Archive", "archive")], Version: 11);
+        var requests = new List<ConversationActionRequest>();
+        var cut = context.Render<ConversationActiveList>(parameters => parameters
+            .Add(component => component.Items, [item])
+            .Add(component => component.ActionRequested, requests.Add));
+        var queued = cut.FindComponent<Button>().Instance.Click;
+        cut.Render(parameters => parameters.Add(component => component.Items, [item with { Version = 12, DisplayName = "Peer title" }]));
+
+        await cut.InvokeAsync(() => queued.InvokeAsync(default));
+
+        Assert.Equal(11, Assert.Single(requests).Version);
+    }
+
+    [Fact]
+    public void Minimize_and_restore_keep_the_same_conversation_composer() {
+        using var context = CreateContext();
+        var cut = context.Render<ConversationFloatingWindow>(parameters => parameters
+            .Add(component => component.WindowId, "draft-window")
+            .AddChildContent<ConversationComposer>(composer => composer
+                .Add(component => component.DraftPrompt, "Unsent draft")));
+        var composer = cut.FindComponent<ConversationComposer>().Instance;
+
+        cut.Render(parameters => parameters.Add(component => component.State, new() { IsMinimized = true }));
+        Assert.Same(composer, cut.FindComponent<ConversationComposer>().Instance);
+        Assert.True(cut.Find(".cda-overlay-window__body").HasAttribute("hidden"));
+
+        cut.Render(parameters => parameters.Add(component => component.State, new()));
+        Assert.Same(composer, cut.FindComponent<ConversationComposer>().Instance);
+        Assert.Equal("Unsent draft", cut.Find("textarea").GetAttribute("value"));
+        Assert.False(cut.Find(".cda-overlay-window__body").HasAttribute("hidden"));
+    }
+
+    [Fact]
     public void Floating_window_preserves_controlled_state_and_default_geometry()
     {
         using var context = CreateContext();

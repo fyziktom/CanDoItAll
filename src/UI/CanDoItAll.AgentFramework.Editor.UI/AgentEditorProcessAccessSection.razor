@@ -1,0 +1,47 @@
+@{ var editorModel = State.Draft; }
+<FormSection Title="Process Access" Description="Internal agents always carry the process-module tool family. These settings decide whether the current agent can read or mutate process data and which process definitions it may touch.">
+    <Grid Gap="LayoutGap.Large" ColumnsMd="3" data-testid="agents-catalog-process-access">
+        <div class="cda-admin-subpanel">
+            <p class="cda-field-label mb-2">Access mode</p>
+            <Stack GapScale="LayoutGap.Small">
+                <label class="cda-inline-option">
+                    <input type="checkbox"
+                           checked="@editorModel.ProcessAccess.CanRead"
+                           @onchange="args => State.Changed.InvokeAsync(new AgentEditorAccessIntent.Flag(AgentEditorAccessFlag.ProcessRead, args.Value is true))"
+                           data-testid="agents-catalog-process-read" />
+                    Can read processes
+                </label>
+                <label class="cda-inline-option">
+                    <input type="checkbox"
+                           checked="@editorModel.ProcessAccess.CanWrite"
+                           @onchange="args => State.Changed.InvokeAsync(new AgentEditorAccessIntent.Flag(AgentEditorAccessFlag.ProcessWrite, args.Value is true))"
+                           data-testid="agents-catalog-process-write" />
+                    Can write processes
+                </label>
+                <label class="cda-inline-option">
+                    <input type="checkbox"
+                           checked="@editorModel.ProcessAccess.AllowAllDefinitions"
+                           @onchange="args => State.Changed.InvokeAsync(new AgentEditorAccessIntent.Flag(AgentEditorAccessFlag.ProcessAllowAll, args.Value is true))"
+                           data-testid="agents-catalog-process-all" />
+                    Allow all current and future processes
+                </label>
+            </Stack>
+        </div>
+        <div class="cda-admin-subpanel md:col-span-2">
+            <p class="cda-field-label mb-1">Allowed processes</p>
+            <p class="text-sm leading-6 text-slate-600">
+                @State.DescribeProcessScope(editorModel)
+            </p>
+            <div class="mt-3 cda-admin-empty">
+                Process definition selection is unavailable while the Process module is rebuilt. Existing stored access metadata is preserved.
+            </div>
+        </div>
+    </Grid>
+    @foreach (var selected in editorModel.ProcessAccess.AllowedDefinitionIds.Distinct()) {
+        <TextBlock Value="@selected.ToString()" data-testid="agents-catalog-process-retained-id" />
+    }
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public AgentEditorAccessState State { get; set; } = default!;
+}

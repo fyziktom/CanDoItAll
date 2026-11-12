@@ -8,6 +8,12 @@ public interface IActiveAgentChatRegistry
 
     IReadOnlyList<ActiveAgentChat> Snapshot();
 
+    ActiveAgentChat Restore(ActiveAgentChat chat)
+        => throw new NotSupportedException("This chat registry does not support execution recovery.");
+
+    bool RemoveRecoveryProjection(AgentChatHandleId handleId)
+        => throw new NotSupportedException("This chat registry does not support removing execution projections.");
+
     ActiveAgentChat Open(
         AgentChatIdentity agent,
         Guid? chatSessionId,
@@ -18,6 +24,8 @@ public interface IActiveAgentChatRegistry
     ActiveAgentChat Show(AgentChatHandleId handleId);
 
     ActiveAgentChat KeepActive(AgentChatHandleId handleId);
+
+    void SetDraftPending(AgentChatHandleId handleId, bool pending);
 
     ActiveAgentChat SetRunState(
         AgentChatHandleId handleId,
@@ -36,6 +44,66 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
     private readonly Dictionary<AgentChatHandleId, ActiveAgentChat> chats = [];
 
     public event EventHandler? Changed;
+
+    public bool RemoveRecoveryProjection(AgentChatHandleId handleId) {
+        ValidateHandleId(handleId);
+        lock (gate) {
+            if (!chats.TryGetValue(handleId, out var chat) || chat.ActivityStreamId is null) {
+                return false;
+            }
+            chats.Remove(handleId);
+        }
+        RaiseChanged();
+        return true;
+    }
+
+    public ActiveAgentChat Restore(ActiveAgentChat chat) {
+        ArgumentNullException.ThrowIfNull(chat);
+        ValidateHandleId(chat.HandleId);
+        ValidateSessionId(chat.ChatSessionId);
+        ActiveAgentChat restored;
+        lock (gate) {
+            if (chat.ChatSessionId is { } sessionId && chats.Values.Any(item =>
+                    item.HandleId != chat.HandleId && item.ChatSessionId == sessionId)) {
+                throw new InvalidOperationException("The recovered conversation already has another floating handle.");
+            }
+            if (chats.TryGetValue(chat.HandleId, out var current)) {
+                if (current.Agent.AgentId != chat.Agent.AgentId ||
+                        current.ChatSessionId.HasValue && current.ChatSessionId != chat.ChatSessionId) {
+                    throw new InvalidOperationException("A recovered chat cannot replace another conversation.");
+                }
+                if (current.ExecutionRevision >= chat.ExecutionRevision) {
+                    return current;
+                }
+                restored = chat with {
+                    Visibility = current.Visibility,
+                    HiddenAtUtc = current.HiddenAtUtc,
+                    CreatedAtUtc = current.CreatedAtUtc,
+                    HasUnsentDraft = current.HasUnsentDraft
+                };
+            } else {
+                restored = chat with {
+                    Visibility = ActiveAgentChatVisibility.Hidden,
+                    HiddenAtUtc = timeProvider.GetUtcNow(),
+                    HasUnsentDraft = false
+                };
+            }
+            chats[restored.HandleId] = restored;
+        }
+        RaiseChanged();
+        return restored;
+    }
+
+    public void SetDraftPending(AgentChatHandleId handleId, bool pending) {
+        lock (gate) {
+            var chat = RequireChat(handleId);
+            if (chat.HasUnsentDraft == pending) {
+                return;
+            }
+            chats[handleId] = chat with { HasUnsentDraft = pending };
+        }
+        RaiseChanged();
+    }
 
     public IReadOnlyList<ActiveAgentChat> Snapshot()
     {
@@ -252,11 +320,13 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
         ValidateHandleId(handleId);
         lock (gate)
         {
-            var chat = RequireChat(handleId);
+            if (!chats.TryGetValue(handleId, out var chat)) {
+                return;
+            }
             if (!chat.CanStop)
             {
                 throw new InvalidOperationException(
-                    "A running chat cannot be stopped until interactive execution cancellation is available.");
+                    "Resolve or cancel the active run before removing its chat.");
             }
 
             chats.Remove(handleId);
@@ -304,6 +374,7 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
             .Where(item =>
                 item.Visibility == ActiveAgentChatVisibility.Hidden &&
                 item.RunState == ActiveAgentChatRunState.Idle &&
+                !item.HasUnsentDraft &&
                 item.HiddenAtUtc.HasValue &&
                 now - item.HiddenAtUtc.Value >= settings.HiddenActiveChatRetention)
             .Select(item => item.HandleId)

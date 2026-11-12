@@ -82,6 +82,8 @@ public sealed class ProcessProjectAdmissionTests {
 
     private sealed class AcceptingPolicy : IProcessProjectAdmissionPolicy {
         public int ReadCount { get; private set; }
+        public Task AcquireMutationGatesAsync(IReadOnlyCollection<ProcessProjectAdmission> admissions, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("The InMemory path must not request relational mutation gates.");
         public Task RequireForMutationAsync(ProcessProjectAdmission admission, CancellationToken cancellationToken = default) {
             ReadCount++;
             return Task.CompletedTask;

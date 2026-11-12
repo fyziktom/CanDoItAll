@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -7,8 +8,46 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class BrowserMcpArtifactPathServiceTests
 {
+    [Theory]
+    [InlineData("D")]
+    [InlineData("N")]
+    public void Imported_process_artifact_reference_resolves_from_the_project_tool_scope_without_granting_other_scopes(string idFormat) {
+        var root = TestFileSystem.CreateTemporaryRoot("browser-artifact-reference");
+        try {
+            var processId = Guid.NewGuid().ToString(idFormat);
+            var projectScope = WorkspaceScopeDescriptor.Project(Guid.NewGuid().ToString("D"));
+            var executionScope = WorkspaceScopeDescriptor.Organization("artifact-owner");
+            var now = DateTimeOffset.UtcNow;
+            var run = new ExecutionRunRecord(Guid.NewGuid(), Guid.NewGuid(), null, "Browser proof", "process-step", "qa",
+                "proof", "proof", "unit-test", "system", "{}", "Capture", "", "fixture", "fixture",
+                ExecutionState.Running, null, now, now, now, null, "", null, [], ProcessRunId: processId);
+            using var audit = WorkspaceExecutionAuditContext.BeginScope(run, projectScope, executionScope);
+            const string requested = ".playwright-mcp/current.png";
+            BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(root, executionScope, requested);
+            var before = BrowserMcpArtifactPathService.ObserveBeforeInvocation(root, executionScope, requested);
+            File.WriteAllBytes(Path.Combine(root, requested), [1, 2, 3]);
+            var imported = BrowserMcpArtifactPathService.TryImportAfterInvocation(root, executionScope, requested, processId, before);
+            var reference = Assert.Single(imported.ToolReferences);
+            var stored = Assert.Single(imported.ImportedRelativePaths);
+            Assert.StartsWith($"artifacts/process-runs/{Guid.Parse(processId):D}/browser/", reference, StringComparison.Ordinal);
+            var result = BrowserMcpResultProjector.Project(ToolContractCatalog.BrowserTakeScreenshot, requested,
+                JsonSerializer.SerializeToElement(new { isError = false, content = Array.Empty<object>() }), imported);
+            Assert.Contains(reference, result.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain(stored, result.Message, StringComparison.Ordinal);
+            Assert.Equal(reference, Assert.Single(result.Artifacts));
+            Assert.DoesNotContain(stored, JsonSerializer.Serialize(result), StringComparison.Ordinal);
+            var policy = TestWorkspaceServices.CreatePathPolicy(root, projectScope);
+            Assert.True(policy.TryResolveWorkspacePath(reference, false, out var resolved, out var failure), failure);
+            Assert.Equal(Path.GetFullPath(Path.Combine(root, stored.Replace('/', Path.DirectorySeparatorChar))), resolved.FullPath);
+            Assert.False(policy.TryResolveWorkspacePath(stored, false, out _, out _));
+            Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(resolved.FullPath));
+        } finally {
+            TestFileSystem.DeleteDirectoryWithRetry(root);
+        }
+    }
+
     [Fact]
-    public void EnsureWritableArtifactDirectories_creates_unscoped_and_scoped_artifact_directories()
+    public void EnsureWritableArtifactDirectories_creates_requested_artifact_directory()
     {
         var workspaceRoot = TestFileSystem.CreateTemporaryRoot("browser-mcp-artifacts");
         try
@@ -21,7 +60,7 @@ public sealed class BrowserMcpArtifactPathServiceTests
                 "artifacts/process-runs/run-1/browser/desktop.png");
 
             Assert.True(Directory.Exists(Path.Combine(workspaceRoot, "artifacts", "process-runs", "run-1", "browser")));
-            Assert.True(Directory.Exists(Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "org-1", "process-runs", "run-1", "browser")));
+            Assert.False(Directory.Exists(Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "org-1", "process-runs", "run-1", "browser")));
         }
         finally
         {
@@ -30,32 +69,24 @@ public sealed class BrowserMcpArtifactPathServiceTests
     }
 
     [Fact]
-    public void TryMirrorToScopedArtifactPath_copies_unscoped_browser_artifact_to_current_scope()
-    {
-        var workspaceRoot = TestFileSystem.CreateTemporaryRoot("browser-mcp-artifacts");
-        try
-        {
+    public void Fresh_artifact_is_imported_to_immutable_current_scope_evidence() {
+        var root = TestFileSystem.CreateTemporaryRoot("browser-mcp-artifacts");
+        try {
             var scope = WorkspaceScopeDescriptor.Organization("Org 1");
-            var fileName = "artifacts/process-runs/run-1/browser/desktop.png";
-            var unscopedFullPath = Path.Combine(workspaceRoot, "artifacts", "process-runs", "run-1", "browser", "desktop.png");
-            Directory.CreateDirectory(Path.GetDirectoryName(unscopedFullPath)!);
-            File.WriteAllText(unscopedFullPath, "screenshot-bytes");
-
-            var mirrored = BrowserMcpArtifactPathService.TryMirrorToScopedArtifactPath(
-                workspaceRoot,
-                scope,
-                fileName,
-                out var scopedRelativePath);
-
-            Assert.True(mirrored);
-            Assert.Equal("artifacts/scopes/organization/org-1/process-runs/run-1/browser/desktop.png", scopedRelativePath);
-            Assert.Equal(
-                "screenshot-bytes",
-                File.ReadAllText(Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "org-1", "process-runs", "run-1", "browser", "desktop.png")));
-        }
-        finally
-        {
-            TestFileSystem.DeleteDirectoryWithRetry(workspaceRoot);
+            const string fileName = "artifacts/process-runs/run-1/browser/desktop.png";
+            BrowserMcpArtifactPathService.EnsureWritableArtifactDirectories(root, scope, fileName);
+            var before = BrowserMcpArtifactPathService.ObserveBeforeInvocation(root, scope, fileName);
+            File.WriteAllText(Path.Combine(root, fileName), "first screenshot bytes");
+            var first = BrowserMcpArtifactPathService.TryImportAfterInvocation(root, scope, fileName, "run-1", before);
+            var firstPath = Assert.Single(first.ImportedRelativePaths);
+            Assert.StartsWith(scope.ArtifactRootRelativePath + "/process-runs/run-1/browser/", firstPath);
+            var next = BrowserMcpArtifactPathService.ObserveBeforeInvocation(root, scope, fileName);
+            File.WriteAllText(Path.Combine(root, fileName), "second screenshot bytes");
+            var second = BrowserMcpArtifactPathService.TryImportAfterInvocation(root, scope, fileName, "run-1", next);
+            Assert.NotEqual(firstPath, Assert.Single(second.ImportedRelativePaths));
+            Assert.Equal("first screenshot bytes", File.ReadAllText(Path.Combine(root, firstPath)));
+        } finally {
+            TestFileSystem.DeleteDirectoryWithRetry(root);
         }
     }
 
@@ -88,23 +119,18 @@ public sealed class BrowserMcpArtifactPathServiceTests
             var fileName = ".playwright-mcp/screenshot.png";
             var sourceFullPath = Path.Combine(workspaceRoot, ".playwright-mcp", "screenshot.png");
             Directory.CreateDirectory(Path.GetDirectoryName(sourceFullPath)!);
+            var before = BrowserMcpArtifactPathService.ObserveBeforeInvocation(workspaceRoot, scope, fileName);
             File.WriteAllText(sourceFullPath, "screenshot-bytes");
 
             var result = BrowserMcpArtifactPathService.TryImportAfterInvocation(
                 workspaceRoot,
                 scope,
                 fileName,
-                "run-1");
+                "run-1", before);
 
-            Assert.True(result.Imported);
-            Assert.Contains("artifacts/process-runs/run-1/browser/screenshot.png", result.ImportedRelativePaths);
-            Assert.Contains("artifacts/scopes/organization/org-1/process-runs/run-1/browser/screenshot.png", result.ImportedRelativePaths);
-            Assert.Equal(
-                "screenshot-bytes",
-                File.ReadAllText(Path.Combine(workspaceRoot, "artifacts", "process-runs", "run-1", "browser", "screenshot.png")));
-            Assert.Equal(
-                "screenshot-bytes",
-                File.ReadAllText(Path.Combine(workspaceRoot, "artifacts", "scopes", "organization", "org-1", "process-runs", "run-1", "browser", "screenshot.png")));
+            var savedPath = Assert.Single(result.ImportedRelativePaths);
+            Assert.StartsWith("artifacts/scopes/organization/org-1/process-runs/run-1/browser/", savedPath);
+            Assert.Equal("screenshot-bytes", File.ReadAllText(Path.Combine(workspaceRoot, savedPath)));
         }
         finally
         {

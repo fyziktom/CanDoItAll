@@ -92,7 +92,8 @@ public sealed class StorageCatalogContractPersistenceTests {
         await Assert.ThrowsAsync<JsonException>(() => routing.RecommendAsync(context with { ProjectId = secondProject }));
         var metadata = Assert.Single(await catalog.ListRulesAsync(), row => row.Id == matched.Id);
         await catalog.SaveRuleAsync(StorageRoutingRuleSaveRequest.FromSnapshot(metadata) with { Name = "Renamed only" });
-        await catalog.ApplyDefaultPurposesAsync(storage.Id, []);
+        var routingRevision = StorageWorkspaceDefaults.Observe(await catalog.ListRulesAsync());
+        await catalog.ApplyDefaultPurposesAsync(storage.Id, new StorageDefaultRoutingWrite(routingRevision, []));
         await using var verify = await OpenAsync(application);
         var disabled = await verify.Set<StorageRoutingRule>().SingleAsync(row => row.Id == workspace.Id);
         Assert.False(disabled.IsEnabled);

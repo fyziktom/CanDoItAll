@@ -4,7 +4,7 @@ namespace CanDoItAll.Memory.Application;
 
 public interface IMemoryProviderProfileStore
 {
-    Task UpsertAsync(
+    Task<MemoryProviderProfile> UpsertAsync(
         MemoryProviderProfile profile,
         DateTimeOffset updatedAtUtc,
         CancellationToken cancellationToken = default);
@@ -15,6 +15,9 @@ public interface IMemoryProviderProfileStore
 
     Task<IReadOnlyList<MemoryProviderProfile>> ListAsync(CancellationToken cancellationToken = default);
 }
+
+public sealed class MemoryProviderProfileConflictException(Exception? innerException = null)
+    : InvalidOperationException("The memory provider changed, already exists, or was removed. Read its current configuration before saving.", innerException);
 
 public interface IMemoryOperationLedgerStore
 {

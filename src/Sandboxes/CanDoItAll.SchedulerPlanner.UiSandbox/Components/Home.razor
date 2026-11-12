@@ -1,0 +1,101 @@
+@page "/"
+@implements IDisposable
+
+<PageScaffold MaxWidthClass="max-w-full">
+    <ChildContent>
+        <FormSection Title="Scheduler sandbox" Description="The production renderer and presentation policy with bounded scenario storage. No scheduler, database, Workflow runtime or real Agent runs here.">
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <label>Scenario <select value="@store.Scenario" @onchange="ChangeAsync" data-testid="scheduler-scenario">
+                    @foreach (var scenario in Enum.GetValues<SchedulerScenario>()) {
+                        <option value="@scenario">@scenario</option>
+                    }
+                </select></label>
+                <label>Hold next <select value="@store.Hold" @onchange="args => store.Hold = Enum.Parse<SchedulerWait>(args.Value!.ToString()!)" data-testid="scheduler-hold">
+                    @foreach (var wait in Enum.GetValues<SchedulerWait>()) {
+                        <option value="@wait">@wait</option>
+                    }
+                </select></label>
+                <Button Text="Release" Click="store.Release" data-testid="scheduler-release" />
+                <Button Text="Restore reads" Click="RestoreAsync" data-testid="scheduler-restore-reads" />
+                <Button Text="Toggle second calendar" Click="ToggleSecondAsync" data-testid="scheduler-second-calendar" />
+                <span data-testid="scheduler-store-counts" data-writes="@store.Writes" data-reads="@store.Reads" data-options="@store.OptionReads" data-agent="@store.AgentIntents" data-editor-reads="@store.EditorReads" data-secondary-editor-reads="@(secondStore?.EditorReads ?? 0)">@store.Writes write(s), @store.Reads read(s), @store.RetainedAdmissions.Count retained admissions</span>
+                @foreach (var plan in store.Plans.Values) {
+                    <span class="sr-only" data-testid="scheduler-stored-plan" data-id="@plan.Id" data-input="@plan.InputJson">@plan.Name</span>
+                }
+            </Cluster>
+        </FormSection>
+    </ChildContent>
+</PageScaffold>
+<div data-testid="scheduler-primary-surface">
+<SchedulerWorkspaceSurface Workspace="workspace" @key="workspace">
+    <AgentAction><Button Text="@(store.Scenario == SchedulerScenario.AgentLoading ? "Agent loading" : "Scenario Agent")" Icon="smart_toy"
+                         Disabled="@(store.Scenario is SchedulerScenario.AgentLoading or SchedulerScenario.AgentUnavailable)"
+                         Click="() => store.AgentIntents++" data-testid="scheduler-agent-open" /></AgentAction>
+</SchedulerWorkspaceSurface>
+</div>
+@if (secondWorkspace is not null) {
+    <div data-testid="scheduler-secondary-surface"><SchedulerWorkspaceSurface Workspace="secondWorkspace" @key="secondWorkspace" /></div>
+}
+
+@code {
+    private SchedulerScenarioStore store = new();
+    private SchedulerWorkspace workspace = null!;
+    private SchedulerScenarioStore? secondStore;
+    private SchedulerWorkspace? secondWorkspace;
+    private bool disposed;
+    protected override async Task OnInitializedAsync() {
+        workspace = new(store);
+        workspace.Changed += Changed;
+        await workspace.InitializeAsync();
+    }
+    private async Task ChangeAsync(ChangeEventArgs args) {
+        workspace.Changed -= Changed;
+        workspace.Dispose();
+        store.Release();
+        store = new(Enum.Parse<SchedulerScenario>(args.Value!.ToString()!));
+        workspace = new(store);
+        workspace.Changed += Changed;
+        secondWorkspace?.Dispose();
+        secondStore?.Release();
+        secondWorkspace = null;
+        secondStore = null;
+        await workspace.InitializeAsync();
+    }
+    private async Task ToggleSecondAsync() {
+        if (secondWorkspace is not null) {
+            secondWorkspace.Dispose();
+            secondStore!.Release();
+            secondWorkspace = null;
+            secondStore = null;
+            return;
+        }
+        secondStore = new();
+        secondStore.Plans[SchedulerScenarioStore.PlanA] = secondStore.Plans[SchedulerScenarioStore.PlanA] with { Name = "Second" };
+        secondWorkspace = new(secondStore);
+        secondWorkspace.Changed += Changed;
+        await secondWorkspace.InitializeAsync();
+    }
+    private Task RestoreAsync() {
+        store.FailReads = false;
+        store.Scenario = SchedulerScenario.Representative;
+        return workspace.RefreshAsync();
+    }
+    private async void Changed() {
+        try {
+            if (!disposed) {
+                await InvokeAsync(StateHasChanged);
+            }
+        } catch (Exception) when (disposed) {
+        } catch (Exception exception) {
+            await DispatchExceptionAsync(exception);
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        workspace.Changed -= Changed;
+        workspace.Dispose();
+        store.Release();
+        secondWorkspace?.Dispose();
+        secondStore?.Release();
+    }
+}

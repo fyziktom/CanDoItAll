@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -26,15 +27,17 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
         Guid agentId,
         Guid? chatSessionId = null,
-        CancellationToken cancellationToken = default)
-        => executionService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? initialTitle = null)
+        => executionService.GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken, initialTitle);
 
     public Task<ChatSessionRecord> RenameChatSessionAsync(
         Guid agentId,
         Guid chatSessionId,
         string title,
+        string expectedTitle,
         CancellationToken cancellationToken = default)
-        => executionService.RenameChatSessionAsync(agentId, chatSessionId, title, cancellationToken);
+        => executionService.RenameChatSessionAsync(agentId, chatSessionId, title, expectedTitle, cancellationToken);
 
     public Task<ExecutionRunResult> ExecuteRunAsync(
         ExecutionRunRequest request,
@@ -63,6 +66,34 @@ public sealed partial class AgentFrameworkWorkspaceService
             operation,
             request,
             cancellationToken);
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningAsync(AgentInheritedPlanningWorkspaceRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(request.ActivityOperationId, nameof(request));
+        return ExecuteNewActivityOperationAsync(request.ActivityOperationId, request.AgentId, chatSessionId: null,
+            "Inherited planning request accepted.", operation => ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default)
+        => executionService.ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken);
+
+    public Task<T> ReviewInheritedPlanningAsync<T>(AgentInheritedPlanningReviewRequest request,
+        AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent, AgentExecutionOperationId activityOperationId,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(authority);
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, authority.Original.AgentId, chatSessionId: null,
+            "Inherited planning review accepted.", operation => ReviewInheritedPlanningWithinOperationAsync(
+                operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
+    }
+
+    public Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default)
+        => executionService.ReviewInheritedPlanningWithinOperationAsync(
+            operation, request, authority, ownerIntent, settleOriginal, cancellationToken);
 
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
@@ -132,6 +163,19 @@ public sealed partial class AgentFrameworkWorkspaceService
             decisions,
             autoApprovePendingToolCalls,
             cancellationToken);
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureRequiredActivityOperationId(activityOperationId, nameof(activityOperationId));
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, request.ChatSessionId,
+            "Planning action accepted.", operation => executionService.ApplyPlanningActionWithinOperationAsync(
+                operation, request, cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default)
+        => executionService.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken);
 
     public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
@@ -332,6 +376,12 @@ public sealed partial class AgentFrameworkWorkspaceService
         {
             completion = dispatch(operation);
         }
+        catch (Exception exception) when (AgentEffectActivityFinalization.IsEffectFailure(exception)) {
+            var failure = AgentEffectActivityFinalization.Publish(operation, null, exception);
+            failure = AgentEffectActivityFinalization.Dispose(operation, null, failure);
+            ExceptionDispatchInfo.Capture(failure!).Throw();
+            throw;
+        }
         catch (OperationCanceledException)
         {
             TerminalizeOwnedCancellation(operation);
@@ -354,9 +404,27 @@ public sealed partial class AgentFrameworkWorkspaceService
         IAgentExecutionActivityOperationLease operation,
         Task<TResult> completion)
     {
+        TResult result = default!;
+        Exception? primary = null;
+        try {
+            result = await completion.ConfigureAwait(false);
+        } catch (Exception exception) {
+            primary = exception;
+        }
+        var continuation = AgentEffectActivityFinalization.Continuation(result);
+        if (continuation is not null || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
+            primary = AgentEffectActivityFinalization.Publish(operation, continuation, primary);
+            primary = AgentEffectActivityFinalization.Dispose(operation, continuation, primary);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
+            return result;
+        }
         try
         {
-            var result = await completion.ConfigureAwait(false);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
             if (!operation.IsTerminal)
             {
                 TerminalizeOwnedFailure(operation);

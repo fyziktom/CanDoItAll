@@ -1,0 +1,420 @@
+[
+  {
+    "id": "MUT-01",
+    "owner": "Projects",
+    "operation": "Definition update/replace",
+    "symbol_anchor": "ProjectModels.cs: GetAsync / SaveWithReceiptCoreAsync",
+    "evidence_level": "selected-code",
+    "entry_points_to_reconcile": "UI, HTTP and Workbench tool adapters must all be enumerated",
+    "proposed_boundary": "Project scalar + phases + options content stamp; current lifetime/source checks remain",
+    "phase": "P02",
+    "sources": [
+      "SRC-03",
+      "SRC-06",
+      "SRC-08"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-02",
+    "owner": "Projects",
+    "operation": "Create/reserved create/subproject create",
+    "symbol_anchor": "ProjectModels.cs create overloads; Project creation reservation/receipt owner",
+    "evidence_level": "selected-code-and-guidance",
+    "entry_points_to_reconcile": "Create UI/API/tools and conversion/transfer callers",
+    "proposed_boundary": "Stable operation identity + creation admission + exact accepted lifetime/result",
+    "phase": "P02",
+    "sources": [
+      "SRC-03",
+      "SRC-15"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-03",
+    "owner": "Projects",
+    "operation": "Phase-only and option-only writes",
+    "symbol_anchor": "Resolve all callers/methods touching ProjectPhase/ProjectOptionSelection",
+    "evidence_level": "discovery-required",
+    "entry_points_to_reconcile": "Direct child writers, imports, maintenance and future narrow commands",
+    "proposed_boundary": "Same initial edit stamp advanced atomically; child identity validation",
+    "phase": "P02",
+    "sources": [
+      "SRC-03",
+      "SRC-07"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-04",
+    "owner": "Projects",
+    "operation": "Hierarchy attach/remove/reconnect",
+    "symbol_anchor": "ProjectModels.cs AddSubprojectAsync / RemoveSubprojectAsync / ReconnectSubprojectAsync",
+    "evidence_level": "selected-code",
+    "entry_points_to_reconcile": "UI, agent tools, conversion and structural callers",
+    "proposed_boundary": "Exact lifetimes + graph invariants + existing global hierarchy/project gates",
+    "phase": "P05",
+    "sources": [
+      "SRC-03",
+      "SRC-08"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-05",
+    "owner": "Projects",
+    "operation": "Delete/recreate/compensate creation",
+    "symbol_anchor": "Projects owner deletion and creation compensation paths; current symbols refresh",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Delete UI/API/tool, cleanup/recovery callers",
+    "proposed_boundary": "Lifetime retirement + effect proof + guarded compensation; receipt history retention",
+    "phase": "P02",
+    "sources": [
+      "SRC-15"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-06",
+    "owner": "Projects",
+    "operation": "Import/export/transfer/restore",
+    "symbol_anchor": "ProjectsProfileTransferStore and canonical maintenance/transfer composition",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "v2/v3 package and profile transfer; maintenance activation",
+    "proposed_boundary": "Fresh local lifetime/stamp/namespace; imported records history only",
+    "phase": "P02",
+    "sources": [
+      "SRC-15"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-07",
+    "owner": "Search",
+    "operation": "Project search projection/rebuild",
+    "symbol_anchor": "ProjectModels.cs UpsertAdmittedSearchProjectionAsync / search participant",
+    "evidence_level": "selected-code",
+    "entry_points_to_reconcile": "Postcommit source callback, rebuild/maintenance paths must be mapped",
+    "proposed_boundary": "Source/lifetime ordering + atomic participation or durable rebuild intention",
+    "phase": "P02",
+    "sources": [
+      "SRC-03",
+      "SRC-15"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-08",
+    "owner": "Workbench",
+    "operation": "Agent project save adapter",
+    "symbol_anchor": "ProjectStructureAgentService.SaveProjectAsync / ProjectAuthorization",
+    "evidence_level": "selected-code",
+    "entry_points_to_reconcile": "Actual registered tool and HTTP request schemas must be traced",
+    "proposed_boundary": "Original target stamp, trusted source authority and operation result preserved",
+    "phase": "P02",
+    "sources": [
+      "SRC-08",
+      "SRC-06"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-09",
+    "owner": "Workbench",
+    "operation": "Canonical task details/assignment/schedule",
+    "symbol_anchor": "ProjectStructureTaskDetailsService.UpdateWithPricingAsync and delegated owners",
+    "evidence_level": "selected-code",
+    "entry_points_to_reconcile": "Task UI/Gantt/API/tools and assignment callbacks",
+    "proposed_boundary": "Preserve expected/proposed state, assignment revision and admission; add only identified gaps",
+    "phase": "P05",
+    "sources": [
+      "SRC-09"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-10",
+    "owner": "Workbench",
+    "operation": "Nodes/notes/placements/links/graph changes",
+    "symbol_anchor": "ProjectWorkbenchService and structure owners from module map",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Canvas/UI/API/tools/imports",
+    "proposed_boundary": "Owner-specific content or graph/set witnesses; distinguish layout from task truth",
+    "phase": "P05",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-11",
+    "owner": "Workbench planning",
+    "operation": "Governed planning publication",
+    "symbol_anchor": "Select one actual planning tool/owner operation in P00/P04",
+    "evidence_level": "proposed-boundary",
+    "entry_points_to_reconcile": "Runtime basis read/proposal/approval -> actual owner publication",
+    "proposed_boundary": "Target CAS + bounded mandatory basis + membership + current attempt",
+    "phase": "P04",
+    "sources": [
+      "SRC-08",
+      "SRC-09",
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-12",
+    "owner": "CRM/HR",
+    "operation": "Parties/opportunities/staffing/capacity",
+    "symbol_anchor": "CrmHrServices and owner integration contracts",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Seven workspaces/API/planning tools; current exact graph needed",
+    "proposed_boundary": "Preserve existing token/state/privacy semantics; scope capacity/assignment invariants",
+    "phase": "P05",
+    "sources": [
+      "SRC-02",
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-13",
+    "owner": "Agents/Providers",
+    "operation": "Technical definition/provider configuration",
+    "symbol_anchor": "Workspace factory/service and technical-agent projection adapter",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Catalog UI/API/administration tools",
+    "proposed_boundary": "Existing editor/version/outcome behavior; runtime configuration generation distinct",
+    "phase": "P05",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-14",
+    "owner": "Simple Chats",
+    "operation": "Definition edit and conversation append",
+    "symbol_anchor": "LlmChatDefinitionApplicationService / SimpleChatsDbContext",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "API/UI/HR administration tool; definition != transcript authority",
+    "proposed_boundary": "Keep definition version and durable dispatch/event identities; no whole-chat token",
+    "phase": "P05",
+    "sources": [
+      "SRC-11",
+      "SRC-14"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-15",
+    "owner": "Prompts",
+    "operation": "Prompt definition/version/assets",
+    "symbol_anchor": "Prompts owner + contracts/rendering library",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Gallery/UI/tools; exact active API/callers to discover",
+    "proposed_boundary": "Distinguish mutable draft from immutable version and asset lifecycle",
+    "phase": "P05",
+    "sources": [
+      "SRC-02",
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-16",
+    "owner": "Collaboration",
+    "operation": "Thread create/reply/flags/status",
+    "symbol_anchor": "Module owner retained by Collaboration UI extraction",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Workspace/shell/runtime readers and writers",
+    "proposed_boundary": "Append reply dedupe separate from conditional status/flags; UI gate not owner concurrency",
+    "phase": "P05",
+    "sources": [
+      "SRC-13",
+      "SRC-12"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-17",
+    "owner": "Resources",
+    "operation": "Resource catalog metadata",
+    "symbol_anchor": "Modules.Resources metadata owner",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Workspace resource UI/storage integrations/tools",
+    "proposed_boundary": "Metadata stamp distinct from content bytes and stable placement",
+    "phase": "P05",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-18",
+    "owner": "Storage",
+    "operation": "Byte replacement/placement/recovery",
+    "symbol_anchor": "StorageStablePlacementService and actual driver contracts",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Storage tools/owner continuations/recovery endpoints",
+    "proposed_boundary": "Existing intents/Uncertain state plus driver-specific conditional bytes",
+    "phase": "P06",
+    "sources": [
+      "SRC-11",
+      "SRC-14"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-19",
+    "owner": "Workspace",
+    "operation": "Settings/data sources/storage configuration",
+    "symbol_anchor": "Modules.Workspace owners; exact symbols to discover",
+    "evidence_level": "discovery-required",
+    "entry_points_to_reconcile": "Workspace editors/API/tool settings",
+    "proposed_boundary": "Owner-defined config stamp and active profile lifecycle; avoid global scope",
+    "phase": "P05",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-20",
+    "owner": "Memory",
+    "operation": "Provider settings/operations",
+    "symbol_anchor": "Modules.Memory and independent Memory provider contracts",
+    "evidence_level": "discovery-required",
+    "entry_points_to_reconcile": "Settings/admin/runtime operations",
+    "proposed_boundary": "Configuration edits separate from append/retention/background effects",
+    "phase": "P05",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-21",
+    "owner": "Plugins/Security",
+    "operation": "Grants/policy/OAuth/settings/revocation",
+    "symbol_anchor": "Owning policy services and current administration contracts",
+    "evidence_level": "discovery-required",
+    "entry_points_to_reconcile": "Admin UI/API/runtime grant workflows",
+    "proposed_boundary": "Current authority checked at effect; CAS does not replace capability/security enforcement",
+    "phase": "P05",
+    "sources": [
+      "SRC-11",
+      "SRC-16"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-22",
+    "owner": "Scheduler Planner",
+    "operation": "Plan edit and launch admission",
+    "symbol_anchor": "Modules.SchedulerPlanner plan/launch/history owners",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Planner UI/API/runtime schedule and recovery",
+    "proposed_boundary": "Plan edit version distinct from fire identity/launch definition; misfire repair independent",
+    "phase": "P07",
+    "sources": [
+      "SRC-11"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-23",
+    "owner": "Workflows/Processes",
+    "operation": "Definitions/prepared launches/runs/checkpoints/approval/recovery",
+    "symbol_anchor": "Owner application/runtime/claims; IProcessRuntimeUnitOfWork and prepared launch store",
+    "evidence_level": "documented-contract",
+    "entry_points_to_reconcile": "Process/workflow UI/API/tools/resume/workers",
+    "proposed_boundary": "Separate immutable definitions, target condition, basis, approval and active attempt",
+    "phase": "P07",
+    "sources": [
+      "SRC-11",
+      "SRC-14",
+      "SRC-15"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-24",
+    "owner": "TestLab/maintenance",
+    "operation": "Scenario setup/test fixtures/seed and recovery tools",
+    "symbol_anchor": "Resolve current TestLab and maintenance entry points",
+    "evidence_level": "discovery-required",
+    "entry_points_to_reconcile": "Developer tools/fixtures/imports—not ordinary production bypass",
+    "proposed_boundary": "Explicit controlled setup through owners/maintenance; protect production paths",
+    "phase": "P05",
+    "sources": [
+      "SRC-11",
+      "SRC-16"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  },
+  {
+    "id": "MUT-25",
+    "owner": "Activity/audit",
+    "operation": "Optional feed append versus durable audit",
+    "symbol_anchor": "IActivityStream postcommit use and actual audit owner",
+    "evidence_level": "selected-callsite-only",
+    "entry_points_to_reconcile": "Owner callbacks/UI history/operations",
+    "proposed_boundary": "Optional feed cannot be presented as guaranteed effect audit; mandatory audit atomic/durable",
+    "phase": "P02",
+    "sources": [
+      "SRC-03"
+    ],
+    "complete_enabled_writer_graph": false,
+    "current_paths_verified_only_as_qualified": true,
+    "implementation_status": "not-started"
+  }
+]

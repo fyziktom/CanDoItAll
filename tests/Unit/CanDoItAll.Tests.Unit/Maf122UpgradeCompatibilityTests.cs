@@ -13,11 +13,11 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 public sealed class Maf122UpgradeCompatibilityTests
 {
     [Fact]
-    public void Resolved_runtime_uses_the_coherent_Maf_122_and_Meai_1010_family()
+    public void Resolved_runtime_uses_the_reviewed_Maf_and_Meai_versions()
     {
         Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
         Assert.Equal(new Version(1, 22, 0, 0), typeof(RunStatus).Assembly.GetName().Version);
-        Assert.Equal(new Version(10, 10, 0, 0), typeof(AIFunction).Assembly.GetName().Version);
+        Assert.Equal(new Version(10, 11, 0, 0), typeof(AIFunction).Assembly.GetName().Version);
     }
 
     [Fact]

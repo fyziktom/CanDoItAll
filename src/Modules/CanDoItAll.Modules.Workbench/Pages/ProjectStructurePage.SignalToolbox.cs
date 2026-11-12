@@ -8,9 +8,6 @@ public partial class ProjectStructurePage
 
     private CanvasWorkbenchWindowState SignalsWindowState => ResolveSignalsWindowState();
 
-    private IReadOnlyList<ProjectStructureSignalSection> SignalsWindowSections
-        => BuildSignalsWindowSections();
-
     private bool CanApplySignals => selectedNodeIds.Count > 0;
 
     private string SignalsSelectionLabel
@@ -28,9 +25,6 @@ public partial class ProjectStructurePage
             1 => "Applies immediately",
             _ => "Applies to the full selection"
         };
-
-    private Task HandleSignalsWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(SignalsWindowKey, state);
 
     private async Task ToggleSignalsWindowAsync()
         => await ToggleWindowAsync(SignalsWindowKey);
@@ -55,49 +49,6 @@ public partial class ProjectStructurePage
         var offsetState = state.Clone();
         offsetState.Left = SignalsWindowDefaultLeft;
         return CanvasWorkbenchWindowState.Normalize(offsetState);
-    }
-
-    private async Task HandleSignalsToolboxActionAsync(string actionId)
-    {
-        var targetNodeIds = selectedNodeIds
-            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (targetNodeIds.Count == 0)
-        {
-            return;
-        }
-
-        if (actionCatalog.TryResolveMarkerAction(actionId, out var markerIcon, out var markerTone, out var markerLabel))
-        {
-            if (string.IsNullOrWhiteSpace(markerIcon))
-            {
-                await ApplyMarkerAsync(targetNodeIds, markerIcon, markerTone, markerLabel);
-                return;
-            }
-
-            var targetNodes = selectedNodes
-                .Where(node => targetNodeIds.Contains(node.Id, StringComparer.Ordinal))
-                .ToList();
-            var allTargetsAlreadyHaveMarker = targetNodes.Count > 0 &&
-                targetNodes.All(node => node.Markers.Any(marker => string.Equals(marker.Icon, markerIcon, StringComparison.OrdinalIgnoreCase)));
-            var updatedNodes = allTargetsAlreadyHaveMarker
-                ? await ProjectWorkbenchService.RemoveObjectMarkerDetailedAsync(ProjectId, targetNodeIds, markerIcon, markerTone, markerLabel)
-                : await ProjectWorkbenchService.AddObjectMarkerDetailedAsync(ProjectId, targetNodeIds, markerIcon, markerTone, markerLabel);
-            await ApplySurfaceNodeUpdatesAsync(updatedNodes);
-            return;
-        }
-
-        if (actionCatalog.TryResolveProgressAction(actionId, out var progressMode, out var progressPercent))
-        {
-            await ApplyProgressAsync(targetNodeIds, progressMode, progressPercent);
-            return;
-        }
-
-        if (actionCatalog.TryResolvePriorityAction(actionId, out var priority))
-        {
-            await ApplyPriorityAsync(targetNodeIds, priority);
-        }
     }
 
     private IReadOnlyList<ProjectStructureSignalSection> BuildSignalsWindowSections()

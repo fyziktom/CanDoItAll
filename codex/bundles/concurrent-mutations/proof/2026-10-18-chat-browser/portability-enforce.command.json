@@ -1,0 +1,27 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "portability-enforce",
+  "Arguments": [
+    "tools/Validation/Portability/enforce_portability_baseline.py",
+    "--scan",
+    ".artifacts/concurrent-mutations/validation/c4-chat-browser-selection-validation/portability-scan.json",
+    "--baseline",
+    "tools/Validation/Portability/portability-risk-baseline.json"
+  ],
+  "StartedUtc": "2026-10-18T17:01:27.8376336+00:00",
+  "State": "Completed",
+  "RunnerPid": 51928,
+  "ChildPid": 49160,
+  "ChildStartedUtc": "2026-10-18T17:01:27.8407376Z",
+  "ExitCode": 0,
+  "Seconds": 0.5318359,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 68,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

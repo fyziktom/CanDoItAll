@@ -24,6 +24,13 @@ This runbook covers the current PostgreSQL-backed process runtime, local dispatc
 7. If ready work is not progressing, dispatch once, then repeat the reads before dispatching again.
 8. Cancel or request rework only with a concrete, evidence-backed reason.
 
+The Live Processes page refreshes the **Last hour** view every ten seconds through the
+existing projection client. Run and agent detail dialogs follow the refreshed records;
+changing the project lifetime closes the old details. Reads do not overlap, and leaving
+the page cancels its outstanding read and timer. Historical windows and mock scenarios
+remain under manual Refresh control. This UI refresh only reads projections; it never
+dispatches, retries or approves process work.
+
 ## Route Contract
 
 `GET /api/processes/contract` returns this source-backed set:
@@ -101,6 +108,18 @@ A retired or recreated project, mismatched preparation, or historical run withou
 
 ## Dispatch
 
+The Blazor delivery implementation step owns product changes, build/test checks, startup
+proof, and publishable output when required. It records its current-run handoff after
+those checks pass. Browser interactions, screenshots, console inspection, visual analysis,
+and offline/cache proof belong to the downstream validation step. That validation remains
+required before delivery can complete.
+
+The per-step deadline remains a safety boundary. Cancellation wrapped in runtime usage
+exceptions is recorded as cancellation, preserving usage and closing undispatched tool
+proposals through the existing journal transition. A timed-out historical run is not
+automatically changed to successful or replayed: inspect its original effects before
+recovery, and retain blocks for unresolved effects.
+
 Use manual dispatch only after confirming that the run has ready work and the background worker is not already progressing it. The queue prevents concurrent local dispatch of the same run and delays retry after unexpected dispatch failure. Repeated manual calls are not a substitute for repairing a provider, capability, database, or worker fault.
 
 After dispatch, read current detail, summary, and history again. Projection readback is the evidence that the operation completed.
@@ -133,6 +152,11 @@ Provider failures are normalized into quota/billing, rate-limit, and general pro
 Never paste credentials into logs, screenshots, documentation, or rework reasons. Use environment variables or the runtime secret store described in [Secure configuration](secure-configuration.md).
 
 ## Rework And Cancellation
+
+For an accepted governed task-planning child, use the
+[Process planning review API](process-planning-review-api.md) to inspect or recover
+the original manager choice. Keep its exact request after an uncertain response;
+ordinary rework cannot substitute for that accepted action's accounting.
 
 Rework must name the specific correction and cite current evidence. Do not use it to conceal provider/configuration failures or restart unrelated steps.
 

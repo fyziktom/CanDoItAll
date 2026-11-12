@@ -24,8 +24,12 @@ public static class ResourcesModuleServiceCollectionExtensions
         services.AddScoped<IResourceConnectorPlugin, WebhookResourceConnectorPlugin>();
         services.AddScoped<IResourceConnectorPlugin, StorageObjectResourceConnectorPlugin>();
         services.AddScoped<ResourceConnectorPluginRegistry>();
+        services.AddScoped<ResourceMetadataPreparation>();
+        services.AddScoped<ResourceMetadataWriter>();
         services.AddScoped<IConnectorManifestSource>(serviceProvider => serviceProvider.GetRequiredService<ResourceConnectorPluginRegistry>());
         services.AddScoped<ResourcesService>();
+        services.AddScoped<IResourceRegistryOwner, ResourceRegistryOwner>();
+        services.AddScoped<IResourceBrowseOwner, ResourceBrowseOwner>();
         services.AddScoped<IResourceFileSourceCatalog, ResourceFileSourceCatalog>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IFileToolsStorageBindingSource, ResourceFileToolsStorageBindingSource>());

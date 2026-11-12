@@ -1,0 +1,64 @@
+@page "/agent-policy"
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.UI.Catalog
+@using CanDoItAll.SharedKernel
+
+<PageTitle>Agent data policy sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Small">
+    <TextBlock TextStyle="TextStyle.H4" Value="Agent data policy" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Inherited policy" Click="@(() => Open(false))" data-testid="policy-sample-open" />
+        <Button Text="Unconfirmed save" Click="@(() => Open(true))" data-testid="policy-sample-unconfirmed" />
+    </Cluster>
+    <TextBlock Value="Independent policy editing with retained drafts. This scenario uses no database or provider." />
+    @if (open) {
+        <AgentDecisionPolicySurface State="state" AgentName="Planning agent" Intent="Handle" />
+    }
+</Stack>
+
+@code {
+    private static readonly AgentExecutionActivityWorkspaceIdentity workspace = new(Guid.NewGuid(), WorkspaceScopeDescriptor.Sandbox, new(1));
+    private AgentDecisionPolicyEditorState state = new(Guid.NewGuid());
+    private bool open;
+
+    private void Open(bool uncertain) {
+        state = new(Guid.NewGuid());
+        state.BeginRead();
+        state.CompleteRead(new(new(workspace, state.AgentId, new(4)), null));
+        state.CompleteRecovery(null);
+        if (uncertain) {
+            state.Draft.ReadBasisMode = ReadBasisMode.RunSnapshot;
+            var command = state.BeginSave()!;
+            state.CompleteSave(command, new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command));
+        }
+        open = true;
+    }
+
+    private void Handle(AgentDecisionPolicyIntent intent) {
+        switch (intent) {
+            case AgentDecisionPolicyIntent.Close:
+                open = false;
+                break;
+            case AgentDecisionPolicyIntent.ReadCurrent:
+                if (state.BeginRead()) {
+                    state.CompleteRead(new(new(workspace, state.AgentId, new(5)), new(ReadBasisMode.StepSnapshot)));
+                }
+                break;
+            case AgentDecisionPolicyIntent.UseCurrentValues:
+                state.AdoptCurrent(false);
+                break;
+            case AgentDecisionPolicyIntent.KeepDraft:
+                state.AdoptCurrent(true);
+                break;
+            case AgentDecisionPolicyIntent.Save:
+                try {
+                    if (state.BeginSave() is { } command) {
+                        state.CompleteSave(command, new AgentDecisionDataPolicySaveOutcome.Rejected(AgentDecisionDataPolicyRejection.Conflict));
+                    }
+                } catch (Exception failure) when (failure is ArgumentException or System.Text.Json.JsonException) {
+                    state.ValidationFailed();
+                }
+                break;
+        }
+    }
+}

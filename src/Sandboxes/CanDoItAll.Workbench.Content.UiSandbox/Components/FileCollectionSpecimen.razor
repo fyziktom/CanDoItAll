@@ -1,0 +1,35 @@
+@implements IAsyncDisposable
+@inject FileInteractionComponentComposition Composition
+
+<SurfaceCard data-testid="content-collection-specimen" data-name="@Name">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
+        <DropDown TValue="ContentCollectionScenarioKind" Data="Enum.GetValues<ContentCollectionScenarioKind>()" @bind-Value="kind" Style="width:11rem" />
+        <Button Text="Replace opening" Click="ReplaceAsync" />
+        <Button Text="Hold read" Click="() => scenario.HoldNextRead()" />
+        <Button Text="Release read" Click="() => scenario.ReleaseRead()" />
+        <Button Text="Fail read" Click="() => scenario.FailNextReadAsync()" />
+    </Cluster>
+    <div class="cw-stage-surface content-scenario-canvas">
+        <ContentFileCollectionWindow @key="scenario.State.OpeningId" WindowId="@windowId" WindowState="window" StateChanged="value => window = value" State="scenario.State" />
+    </div>
+    <TextBlock Value="@($"Opening {scenario.State.OpeningId}; simulated actions: {scenario.SimulatedActions}")" TextStyle="TextStyle.Note" />
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private readonly string windowId = $"content-scenario-{Guid.NewGuid():N}";
+    private ContentCollectionScenarioKind kind;
+    private ContentCollectionScenario scenario = null!;
+    private CanvasWorkbenchWindowState window = new() { IsVisible = true };
+    protected override void OnInitialized() => scenario = new(this, Name, kind, Composition);
+
+    private async Task ReplaceAsync() {
+        var retired = scenario;
+        scenario = new(this, Name, kind, Composition);
+        window = new() { IsVisible = true };
+        await retired.DisposeAsync();
+    }
+
+    public ValueTask DisposeAsync() => scenario.DisposeAsync();
+}

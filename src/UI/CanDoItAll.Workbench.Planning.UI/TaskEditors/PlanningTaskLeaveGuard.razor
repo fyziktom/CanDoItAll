@@ -1,0 +1,59 @@
+@namespace CanDoItAll.Workbench.Planning.UI
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+
+<NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="@(ReadCurrent().NeedsDecision)" />
+<Dialog IsOpen="@(decision is not null)" Title="Leave this task editor?" Size="ModalSize.Compact" CloseOnBackdrop="false"
+        OnClose="@(() => Complete(false))" TestId="planning-task-dirty-close">
+    <ChildContent>
+        <TextBlock Value="Continue editing or discard this local draft. Unsaved task input will be lost." />
+        @if (submittedOperation) {
+            <TextBlock Value="Leaving does not retry or resolve the submitted operation. Its original outcome remains separate." />
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Wrap="FlexWrap.Wrap">
+            <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="planning-task-dirty-continue" />
+            <Button Text="Discard local draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="planning-task-dirty-discard" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public Func<PlanningTaskCloseRequest> ReadCurrent { get; set; } = default!;
+    private TaskCompletionSource<bool>? decision;
+    private bool submittedOperation;
+    private bool disposed;
+
+    public async Task<bool> RequestLeaveAsync() {
+        if (disposed || decision is not null) {
+            return false;
+        }
+        var captured = ReadCurrent();
+        if (!captured.NeedsDecision) {
+            return true;
+        }
+        submittedOperation = captured.IsSaving || captured.Outcome is { Status: PlanningTaskSaveStatus.Unknown or PlanningTaskSaveStatus.Partial };
+        var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        decision = pending;
+        await InvokeAsync(StateHasChanged);
+        return await pending.Task && !disposed && ReadCurrent() == captured;
+    }
+
+    private void Complete(bool leave) {
+        var pending = decision;
+        decision = null;
+        pending?.TrySetResult(leave);
+    }
+
+    private async Task BeforeNavigationAsync(LocationChangingContext context) {
+        if (!await RequestLeaveAsync() || context.CancellationToken.IsCancellationRequested) {
+            context.PreventNavigation();
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        Complete(false);
+    }
+}

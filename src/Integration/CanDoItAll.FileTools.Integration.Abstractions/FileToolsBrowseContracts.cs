@@ -165,5 +165,6 @@ public interface IFileToolsBrowseSessionFactory
 {
     ValueTask<FileToolsBrowseSession> CreateAsync(
         FileToolsSemanticScope scope,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 }

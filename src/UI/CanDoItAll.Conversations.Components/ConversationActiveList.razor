@@ -34,7 +34,7 @@
                                     Size="ButtonSize.Small"
                                     ButtonStyle="@ResolveButtonStyle(action.Style)"
                                     Disabled="@action.IsDisabled"
-                                    Click="@(() => HandleActionAsync(item.Key, action.Key))"
+                                    Click="@(() => ActionRequested.InvokeAsync(new(item.Key, action.Key, item.Version)))"
                                     data-testid="@ResolveActionTestId(item.Key, action)" />
                         }
                     </Cluster>
@@ -59,11 +59,6 @@
 
     private string ResolveItemTestId(ConversationPresentationKey key)
         => $"{TestId}-{key.Value}";
-
-    private Task HandleActionAsync(
-        ConversationPresentationKey itemKey,
-        ConversationPresentationKey actionKey)
-        => ActionRequested.InvokeAsync(new(itemKey, actionKey));
 
     private string ResolveActionTestId(
         ConversationPresentationKey itemKey,

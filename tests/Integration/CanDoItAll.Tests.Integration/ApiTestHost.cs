@@ -177,6 +177,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         app.MapCanDoItAllApi();
 
         await TestApplicationBootstrap.InitializeSchemaAsync(app.Services, TestSchemaBootstrapModules.Full);
+        await ApiAuthorityReadiness.PrepareAsync(app.Services);
         await app.StartAsync();
 
         var client = CreateClient(app);

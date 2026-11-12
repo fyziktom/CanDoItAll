@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuiltUnexecuted",
+  "changedFactRows": 1,
+  "fileFactRows": 4,
+  "selectedLaneRows": 57,
+  "historicalNativeSourceIncluded": false,
+  "inputs": [
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+      "mainBaseSha256": "1C6C973A4DCD41BF9ADB807FA60E367322FF89B71B5EA01D0454E86BB9296F7A",
+      "sha256": "EEF051EF99C58A0E96AD3521055696BE6B597BE7FF1F4E1B631604D6F7D0F571"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-native-notification-fixture-repair.md",
+      "mainBaseSha256": null,
+      "sha256": "AFC16CDA602F5FE9FC2D756204B3E96449D6868EEBF1889750B7386AAECD35A5"
+    }
+  ]
+}

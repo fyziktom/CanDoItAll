@@ -1,0 +1,323 @@
+{
+  "schema_version": 1,
+  "hash_algorithm": "SHA-256",
+  "excludes": [
+    "MANIFEST.json",
+    "__pycache__ directories",
+    "*.pyc",
+    ".DS_Store"
+  ],
+  "meaning": "Package integrity only; not a signature or application test result",
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 1213,
+      "sha256": "39d67979260c8e230d0d6e503a9fc0a25b7ea9f9d09508197b389d2211d0cdfe"
+    },
+    {
+      "path": "INDEX.md",
+      "bytes": 5509,
+      "sha256": "827c8d3c1e33e9cd14d467d403ca179f1fd9631f64e6ce6ec1972d451365b8e5"
+    },
+    {
+      "path": "PACKAGE_VALIDATION.md",
+      "bytes": 2612,
+      "sha256": "99a98b881d087a4ab09e242df87a22114e950a19ffc575bab75e1386cafa257a"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5763,
+      "sha256": "91dc0b73ca680dd2c3aa8b295d3d90e833a35a3ee7d24acbce042a0c77927ef1"
+    },
+    {
+      "path": "docs/01-executive-recommendation.md",
+      "bytes": 5825,
+      "sha256": "35b99cf1a5f95015288a993dad4f00e202b0dafe99fcbe3869d677640994bf83"
+    },
+    {
+      "path": "docs/02-current-state-and-evidence.md",
+      "bytes": 7343,
+      "sha256": "9cd2b39bcd1477681ecf65efaf754388bb277c522c0c405cb8edbc5cd845ad2d"
+    },
+    {
+      "path": "docs/03-terminology-and-invariants.md",
+      "bytes": 5628,
+      "sha256": "4fb3e6f5cdcf45a995ef0871bf64cff7c1511c48d2f514718b927c948b334c82"
+    },
+    {
+      "path": "docs/04-target-architecture.md",
+      "bytes": 7007,
+      "sha256": "bb7f2e17cb9fd84f672f9d4b77dd7f7004e542db1b86c2e1a3cdda10bcf5cc2c"
+    },
+    {
+      "path": "docs/05-revision-boundaries.md",
+      "bytes": 6579,
+      "sha256": "2f2a507c1dba7674e1422fdc6737ab00ca2cebc99e3ae9368a155ee266dff2d8"
+    },
+    {
+      "path": "docs/06-write-and-transaction-protocol.md",
+      "bytes": 10865,
+      "sha256": "81171e74daecdd938210aee0bac24fc5ff3eb49a0d83a73551e1bf205bb1429c"
+    },
+    {
+      "path": "docs/07-outcomes-idempotency-and-retry.md",
+      "bytes": 8278,
+      "sha256": "1a880bfaca0d136c579bc3395fe6bf96c7ecb887f3b6aa37a5402482248d8416"
+    },
+    {
+      "path": "docs/08-ui-drafts-and-conflicts.md",
+      "bytes": 6647,
+      "sha256": "0754654bd89acf05b37bd0948506f188f1d3e009f2652135c03190faeb001279"
+    },
+    {
+      "path": "docs/09-agent-bases-approvals-and-authority.md",
+      "bytes": 7993,
+      "sha256": "b5f5e7895bc55ba08ff497e94a5baab03a19b346c877d19fe9ce9a465366749a"
+    },
+    {
+      "path": "docs/10-projections-storage-and-external-effects.md",
+      "bytes": 6786,
+      "sha256": "ddcabc1061e15c65f817f731182596443888f057017045e1462441b6aaa9813b"
+    },
+    {
+      "path": "docs/11-performance-and-capacity.md",
+      "bytes": 10605,
+      "sha256": "16ba40700ce3e52845fb8b6f382637665bbd9b933a671bbc3220a96f56b6e6b8"
+    },
+    {
+      "path": "docs/12-foundation-prerequisites.md",
+      "bytes": 6132,
+      "sha256": "4e741cfc40d58207f62f591dad6f29828713660a26eceac4b0dbb51f8f75d59e"
+    },
+    {
+      "path": "docs/13-phase-plan.md",
+      "bytes": 5705,
+      "sha256": "5f2dfeba2f51123614383c20d6e9d4abc8b5c38aee012578200bc7a133ab2845"
+    },
+    {
+      "path": "docs/14-projects-pilot-impact.md",
+      "bytes": 6624,
+      "sha256": "0641317c9addda0a69315a4ab30545c7494e7470b699a2ee252092396f070642"
+    },
+    {
+      "path": "docs/15-compatibility-migration-and-lifecycle.md",
+      "bytes": 7664,
+      "sha256": "ac5747f14a19900eaf7e98dacdb7e9262defbb6a27630cfdd7d0164d65bff5dd"
+    },
+    {
+      "path": "docs/16-test-strategy.md",
+      "bytes": 8089,
+      "sha256": "eb978971bfe93f349139fd4cfdfcf48be39e100c6c22c2bb36fc449ad048108a"
+    },
+    {
+      "path": "docs/17-decoupling-and-iteration.md",
+      "bytes": 4690,
+      "sha256": "7a023145e545422f13ada2faebf52cc2461d2b47c072c175ccb57ffd47f8893b"
+    },
+    {
+      "path": "docs/18-observability-and-operations.md",
+      "bytes": 4988,
+      "sha256": "3644dbe976f4aa147dff6d754b311cc722d5a9384d36ba70e83e937f91b699ec"
+    },
+    {
+      "path": "docs/19-decisions-and-open-questions.md",
+      "bytes": 8955,
+      "sha256": "4a339059f9748a4c2e2442785f991787e5c5ddad90128c8dbe78860ffeaf59b8"
+    },
+    {
+      "path": "docs/20-source-ledger.md",
+      "bytes": 12354,
+      "sha256": "c8ce24dbda790bd122506997b0ba1153edf41b2e9c879777beee8b97266fc085"
+    },
+    {
+      "path": "docs/21-test-catalogue.md",
+      "bytes": 15102,
+      "sha256": "45fd7c27cafb1f6eeb8b3fb533caf1ecabbdf518ef42df65a15673d780838561"
+    },
+    {
+      "path": "docs/22-risk-register.md",
+      "bytes": 9309,
+      "sha256": "53829cde39c7d7647c86dc67bdeb2706070375512fe26471c4ca9d277c765eaa"
+    },
+    {
+      "path": "package.json",
+      "bytes": 693,
+      "sha256": "93ae003aba39899abe742f6d64b0cb7fc1f6b1e064d09a566c99c693eed4c276"
+    },
+    {
+      "path": "phases/P00.md",
+      "bytes": 2602,
+      "sha256": "89ab907b4152bc2fcf9281f49bcfff840b76f7d7cee032c26f9cbcb28fa05f10"
+    },
+    {
+      "path": "phases/P01.md",
+      "bytes": 2614,
+      "sha256": "35c84b8860b8702013f69f22fd74106cfdd580bb21827094eead0de89492e5fc"
+    },
+    {
+      "path": "phases/P02.md",
+      "bytes": 2869,
+      "sha256": "33f3ce8f7dd71afa7fa35280e9c6e00e3b8aa544e82cd1d4142dbaebbd841df1"
+    },
+    {
+      "path": "phases/P03.md",
+      "bytes": 2267,
+      "sha256": "10786a76118e79fefd26291de2dff9a486c2aa0c2a327d362fa33f00f7ac58aa"
+    },
+    {
+      "path": "phases/P04.md",
+      "bytes": 2547,
+      "sha256": "104d89be59dadb0173f69a1fdb3a9ef953a2a9f8a07cb40d0e20e6d08bff2455"
+    },
+    {
+      "path": "phases/P05.md",
+      "bytes": 2833,
+      "sha256": "2cfe22622572120d3dcac1e159c4de482500d8b2ad127a9ec3dbabd560f6ea42"
+    },
+    {
+      "path": "phases/P06.md",
+      "bytes": 2488,
+      "sha256": "9f49789fa357052588cb09cd56c324b5671ec0202c1cbdde860c9cd329460839"
+    },
+    {
+      "path": "phases/P07.md",
+      "bytes": 2616,
+      "sha256": "8e7d927aced9702a03292d965b550913241bbecdec652fa9dfd95b3fd50519c2"
+    },
+    {
+      "path": "phases/P08.md",
+      "bytes": 2691,
+      "sha256": "8fdeef711fad579132ce376116eeab5222f7ba590e630bf55fb6c5b390688d7c"
+    },
+    {
+      "path": "registers/decisions.json",
+      "bytes": 12436,
+      "sha256": "82ff5b92e6277fefc0a366a967fcf0992645e252f28449839290171e020c080a"
+    },
+    {
+      "path": "registers/findings.json",
+      "bytes": 6201,
+      "sha256": "20a4a380d21e819ddb347d30ae86bc0ae17e3fef4adb3ec0d2f43f813ac98263"
+    },
+    {
+      "path": "registers/invariants.json",
+      "bytes": 5261,
+      "sha256": "ca9eca3ece56952b967912ccbd64b3224ce69a3018cbecb9b9abf93a09fd012b"
+    },
+    {
+      "path": "registers/mutation_inventory.json",
+      "bytes": 16286,
+      "sha256": "385041d8b547a7ac8d54d67643293d92607b31fcf7d8d7dd00499dcb0aa8493f"
+    },
+    {
+      "path": "registers/open_questions.json",
+      "bytes": 5924,
+      "sha256": "dae5b22f3bfa9a1e5349747bd00c75ccd06249d856833ab4089f85b3e46251c0"
+    },
+    {
+      "path": "registers/performance_scenarios.json",
+      "bytes": 5299,
+      "sha256": "b8faf321f456d5ac473414c391860076e26edb9d826cc1244d1487756b59a948"
+    },
+    {
+      "path": "registers/phases.json",
+      "bytes": 17834,
+      "sha256": "4da2d216477bf98928c222ad1bac5e4096e84df2f0ddad04a5248ce8ad0e0fcf"
+    },
+    {
+      "path": "registers/risks.json",
+      "bytes": 23376,
+      "sha256": "cbd14a485220c41cebf5d7dbad7dd4566eba3a08ff049162f3788376614624a5"
+    },
+    {
+      "path": "registers/sources.json",
+      "bytes": 16242,
+      "sha256": "c17a7a080fc6fb5f8d36268abbb10beee2788f3c180cdbf1c3e5fb9df48133b9"
+    },
+    {
+      "path": "registers/test_scenarios.json",
+      "bytes": 52677,
+      "sha256": "82818c7a17ac935a3e3d54f25c14ce132d06b9c698e164b3b0df730c5a44565c"
+    },
+    {
+      "path": "registers/traceability.json",
+      "bytes": 6345,
+      "sha256": "feed11510e1a5054efb85c1f23ff8b098dce30714033651fc1306615302493c6"
+    },
+    {
+      "path": "registers/views/decisions.md",
+      "bytes": 4022,
+      "sha256": "9e4c3a220d93596b2b267404a3362459aa4d0dacc8f352240f5b63d46914c526"
+    },
+    {
+      "path": "registers/views/mutation_inventory.md",
+      "bytes": 4572,
+      "sha256": "0f28bc55ab4ec35ba56e64976f4ecc1a7ba5eb58cfe0b3d6b0e74a75758191b3"
+    },
+    {
+      "path": "registers/views/open_questions.md",
+      "bytes": 3779,
+      "sha256": "ce3b3934e075833413fc5f550a4b1d399066de9ab39076a5b49803ac8625238c"
+    },
+    {
+      "path": "registers/views/performance_scenarios.md",
+      "bytes": 3663,
+      "sha256": "457b2d2589d7e3ddd8ab29864159285099e843a3a89216672f8bb5b0c864883d"
+    },
+    {
+      "path": "registers/views/phases.md",
+      "bytes": 3392,
+      "sha256": "3e33fb4f8eb2ee0b1a1defee68337ef26270c76e133dd9ffefeb14b60fc410a3"
+    },
+    {
+      "path": "registers/views/risks.md",
+      "bytes": 7905,
+      "sha256": "a75d208b7c6008b740746c7b995ac699a97138f8b0a5b900c78a454f24c43869"
+    },
+    {
+      "path": "registers/views/test_scenarios.md",
+      "bytes": 22598,
+      "sha256": "849c7424ee935d92c6e2958dd8e719b1009153fdda9a402538161751c5902057"
+    },
+    {
+      "path": "templates/BENCHMARK_REPORT.md",
+      "bytes": 1923,
+      "sha256": "7e96275346701e80b4de807ccc11a1259bc4fdf45c27eb1ef2ca387064ef72cb"
+    },
+    {
+      "path": "templates/NEXT_ITERATION_REVIEW.md",
+      "bytes": 3466,
+      "sha256": "13230f3811158d679a6cb3ceac00453367f175d4cdb598f3116b3fe7876958af"
+    },
+    {
+      "path": "templates/PHASE_REVIEW.md",
+      "bytes": 2467,
+      "sha256": "d4b208823c97a58f222e7252e27db2d6658444a3debd10ee3d322a6c7a70ac09"
+    },
+    {
+      "path": "tools/rebuild_manifest.py",
+      "bytes": 1844,
+      "sha256": "c9a3982822cc64a1e20352d5545a54accde3d5686ba98948571591b1c69f7587"
+    },
+    {
+      "path": "tools/refresh_evidence.py",
+      "bytes": 4758,
+      "sha256": "0d5e3b4f06793ec712db1fb6b580d56fad23b0087685c0a0964dfd4b1de421f7"
+    },
+    {
+      "path": "tools/render_register_views.py",
+      "bytes": 2597,
+      "sha256": "cdb637c2a111ec2083af1420f037621190c558ee3f7ab51c7d59cfb8e9a255af"
+    },
+    {
+      "path": "tools/test_package_tools.py",
+      "bytes": 6476,
+      "sha256": "4c96fe7fdc81b3b84f43007a1b1ddb5a245eed909364b222c3d2241bc80f96a5"
+    },
+    {
+      "path": "tools/validate_package.py",
+      "bytes": 8027,
+      "sha256": "9964dbf6ffceaae67bf265dcc4b94c046223719552ed89837b90a006df4dd17d"
+    }
+  ]
+}

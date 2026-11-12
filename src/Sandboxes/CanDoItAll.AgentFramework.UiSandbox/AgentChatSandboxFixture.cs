@@ -6,7 +6,7 @@ namespace CanDoItAll.AgentFramework.UiSandbox;
 
 public enum AgentChatScenario {
     Loading, NoAgents, MissingAgent, Threads, Transcript, Executing,
-    Approvals, Attachments, Voice, Focused, Failed, Adversarial
+    Approvals, Attachments, Voice, Focused, Failed, Adversarial, Unconfirmed
 }
 
 public sealed class AgentChatSandboxFixture {
@@ -14,6 +14,7 @@ public sealed class AgentChatSandboxFixture {
     public ChatWorkspacePresentation Presentation { get; private set; } = new();
     public AgentChatNavigationPresentation Navigation { get; private set; } = new();
     public string IntentLog { get; private set; } = "No intent";
+    public int SendIntentCount { get; private set; }
 
     public AgentChatSandboxFixture() => SetScenario(AgentChatScenario.Transcript);
 
@@ -86,6 +87,14 @@ public sealed class AgentChatSandboxFixture {
                     ExecutionStepCount = 2, CollapseExecution = true, ExecutionSummary = "Worked for 2s", ExecutionTone = "danger",
                     ExecutionPreview = "The failed run was persisted; refresh to read its latest state." };
                 break;
+            case AgentChatScenario.Unconfirmed:
+                Presentation = Presentation with {
+                    IsSendBlocked = true,
+                    IsBusy = false,
+                    Header = new(avatar, [new("Prior outcome needs review", PresentationTone.Warning)]),
+                    ComposerGuidance = "You can edit the draft while the prior outcome is reviewed. Sending is blocked."
+                };
+                break;
         }
     }
 
@@ -94,6 +103,9 @@ public sealed class AgentChatSandboxFixture {
             return;
         }
         IntentLog = intent.Action.ToString();
+        if (intent.Action == ChatWorkspaceAction.Send) {
+            SendIntentCount++;
+        }
         Presentation = intent.Action switch {
             ChatWorkspaceAction.DraftChanged => Presentation with { DraftPrompt = intent.Text ?? "" },
             ChatWorkspaceAction.SessionTitleChanged when Presentation.Session is { } session => Presentation with { Session = session with { Title = intent.Text ?? "" } },

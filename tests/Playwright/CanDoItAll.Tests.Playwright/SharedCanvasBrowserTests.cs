@@ -657,6 +657,12 @@ public sealed partial class AppSmokeTests
             "group frame to settle after multi-select drag");
 
         var afterDragMetrics = await ReadCanvasDiagnosticsAsync(page);
+        using (var publicationDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30))) {
+            while (afterDragMetrics.Metrics.StatePublishCommitCount <= beforeDragMetrics.Metrics.StatePublishCommitCount) {
+                await Task.Delay(50, publicationDeadline.Token);
+                afterDragMetrics = await ReadCanvasDiagnosticsAsync(page);
+            }
+        }
         var afterFrame = await ReadSceneFrameSnapshotByLabelAsync(page, "Guide batch");
         Assert.True(
             afterDragMetrics.Metrics.StatePublishCommitCount > beforeDragMetrics.Metrics.StatePublishCommitCount,

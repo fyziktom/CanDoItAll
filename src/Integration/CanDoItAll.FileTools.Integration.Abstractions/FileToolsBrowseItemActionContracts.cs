@@ -129,12 +129,14 @@ public interface IFileToolsBrowseItemActionService
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 
     ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 }
 
 public interface IFileToolsKnownFileActionService
@@ -145,5 +147,6 @@ public interface IFileToolsKnownFileActionService
         FileToolsSemanticScope scope,
         FileToolsKnownFileOccurrence occurrence,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null);
 }

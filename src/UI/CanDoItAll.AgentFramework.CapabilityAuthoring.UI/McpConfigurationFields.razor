@@ -1,0 +1,102 @@
+<FormSection Title="MCP server"
+                 Description="Edit the launch or remote endpoint parameters that the runtime uses when this capability is attached. Store only bindings, not raw secrets.">
+        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+            <div>
+                <label class="cda-field-label">Transport</label>
+                <InputSelect @bind-Value="Draft.Transport"
+                             class="cda-input"
+                             data-testid="@($"{TestId}-mcp-transport")">
+                    <option value="stdio">Stdio</option>
+                    <option value="http">HTTP</option>
+                    <option value="sse">SSE</option>
+                    <option value="logical">Logical seam</option>
+                </InputSelect>
+            </div>
+            <div>
+                <label class="cda-field-label">Server name</label>
+                <AuthoringText @bind-Value="Draft.ServerName"
+                           class="cda-input"
+                           data-testid="@($"{TestId}-mcp-server")" />
+            </div>
+            <label class="cda-inline-option capability-authoring__inline-option">
+                <InputCheckbox @bind-Value="Draft.Hosted"
+                               data-testid="@($"{TestId}-mcp-hosted")" />
+                Hosted provider MCP
+            </label>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <div>
+                <label class="cda-field-label">Endpoint</label>
+                <AuthoringText @bind-Value="Draft.Endpoint"
+                           class="cda-input"
+                           data-testid="@($"{TestId}-mcp-endpoint")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Command</label>
+                <AuthoringText @bind-Value="Draft.Command"
+                           class="cda-input"
+                           data-testid="@($"{TestId}-mcp-command")" />
+            </div>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <div>
+                <label class="cda-field-label">Arguments</label>
+                <AuthoringTextArea @bind-Value="Draft.ArgumentsText"
+                               class="cda-input cda-input--textarea capability-authoring__textarea"
+                               data-testid="@($"{TestId}-mcp-arguments")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Allowed tools</label>
+                <AuthoringTextArea @bind-Value="Draft.AllowedToolsText"
+                               class="cda-input cda-input--textarea capability-authoring__textarea"
+                               data-testid="@($"{TestId}-mcp-tools")" />
+            </div>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+            <div>
+                <label class="cda-field-label">Working directory</label>
+                <AuthoringText @bind-Value="Draft.WorkingDirectory"
+                           class="cda-input"
+                           data-testid="@($"{TestId}-mcp-working-directory")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Approval mode</label>
+                <InputSelect @bind-Value="Draft.ApprovalMode"
+                             class="cda-input"
+                             data-testid="@($"{TestId}-mcp-approval")">
+                    <option value="NeverRequire">Never Require</option>
+                    <option value="AlwaysRequire">Always Require</option>
+                </InputSelect>
+            </div>
+            <div>
+                <label class="cda-field-label">Allowed working roots</label>
+                <AuthoringTextArea @bind-Value="Draft.AllowedWorkingDirectoriesText"
+                               class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                               data-testid="@($"{TestId}-mcp-roots")" />
+            </div>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+            <div>
+                <label class="cda-field-label">Environment variable bindings</label>
+                <AuthoringTextArea @bind-Value="Draft.EnvironmentVariableBindingsText"
+                               class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                               data-testid="@($"{TestId}-mcp-env-bindings")" />
+            </div>
+            <div>
+                <label class="cda-field-label">Header bindings</label>
+                <AuthoringTextArea @bind-Value="Draft.HeaderBindingsText"
+                               class="cda-input cda-input--textarea capability-authoring__small-textarea"
+                               data-testid="@($"{TestId}-mcp-header-bindings")" />
+            </div>
+        </Grid>
+    </FormSection>
+
+@code {
+    [Parameter, EditorRequired] public McpCapabilityDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    [Parameter] public bool Locked { get; set; }
+}

@@ -1,0 +1,120 @@
+@implements IDisposable
+
+<Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Medium" data-testid="storage-catalog-surface">
+    @if (!Session.IsCurrent) {
+        <EmptyState Title="Storage view retired" Description="Reopen Storage for the active workspace. Accepted operations retain their original receipts." />
+    } else {
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <Button Text="Refresh catalog" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshCatalogAsync" data-testid="storage-refresh-catalog" />
+            <Button Text="Refresh secrets" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshSecretsAsync" data-testid="storage-refresh-secrets" />
+            <Button Text="Refresh routing" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshRoutesAsync" data-testid="storage-refresh-routes" />
+            @if (Session.Catalog.IsLoading || Session.Secrets.IsLoading || Session.Routes.IsLoading) {
+                <StatusBadge Tone="info" Text="Reading catalog references" />
+            }
+        </Cluster>
+        @if (!string.IsNullOrEmpty(Session.Catalog.Error)) {
+            <p role="alert">Catalog: @Session.Catalog.Error</p>
+        }
+        @if (!string.IsNullOrEmpty(Session.Secrets.Error)) {
+            <p role="alert">Secrets: @Session.Secrets.Error Existing secret references remain unchanged.</p>
+        }
+        @if (!string.IsNullOrEmpty(Session.Routes.Error)) {
+            <p role="alert">Routing: @Session.Routes.Error</p>
+        }
+        @if (!string.IsNullOrEmpty(Session.Notice)) {
+            <p role="status">@Session.Notice</p>
+        }
+        <ListDetailShell ListPaneWidth="27rem">
+            <ListHeader>
+                <ListPanelHeader Title="Storage catalog" Description="Define storage targets, verify health explicitly, and choose workspace defaults."
+                                 Count="@($"{Session.Filtered.Count()} storage target(s)")">
+                    <Actions>
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            @foreach (var provider in Session.Choices.Providers) {
+                                <Button Text="@provider.Label" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                        Click="@(() => Session.New(provider.Value))" data-testid="@($"storage-settings-new-{provider.Value.ToString().ToLowerInvariant()}")" />
+                            }
+                            <Button Text="Recovery" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                    Click="@(() => RecoveryRequested.InvokeAsync(Session.Draft?.Id ?? Session.SelectedId))" data-testid="storage-settings-recovery" />
+                        </Cluster>
+                    </Actions>
+                    <Filters>
+                        <FilterBar ResultText="@($"{Session.Filtered.Count()} matching storage target(s)")">
+                            <TextBox Immediate="true" @bind-Value="Session.Search" Placeholder="Search storage catalog" aria-label="Search storage catalog" data-testid="storage-settings-search" />
+                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="@(() => Session.Search = string.Empty)" />
+                        </FilterBar>
+                    </Filters>
+                </ListPanelHeader>
+            </ListHeader>
+            <ListContent>
+                <StorageSummaryCard Model="@CatalogSummaries.Catalog(Session)" Emphasized="true" data-testid="storage-settings-summary" />
+                @if (Session.Catalog.IsAvailable && !Session.Filtered.Any()) {
+                    <EmptyState Title="No matching storage targets" Description="Change the filter or explicitly create a new target." />
+                }
+                <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Medium" data-testid="storage-catalog-list">
+                    @foreach (var row in Session.Filtered) {
+                        <SelectionListItem @key="row.Id" Title="@row.Name" Eyebrow="@Session.ProviderLabel(row.ProviderKind)"
+                                           Meta="@row.ConnectionMode.ToString()" Summary="@row.EndpointOrRoot"
+                                           DataTestId="@($"storage-catalog-row-{row.Id:N}")" IsSelected="@(Session.SelectedId == row.Id)"
+                                           OnSelect="@(() => Session.SelectAsync(row.Id))">
+                            <Status>
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                    <StatusBadge Tone="@CatalogSummaries.HealthTone(row.Health.Status)" Text="@row.Health.Status.ToString()" />
+                                    @if (row.IsSystemDefault) {
+                                        <StatusBadge Tone="info" Text="System default" />
+                                    }
+                                    @if (row.IsReadOnly) {
+                                        <StatusBadge Tone="warning" Text="Read only" />
+                                    }
+                                    @if (!row.IsEnabled) {
+                                        <StatusBadge Tone="warning" Text="Disabled" />
+                                    }
+                                </Cluster>
+                            </Status>
+                        </SelectionListItem>
+                    }
+                </Stack>
+            </ListContent>
+            <DetailHeader>
+                <h2 class="cda-title-xl">@(Session.Draft is { } titleDraft ? titleDraft.Id.HasValue ? titleDraft.Name : $"New {Session.ProviderLabel(titleDraft.ProviderKind)} target" : "Storage editor")</h2>
+                <p class="cda-body-muted">Configure identity, connectivity and default routing. System defaults are managed by the storage owner.</p>
+            </DetailHeader>
+            <DetailContent>
+                @if (Session.EditorRead.IsLoading) {
+                    <StatusBadge Tone="info" Text="Loading exact storage target" />
+                } else if (Session.Draft is { } draft) {
+                    @if (draft.Deleted) {
+                        <p role="status">This target was deleted. Choose New explicitly to create another target.</p>
+                    }
+                    <CatalogEditor @key="draft" Session="Session" Draft="draft" />
+                } else {
+                    <EmptyState Title="Storage target unavailable" Description="@(string.IsNullOrEmpty(Session.EditorRead.Error) ? "The exact target was not found. Choose another target or create New explicitly." : Session.EditorRead.Error)" />
+                    @if (Session.SelectedId is { } selected) {
+                        <Button Text="Retry exact target" Click="@(() => Session.SelectAsync(selected))" data-testid="storage-editor-retry" />
+                    }
+                }
+            </DetailContent>
+        </ListDetailShell>
+        <CatalogReceipts Session="Session" />
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public CatalogSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<Guid?> RecoveryRequested { get; set; }
+    private CatalogSession? subscribed;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribed, Session)) {
+            Dispose();
+            subscribed = Session;
+            subscribed.Changed += Changed;
+        }
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+            subscribed = null;
+        }
+    }
+}

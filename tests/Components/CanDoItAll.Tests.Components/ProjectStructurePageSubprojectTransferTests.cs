@@ -63,7 +63,9 @@ public sealed class ProjectStructurePageSubprojectTransferTests
                 var workbench = provider.GetRequiredService<ProjectWorkbenchService>();
                 return new(new ProjectStructureSubprojectTransferOperations(
                     async (parentId, targetId, reservation, editor, cancellationToken, authority) => {
-                        var created = await projects.CreateWithReceiptAsync(targetId, editor, parentId, cancellationToken, authority);
+                        var created = reservation is null
+                            ? await projects.CreateWithReceiptAsync(targetId, editor, parentId, cancellationToken, authority)
+                            : await projects.CreateWithReceiptAsync(reservation, editor, cancellationToken, authority);
                         Assert.True(created.IsSuccess);
                         createdProjectId = created.Value!.Project.ProjectId;
                         throw fault;

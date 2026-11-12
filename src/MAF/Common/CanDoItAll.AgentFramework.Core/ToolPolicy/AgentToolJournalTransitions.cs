@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -13,13 +12,21 @@ public static class AgentToolJournalTransitions {
 
         current.Validate();
         if (proposed is null || proposed.SchemaVersion < current.SchemaVersion ||
+            (proposed.PlanningDecision is not null || current.PlanningDecision is not null) && proposed.SchemaVersion != current.SchemaVersion ||
             proposed.Session != current.Session || proposed.Support != current.Support ||
             proposed.OriginalInput != current.OriginalInput || proposed.BackgroundInput != current.BackgroundInput ||
             proposed.RuntimeContext?.Content != current.RuntimeContext?.Content ||
             proposed.RuntimeContext?.WorkspaceScope != current.RuntimeContext?.WorkspaceScope || proposed.Revision < current.Revision ||
             !HasSameContextAttachments(current.RuntimeContext, proposed.RuntimeContext) ||
+            current.ReceiptReconciliationCursor is not null && proposed.ReceiptReconciliationCursor is null ||
+            current.ReceiptReconciliationCursor != proposed.ReceiptReconciliationCursor &&
+                (proposed.ActiveDispatchLeaseId is null || proposed.ActiveDispatchLeaseId != current.ActiveDispatchLeaseId) ||
             proposed.Batches.Length < current.Batches.Length || proposed.Segments.Length < current.Segments.Length) {
             throw Conflict("A run update cannot remove or replace its current tool admission journal.");
+        }
+
+        if (current.PlanningDecision is { } decision) {
+            AgentPlanningDecisionPersistence.Validate(decision, proposed.PlanningDecision!, proposed);
         }
 
         if (proposed.Revision == current.Revision && !Equivalent(current, proposed)) {
@@ -33,9 +40,18 @@ public static class AgentToolJournalTransitions {
             var next = proposed.Segments[index];
             if (previous.Id != next.Id || previous.Ordinal != next.Ordinal ||
                 previous.FirstBatchOrdinal != next.FirstBatchOrdinal || previous.RestartCheckpoint != next.RestartCheckpoint ||
+                previous.CheckpointKind != next.CheckpointKind || previous.OriginDispatchLeaseId != next.OriginDispatchLeaseId ||
+                previous.ProviderEffectScope != next.ProviderEffectScope ||
                 previous.ContinuesSegmentId != next.ContinuesSegmentId ||
-                previous.ApprovalCheckpoint is not null && (next.ApprovalCheckpoint != previous.ApprovalCheckpoint ||
-                    !next.PendingApprovals.SequenceEqual(previous.PendingApprovals))) {
+                previous.CheckpointKind == AgentToolCheckpointKind.ProviderRestart &&
+                    (previous.ApprovalCheckpoint is not null || !previous.PendingApprovals.IsEmpty) &&
+                    (next.ApprovalCheckpoint != previous.ApprovalCheckpoint ||
+                    !next.PendingApprovals.SequenceEqual(previous.PendingApprovals)) ||
+                previous.CheckpointKind == AgentToolCheckpointKind.EffectsOnly &&
+                    (next.PendingApprovals.Length < previous.PendingApprovals.Length ||
+                        !next.PendingApprovals.Take(previous.PendingApprovals.Length).SequenceEqual(previous.PendingApprovals) ||
+                        next.PendingApprovals.Length > previous.PendingApprovals.Length && previous.PendingApprovals.Any(approval =>
+                            RequireProposal(current, approval.ToolAdmission!).ApprovalStatus == ExecutionApprovalStatus.Pending))) {
                 throw Conflict("A saved SDK invocation or approval checkpoint is immutable.");
             }
         }
@@ -52,6 +68,14 @@ public static class AgentToolJournalTransitions {
             for (var ordinal = 0; ordinal < previous.Proposals.Length; ordinal++) {
                 var prior = previous.Proposals[ordinal];
                 var target = next.Proposals[ordinal];
+                if (target.State == AgentToolProposalState.OwnerReceiptConfirmed &&
+                    (prior.State is not (AgentToolProposalState.Executing or AgentToolProposalState.ReconciliationRequired or AgentToolProposalState.OwnerReceiptConfirmed) ||
+                        prior.ApprovalStatus != ExecutionApprovalStatus.Approved || prior.ApprovedDigest != prior.Payload.Digest ||
+                        target.Result != prior.Result || target.DisclosureEvidence != prior.DisclosureEvidence ||
+                        target.DispatchClaimId != prior.DispatchClaimId) ||
+                    prior.State == AgentToolProposalState.OwnerReceiptConfirmed && target != prior) {
+                    throw Conflict("An owner-confirmed effect preserves its original dispatch and SDK evidence and cannot execute again.");
+                }
                 if ((prior.Result is not null || prior.DisclosureEvidence is not null) &&
                     target.DisclosureEvidence != prior.DisclosureEvidence) {
                     throw Conflict("A saved result cannot change or acquire disclosure evidence after its original checkpoint.");
@@ -95,6 +119,12 @@ public static class AgentToolJournalTransitions {
             }
         }
 
+        if (updated.PlanningDecision is { } planning) {
+            return updated with {
+                Revision = checked(updated.Revision + 1),
+                PlanningDecision = AgentPlanningDecisionTransitions.Cancel(planning)
+            };
+        }
         return CancelProviderDispatches(updated);
     }
 
@@ -187,10 +217,18 @@ public static class AgentToolJournalTransitions {
                     throw Conflict("This proposal requires its exact permitted disclosure or mutation approval.");
                 }
 
+                var declinedPlanning = !decision.Approved && journal.SchemaVersion == AgentToolJournalRecord.PlanningSchemaVersion;
+                if (declinedPlanning && proposal is not {
+                        State: AgentToolProposalState.Prepared, DispatchClaimId: null, Result: null,
+                        EffectState: AgentToolEffectState.Unknown or AgentToolEffectState.None or AgentToolEffectState.NotCommitted }) {
+                    throw Conflict("Only an undispatched planning proposal can be declined as a definite no-effect outcome.");
+                }
+
                 return proposal with {
                     ApprovalStatus = decision.Approved ? ExecutionApprovalStatus.Approved : ExecutionApprovalStatus.Rejected,
                     ApprovedDigest = decision.Approved ? proposal.Payload.Digest : null,
-                    State = decision.Approved ? proposal.State : AgentToolProposalState.Rejected
+                    State = decision.Approved ? proposal.State : AgentToolProposalState.Rejected,
+                    EffectState = declinedPlanning ? AgentToolEffectState.NotCommitted : proposal.EffectState
                 };
             });
         }
@@ -246,7 +284,7 @@ public static class AgentToolJournalTransitions {
     }
 
     private static bool Equivalent(AgentToolJournalRecord left, AgentToolJournalRecord right)
-        => JsonSerializer.Serialize(left) == JsonSerializer.Serialize(right);
+        => ReferenceEquals(left, right) || AgentToolJournalWireEquality.AreEqual(left, right);
 
     private static AgentToolAdmissionException Conflict(string message)
         => new("tool-admission.conflict", message);

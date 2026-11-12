@@ -845,7 +845,10 @@ internal sealed record ProjectStructureNodeEditOpenApiRequest(
     string? MetadataJson = null,
     JsonElement? Metadata = null,
     string? LeaseToken = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null) {
+    [System.ComponentModel.Description("Original node state from a canonical read. Return it unchanged with the edit; missing or stale state is rejected with HTTP 409.")]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 internal sealed class ProjectStructureProjectObjectTypeJsonConverter : JsonConverter<ProjectObjectType>
 {

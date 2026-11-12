@@ -17,6 +17,7 @@ namespace CanDoItAll.CrmHr.UI.Recruiting;
 public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
 {
     RecruitmentWorkspaceModel? CurrentWorkspace { get; }
+    Guid DatabaseProfileId { get; }
     RecruitmentApplicationEditorModel ApplicationEditor { get; }
     RecruitmentInterviewEditorModel InterviewEditor { get; }
     LifecycleTaskEditorModel TaskEditor { get; }
@@ -28,10 +29,14 @@ public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
     Guid? SelectedPartyId { get; }
     Error? ConversionEligibilityError { get; }
     PagedRecordSelection<Guid>? ApplicationSelection { get; }
+    // The application catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<RecruitmentApplicationScope>? CatalogQuery { get; }
     int SelectedRecruitingTabIndex { get; }
     string RecruitmentDialogTitle { get; }
     Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(PagedRecordRequest<RecruitmentApplicationScope> request, CancellationToken cancellationToken);
     Task SelectApplicationAsync(Guid applicationId);
+    // A committed catalog change: a debounced search, a stage, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change);
     Task HandleApplicationPageLoadFailed(Exception exception);
     Task CreateNewApplicationAsync();
     Task CloseRecruitmentDialogAsync();
@@ -40,10 +45,10 @@ public interface ICrmHrRecruitingWorkspaceView : ICrmHrWorkspaceView
     Task ResetApplicationAsync();
     Task SaveInterviewAsync();
     Task ResetInterviewAsync();
-    Task DeleteInterviewAsync(Guid interviewId);
+    Task DeleteInterviewAsync(RecruitmentInterviewItemModel row);
     Task SaveTaskAsync();
     Task ResetTaskAsync();
-    Task DeleteTaskAsync(Guid taskId);
+    Task DeleteTaskAsync(LifecycleTaskItemModel row);
     Task SaveSupportAssignmentsAsync();
     Task ConvertCandidateAsync();
     Task SetConversionHomeUnitAsync(Guid? partyId);

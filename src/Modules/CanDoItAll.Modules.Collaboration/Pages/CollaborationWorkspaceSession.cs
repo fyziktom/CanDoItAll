@@ -1,0 +1,471 @@
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Collaboration.UI;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
+
+namespace CanDoItAll.Modules.Collaboration.Pages;
+
+public sealed class CollaborationWorkspaceSession(
+    ICollaborationWorkspaceOwner owner,
+    ILogger<CollaborationWorkspaceSession> logger,
+    Action changed,
+    Action<CollaborationUrlState, UrlHistoryMode> routeChanged,
+    Action<string> navigate,
+    Action<string, bool> notify) : ICollaborationWorkspaceView, IDisposable {
+    private CancellationTokenSource? readCancellation;
+    private long readGeneration;
+    private long selectionGeneration;
+    private bool disposed;
+    private bool routeDelivered;
+    private CollaborationUrlState? lastRoute;
+    private SelectionKind selectionKind;
+    private readonly Dictionary<Guid, CollaborationDraft<CollaborationReplyEditorModel>> retainedReplies = [];
+
+    public CollaborationWorkspaceModel? Workspace { get; private set; }
+    public CollaborationSection Section { get; private set; }
+    public CollaborationReadState ReadState { get; private set; } = CollaborationReadState.Loading;
+    public bool UnreadOnly { get; private set; }
+    public int PageOffset { get; private set; }
+    public bool IsMissing => selectionKind == SelectionKind.Explicit && Workspace is { SelectedThread: null };
+    public bool IsReplyRetained => Workspace?.SelectedThread is { } selected && Target?.ThreadId == selected.ThreadId
+        && !VisibleIds(Workspace).Contains(selected.ThreadId) && CollaborationReplyPolicy.MustRetain(Reply);
+    public string? ReadError { get; private set; }
+    public CollaborationDraft<CollaborationThreadEditorModel> NewThread { get; private set; } = new(new());
+    public CollaborationDraft<CollaborationReplyEditorModel> Reply { get; private set; } = new(new());
+    public CollaborationTarget? Target { get; private set; }
+    public CollaborationDraftStatus DraftStatus => CollaborationDraftLifetime.Status(NewThread, Reply, retainedReplies.Values, Target);
+    public CollaborationUrlState Route => new(Section, UnreadOnly, Target?.ThreadId);
+
+    public async Task ApplyRouteAsync(CollaborationUrlState route) {
+        ArgumentNullException.ThrowIfNull(route);
+        if (disposed || routeDelivered && lastRoute == route) {
+            return;
+        }
+
+        routeDelivered = true;
+        lastRoute = route;
+        Section = route.View ?? Section;
+        UnreadOnly = route.ThreadId is null && route.UnreadOnly;
+        PageOffset = 0;
+        ChangeTarget(route.ThreadId, route.ThreadId.HasValue ? SelectionKind.Explicit : SelectionKind.Initial);
+        if (route.ThreadId.HasValue && route.UnreadOnly) {
+            Publish(UrlHistoryMode.Replace);
+        }
+        await ReadAsync(resolveSection: route.ThreadId.HasValue && route.View is null);
+    }
+
+    public Task RefreshAsync() => ReadAsync();
+
+    public Task SelectAsync(Guid threadId) => SelectAsync(threadId, UrlHistoryMode.Push);
+
+    private async Task SelectAsync(Guid threadId, UrlHistoryMode mode) {
+        if (disposed || Target?.ThreadId == threadId) {
+            return;
+        }
+
+        ChangeTarget(threadId, SelectionKind.Explicit);
+        Publish(mode);
+        await ReadAsync();
+    }
+
+    public async Task SetSectionAsync(CollaborationSection section) {
+        if (disposed || Section == section) {
+            return;
+        }
+
+        Section = section;
+        var pageChanged = PageOffset != 0;
+        PageOffset = 0;
+        ++selectionGeneration;
+        Publish(UrlHistoryMode.Push);
+        if (pageChanged) {
+            await ReadAsync(realign: true);
+        } else {
+            await RealignAsync();
+        }
+    }
+
+    public async Task SetUnreadOnlyAsync(bool unreadOnly) {
+        if (disposed || UnreadOnly == unreadOnly) {
+            return;
+        }
+
+        UnreadOnly = unreadOnly;
+        PageOffset = 0;
+        ++selectionGeneration;
+        Publish(UrlHistoryMode.Push);
+        if (Workspace is not null) {
+            await ReadAsync(realign: true);
+        } else {
+            changed();
+        }
+    }
+
+    public async Task SetPageAsync(int offset) {
+        if (disposed || offset == PageOffset || offset < 0 || offset % CollaborationListWindow.Size != 0 ||
+            Workspace is not { } workspace || offset > 0 && offset >= workspace.Totals.Visible(Section, UnreadOnly)) {
+            return;
+        }
+        await ReadAsync(offset: offset);
+    }
+
+    private async Task RealignAsync(bool allowSelectionRead = true) {
+        if (Workspace is null) {
+            changed();
+            return;
+        }
+
+        var visible = VisibleIds(Workspace).ToArray();
+        if (IsReplyRetained || Target is not null && visible.Contains(Target.ThreadId)) {
+            changed();
+            return;
+        }
+
+        Guid? next = visible.Length > 0 ? visible[0] : null;
+        if (next is null) {
+            var accepted = Workspace;
+            var readError = ReadError;
+            ChangeTarget(null, SelectionKind.Empty);
+            Workspace = accepted with { SelectedThread = null };
+            ReadError = readError;
+            ReadState = readError is null ? CollaborationReadState.Ready : CollaborationReadState.Stale;
+            Publish(UrlHistoryMode.Replace);
+            changed();
+            return;
+        }
+
+        if (allowSelectionRead) {
+            await SelectAsync(next.Value, UrlHistoryMode.Replace);
+        }
+    }
+
+    private IEnumerable<Guid> VisibleIds(CollaborationWorkspaceModel workspace) => Section switch {
+        CollaborationSection.Threads => workspace.Threads.Select(item => item.ThreadId),
+        CollaborationSection.Escalations => workspace.Escalations.Where(item => !UnreadOnly || item.IsUnread).Select(item => item.ThreadId),
+        _ => workspace.InboxItems.Where(item => !UnreadOnly || item.IsUnread).Select(item => item.ThreadId)
+    };
+
+    private void ChangeTarget(Guid? threadId, SelectionKind kind) {
+        ++selectionGeneration;
+        ++readGeneration;
+        readCancellation?.Cancel();
+        readCancellation = null;
+        if (Target is { } previous && CollaborationReplyPolicy.MustRetain(Reply)) {
+            retainedReplies[previous.ThreadId] = Reply;
+        }
+        selectionKind = kind;
+        Target = threadId.HasValue ? new(threadId.Value) : null;
+        Reply = threadId is { } id && retainedReplies.Remove(id, out var retained) ? retained : new(new());
+        Workspace = null;
+        ReadError = null;
+        ReadState = CollaborationReadState.Loading;
+    }
+
+    private async Task ReadAsync(bool resolveSection = false, bool realign = false, int? offset = null) {
+        if (disposed) {
+            return;
+        }
+
+        readCancellation?.Cancel();
+        using var cancellation = new CancellationTokenSource();
+        readCancellation = cancellation;
+        var generation = ++readGeneration;
+        var kind = selectionKind;
+        var target = Target;
+        var selection = selectionGeneration;
+        var window = new CollaborationListWindow(Section, UnreadOnly, offset ?? PageOffset);
+        ReadState = Workspace is null ? CollaborationReadState.Loading : CollaborationReadState.Refreshing;
+        ReadError = null;
+        changed();
+        try {
+            var result = await owner.GetWorkspaceAsync(target?.ThreadId, cancellation.Token, window);
+            if (!IsCurrentRead(generation)) {
+                return;
+            }
+            if (window.UnreadOnly != UnreadOnly || window.Section != Section && window.Offset != 0) {
+                await ReadAsync(resolveSection, realign: true);
+                return;
+            }
+
+            Workspace = kind == SelectionKind.Empty ? result with { SelectedThread = null } : result;
+            PageOffset = window.Offset;
+            var published = Route;
+            if (kind == SelectionKind.Initial) {
+                Target = result.SelectedThread is { } selected ? new(selected.ThreadId) : null;
+                selectionKind = Target is null ? SelectionKind.Empty : SelectionKind.Explicit;
+            }
+
+            if (resolveSection && selection == selectionGeneration && Target is not null) {
+                Section = result.SelectedThread?.ItemKind switch {
+                    CollaborationInboxItemKind.Escalation => CollaborationSection.Escalations,
+                    not null => CollaborationSection.Threads,
+                    _ => CollaborationSection.Inbox
+                };
+            }
+
+            if (Route != published || resolveSection && selection == selectionGeneration) {
+                Publish(UrlHistoryMode.Replace);
+            }
+
+            ReadState = CollaborationReadState.Ready;
+            if (target is { OutcomeUnknown: true }) {
+                target.OutcomeUnknown = false;
+                target.Message = "Unread state reloaded. Review it before marking again.";
+            }
+            if (!IsMissing && (realign || UnreadOnly && Section != CollaborationSection.Threads || selection != selectionGeneration)) {
+                await RealignAsync();
+            }
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) {
+        } catch (Exception exception) {
+            logger.LogWarning(exception, "Collaboration workspace read failed for thread {ThreadId}, generation {Generation}.", target?.ThreadId, generation);
+            if (IsCurrentRead(generation)) {
+                ReadError = Workspace is null
+                    ? "The collaboration workspace could not be loaded. Retry the read."
+                    : "Refresh failed. Showing the last accepted snapshot. Retry the read.";
+                ReadState = Workspace is null ? CollaborationReadState.Failed : CollaborationReadState.Stale;
+                if (realign && !IsMissing) {
+                    await RealignAsync(allowSelectionRead: false);
+                }
+            }
+        } finally {
+            if (IsCurrentRead(generation)) {
+                readCancellation = null;
+                changed();
+            }
+        }
+    }
+
+    public void PrepareThread(CollaborationDraft<CollaborationThreadEditorModel> origin, CollaborationInboxItemKind kind) {
+        if (disposed || !ReferenceEquals(NewThread, origin) || origin.IsSaving) {
+            return;
+        }
+
+        NewThread = new(new() { ItemKind = kind });
+        changed();
+    }
+
+    public async Task CreateAsync(CollaborationDraft<CollaborationThreadEditorModel> origin) {
+        if (disposed || !ReferenceEquals(NewThread, origin) || !origin.TryBegin()) {
+            return;
+        }
+
+        var request = CollaborationService.CreateManualThreadRequest(origin.Model) with { SubmissionId = origin.SubmissionId };
+        var selection = selectionGeneration;
+        changed();
+        Result<Guid> result;
+        try {
+            result = await owner.CreateThreadAsync(request);
+        } catch (Exception exception) {
+            HandleUnknown(origin, exception, "create", null);
+            return;
+        } finally {
+            origin.Complete(origin.OutcomeUnknown);
+        }
+
+        if (disposed || !ReferenceEquals(NewThread, origin)) {
+            return;
+        }
+
+        if (result.IsFailure) {
+            Reject(origin, result, "Unable to create the collaboration thread.");
+            return;
+        }
+
+        NewThread = new(new() { ItemKind = request.ItemKind }) {
+            SavedThreadId = result.Value,
+            Message = "Collaboration thread created."
+        };
+        if (selection == selectionGeneration) {
+            Section = request.ItemKind == CollaborationInboxItemKind.Escalation ? CollaborationSection.Escalations : CollaborationSection.Inbox;
+            PageOffset = 0;
+            ChangeTarget(result.Value, SelectionKind.Explicit);
+            var createdTarget = Target;
+            var acceptedDraft = NewThread;
+            Publish(UrlHistoryMode.Push);
+            notify(NewThread.Message, false);
+            await ReadAsync();
+            if (!disposed && ReferenceEquals(Target, createdTarget) && ReferenceEquals(NewThread, acceptedDraft)
+                && ReadState is CollaborationReadState.Failed or CollaborationReadState.Stale) {
+                acceptedDraft.Message = "Saved successfully. Refresh failed; retry the read, not the create.";
+            }
+        }
+
+        if (!disposed) {
+            changed();
+        }
+    }
+
+    public async Task ReplyAsync(CollaborationTarget target, CollaborationDraft<CollaborationReplyEditorModel> origin) {
+        if (!IsCurrentTarget(target) || !ReferenceEquals(Reply, origin) || Workspace?.SelectedThread is not { } selected || !origin.TryBegin()) {
+            return;
+        }
+
+        var request = CollaborationService.CreateLocalReplyRequest(target.ThreadId, origin.Model) with {
+            SubmissionId = origin.SubmissionId, ReadObservation = CollaborationReadObservation.From(selected)
+        };
+        changed();
+        Result result;
+        try {
+            result = await owner.AppendMessageAsync(request);
+        } catch (Exception exception) {
+            if (IsRetainedReply(target.ThreadId, origin)) {
+                HandleUnknown(origin, exception, "reply", target.ThreadId);
+            }
+            return;
+        } finally {
+            origin.Complete(origin.OutcomeUnknown);
+        }
+
+        if (!IsRetainedReply(target.ThreadId, origin)) {
+            return;
+        }
+
+        if (result.IsFailure) {
+            Reject(origin, result, "Unable to append the collaboration message.");
+            return;
+        }
+
+        if (Target?.ThreadId != target.ThreadId || !ReferenceEquals(Reply, origin)) {
+            retainedReplies.Remove(target.ThreadId);
+            return;
+        }
+
+        Reply = new(new()) { Message = "Reply recorded on the selected thread." };
+        var acceptedDraft = Reply;
+        notify(Reply.Message, false);
+        await ReadAsync();
+        if (IsCurrentTarget(target) && ReferenceEquals(Reply, acceptedDraft)
+            && ReadState is CollaborationReadState.Failed or CollaborationReadState.Stale) {
+            acceptedDraft.Message = "Reply saved. Refresh failed; retry the read, not the reply.";
+            changed();
+        }
+    }
+
+    private bool IsRetainedReply(Guid threadId, CollaborationDraft<CollaborationReplyEditorModel> origin)
+        => !disposed && (Target?.ThreadId == threadId && ReferenceEquals(Reply, origin) ||
+            ReferenceEquals(retainedReplies.GetValueOrDefault(threadId), origin));
+
+    public async Task MarkReadAsync(CollaborationTarget target) {
+        if (!IsCurrentTarget(target) || target.IsMarkingRead || target.OutcomeUnknown || Workspace?.SelectedThread is not { IsUnread: true } selected) {
+            return;
+        }
+
+        target.IsMarkingRead = true;
+        target.Message = null;
+        changed();
+        Result result;
+        try {
+            result = await owner.MarkThreadAsReadAsync(CollaborationReadObservation.From(selected));
+        } catch (Exception exception) {
+            logger.LogWarning(exception, "Collaboration mark-read outcome unknown for thread {ThreadId}.", target.ThreadId);
+            target.IsMarkingRead = false;
+            if (IsCurrentTarget(target)) {
+                target.OutcomeUnknown = true;
+                target.Message = "Unread update outcome unknown. Refresh to inspect persisted state.";
+                changed();
+            }
+            return;
+        }
+
+        if (!IsCurrentTarget(target)) {
+            target.IsMarkingRead = false;
+            return;
+        }
+
+        try {
+            target.Message = result.IsSuccess ? "Selected thread marked as read." : FailureMessage(result, "Unable to update unread state.");
+            notify(target.Message, result.IsFailure);
+            if (result.IsSuccess) {
+                await ReadAsync();
+                if (IsCurrentTarget(target) && ReadState is CollaborationReadState.Failed or CollaborationReadState.Stale) {
+                    target.Message = "Unread state saved. Refresh failed; retry the read.";
+                }
+            } else if (result.Errors.Any(error => error.Code == CollaborationWriteConflict.ReadObservationChanged)) {
+                await ReadAsync();
+            }
+        } finally {
+            target.IsMarkingRead = false;
+            if (IsCurrentTarget(target)) {
+                changed();
+            }
+        }
+    }
+
+    public void ClearReply(CollaborationTarget target, CollaborationDraft<CollaborationReplyEditorModel> origin) {
+        if (IsCurrentTarget(target) && ReferenceEquals(Reply, origin) && !origin.IsSaving) {
+            if (origin.OutcomeUnknown) {
+                Reply = new(new() { MessageKind = origin.Model.MessageKind });
+            } else {
+                origin.Model.MessageBody = string.Empty;
+                origin.Context.MarkAsUnmodified();
+            }
+            changed();
+        }
+    }
+
+    public void OpenContext(CollaborationTarget target) {
+        if (!IsCurrentTarget(target) || Workspace?.SelectedThread?.ContextRoute is not { } route) {
+            return;
+        }
+
+        if (IsSafeContextRoute(route)) {
+            navigate(route.Trim());
+        } else {
+            target.Message = "The linked context must be a local application route.";
+            notify(target.Message, true);
+            changed();
+        }
+    }
+
+    public static bool IsSafeContextRoute(string route) {
+        var value = route.Trim();
+        return value.StartsWith('/') && !value.StartsWith("//", StringComparison.Ordinal)
+            && !value.Contains('\\') && !value.Any(char.IsControl);
+    }
+
+    public void OpenScheduler() {
+        if (!disposed) {
+            navigate("/scheduler");
+        }
+    }
+
+    private void HandleUnknown<T>(CollaborationDraft<T> origin, Exception exception, string action, Guid? target) where T : class {
+        logger.LogWarning(exception, "Collaboration {Action} outcome unknown for thread {ThreadId}.", action, target);
+        if (disposed) {
+            return;
+        }
+
+        origin.Complete(unknown: true);
+        origin.Message = "Save outcome unknown. Refresh and inspect Threads before explicitly starting a new draft. This submission cannot be replayed.";
+        changed();
+    }
+
+    private void Reject<T>(CollaborationDraft<T> origin, Result result, string fallback) where T : class {
+        origin.Message = FailureMessage(result, fallback);
+        notify(origin.Message, true);
+        changed();
+    }
+
+    private static string FailureMessage(Result result, string fallback) => result.Errors.FirstOrDefault()?.Message ?? fallback;
+    private bool IsCurrentRead(long generation) => !disposed && generation == readGeneration;
+    private bool IsCurrentTarget(CollaborationTarget target) => !disposed && ReferenceEquals(Target, target);
+
+    private void Publish(UrlHistoryMode mode) {
+        lastRoute = Route;
+        routeDelivered = true;
+        routeChanged(lastRoute, mode);
+    }
+
+    public void Dispose() {
+        disposed = true;
+        ++readGeneration;
+        readCancellation?.Cancel();
+        readCancellation = null;
+    }
+
+    private enum SelectionKind {
+        Initial,
+        Explicit,
+        Empty
+    }
+}

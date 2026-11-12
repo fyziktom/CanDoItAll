@@ -69,7 +69,7 @@ public sealed class CrmHrFinancialsSurfaceTests
         Assert.Equal("month", root.GetAttribute("data-period"));
         var metrics = cut.FindComponents<MetricCard>().Select(card => (card.Instance.Label, card.Instance.Value)).ToArray();
         Assert.Equal(
-            new[]
+            new (string?, string?)[]
             {
                 ("Sold · EUR", $"{80m:N2} EUR"),
                 ("Sold · USD", $"{150m:N2} USD"),
@@ -131,7 +131,7 @@ public sealed class CrmHrFinancialsSurfaceTests
         Assert.Equal("ready", cut.Find("[data-testid='crmhr-financials-panel']").GetAttribute("data-phase"));
         var metrics = cut.FindComponents<MetricCard>().Select(card => (card.Instance.Label, card.Instance.Value)).ToArray();
         Assert.Equal(
-            new[]
+            new (string?, string?)[]
             {
                 ("Sold", CrmHrFinancialsText.NoRecognizedSalesValue),
                 ("Bought", CrmHrFinancialsText.UnavailableValue),

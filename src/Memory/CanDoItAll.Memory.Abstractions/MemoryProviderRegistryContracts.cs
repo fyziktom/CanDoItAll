@@ -107,7 +107,10 @@ public sealed record MemoryProviderProfile(
     MemoryProviderWorkspaceScope WorkspaceScope,
     IReadOnlyList<string> SelectionTags,
     MemoryProviderProfilePolicy DefaultPolicy,
-    MemoryProviderManifest Manifest);
+    MemoryProviderManifest Manifest) {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid? ConfigurationRevision { get; init; }
+}
 
 public sealed record MemoryProviderProfilePolicy(
     MemoryProviderFallbackBehavior FallbackBehavior)

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <InsightsAssetMode Condition="'$(InsightsAssetMode)' == ''">Parity</InsightsAssetMode>
+    <OutputPath>bin/$(InsightsAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(InsightsAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(InsightsAssetMode)' == 'Fast'">$(DefineConstants);INSIGHTS_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Insights.UI/CanDoItAll.Workbench.Insights.UI.csproj" />
+    <Content Remove="wwwroot/css/insights-fast.css" Condition="'$(InsightsAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(InsightsAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireInsightsTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(InsightsAssetMode)' != 'Parity' and '$(InsightsAssetMode)' != 'Fast'"
+           Text="InsightsAssetMode must be Parity or Fast." />
+    <Error Condition="'$(InsightsAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(InsightsAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/insights-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run insights:css:build." />
+  </Target>
+</Project>

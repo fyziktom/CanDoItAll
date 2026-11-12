@@ -142,9 +142,10 @@ public sealed class ProviderLocalBatchDispatcherTests
         Assert.Equal(new[] { 1, 2 }, (await Task.WhenAll(first, second)).Order().ToArray());
     }
 
-    [Fact]
-    public async Task ProviderPipeline_CancellationTimeoutAndPartialFailureArePerRequest()
-    {
+    [Theory]
+    [InlineData(5)]
+    [InlineData(1000)]
+    public async Task ProviderPipeline_CancellationTimeoutAndPartialFailureArePerRequest(int timeoutQueueDelayMilliseconds) {
         var partialKey = CreateKey("partial-model", "chat");
         await using var partialHub = new ProviderLocalBatchDispatcherHub<int, int>();
         var successId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -165,45 +166,46 @@ public sealed class ProviderLocalBatchDispatcherTests
         var cancellationKey = CreateKey("cancel-model", "chat");
         await using var cancellationHub = new ProviderLocalBatchDispatcherHub<int, int>();
         using var canceledRequest = new CancellationTokenSource();
+        var releaseCanceledBatch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var canceledTask = cancellationHub.DispatchAsync(
             new ProviderBatchEnvelope<int>(cancellationKey, 1, Guid.NewGuid()),
             CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
-            SuccessfulBatchAsync,
+            async (items, cancellationToken) => {
+                await releaseCanceledBatch.Task.WaitAsync(cancellationToken);
+                return await SuccessfulBatchAsync(items, cancellationToken);
+            },
             canceledRequest.Token);
-        await canceledRequest.CancelAsync();
-        var unrelatedResult = await cancellationHub.DispatchAsync(
-            new ProviderBatchEnvelope<int>(cancellationKey, 42, Guid.NewGuid()),
-            CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
-            SuccessfulBatchAsync);
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledTask);
-        Assert.Equal(42, unrelatedResult);
+        try {
+            await canceledRequest.CancelAsync();
+            var unrelatedTask = cancellationHub.DispatchAsync(
+                new ProviderBatchEnvelope<int>(cancellationKey, 42, Guid.NewGuid()),
+                CreatePolicy(cancellationKey, maxBatchSize: 2, maxQueueDelay: TimeSpan.FromMilliseconds(40)),
+                SuccessfulBatchAsync);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => canceledTask).WaitAsync(TimeSpan.FromSeconds(5));
+            releaseCanceledBatch.TrySetResult();
+            Assert.Equal(42, await unrelatedTask.WaitAsync(TimeSpan.FromSeconds(5)));
+        } finally {
+            releaseCanceledBatch.TrySetResult();
+        }
 
         var timeoutKey = CreateKey("timeout-model", "chat");
         await using var timeoutHub = new ProviderLocalBatchDispatcherHub<int, int>();
-        var timedOutBatchStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseTimedOutBatch = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var timeoutTask = timeoutHub.DispatchAsync(
             new ProviderBatchEnvelope<int>(timeoutKey, 5, Guid.NewGuid()),
             CreatePolicy(
                 timeoutKey,
                 maxBatchSize: 2,
-                maxQueueDelay: TimeSpan.FromMilliseconds(5),
+                maxQueueDelay: TimeSpan.FromMilliseconds(timeoutQueueDelayMilliseconds),
                 requestTimeout: TimeSpan.FromMilliseconds(40)),
-            async (items, _) =>
-            {
-                timedOutBatchStarted.SetResult();
+            async (items, _) => {
                 await releaseTimedOutBatch.Task;
                 return items.Select(item => ProviderBatchItemResult<int>.Succeeded(item.CorrelationId, item.Payload)).ToList();
             });
 
-        try
-        {
-            await timedOutBatchStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            await Assert.ThrowsAsync<TimeoutException>(() => timeoutTask);
-        }
-        finally
-        {
+        try {
+            await Assert.ThrowsAsync<TimeoutException>(() => timeoutTask).WaitAsync(TimeSpan.FromSeconds(5));
+        } finally {
             releaseTimedOutBatch.TrySetResult();
         }
 

@@ -1,12 +1,16 @@
 @namespace CanDoItAll.AgentFramework.UI.History
 @using CanDoItAll.AgentFramework.ProviderHistory
+@implements IDisposable
+@{
+    var renderedOrigin = Presentation.Origin;
+}
 <div class="history-results-surface" data-testid="history-results-surface">
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
     <Cluster Gap="LayoutGap.Small">
         @if (Presentation.Phase == HistorySearchPhase.Loading) {
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Cancel()))" data-testid="history-cancel" />
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Cancel(renderedOrigin)))" data-testid="history-cancel" />
         }
-        <Button Text="Clear results" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Clear()))"
+        <Button Text="Clear results" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Clear(renderedOrigin)))"
                 Disabled="@(Presentation.AppliedQuery is null)" data-testid="history-clear" />
     </Cluster>
     @if (Presentation.AppliedQuery is { } applied) {
@@ -52,14 +56,17 @@
                 </DataGridColumn>
                 <DataGridColumn TItem="HistoryEntry" Title="Evidence">
                     <Template Context="entry">
-                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(entry.Id)))" data-testid="history-details" />
+                        @{
+                            var rowOrigin = Presentation.Origin;
+                        }
+                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(rowOrigin, entry.Id)))" data-testid="history-details" />
                     </Template>
                 </DataGridColumn>
             </Columns>
         </DataGrid>
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Previous" Disabled="@(!Presentation.CanPrevious)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Previous()))" data-testid="history-previous" />
-            <Button Text="Next" Disabled="@(!Presentation.CanNext)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Next()))" data-testid="history-next" />
+            <Button Text="Previous" Disabled="@(!Presentation.CanPrevious)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Previous(renderedOrigin)))" data-testid="history-previous" />
+            <Button Text="Next" Disabled="@(!Presentation.CanNext)" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Next(renderedOrigin)))" data-testid="history-next" />
             @if (Presentation.HasEarlierPages) {
                 <span>Only the last 32 previous pages are retained. Search again to return to the beginning.</span>
             }
@@ -72,4 +79,9 @@
 @code {
     [Parameter, EditorRequired] public HistoryResultsPresentation Presentation { get; set; } = HistoryResultsPresentation.Initial;
     [Parameter] public EventCallback<HistoryResultsIntent> OnIntent { get; set; }
+
+    public void Dispose() {
+        Presentation = HistoryResultsPresentation.Initial;
+        OnIntent = default;
+    }
 }

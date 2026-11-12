@@ -6,6 +6,12 @@ Product module that exposes AgentFramework catalog, provider, governed execution
 Chats presentation, shared provider-usage analytics, and technical-agent bridge capabilities to the app
 runtime.
 
+The Agent catalog owns the retained-policy recovery entry point even when its Agent no
+longer exists. `AgentDecisionPolicyRecoverySession` validates the current workspace
+around bounded browser reads and rejects a changed selection. The existing editor
+session looks up the original receipt; the recovery dialog never dispatches a new save.
+Cancellation and retirement prevent late reads from opening another workspace's editor.
+
 ## Project Type
 
 - SDK: `Microsoft.NET.Sdk.Razor`
@@ -21,6 +27,75 @@ dotnet build src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.Ag
 The authoritative project and package dependency list is in [CanDoItAll.Modules.AgentFramework.csproj](CanDoItAll.Modules.AgentFramework.csproj). This README focuses on the project's purpose, boundaries, and validation.
 
 ## Architecture Notes
+
+Floating agent operations use an application-owned execution scope. Browser refresh
+and circuit disposal detach the view without cancelling the accepted run. The scope
+also retains transient context while approval or continuation is pending. The scoped
+recovery service projects only the verified owner's current-profile executions into
+Active chats and reconnects their existing activity streams. Reopening uses the saved
+safe module route; normal route publication and canonical authority checks still apply.
+See [execution lifetime](../../../docs/architecture/agent-chat-execution-lifetime.md)
+for boundaries, retention and server-restart limits.
+
+Workflow catalog list, search and lookup project the current head's metadata without
+loading its graph JSON. Six provenance and external-identity columns are populated by
+the same version append as the complete immutable definition. Existing rows are backfilled
+by `20261104001801_AddWorkflowCatalogMetadata`; the graph remains authoritative and
+unchanged. Selected definition/version reads still load the complete document.
+
+The native catalog page uses bounded search pages and an exact selected-ID metadata
+lookup. Committed definition create/content/status/delete changes publish dataset-scoped
+hints. Quiet catalog reads revalidate current Workflow read access and retain the open
+canvas definition, original version, filters, paging and expanded groups. Read failure
+keeps the previous catalog with an explicit warning. Notifications never grant write
+authority or replace the conditional head check. A lost hint cannot admit a stale save.
+
+Workflow definition saves and lifecycle commands require the original version for existing
+heads. Preserved-ID import accepts an explicit original version; null is create-only
+absence. Delete takes `WorkflowDefinitionDeleteRequest` with its original head version;
+the API requires `expectedVersionId` and returns409 for missing, empty, stale or retired
+observations. Native delete/save races use the existing head concurrency token and one
+transaction, preserving the winning history. Deletion retains runtime runs and components.
+
+The [complete Agent editor renderer](../../UI/CanDoItAll.AgentFramework.Editor.UI/README.md)
+owns the form shell, all ten sections, Memory/root child rendering and small confirmations. `AgentDetailsDialog` retains
+the single editor session and whole-agent commands, all authority and reconciliation,
+Memory eligibility, root binding resolution, AvatarPicker integration, native capability-definition operations and shared-provider refresh. Refresh
+publication is fenced by both editor origin and provider selection revision, including
+A→B→A. Verification uses native proof receipts independently of whole-agent Save and retains
+the unsaved draft. The [A2 record](../../../docs/architecture/agent-editor-completion-a2.md) documents the
+selected boundary and validation; it does not declare every AgentFramework surface complete.
+
+The [capability authoring renderer](../../UI/CanDoItAll.AgentFramework.CapabilityAuthoring.UI/README.md)
+owns all wizard steps, details tabs, typed MCP/Skill/Tool fields, bounded upload, raw metadata
+and setup-result presentation. Thin native dialogs retain setup effects, save fingerprints and
+accepted identities; existing-agent assignment still saves the whole dirty agent draft.
+Technical-team metadata, icon and member views use AgentFramework.UI. The catalog host and
+coordinated owner retain exact-team/profile writes, membership preservation and postcommit
+read recovery. Grouping grants no runtime or storage authority. See the
+[CA1 record](../../../docs/architecture/agent-authoring-ui-ca1.md) for final independent and native proof.
+
+The [AC1 boundary](../../../docs/architecture/agents-completion-ac1.md) adds the native
+Agents shell, complete Usage detail family, runtime/log, context/close, attachment and
+avatar renderers to the existing light UI. This module retains route/read/default-feed
+orchestration, safe runtime projection, original dialog references, context leases,
+durable approvals and cancellation. Usage queries retain their accepted UTC window and
+opening profile/actor lifetime; a later read cannot publish into a successor view.
+Voice and Floating Settings still use the canonical installation settings owner. Voice
+playback and SimpleChat floating dialogs retire only their own activation. The
+workflow settings value carries its original `UpdatedAtUtc` through reads and saves;
+Voice retains that original through its form instead of authorizing an old form with a
+new read. Native replacements use the existing timestamp column as an EF concurrency
+token, with monotonic microsecond revisions and create-only absence. Native authoring
+commits recheck a supplied UI admission after SQL and before transaction commit. Floating
+chat has its own settings key and remains a separate authoring adoption checkpoint.
+The
+Simple Chat workspace composes the existing SimpleChats UI leaf's complete
+Start/Rename/Archive forms while retaining authorization, revision pinning and persistence.
+The
+[current census](../../../docs/architecture/agents-renderer-census.csv) and
+[asset closure](../../../docs/architecture/agents-renderer-assets.md) distinguish these
+intentional adapters from renderers and retained unreachable public components.
 
 This module owns product semantics for its bounded area. Keep business behavior here and expose it through typed services, Razor components, and module contracts. UI and transport adapters should call into these services instead of duplicating module logic.
 

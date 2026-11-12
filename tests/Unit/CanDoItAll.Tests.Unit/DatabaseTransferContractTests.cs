@@ -9,8 +9,11 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class DatabaseTransferContractTests {
     [Fact]
-    public void Public_handler_request_contains_only_profile_and_selection_data() {
-        Assert.Equal(new[] { "ReplaceExisting", "SourceProfile", "TargetProfile" }, typeof(DatabaseTransferOperation).GetProperties().Select(property => property.Name).Order());
+    public void Public_handler_request_contains_only_profiles_selection_and_reviewed_revisions() {
+        Assert.Equal(new[] { "Observations", "ReplaceExisting", "SourceProfile", "TargetProfile" },
+            typeof(DatabaseTransferOperation).GetProperties().Select(property => property.Name).Order());
+        Assert.Equal(typeof(IReadOnlyDictionary<string, DatabaseTransferObservation>),
+            typeof(DatabaseTransferOperation).GetProperty(nameof(DatabaseTransferOperation.Observations))!.PropertyType);
         Assert.False(typeof(DatabaseTransferOwnerSession).IsPublic);
         Assert.DoesNotContain(typeof(ProjectTransferTargetInspectionRunner).GetMethods(), method => method.Name == "Begin");
         foreach (var method in typeof(IDatabaseTransferHandler).GetMethods().Where(method => !method.IsSpecialName)) {

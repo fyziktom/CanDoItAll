@@ -1,0 +1,22 @@
+{
+  "observationLimitation": {
+    "precedingClosedRoot": "p03-created-definition-validation",
+    "recordedUtc": "2026-10-18T17:03:57.099468-04:00",
+    "limitation": "Observer refused the changed lane manifest before baseline capture. Tests began before this repair; observation starts late. Source and runtime remain frozen. Prior closed run database list is the pre-test baseline; owned child identity must be reconciled from command and fixture evidence.",
+    "command": "execute-created-definition-repair",
+    "owner": "concurrent-mutations"
+  },
+  "passed": 13,
+  "evidenceRoot": ".artifacts/concurrent-mutations/validation/p03-created-definition-restart-validation",
+  "failed": 0,
+  "discovered": 13,
+  "scope": "Seven live/reconciliation fixtures and six actual seed/Web restart scenarios",
+  "sourceRuntime": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceFiles": 9087,
+    "runtimeFiles": 4182,
+    "sourceSha256": "1BD30855B938231807B225A92D5A5F8CC4046309D6C3E3EA7C3C0CA7998A2A70",
+    "runtimeSha256": "FCD6A3376528420459ED2A18B4E199682E59E1508D1685EB6F56E822FC181DBF"
+  },
+  "executed": 13
+}

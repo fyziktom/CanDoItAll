@@ -16,9 +16,13 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
 {
     public async ValueTask<FileToolsBrowseSession> CreateAsync(
         FileToolsSemanticScope scope,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         IReadOnlyList<FileToolsStorageBinding> bindings = await bindingProvider.ResolveAsync(scope, cancellationToken);
         if (bindings.Count > StorageBrowseCacheKeyBuilder.MaximumSourceCount)
         {
@@ -45,6 +49,23 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                 ?? throw new FileBrowserProviderException(new FileBrowserError(
                     FileBrowserErrorCode.NotFound,
                     "A storage binding for the semantic file scope no longer exists."));
+            var originalSource = storage.BuildContentSourceFingerprint();
+            async ValueTask AuthorizeSourceReadAsync(CancellationToken token) {
+                if (authorizeRead is not null) {
+                    await authorizeRead(token);
+                }
+                var currentBindings = await bindingProvider.ResolveAsync(scope, token);
+                var matches = currentBindings.Where(current => current.StorageId == binding.StorageId).Take(2).ToArray();
+                var currentStorage = await storageCatalog.GetDriverAsync(binding.StorageId, token);
+                if (matches.Length != 1 || matches[0].Root != binding.Root || currentStorage is null || !currentStorage.IsEnabled ||
+                    currentStorage.BuildContentSourceFingerprint() != originalSource) {
+                    throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable,
+                        "The original file collection source is unavailable or changed. Reopen the collection with current access.");
+                }
+                if (authorizeRead is not null) {
+                    await authorizeRead(token);
+                }
+            }
             IStorageBrowseDriver driver;
             try
             {
@@ -82,7 +103,8 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                 storage,
                 listingDriver,
                 driver,
-                actionAvailability);
+                actionAvailability,
+                AuthorizeSourceReadAsync);
             if (!sourceIds.Add(provider.Descriptor.Id))
             {
                 throw new FileBrowserProviderException(new FileBrowserError(
@@ -97,6 +119,9 @@ internal sealed class StorageFileToolsBrowseSessionFactory(
                 revisions.Get(scope, storage.Id)));
         }
 
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         return new FileToolsBrowseSession(
             scope,
             providers,

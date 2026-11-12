@@ -16,7 +16,8 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
     DbContextOptions<AgentProjectAccessDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction,
     AgentProjectAccessClaimOptions claimOptions,
-    ProjectWriteAdmissionService writeAdmissionService)
+    ProjectWriteAdmissionService writeAdmissionService,
+    IProjectDeletionCompletionQuery deletionCompletions)
     : IProjectDeletionParticipant
 {
     private readonly AgentProjectAccessClaimOptions options = claimOptions.Validate();
@@ -31,54 +32,72 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         "Retry the exact Agent Framework project-access cleanup with this recovery id.";
 
     public ProjectDeletionParticipantId Id { get; } = new(ParticipantIdValue);
+    public int RecoveryProtocolVersion => AgentProjectDeletionBinding.ProtocolVersion;
 
     public IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; } = [];
 
-    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
-        Guid projectId,
+    public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(Guid projectId,
         CancellationToken cancellationToken = default)
-    {
-        if (projectId == Guid.Empty)
-        {
-            throw new ArgumentException("A project id is required.", nameof(projectId));
-        }
+        => throw new NotSupportedException("Project-access cleanup preparation requires the original typed deletion completion context.");
 
-        var admission = await writeAdmissionService.CaptureForMutationAsync(projectId, cancellationToken);
-        var reservation = admission is null
-            ? await writeAdmissionService.CaptureReservedCreationForMutationAsync(projectId, cancellationToken) : null;
-        var lifetimeId = admission?.LifetimeId ?? reservation?.LifetimeId;
-        var profileId = admission?.DatabaseProfileId ?? reservation?.DatabaseProfileId;
-        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectDeletionPreparationContext original,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        await writeAdmissionService.RequireForMutationAsync(original.Project, cancellationToken);
+        return await PrepareCoreAsync(original, cancellationToken);
+    }
+
+    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        await writeAdmissionService.RequireReservedCancellationForMutationAsync(original, cancellationToken);
+        return await PrepareCoreAsync(original.Completion, cancellationToken);
+    }
+
+    private async Task<ProjectDeletionParticipantPreparation?> PrepareCoreAsync(ProjectDeletionPreparationContext original,
+        CancellationToken cancellationToken) {
+        var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
             contextOptions, static options => new AgentProjectAccessDbContext(options), cancellationToken);
-        var record = await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
-            .SingleOrDefaultAsync(record => record.ProjectId == projectId && record.ProjectLifetimeId == lifetimeId, cancellationToken);
-        if (record is not null && record.DatabaseProfileId != profileId) {
-            throw new InvalidOperationException("The stored project-access revocation belongs to another database profile.");
-        }
-        if (record?.Status == AgentProjectStructureAccessRevocationStatus.Completed) {
+        Exception? primary = null;
+        try {
+            coordinatedTransaction.RequireOwnerProfile(dbContext);
+            var project = original.Project;
+            var record = await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
+                .SingleOrDefaultAsync(record => record.ProjectId == project.ProjectId &&
+                    record.ProjectLifetimeId == project.LifetimeId, cancellationToken);
+            if (record is not null && OriginalContext(record) != original) {
+                throw new InvalidOperationException("The retained project-access cleanup belongs to another or legacy deletion completion.");
+            }
+            if (record?.Status == AgentProjectStructureAccessRevocationStatus.Completed) {
+                return null;
+            }
+            if (record is null) {
+                var now = timeProvider.GetUtcNow();
+                record = new AgentProjectStructureAccessRevocationRecord {
+                    Id = Guid.NewGuid(),
+                    ProjectId = project.ProjectId,
+                    DatabaseProfileId = project.DatabaseProfileId,
+                    ProjectLifetimeId = project.LifetimeId,
+                    CompletionNamespaceId = original.Completion.Namespace.Value,
+                    CompletionId = original.Completion.Id.Value,
+                    Status = AgentProjectStructureAccessRevocationStatus.Pending,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now
+                };
+                await dbContext.Set<AgentProjectStructureAccessRevocationRecord>().AddAsync(record, cancellationToken);
+            }
             await dbContext.SaveChangesAsync(cancellationToken);
-            return null;
+            return new(project.ProjectId, record.Id);
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            try {
+                await dbContext.DisposeAsync();
+            } catch (Exception cleanup) when (primary is not null) {
+                throw new AggregateException("Agent project-access preparation and enlisted context release failed.", primary, cleanup);
+            }
         }
-
-        if (record is null)
-        {
-            var now = timeProvider.GetUtcNow();
-            record = new AgentProjectStructureAccessRevocationRecord
-            {
-                Id = Guid.NewGuid(),
-                ProjectId = projectId,
-                DatabaseProfileId = profileId,
-                ProjectLifetimeId = lifetimeId,
-                Status = AgentProjectStructureAccessRevocationStatus.Pending,
-                CreatedAtUtc = now,
-                UpdatedAtUtc = now
-            };
-            await dbContext.Set<AgentProjectStructureAccessRevocationRecord>()
-                .AddAsync(record, cancellationToken);
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return new ProjectDeletionParticipantPreparation(projectId, record.Id);
     }
 
     public async Task<ProjectDeletionParticipantCompletion> CompleteAsync(
@@ -100,6 +119,7 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
     private async Task<ProjectDeletionParticipantCompletion> CompleteCoreAsync(
         ProjectDeletionParticipantPreparation preparation, CancellationToken cancellationToken) {
         var record = await LoadRequiredRecordAsync(preparation, cancellationToken);
+        await RequireOwnerReleaseAsync(record, cancellationToken);
         if (record.Status == AgentProjectStructureAccessRevocationStatus.Completed) {
             return ProjectDeletionParticipantCompletion.Empty(preparation.RecoveryId);
         }
@@ -118,6 +138,7 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
             if (!await TryRenewClaimAsync(claim, processingCancellation.Token)) {
                 throw new InvalidOperationException("Agent project-access revocation lost its claim before workspace dispatch.");
             }
+            await RequireOwnerReleaseAsync(record, processingCancellation.Token);
             await workspaceService.RevokeProjectStructureLifetimeAccessFromAllAgentsAsync(
                 ResolveRevocationTarget(record), processingCancellation.Token);
             await StopHeartbeatAsync(heartbeatStop, heartbeatTask, suppressFailure: false);
@@ -145,14 +166,64 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         var records = await dbContext.Set<AgentProjectStructureAccessRevocationRecord>().AsNoTracking()
             .Where(record => record.Status != AgentProjectStructureAccessRevocationStatus.Completed)
             .OrderBy(record => record.CreatedAtUtc).ToListAsync(cancellationToken);
-        return records.Select(record => {
+        var recoveries = new List<ProjectDeletionParticipantRecovery>(records.Count);
+        foreach (var record in records) {
+            var original = OriginalContext(record);
+            var released = original is not null &&
+                await deletionCompletions.ObserveAsync(original, new(Id, record.Id), cancellationToken)
+                    is ProjectDeletionCompletionObservation.Released;
             var lastOwnershipAt = record.LastAttemptAtUtc is { } attempted && attempted > record.UpdatedAtUtc
                 ? attempted : record.UpdatedAtUtc;
             var retryAt = lastOwnershipAt + options.LeaseDuration;
             var active = record.Status == AgentProjectStructureAccessRevocationStatus.Processing && retryAt > now;
-            return new ProjectDeletionParticipantRecovery(record.ProjectId, record.Id, MapRecoveryStatus(record.Status),
-                CanRetryNow: !active, RetryAvailableAtUtc: active ? retryAt : null, RetryGuidance: RetryGuidance);
-        }).ToArray();
+            recoveries.Add(new(record.ProjectId, record.Id, MapRecoveryStatus(record.Status),
+                CanRetryNow: released && !active, RetryAvailableAtUtc: released && active ? retryAt : null,
+                RetryGuidance: released ? RetryGuidance
+                    : "Retain the original recovery. Deletion owner release or explicit legacy reconciliation is required before retry."));
+        }
+        return recoveries;
+    }
+
+    public async Task<ProjectDeletionParticipantObservation> ObserveCompletionAsync(ProjectDeletionPreparationContext original,
+        Guid recoveryId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        if (recoveryId == Guid.Empty) {
+            throw new ArgumentException("Exact deletion completion observation requires a recovery identity.", nameof(recoveryId));
+        }
+        var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        Exception? readFailure = null;
+        AgentProjectStructureAccessRevocationRecord? record;
+        try {
+            if (context.Database.CurrentTransaction is not null || System.Transactions.Transaction.Current is not null ||
+                    context.Database.IsRelational() && System.Transactions.TransactionsDatabaseFacadeExtensions.GetEnlistedTransaction(context.Database) is not null ||
+                    context.ChangeTracker.Entries().Any()) {
+                throw new InvalidOperationException("Deletion participant observation requires an independent read context.");
+            }
+            coordinatedTransaction.RequireOwnerProfile(context);
+            record = await context.Set<AgentProjectStructureAccessRevocationRecord>().AsNoTracking()
+                .SingleOrDefaultAsync(row => row.Id == recoveryId, cancellationToken);
+        } catch (Exception failure) {
+            readFailure = failure;
+            throw;
+        } finally {
+            try {
+                await context.DisposeAsync();
+            } catch (Exception cleanupFailure) when (readFailure is not null) {
+                throw new AggregateException("Deletion participant observation and context disposal both failed.", readFailure, cleanupFailure);
+            }
+        }
+        if (record is null) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.MissingRecord);
+        }
+        if (OriginalContext(record) != original) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.OriginalBindingMismatch);
+        }
+        if (!Enum.IsDefined(record.Status)) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.InvalidStoredState);
+        }
+        return record.Status == AgentProjectStructureAccessRevocationStatus.Completed
+            ? new ProjectDeletionParticipantObservation.Completed(ProjectDeletionParticipantCompletion.Empty(recoveryId))
+            : new ProjectDeletionParticipantObservation.Pending(MapRecoveryStatus(record.Status));
     }
 
     public async Task<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>> ListCompletionNoticesAsync(
@@ -343,14 +414,24 @@ internal sealed class AgentProjectStructureAccessDeletionParticipant(
         };
     }
 
+    private async Task RequireOwnerReleaseAsync(AgentProjectStructureAccessRevocationRecord record,
+        CancellationToken cancellationToken) {
+        var original = OriginalContext(record);
+        if (original is null || await deletionCompletions.ObserveAsync(original, new(Id, record.Id), cancellationToken)
+                is not ProjectDeletionCompletionObservation.Released) {
+            throw new ProjectDeletionParticipantCleanupException(record.Id,
+                "The exact deletion owner release is not confirmed. Retain the original recovery and reconcile its owner before retrying.");
+        }
+    }
+
+    private ProjectDeletionPreparationContext? OriginalContext(AgentProjectStructureAccessRevocationRecord record)
+        => AgentProjectDeletionBinding.Read(record, writeAdmissionService.DatabaseProfileId);
+
     private AgentProjectStructureRevocationTarget ResolveRevocationTarget(AgentProjectStructureAccessRevocationRecord record) {
-        if (record.DatabaseProfileId is null && record.ProjectLifetimeId is null) {
-            return AgentProjectStructureRevocationTarget.UnboundLegacy(writeAdmissionService.DatabaseProfileId, record.ProjectId);
-        }
-        if (record.DatabaseProfileId != writeAdmissionService.DatabaseProfileId || record.ProjectLifetimeId is not { } lifetimeId) {
-            throw new InvalidOperationException("The stored project-access revocation does not belong to the canonical project lifetime profile.");
-        }
-        return AgentProjectStructureRevocationTarget.ForLifetime(new(record.DatabaseProfileId.Value, record.ProjectId, lifetimeId));
+        var original = OriginalContext(record) ?? throw new ProjectDeletionParticipantCleanupException(record.Id,
+            "Legacy project-access cleanup requires explicit original-owner reconciliation.");
+        return AgentProjectStructureRevocationTarget.ForLifetime(new(original.Project.DatabaseProfileId,
+            original.Project.ProjectId, original.Project.LifetimeId));
     }
 
     private static SemaphoreSlim ResolveCompletionLock(Guid recoveryId)
@@ -370,6 +451,8 @@ public enum AgentProjectStructureAccessRevocationStatus
 
 public sealed class AgentProjectStructureAccessRevocationRecord
 {
+    internal static string PendingFilter => FormattableString.Invariant($"\"Status\" <> {(int)AgentProjectStructureAccessRevocationStatus.Completed}");
+
     public Guid Id { get; set; }
 
     public Guid ProjectId { get; set; }
@@ -377,6 +460,10 @@ public sealed class AgentProjectStructureAccessRevocationRecord
     public Guid? DatabaseProfileId { get; set; }
 
     public Guid? ProjectLifetimeId { get; set; }
+
+    public Guid? CompletionNamespaceId { get; set; }
+
+    public Guid? CompletionId { get; set; }
 
     public AgentProjectStructureAccessRevocationStatus Status { get; set; }
 
@@ -398,10 +485,15 @@ internal sealed class AgentProjectStructureAccessRevocationRecordConfiguration
 {
     public void Configure(EntityTypeBuilder<AgentProjectStructureAccessRevocationRecord> builder)
     {
-        builder.ToTable("AgentFramework_ProjectAccessRevocations", table => table.HasCheckConstraint(
-            "CK_AF_ProjectAccessRevocations_Lifetime",
-            "(\"DatabaseProfileId\" IS NULL AND \"ProjectLifetimeId\" IS NULL) OR (\"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)"));
+        builder.ToTable("AgentFramework_ProjectAccessRevocations", table => {
+            table.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Lifetime",
+                "(\"DatabaseProfileId\" IS NULL AND \"ProjectLifetimeId\" IS NULL) OR (\"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
+            table.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Completion",
+                "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR (\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND \"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
+        });
         builder.HasKey(record => record.Id);
+        builder.HasIndex(record => record.Id, "IX_AF_ProjectAccessRevocations_Unfinished")
+            .HasFilter(AgentProjectStructureAccessRevocationRecord.PendingFilter);
         builder.Property(record => record.Status).HasConversion<int>();
         builder.Property(record => record.LastFailureCode).HasMaxLength(256);
         builder.HasIndex(record => record.ProjectId)

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.IO.Compression;
 using System.Reflection;
@@ -8,15 +9,18 @@ using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Web.Api;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -426,6 +430,40 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Equal(WorkflowExecutorSourceKind.LocalPackage, executor.Source.Kind);
         Assert.Equal(manifest.Plugin.Id.Value, executor.Source.PluginId);
         Assert.Equal(manifest.Plugin.Package!.PackageId.Value, executor.Source.PackageId);
+
+        Assert.True((await catalogService.InstallAsync(manifest.Plugin.Id, new(Enable: true, Actor: "integration-test"))).IsSuccess);
+        var settings = scope.ServiceProvider.GetRequiredService<PluginSettingsService>();
+        var granted = await settings.UpdateGrantAsync(manifest.Plugin.Id,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Granted), "integration-test");
+        Assert.True(granted.IsSuccess);
+        var node = CreateSimulationExecutorNode("fixture", executor);
+        var definition = CreateSingleExecutorSimulationWorkflow(node) with {
+            Name = "Actual inert package invocation", Description = "Registered package executor with the real grant and observer."
+        };
+        await using (var invocationScope = services.CreateAsyncScope()) {
+            var result = await invocationScope.ServiceProvider.GetRequiredService<IWorkflowExecutorInvoker>()
+                .ExecuteAsync(definition, node, new("{}"));
+            using var payload = JsonDocument.Parse(result.PayloadJson);
+            Assert.True(payload.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Equal(node.Id, result.NodeId);
+            Assert.Contains(await invocationScope.ServiceProvider.GetRequiredService<PluginLogStore>()
+                .ListAsync(new(PluginLogStreamKind.Runtime, manifest.Plugin.Id)), item => item.OperationKind == PluginLogOperationKind.ExecutorCompleted);
+        }
+        Assert.True((await settings.UpdateGrantAsync(manifest.Plugin.Id,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied) {
+                ExpectedConcurrencyToken = granted.Value!.ConcurrencyToken
+            }, "integration-test")).IsSuccess);
+        await using var deniedScope = services.CreateAsyncScope();
+        Assert.False(deniedScope.ServiceProvider.GetRequiredService<PluginGrantEvaluator>()
+            .Evaluate(manifest.Plugin.Id, PluginCapabilityKind.WorkflowExecutor).Allowed);
+        Assert.True((await catalogService.InstallAsync(Office365PluginConstants.PluginId,
+            new(Enable: true, Actor: "integration-test"))).IsSuccess);
+        Assert.True((await settings.UpdateGrantAsync(Office365PluginConstants.PluginId,
+            new(PluginCapabilityKind.WorkflowExecutor, PluginGrantState.Denied), "integration-test")).IsSuccess);
+        var deniedNode = CreateSimulationExecutorNode("denied-office365",
+            executorCatalog.GetRequiredExecutor(Office365PluginConstants.DownloadByCategoryExecutorId));
+        await Assert.ThrowsAnyAsync<InvalidOperationException>(() => deniedScope.ServiceProvider.GetRequiredService<IWorkflowExecutorInvoker>()
+            .ExecuteAsync(CreateSingleExecutorSimulationWorkflow(deniedNode), deniedNode, new("{}")).AsTask());
     }
 
     [Fact]
@@ -560,11 +598,17 @@ public sealed class PluginCatalogIntegrationTests
         var lifetime = services.GetRequiredService<TestHostApplicationLifetime>();
 
         await restartService.MarkRestartRequiredAsync("Integration restart proof.", "integration-test");
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = lifetime.ApplicationStopping.Register(() => stopped.TrySetResult());
         var restartResult = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("integration-test"));
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        var repeated = await restartService.RequestRestartAsync(new PluginRuntimeRestartRequest("duplicate-test"));
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(restartResult.IsSuccess, FormatErrors(restartResult.Errors));
         Assert.True(restartResult.Value!.IsRestartRequested);
+        Assert.True(repeated.IsSuccess);
+        Assert.Equal(restartResult.Value.RequestedAtUtc, repeated.Value!.RequestedAtUtc);
+        Assert.Equal("integration-test", repeated.Value.RequestedBy);
         Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 
@@ -1090,23 +1134,57 @@ public sealed class PluginCatalogIntegrationTests
             return;
         }
 
+        await using var environment = CanDoItAllTestEnvironment.Create("docker-plugin-live-proof");
+        var profile = environment.CreatePostgreSqlProfile("plugins");
+        var packagePaths = CreatePackagePathOverrides(environment.RootPath);
+        Directory.CreateDirectory(packagePaths.CatalogRootPath);
+        await File.WriteAllBytesAsync(
+            Path.Combine(packagePaths.CatalogRootPath, "docker-runtime-package.zip"),
+            await CreateDockerPackageArchiveAsync(CreateDockerPackageManifest()));
+        await using (var services = await BuildServiceProviderAsync(profile, [], packagePaths.ConfigurationOverrides)) {
+            await using var scope = services.CreateAsyncScope();
+            var packages = scope.ServiceProvider.GetRequiredService<PluginPackageService>();
+            var installed = await packages.InstallFromCatalogAsync(
+                DockerPluginConstants.PackageId,
+                new PluginPackageInstallRequest(Enable: true, Actor: "docker-proof"));
+            Assert.True(installed.IsSuccess, FormatErrors(installed.Errors));
+            Assert.True(installed.Value!.RestartRequired);
+        }
+
         await using var host = await ApiTestHost.CreateAsync(
-            jwtEnabled: false,
+            jwtEnabled: true,
             configureServices: services =>
             {
                 services.RemoveAll<IWorkflowLlmComponentInvoker>();
                 services.AddScoped<IWorkflowLlmComponentInvoker, DockerLogSummaryLlmInvoker>();
-            });
+            },
+            sharedTestEnvironment: environment,
+            sharedActiveProfile: profile,
+            apiConfiguration: packagePaths.ConfigurationOverrides);
+        var token = host.App.Services.GetRequiredService<IApiTokenService>().IssueToken(new ApiTokenIssueRequest {
+            Subject = "docker-proof",
+            DisplayName = "Docker live proof",
+            Scopes = [ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows,
+                ApiAccessScopeNames.ExecuteWorkflows, ApiAccessScopeNames.RespondWorkflows,
+                ApiAccessScopeNames.ReadPlugins, ApiAccessScopeNames.WritePlugins]
+        });
+        host.Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(token.TokenType, token.Token);
         await ConfigureDockerPluginForProofAsync(host);
         var component = await SaveDockerLogSummaryComponentAsync(host);
-        var workflow = CreateDockerProofWorkflow(component.Id);
+        var draft = CreateDockerProofWorkflow(component);
+        using var savedResponse = await host.Client.PostAsJsonAsync("/api/workflows/definitions",
+            new WorkflowDefinitionSaveRequest(null, null, draft.Name, draft.Description,
+                draft.Status, draft.Graph, draft.RuntimePolicy));
+        var savedBody = await savedResponse.Content.ReadAsStringAsync();
+        Assert.True(savedResponse.IsSuccessStatusCode, savedBody);
+        var workflow = JsonSerializer.Deserialize<WorkflowDefinition>(savedBody, JsonOptions)!;
 
         var response = await host.Client.PostAsJsonAsync(
             "/api/workflows/test-runs",
             new WorkflowTestRunRequest(
-                WorkflowId: null,
-                VersionId: null,
-                DraftDefinition: workflow,
+                WorkflowId: workflow.Id,
+                VersionId: workflow.VersionId,
+                DraftDefinition: null,
                 InputJson: "{}",
                 RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
                 ValidateOnly: false));
@@ -1116,8 +1194,35 @@ public sealed class PluginCatalogIntegrationTests
 
         Assert.True(result.Succeeded, result.ErrorMessage);
         Assert.NotNull(result.Run);
-        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
-        var eventText = string.Join(Environment.NewLine, result.Events.Select(item => item.Message + item.PayloadJson));
+        Assert.Equal(WorkflowRunState.WaitingForInput, result.Run.State);
+        foreach (var node in workflow.Graph.Nodes.Where(node => node.Kind == WorkflowNodeKind.Executor)) {
+            var pending = Assert.Single((await host.Client.GetFromJsonAsync<WorkflowPendingExternalRequestApiResponse[]>(
+                $"/api/workflows/runs/{result.Run.RunId.Value:D}/pending-requests", JsonOptions))!);
+            Assert.Equal(node.Id.Value, pending.NodeId);
+            Assert.Equal(WorkflowExternalRequestKind.Approval, pending.Kind);
+            using var approval = new HttpRequestMessage(HttpMethod.Post,
+                $"/api/workflows/external-requests/{pending.Id:D}/response") {
+                Content = JsonContent.Create(new WorkflowExternalResponseApiRequest(
+                    pending.Version, JsonSerializer.SerializeToElement(new { approved = true })), options: JsonOptions)
+            };
+            approval.Headers.Add("Idempotency-Key", $"docker-proof-{pending.Id:N}");
+            using var approvedResponse = await host.Client.SendAsync(approval);
+            var approvedBody = await approvedResponse.Content.ReadAsStringAsync();
+            Assert.True(approvedResponse.IsSuccessStatusCode, approvedBody);
+            var resumed = JsonSerializer.Deserialize<WorkflowExternalResponseApiResponse>(approvedBody, JsonOptions)!;
+            Assert.Contains(resumed.Outcome, new[] {
+                WorkflowExternalResponseServiceOutcome.WaitingAgain, WorkflowExternalResponseServiceOutcome.Completed
+            });
+        }
+        await using var runScope = host.App.Services.CreateAsyncScope();
+        var runtime = runScope.ServiceProvider.GetRequiredService<IWorkflowRuntimeManager>();
+        var completed = await runtime.GetRunAsync(result.Run.RunId);
+        Assert.Equal(WorkflowRunState.Completed, completed!.State);
+        var events = await runtime.ListEventsAsync(result.Run.RunId);
+        foreach (var node in workflow.Graph.Nodes.Where(node => node.Kind == WorkflowNodeKind.Executor)) {
+            Assert.Single(events, item => item.NodeId == node.Id && item.Kind == WorkflowEventKind.ExecutorCompleted);
+        }
+        var eventText = string.Join(Environment.NewLine, events.Select(item => item.Message + item.PayloadJson));
         Assert.Contains("qdrant", eventText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Deterministic Docker log summary", eventText, StringComparison.OrdinalIgnoreCase);
     }
@@ -1640,7 +1745,7 @@ public sealed class PluginCatalogIntegrationTests
         return JsonSerializer.Deserialize<LlmCallComponent>(body, JsonOptions)!;
     }
 
-    private static WorkflowDefinition CreateDockerProofWorkflow(WorkflowComponentId summaryComponentId)
+    private static WorkflowDefinition CreateDockerProofWorkflow(LlmCallComponent summaryComponent)
     {
         var settings = new DockerWorkflowExecutorSettings
         {
@@ -1682,7 +1787,8 @@ public sealed class PluginCatalogIntegrationTests
                         inputShape: JsonShape(),
                         resultShape: JsonShape(),
                         timeoutSeconds: 45),
-                    CreateNode("summarize", WorkflowNodeKind.LlmCall, summaryComponentId, inputShape: JsonShape(), resultShape: WorkflowValueShape.Text),
+                    CreateNode("summarize", WorkflowNodeKind.LlmCall, summaryComponent.Id, inputShape: JsonShape(),
+                        resultShape: WorkflowValueShape.Text, instructions: summaryComponent.Instructions),
                     CreateNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text, resultShape: WorkflowValueShape.Text)
                 ],
                 [
@@ -1737,7 +1843,8 @@ public sealed class PluginCatalogIntegrationTests
         WorkflowNodeKind kind,
         WorkflowComponentId? componentId = null,
         WorkflowValueShape? inputShape = null,
-        WorkflowValueShape? resultShape = null)
+        WorkflowValueShape? resultShape = null,
+        string instructions = "")
         => new(
             new WorkflowNodeId(id),
             kind,
@@ -1748,7 +1855,7 @@ public sealed class PluginCatalogIntegrationTests
                 AgentId: null,
                 SubworkflowId: null,
                 ExternalRequestKind: null,
-                Instructions: string.Empty,
+                Instructions: instructions,
                 InputShape: inputShape ?? WorkflowValueShape.Text,
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
 

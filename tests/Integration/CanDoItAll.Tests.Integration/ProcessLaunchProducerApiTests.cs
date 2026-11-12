@@ -136,16 +136,17 @@ public sealed class ProcessLaunchProducerApiTests {
             var commit = await services.GetRequiredService<IProcessRuntimeUnitOfWork>().CommitAsync(ProcessPreparedLaunchFixture.Commit(fixture.Saved));
             Assert.True(commit.Succeeded);
             var projectId = fixture.Saved.Preparation.Authority!.ProjectAdmission!.ProjectId;
-            var deletion = await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
-            Assert.Equal(projectId, deletion.ProjectId);
-            Assert.Empty(deletion.Warnings);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
+            Assert.Null(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
         }
         await using var restarted = await ApiTestHost.CreateAsync(jwtEnabled: false, sharedTestEnvironment: environment, sharedActiveProfile: profile);
         await using var before = new ProcessPersistenceDbContext(Options(restarted.App.Services));
         var retainedBefore = await before.PreparedLaunches.AsNoTracking().SingleAsync(row => row.Id == fixture.Saved.Preparation.AdmissionId.Value);
         var eventsBefore = await before.RuntimeEvents.CountAsync(row => row.RunId == fixture.Saved.Preparation.InitialCommit.Mutation.State.RunId.Value);
         for (var index = 0; index < 2; index++) {
-            using var response = await restarted.Client.GetAsync($"/api/processes/launch/{fixture.Saved.Preparation.AdmissionId.Value:D}");
+            var route = index == 0 ? $"/api/processes/launch/{fixture.Saved.Preparation.AdmissionId.Value:D}"
+                : $"/api/processes/launch/intents/{fixture.Request.CallerIntentId:D}";
+            using var response = await restarted.Client.GetAsync(route);
             using var body = await ReadAsync(response);
             Assert.Equal(fixture.Saved.Preparation.InitialCommit.Mutation.State.RunId.Value, body.RootElement.GetProperty("acceptedRunId").GetGuid());
             Assert.Equal(fixture.Saved.Preparation.AdmissionId.Value, body.RootElement.GetProperty("admissionId").GetGuid());

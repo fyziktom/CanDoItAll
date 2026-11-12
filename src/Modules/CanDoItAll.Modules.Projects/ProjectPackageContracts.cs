@@ -112,19 +112,27 @@ public sealed record ProjectPackageExportResult(
     ProjectPackageManifest Manifest,
     string PackagePath);
 
+public enum ProjectPackageImportWarning { CleanupIncomplete }
+
+public static class ProjectPackageErrorCodes {
+    public const string ImportOutcomeUnconfirmed = "projects.package-import-outcome-unconfirmed";
+}
+
 public sealed record ProjectPackageImportResult(
     ProjectPackageManifest Manifest,
     int RecordsImported,
-    int StorageFilesImported);
+    int StorageFilesImported) {
+    public ProjectPackageImportWarning? Warning { get; init; }
+}
 
 public interface IProjectPackageService {
     Task<Result<ProjectPackageExportResult>> ExportAllAsync(
         ProjectPackageExportRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null);
 
     Task<Result<ProjectPackageImportResult>> ImportAllAsync(
         ProjectPackageImportRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Func<CancellationToken, ValueTask>? requireCurrentAccess = null);
 
     Task<Result<ProjectPackageManifest>> ReadManifestAsync(
         string packagePath,

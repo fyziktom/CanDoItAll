@@ -1,3 +1,4 @@
+using CanDoItAll.Application.UI.Dashboard;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.Projects;

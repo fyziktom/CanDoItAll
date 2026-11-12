@@ -307,6 +307,7 @@ internal sealed class CrmAccountProfileConfiguration : IEntityTypeConfiguration<
         builder.Property(profile => profile.ConstraintNotes).HasColumnType("TEXT");
         builder.Property(profile => profile.TimingRiskNotes).HasColumnType("TEXT");
         builder.Property(profile => profile.LastChangedBy).HasMaxLength(160);
+        builder.Property(profile => profile.UpdatedAtUtc).IsConcurrencyToken();
         builder.HasIndex(profile => profile.AccountPartyId).IsUnique();
     }
 }

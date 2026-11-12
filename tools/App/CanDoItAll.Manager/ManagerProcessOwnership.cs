@@ -18,7 +18,7 @@ public enum ManagerHostKind
 public enum ManagerProcessPurpose
 {
     DotnetWatch,
-    TailwindBuild,
+    TailwindWatch,
     TailwindDependencyInstall,
     Tuning
 }
@@ -151,7 +151,8 @@ public sealed record ManagerProcessLaunchRequest(
     string WorkspaceRoot,
     string LeaseOwner,
     int StdoutLimitCharacters = 262_144,
-    int StderrLimitCharacters = 262_144);
+    int StderrLimitCharacters = 262_144,
+    bool HoldStandardInputOpen = false);
 
 public interface IManagerProcessLease : IAsyncDisposable
 {
@@ -575,7 +576,10 @@ public sealed class ManagerProcessCoordinator : IManagerProcessCoordinator
                 request.StdoutLimitCharacters,
                 request.StderrLimitCharacters,
                 StandardInput: null,
-                WorkspaceProcessTerminationMode.GracefulThenForceTree),
+                WorkspaceProcessTerminationMode.GracefulThenForceTree,
+                request.HoldStandardInputOpen
+                    ? WorkspaceProcessStandardIoMode.CapturedWithOpenInput
+                    : WorkspaceProcessStandardIoMode.Captured),
             cancellationToken).ConfigureAwait(false);
 
         try

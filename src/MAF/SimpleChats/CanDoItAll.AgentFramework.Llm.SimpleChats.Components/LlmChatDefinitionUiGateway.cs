@@ -2,6 +2,8 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -91,7 +93,7 @@ public interface ILlmChatDefinitionUiGateway
 public sealed class LlmChatDefinitionUiGateway(
     ILlmChatDefinitionApplicationService definitions,
     ILlmChatUiAuthorizationFacade authorization,
-    ILlmChatDefinitionCatalogInvalidator catalogInvalidator) : ILlmChatDefinitionUiGateway
+    ILlmChatDefinitionCatalogInvalidator catalogInvalidator, ILogger<LlmChatDefinitionUiGateway> logger) : ILlmChatDefinitionUiGateway
 {
     public async Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
@@ -156,7 +158,7 @@ public sealed class LlmChatDefinitionUiGateway(
             return LlmChatUiResultMapper.Forbidden<LlmChatDefinitionEditor>(LlmChatUiPermission.Manage);
         }
 
-        var result = await definitions.CreateAsync(new CreateLlmChatDefinitionCommand(
+        return await WriteAsync(() => definitions.CreateAsync(new CreateLlmChatDefinitionCommand(
             mutation.Name,
             mutation.Summary,
             mutation.AvatarImageUrl,
@@ -167,10 +169,7 @@ public sealed class LlmChatDefinitionUiGateway(
             mutation.Timeout,
             ToResponseFormat(mutation),
             mutation.RevisionReason,
-            mutation.Tags), cancellationToken).ConfigureAwait(false);
-        return InvalidateCatalogAfterSuccess(
-            LlmChatUiResultMapper.Map(result, ToEditor),
-            static editor => editor.Definition);
+            mutation.Tags), cancellationToken), ToEditor, static editor => editor.Definition).ConfigureAwait(false);
     }
 
     public async Task<LlmChatUiResult<LlmChatDefinitionEditor>> UpdateAsync(
@@ -190,7 +189,7 @@ public sealed class LlmChatDefinitionUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatDefinitionEditor>("Select a valid Simple Chat definition.");
         }
 
-        var result = await definitions.UpdateAsync(new UpdateLlmChatDefinitionCommand(
+        return await WriteAsync(() => definitions.UpdateAsync(new UpdateLlmChatDefinitionCommand(
             id,
             mutation.Name,
             mutation.Summary,
@@ -203,10 +202,7 @@ public sealed class LlmChatDefinitionUiGateway(
             ToResponseFormat(mutation),
             mutation.RevisionReason,
             expectedConcurrencyToken,
-            mutation.Tags), cancellationToken).ConfigureAwait(false);
-        return InvalidateCatalogAfterSuccess(
-            LlmChatUiResultMapper.Map(result, ToEditor),
-            static editor => editor.Definition);
+            mutation.Tags), cancellationToken), ToEditor, static editor => editor.Definition).ConfigureAwait(false);
     }
 
     public async Task<LlmChatUiResult<LlmChatDefinitionListItem>> ChangeStatusAsync(
@@ -225,12 +221,22 @@ public sealed class LlmChatDefinitionUiGateway(
             return LlmChatUiResultMapper.Invalid<LlmChatDefinitionListItem>("Select a valid Simple Chat definition.");
         }
 
-        var result = await definitions.ChangeStatusAsync(
+        return await WriteAsync(() => definitions.ChangeStatusAsync(
             new ChangeLlmChatDefinitionStatusCommand(id, status, expectedConcurrencyToken),
-            cancellationToken).ConfigureAwait(false);
-        return InvalidateCatalogAfterSuccess(
-            LlmChatUiResultMapper.Map(result, ToListItem),
-            static definition => definition);
+            cancellationToken), ToListItem, static definition => definition).ConfigureAwait(false);
+    }
+
+    private async Task<LlmChatUiResult<T>> WriteAsync<T>(Func<Task<Result<LlmChatDefinitionDetails>>> write,
+        Func<LlmChatDefinitionDetails, T> map, Func<T, LlmChatDefinitionListItem> identity) {
+        LlmChatUiResult<T> result;
+        try {
+            result = LlmChatUiResultMapper.Map(await write().ConfigureAwait(false), map);
+        } catch (LlmChatCommittedException<Result<LlmChatDefinitionDetails>> exception) when (exception.Accepted.IsSuccess) {
+            logger.LogWarning("Simple Chat definition {DefinitionId} is saved; secondary update failed with {FailureType}.",
+                exception.Accepted.Value!.Definition.Id.Value, exception.InnerException?.GetType().Name);
+            result = LlmChatUiResult<T>.Success(map(exception.Accepted.Value), exception.Message);
+        }
+        return InvalidateCatalogAfterSuccess(result, identity);
     }
 
     private LlmChatUiResult<T> InvalidateCatalogAfterSuccess<T>(
@@ -239,7 +245,13 @@ public sealed class LlmChatDefinitionUiGateway(
     {
         if (result is { IsSuccess: true, Value: { } value })
         {
-            catalogInvalidator.Invalidate(resolveDefinition(value));
+            try {
+                catalogInvalidator.Invalidate(resolveDefinition(value));
+            } catch (Exception exception) {
+                logger.LogWarning("Simple Chat definition {DefinitionId} is saved; local catalog notification failed with {FailureType}.",
+                    resolveDefinition(value).DefinitionId, exception.GetType().Name);
+                return LlmChatUiResult<T>.Success(value, "The definition is saved, but catalog updates require a refresh. Do not repeat the save to reconcile.");
+            }
         }
 
         return result;

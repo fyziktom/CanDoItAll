@@ -44,8 +44,10 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
         bool includeRecoveryInput = false, bool managedHr = false, Func<AgentDefinition, AgentDefinition>? configureAgent = null,
         WorkspaceScopeDescriptor? storageScope = null,
         IReadOnlyList<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null,
-        AgentProjectStructureLifetime? sourceProjectLifetime = null) {
-        var environment = CanDoItAllTestEnvironment.Create($"tool-admission-{Guid.NewGuid():N}");
+        AgentProjectStructureLifetime? sourceProjectLifetime = null, string? ownedParentRoot = null) {
+        var environment = ownedParentRoot is null
+            ? CanDoItAllTestEnvironment.Create("tool-admission")
+            : CanDoItAllTestEnvironment.CreateUnder(ownedParentRoot, "tool-admission");
         try {
             var profile = environment.CreateInMemoryProfile("primary");
             var actualStorageScope = storageScope ?? WorkspaceScopeDescriptor.Sandbox;
@@ -125,20 +127,22 @@ internal sealed class AgentToolAdmissionJournalFixture : IAsyncDisposable {
     }
 
     internal static async Task<AgentToolAdmissionJournalFixture> RestoreRetainedAsync(
-        AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run) {
-        var environment = CanDoItAllTestEnvironment.Create($"retained-tool-admission-{Guid.NewGuid():N}");
+        AgentDefinition agent, ProviderProfile provider, AgentToolProfileBinding profile, ExecutionRunRecord run,
+        WorkspaceScopeDescriptor? storageScope = null) {
+        var environment = CanDoItAllTestEnvironment.Create("retained-tool-admission");
         try {
             var workspace = environment.CreateInMemoryProfile("retained");
-            var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, WorkspaceScopeDescriptor.Sandbox);
+            var actualStorageScope = storageScope ?? WorkspaceScopeDescriptor.Sandbox;
+            var store = new FileSandboxWorkspaceStore(workspace.WorkspaceRootPath, actualStorageScope);
             await store.UpdateCatalogAsync(catalog => catalog with {
                 Agents = catalog.Agents.Where(item => item.Id != agent.Id).Append(agent).ToArray(),
                 Providers = catalog.Providers.Where(item => item.Id != provider.Id).Append(provider).ToArray()
             });
-            var chat = new ChatSessionRecord(run.ChatSessionId!.Value, agent.Id, run.Title, run.CreatedAtUtc,
-                run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id);
+            var chat = run.ChatSessionId is { } chatId ? new ChatSessionRecord(chatId, agent.Id, run.Title, run.CreatedAtUtc,
+                run.UpdatedAtUtc, [], LatestExecutionRunId: run.Id) : null;
             var saved = await store.SaveExecutionRunDetailAsync(new(run, chat, [], []));
             return new(environment, workspace.WorkspaceRootPath, store, profile, agent, provider, saved,
-                WorkspaceScopeDescriptor.Sandbox, []);
+                actualStorageScope, []);
         } catch {
             await environment.DisposeAsync();
             throw;

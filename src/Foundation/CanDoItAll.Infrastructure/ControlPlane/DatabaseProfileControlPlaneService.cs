@@ -161,7 +161,14 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     public Task<Result<Guid>> SaveAsync(DatabaseProfileEditorModel model, CancellationToken cancellationToken = default)
-    {
+        => SaveCoreAsync(model, null, cancellationToken);
+
+    public Task<Result<Guid>> SaveEditorAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(runtimeProfile);
+        return SaveCoreAsync(model, runtimeProfile, cancellationToken);
+    }
+
+    private Task<Result<Guid>> SaveCoreAsync(DatabaseProfileEditorModel model, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(model);
 
         var validation = Validate(model);
@@ -178,20 +185,36 @@ public sealed class DatabaseProfileControlPlaneService(
                 ? document.Profiles.FirstOrDefault(item => item.Id == model.Id.Value)
                 : null;
 
+            if (editorRuntime is not null) {
+                if (editorRuntime.Profile.Runtime.LockedByRuntimeOverride || TryResolveExplicitOverrideLocked() is not null) {
+                    return Task.FromResult(Result<Guid>.Failure(Error.Validation("Startup-controlled profiles cannot be edited.")));
+                }
+                if (model.Id.HasValue && (existing is null || !IsPersistedRuntimeProfile(existing))) {
+                    return Task.FromResult(Result<Guid>.Failure(Error.Validation("The acquired database profile no longer exists.")));
+                }
+            }
+
             if (existing?.Runtime.LockedByRuntimeOverride == true)
             {
                 return Task.FromResult(Result<Guid>.Failure(Error.Failure("Runtime override profiles cannot be persisted.")));
+            }
+            if (existing?.Audit.ConfigurationRevision != model.ExpectedConfigurationRevision) {
+                return Task.FromResult(Result<Guid>.Failure(ProfileConfigurationChanged()));
             }
 
             var profile = BuildPersistedProfile(model, existing);
             UpsertProfile(document, profile);
             WriteCatalogLocked(document);
+            model.ExpectedConfigurationRevision = profile.Audit.ConfigurationRevision;
 
-            var activeState = ReadActiveProfileStateLocked();
-            if (!activeState.ActiveProfileId.HasValue)
-            {
-                activeState.ActiveProfileId = profile.Id;
-                WriteActiveProfileStateLocked(activeState);
+            try {
+                var activeState = ReadActiveProfileStateLocked();
+                if (!activeState.ActiveProfileId.HasValue) {
+                    activeState.ActiveProfileId = profile.Id;
+                    WriteActiveProfileStateLocked(activeState);
+                }
+            } catch (Exception exception) when (editorRuntime is not null) {
+                throw new DatabaseProfileCatalogCommittedException(profile.Id, exception);
             }
 
             ClearSelectionLogLocked();
@@ -200,7 +223,14 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     public Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+        => DeleteCoreAsync(id, null, null, cancellationToken);
+
+    public Task<Result> DeleteEditorAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile runtimeProfile, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(runtimeProfile);
+        return DeleteCoreAsync(id, expectedConfigurationRevision, runtimeProfile, cancellationToken);
+    }
+
+    private Task<Result> DeleteCoreAsync(Guid id, Guid? expectedConfigurationRevision, ResolvedDatabaseProfile? editorRuntime, CancellationToken cancellationToken) {
         lock (_sync)
         {
             using IDisposable coordination = AcquireCoordination(cancellationToken);
@@ -211,10 +241,18 @@ public sealed class DatabaseProfileControlPlaneService(
                 return Task.FromResult(Result.Failure(Error.Validation("Database profile not found.")));
             }
 
+            var activeState = ReadActiveProfileStateLocked();
+            if (editorRuntime is not null && (editorRuntime.Profile.Runtime.LockedByRuntimeOverride ||
+                TryResolveExplicitOverrideLocked() is not null || editorRuntime.Profile.Id == id || activeState.ActiveProfileId == id)) {
+                return Task.FromResult(Result.Failure(Error.Validation("Current, pending or startup-controlled profiles cannot be deleted.")));
+            }
+            if (editorRuntime is not null && profile.Audit.ConfigurationRevision != expectedConfigurationRevision) {
+                return Task.FromResult(Result.Failure(ProfileConfigurationChanged()));
+            }
+
             document.Profiles.Remove(profile);
             WriteCatalogLocked(document);
 
-            var activeState = ReadActiveProfileStateLocked();
             if (activeState.ActiveProfileId == id)
             {
                 activeState.ActiveProfileId = null;
@@ -225,6 +263,9 @@ public sealed class DatabaseProfileControlPlaneService(
             return Task.FromResult(Result.Success());
         }
     }
+
+    private static Error ProfileConfigurationChanged() => Error.Failure(
+        "The database profile changed after it was opened. Review its saved configuration.", "database-profile.configuration-changed");
 
     public Task<Result> ActivateAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -654,6 +695,7 @@ public sealed class DatabaseProfileControlPlaneService(
             Audit = new DatabaseProfileAuditMetadata
             {
                 CreatedUtc = existing?.Audit.CreatedUtc ?? now,
+                ConfigurationRevision = Guid.NewGuid(),
                 LastUsedUtc = existing?.Audit.LastUsedUtc,
                 LastSuccessfulOpenUtc = existing?.Audit.LastSuccessfulOpenUtc
             },
@@ -724,37 +766,7 @@ public sealed class DatabaseProfileControlPlaneService(
     }
 
     private ResolvedDatabaseProfile BuildResolvedProfile(DatabaseProfileRecord profile, DatabaseProfileResolutionSource resolutionSource)
-    {
-        HostBoundPathPolicy.ResolveRequired(profile.Storage.WorkspacePath, "database profile workspace");
-        var connectionString = profile.ProviderKind switch
-        {
-            DatabaseProviderKind.PostgreSql => BuildPostgreSqlConnectionString(profile),
-            DatabaseProviderKind.InMemory => profile.InMemory?.DatabaseName ?? throw new InvalidOperationException("In-memory profile is missing a database name."),
-            _ => throw new InvalidOperationException($"Unsupported provider '{profile.ProviderKind}'.")
-        };
-
-        return new ResolvedDatabaseProfile(profile, resolutionSource, connectionString);
-    }
-
-    private string BuildPostgreSqlConnectionString(DatabaseProfileRecord profile)
-    {
-        var descriptor = profile.PostgreSql
-            ?? throw new InvalidOperationException("PostgreSQL profile is missing connection metadata.");
-        var builder = new NpgsqlConnectionStringBuilder
-        {
-            Host = descriptor.Host,
-            Port = descriptor.Port,
-            Database = descriptor.DatabaseName,
-            Username = descriptor.Username
-        };
-
-        if (!string.IsNullOrWhiteSpace(descriptor.EncryptedPassword))
-        {
-            builder.Password = secretProtector.Unprotect(descriptor.EncryptedPassword);
-        }
-
-        return builder.ConnectionString;
-    }
+        => DatabaseProfileConnection.Resolve(profile, resolutionSource, secretProtector);
 
     private DatabaseProfileSummary CreateSummary(DatabaseProfileRecord profile, bool isActive)
     {
@@ -779,6 +791,7 @@ public sealed class DatabaseProfileControlPlaneService(
         return new DatabaseProfileEditorModel
         {
             Id = profile.Id,
+            ExpectedConfigurationRevision = profile.Audit.ConfigurationRevision,
             DisplayName = profile.DisplayName,
             ProviderKind = profile.ProviderKind,
             SourceKind = profile.SourceKind,

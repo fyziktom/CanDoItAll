@@ -22,6 +22,8 @@ The authoritative project and package dependency list is in [CanDoItAll.AgentFra
 
 Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
 
+Session-only writes preserve a current usage projection without rereading historical runs or usage records. Under the workspace lock, the canonical execution index advances first; the usage projection may then advance only if its version and revision matched the previous index. Missing or stale projections retain the normal canonical rebuild path, including recovery after an interrupted write. `FileSandboxWorkspaceAdmissionReadScalingIntegrationTests` covers precreated sessions, edits, stale projections, interrupted writes and competing store instances.
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

@@ -24,6 +24,13 @@ AgentAvatarActionButton is the shared service-free avatar/tooltip action used to
 
 Product owners adapt their domain/runtime state into the contracts in this project. Opaque keys are never interpreted here.
 
+`ConversationFloatingWindow` accepts an optional avatar and provides per-window
+`ConversationWindowHeaderSlots` through a fixed cascade. A retained chat can publish its
+current status with Blazor `SectionContent` into `Status`; the window owns the matching
+outlet. This keeps execution state with the chat and allows status updates while minimized.
+`ConversationHeader.ContextContent` places scope beside the title and actions, wrapping
+according to the floating window's available width.
+
 ## Related docs
 
 - Repository architecture: `docs/architecture/overview.md`

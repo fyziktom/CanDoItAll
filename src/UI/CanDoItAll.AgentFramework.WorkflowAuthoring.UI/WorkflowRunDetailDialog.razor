@@ -1,0 +1,101 @@
+<HeadContent><link rel="stylesheet" href="_content/CanDoItAll.AgentFramework.Workflows.UI/workflows.css" /></HeadContent>
+                <Dialog IsOpen="true"
+                        Title="Workflow run"
+                        Eyebrow="History detail"
+                        Subtitle="@Presentation.Summary"
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="Closed"
+                        TestId="workflows-run-detail-dialog">
+                    <div class="workflows-detail-dialog">
+                        <Grid Gap="LayoutGap.Small" ColumnsLg="4">
+                            <div class="workflows-fact">
+                                <span>Run</span>
+                                <strong>@FormatShortId(Presentation.Run.RunId.Value)</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>State</span>
+                                <strong>@Presentation.Run.State</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Backend</span>
+                                <strong>@Presentation.Run.Backend</strong>
+                            </div>
+                            <div class="workflows-fact">
+                                <span>Updated</span>
+                                <strong>@WorkflowPresentationTime.Format(Presentation.Run.UpdatedAtUtc)</strong>
+                            </div>
+                        </Grid>
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Summary" />
+                            <pre class="workflows-detail-pre" data-testid="workflows-run-detail-summary">@Presentation.Summary</pre>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(Presentation.Result)) {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Result" />
+                                <pre class="workflows-detail-pre" data-testid="workflows-run-detail-result">@Presentation.Result</pre>
+                            </div>
+                        }
+
+                        @if (Presentation.Artifacts.Count > 0) {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Captured outputs" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var artifact in Presentation.Artifacts) {
+                                        <div class="workflows-artifact" data-testid="workflows-run-detail-artifact">
+                                            <strong>@artifact.Artifact.Name</strong>
+                                            <span>@artifact.Artifact.Kind · @artifact.Artifact.ContentType · @(artifact.NodeId?.Value ?? "workflow")</span>
+                                            <small>@artifact.Artifact.Summary</small>
+                                            @if (artifact.RelativePath is { } reference) {
+                                                <small>@reference</small>
+                                            }
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
+
+                        @if (Presentation.Events.Count > 0) {
+                            <div class="workflows-section">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Events" />
+                                <Stack GapScale="LayoutGap.Small" Class="mt-3">
+                                    @foreach (var workflowEvent in Presentation.Events) {
+                                        <div class="workflows-event" data-testid="workflows-run-detail-event">
+                                            <div class="workflows-event__summary">
+                                                <StatusBadge Tone="@workflowEvent.Event.Tone" Text="@workflowEvent.Event.Kind" />
+                                                <small>@workflowEvent.Event.CreatedAt</small>
+                                                <span>@workflowEvent.Summary</span>
+                                                @if (workflowEvent.Payload.Length > 0) {
+                                                    <pre class="workflows-detail-pre">@workflowEvent.Payload</pre>
+                                                }
+                                                @if (workflowEvent.TechnicalDetail.Length > 0) {
+                                                    <details>
+                                                        <summary>Technical details</summary>
+                                                        <pre class="workflows-detail-pre">@workflowEvent.TechnicalDetail</pre>
+                                                    </details>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </Stack>
+                            </div>
+                        }
+
+                        <div class="workflows-section">
+                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Identifiers" />
+                            <pre class="workflows-detail-pre">RunId: @Presentation.Run.RunId
+WorkflowId: @Presentation.Run.WorkflowId
+VersionId: @Presentation.Run.VersionId
+BackendRunId: @Presentation.Run.BackendRunId
+CreatedAt: @WorkflowPresentationTime.Format(Presentation.Run.CreatedAtUtc)
+UpdatedAt: @WorkflowPresentationTime.Format(Presentation.Run.UpdatedAtUtc)</pre>
+                        </div>
+                    </div>
+                </Dialog>
+@code {
+    [Parameter, EditorRequired] public WorkflowRunDetailPresentation Presentation { get; set; } = default!;
+    [Parameter] public EventCallback Closed { get; set; }
+    private static string FormatShortId(Guid value) => value.ToString("N")[..8];
+}

@@ -697,7 +697,9 @@ public sealed class ProcessRunNarrativeGeneratorTests
         ExecutionRunRequest request,
         ExecutionRunResult result)
     {
-        var now = result.Metric.CreatedAtUtc;
+        var metric = result.Metric;
+        Assert.NotNull(metric);
+        var now = metric.CreatedAtUtc;
         return new ExecutionRunRecord(
             result.ExecutionRunId,
             request.AgentId,
@@ -712,10 +714,10 @@ public sealed class ProcessRunNarrativeGeneratorTests
             MetadataJson: request.Context?.MetadataJson ?? "{}",
             InputSummary: "Narrative",
             result.ResponseText,
-            result.Metric.ProviderName,
-            result.Metric.Model,
+            metric.ProviderName,
+            metric.Model,
             ExecutionState.Completed,
-            result.Metric.Outcome,
+            metric.Outcome,
             CreatedAtUtc: now,
             UpdatedAtUtc: now,
             StartedAtUtc: now,

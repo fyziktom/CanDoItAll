@@ -1,0 +1,11 @@
+@page "/files"
+
+<PageTitle>Content file collections</PageTitle>
+<Stack GapScale="LayoutGap.Small" Class="content-scenarios">
+    <PageHeader Eyebrow="Independent content scenarios" Title="File collections" Description="Real compact browsers and read-only previews over bounded synthetic sources." />
+    <ContentScenarioNavigation />
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+        <FileCollectionSpecimen Name="First collection" />
+        <FileCollectionSpecimen Name="Second collection" />
+    </Grid>
+</Stack>

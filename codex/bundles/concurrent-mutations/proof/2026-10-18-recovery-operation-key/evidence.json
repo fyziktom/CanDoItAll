@@ -1,0 +1,13 @@
+{
+  "source": "081C43673BACD678BA7718064DE2DECE0FB6E4C41F0A5591DA637FCFDA7DEFF7",
+  "limits": [
+    "Offline coordinator and command remain unfinished.",
+    "Recovery-only caller data never creates current caller authority.",
+    "Six unowned TEMP paths preserved."
+  ],
+  "runtime": "FF0401B310A299150162F76DE70DCC6C06A7890D69D99DB2B68EA8F40E79763B",
+  "candidate": ".artifacts/concurrent-mutations/validation/p03-recovery-operation-key-validation",
+  "recordedUtc": "2026-10-18T21:53:17.4285179+00:00",
+  "scope": "Every caller-kind canonical roundtrip, malformed and mismatched exclusion refusal, old absent compatibility, real governed deletion matching durable receipt identity",
+  "passed": 42
+}

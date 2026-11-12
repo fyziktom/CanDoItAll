@@ -1,0 +1,11 @@
+@page "/editors"
+
+<PageTitle>Content direct file editors</PageTitle>
+<Stack GapScale="LayoutGap.Small" Class="content-scenarios">
+    <PageHeader Eyebrow="Independent content scenarios" Title="Direct file interactions" Description="Actual child renderers with controlled revision and save outcomes. Scenario writes remain in memory." />
+    <ContentScenarioNavigation />
+    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+        <DirectEditorSpecimen Name="First editor" />
+        <DirectEditorSpecimen Name="Second editor" />
+    </Grid>
+</Stack>

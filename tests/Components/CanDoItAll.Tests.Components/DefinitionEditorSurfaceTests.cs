@@ -43,8 +43,8 @@ public sealed class DefinitionEditorSurfaceTests {
         cut.Find("[data-testid='llm-chat-definition-name']").Change("Edited name");
         cut.Render(p => p.Add(x => x.Presentation, presentation with { ProvidersUnavailable = true }));
         cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
-        var saved = Assert.Single(intents);
-        Assert.Equal(DefinitionEditorAction.Save, saved.Action);
+        Assert.Equal([DefinitionEditorAction.DraftChanged, DefinitionEditorAction.Save], intents.Select(intent => intent.Action));
+        var saved = intents[1];
         Assert.Equal("Edited name", saved.Submission!.Name);
         cut.Find("[data-testid='llm-chat-definition-name']").Change("Later name");
         Assert.Equal("Edited name", saved.Submission.Name);

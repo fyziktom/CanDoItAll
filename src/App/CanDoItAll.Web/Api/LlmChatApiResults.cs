@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,16 @@ namespace CanDoItAll.Web.Api;
 
 internal static class LlmChatApiResults
 {
+    internal const string OutcomeHeader = "CDA-Llm-Chat-Outcome";
+
+    public static async Task<Result<T>> WriteAsync<T>(Func<Task<Result<T>>> write, HttpResponse response) {
+        try {
+            return await write().ConfigureAwait(false);
+        } catch (LlmChatCommittedException<Result<T>> exception) when (exception.Accepted.IsSuccess) {
+            response.Headers[OutcomeHeader] = "committed-reconciliation-pending";
+            return exception.Accepted;
+        }
+    }
     public static IResult FromFailure(IReadOnlyList<Error> errors, Guid? operationId = null)
     {
         var code = errors.FirstOrDefault()?.Code ?? LlmChatErrorCodes.InvalidRequest;

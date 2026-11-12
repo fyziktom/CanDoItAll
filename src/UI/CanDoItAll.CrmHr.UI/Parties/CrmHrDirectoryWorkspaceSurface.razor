@@ -1,6 +1,8 @@
 @namespace CanDoItAll.CrmHr.UI.Parties
 @inherits CrmHrWorkspaceSurface<ICrmHrDirectoryWorkspaceView>
+@implements IAsyncDisposable
 
+<NativeFormInspector @ref="browserInput" FormId="@FormId" PanelsSelector="[data-testid='crmhr-directory-tabs'] .cad-tabs__panels" />
 <PageScaffold MaxWidthClass="max-w-full">
     <Header>
         <PageHeader Eyebrow="CRM / HR"
@@ -49,9 +51,11 @@
                     <ListPanelHeader Title="Directory records"
                                      Description="Search and page through shared people, organizations, delivery units, and AI agents. Open a card to view or edit the complete record."
                                      Count="Server-paged" />
-                    <PartyRecordBrowser @key="View.DirectoryBrowserVersion"
+                    <PartyRecordBrowser RefreshVersion="View.DirectoryBrowserVersion"
                                         SelectedPartyId="@View.Editor.Id"
                                         SelectionChanged="View.SelectPartyAsync"
+                                        Query="@View.CatalogQuery"
+                                        QueryChanged="View.HandleCatalogQueryChangedAsync"
                                         IncludeArchived="true"
                                         PageSize="18"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
@@ -112,13 +116,15 @@
                         </Cluster>
                     </Split>
 
+                    @EditingStatus
                     <EditForm id="crmhr-directory-record-form"
-                              EditContext="@ContextFor(ref editorContext, View.Editor)"
-                              OnValidSubmit="View.SaveAsync">
+                              EditContext="@PartyContext()"
+                              OnValidSubmit="HandleValidSubmitAsync">
                         <Stack Class="min-h-full" GapScale="LayoutGap.Large">
+                            <ValidationSummary />
                             <Tabs SelectedIndex="@View.SelectedEditorTabIndex"
                                   SelectedIndexChanged="View.HandleEditorTabChangedAsync"
-                                  RenderMode="TabRenderMode.Server"
+                                  RenderMode="TabRenderMode.Client"
                                   Variant="TabsVariant.WorkspaceSecondary"
                                   OverflowMode="TabsOverflowMode.Wrap"
                                   AriaLabel="Party editor sections"
@@ -154,7 +160,7 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">External code</label>
-                                        <InputText @bind-Value="View.Editor.ExternalCode"
+                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.ExternalCode"
                                                    class="cda-input"
                                                    data-testid="crmhr-party-external-code" />
                                     </div>
@@ -163,13 +169,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Display name</label>
-                                        <InputText @bind-Value="View.Editor.DisplayName"
+                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.DisplayName"
                                                    class="cda-input"
                                                    data-testid="crmhr-party-display-name" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Preferred name</label>
-                                        <InputText @bind-Value="View.Editor.PreferredName"
+                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PreferredName"
                                                    class="cda-input"
                                                    data-testid="crmhr-party-preferred-name" />
                                     </div>
@@ -177,7 +183,7 @@
 
                                 <div>
                                     <label class="cda-field-label">Legal name</label>
-                                    <InputText @bind-Value="View.Editor.LegalName"
+                                    <NativeValueInput TValue="string" @bind-Value="View.Editor.LegalName"
                                                class="cda-input"
                                                data-testid="crmhr-party-legal-name" />
                                 </div>
@@ -200,8 +206,10 @@
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Tags</label>
-                                        <TagEditor Value="@View.Editor.Tags"
-                                                   ValueChanged="value => View.Editor.Tags = value"
+                                        <TagEditor @ref="tags" Value="@View.Editor.Tags"
+                                                   ValueChanged="HandleTagsChangedAsync"
+                                                   PendingInput="@PendingTagInput"
+                                                   PendingInputChanged="PendingTagInputChanged"
                                                    Placeholder="Add customer, priority, or region tags"
                                                    MaxTags="20"
                                                    TestId="crmhr-party-tags-editor"
@@ -212,13 +220,13 @@
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                     <div>
                                         <label class="cda-field-label">Primary email</label>
-                                        <InputText @bind-Value="View.Editor.PrimaryEmail"
+                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PrimaryEmail"
                                                    class="cda-input"
                                                    data-testid="crmhr-party-email" />
                                     </div>
                                     <div>
                                         <label class="cda-field-label">Primary phone</label>
-                                        <InputText @bind-Value="View.Editor.PrimaryPhone"
+                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PrimaryPhone"
                                                    class="cda-input"
                                                    data-testid="crmhr-party-phone" />
                                     </div>
@@ -253,7 +261,7 @@
                                             // per-row copies, never the shared loop variable.
                                             var rowIndex = index;
                                             var role = View.Editor.AdditionalRoles[index];
-                                            <PanelCard Soft="true">
+                                            <PanelCard @key="role" Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div>
                                                         <label class="cda-field-label">Role kind</label>
@@ -268,7 +276,7 @@
                                                     </div>
                                                     <div class="lg:col-span-2">
                                                         <label class="cda-field-label">Role title</label>
-                                                        <InputText @bind-Value="role.Title"
+                                                        <NativeValueInput TValue="string" @bind-Value="role.Title"
                                                                    class="cda-input"
                                                                    data-testid="@($"crmhr-party-extra-role-title-{rowIndex}")" />
                                                     </div>
@@ -285,18 +293,20 @@
                                                     <div>
                                                         <label class="cda-field-label">Valid from</label>
                                                         <InputDate @bind-Value="role.ValidFromUtc"
+                                                                   @oninput="@(() => ReportPendingDate(new(role, nameof(PartyRoleAssignmentEditorModel.ValidFromUtc))))"
                                                                    class="cda-input"
                                                                    data-testid="@($"crmhr-party-extra-role-start-{rowIndex}")" />
                                                     </div>
                                                     <div>
                                                         <label class="cda-field-label">Valid to</label>
                                                         <InputDate @bind-Value="role.ValidToUtc"
+                                                                   @oninput="@(() => ReportPendingDate(new(role, nameof(PartyRoleAssignmentEditorModel.ValidToUtc))))"
                                                                    class="cda-input"
                                                                    data-testid="@($"crmhr-party-extra-role-end-{rowIndex}")" />
                                                     </div>
                                                     <div>
                                                         <label class="cda-field-label">Notes</label>
-                                                        <InputText @bind-Value="role.Notes"
+                                                        <NativeValueInput TValue="string" @bind-Value="role.Notes"
                                                                    class="cda-input"
                                                                    data-testid="@($"crmhr-party-extra-role-notes-{rowIndex}")" />
                                                     </div>
@@ -308,7 +318,7 @@
 
                                 <div>
                                     <label class="cda-field-label">Summary</label>
-                                    <InputTextArea @bind-Value="View.Editor.Summary"
+                                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.Editor.Summary"
                                                    class="cda-input cda-input--textarea min-h-24"
                                                    data-testid="crmhr-party-summary" />
                                 </div>
@@ -322,26 +332,26 @@
                                     <FormSection Title="Contact methods and addresses"
                                                  Description="Keep secondary contact methods and structured addresses on the shared party record so downstream screens do not need their own copies.">
                                         <Stack GapScale="LayoutGap.XLarge">
-                                            <PartyContactMethodsEditor ContactPoints="View.Editor.AdditionalContactPoints" />
+                                            <PartyContactMethodsEditor ContactPoints="View.Editor.AdditionalContactPoints" PendingChanged="ChildInputChanged" />
                                             <PartyAddressesEditor Addresses="View.Editor.Addresses" />
                                         </Stack>
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                             <div>
                                                 <label class="cda-field-label">Region</label>
-                                                <InputText @bind-Value="View.Editor.Region"
+                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.Region"
                                                            class="cda-input"
                                                            data-testid="crmhr-party-region" />
                                             </div>
                                             <div>
                                                 <label class="cda-field-label">Country code</label>
-                                                <InputText @bind-Value="View.Editor.CountryCode"
+                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.CountryCode"
                                                            class="cda-input"
                                                            data-testid="crmhr-party-country" />
                                             </div>
                                             <div>
                                                 <label class="cda-field-label">Time zone</label>
-                                                <InputText @bind-Value="View.Editor.TimeZone"
+                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.TimeZone"
                                                            class="cda-input"
                                                            data-testid="crmhr-party-timezone" />
                                             </div>
@@ -370,7 +380,7 @@
 
                                 <div>
                                     <label class="cda-field-label">Operational notes</label>
-                                    <InputTextArea @bind-Value="View.Editor.Notes"
+                                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.Editor.Notes"
                                                    class="cda-input cda-input--textarea min-h-28"
                                                    data-testid="crmhr-party-notes" />
                                 </div>
@@ -417,7 +427,7 @@
                                                 // per-row copies, never the shared loop variable.
                                                 var rowIndex = index;
                                                 var note = View.Editor.ConfidentialNotes[index];
-                                                <div class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4"
+                                                <div @key="note" class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4"
                                                      data-testid="crmhr-confidential-note-item">
                                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                                                         <div>
@@ -452,7 +462,7 @@
 
                                                     <div class="mt-4">
                                                         <label class="cda-field-label">Confidential note</label>
-                                                        <InputTextArea @bind-Value="note.NoteText"
+                                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="note.NoteText"
                                                                        class="cda-input cda-input--textarea min-h-24"
                                                                        data-testid="@($"crmhr-confidential-note-text-{rowIndex}")" />
                                                     </div>
@@ -600,6 +610,14 @@
                                           Icon="account_tree"
                                           Disabled="@(!View.Editor.Id.HasValue)"
                                           data-testid="crmhr-directory-tab-relationships">
+                                    @if (View.Editor.PartyType == PartyType.Person) {
+                                        <FormSection Title="Organization affiliations" Description="Keep audited company affiliations with their effective dates and primary role.">
+                                            <PartyAffiliationsEditor CurrentPersonPartyId="View.Editor.Id"
+                                                Affiliations="View.AffiliationEditors" AffiliationsChanged="View.HandleAffiliationsChangedAsync"
+                                                OwnerRevision="@AffiliationRevision" InputChanged="AffiliationInputChanged" PendingInputChanged="AffiliationPendingChanged"
+                                                PartyDisplayNames="View.AffiliationPartyDisplayNames" />
+                                        </FormSection>
+                                    }
                                     @if (View.IsRelationshipsLoading)
                                     {
                                         <LoadingState Eyebrow="Party relationships"
@@ -619,22 +637,15 @@
                                                     Click="View.RetryRelationshipsLoadAsync" />
                                         </SurfaceCard>
                                     }
-                                    else
-                                    {
                             <FormSection Title="Relationships and duplicate stewardship"
                                          Description="Model org structure and safe deduplication here so downstream CRM, workforce, recruiting, and assignment flows inherit trusted references.">
                                 <Stack GapScale="LayoutGap.XLarge">
-                                    @if (View.Editor.PartyType == PartyType.Person)
-                                    {
-                                        <PartyAffiliationsEditor CurrentPersonPartyId="View.Editor.Id"
-                                                                 Affiliations="View.AffiliationEditors"
-                                                                 AffiliationsChanged="View.HandleAffiliationsChangedAsync"
-                                                                 PartyDisplayNames="View.AffiliationPartyDisplayNames" />
-                                    }
-
                                     <PartyRelationshipsEditor CurrentPartyId="View.Editor.Id"
-                                                             Relationships="View.Relationships" />
+                                                             Relationships="View.Relationships" RelationshipsChanged="View.HandleRelationshipsChangedAsync"
+                                                             OwnerRevision="RelationshipRevision" InputChanged="RelationshipInputChanged" PendingInputChanged="RelationshipPendingChanged"
+                                                             Disabled="@(View.IsRelationshipsLoading || !string.IsNullOrWhiteSpace(View.RelationshipsLoadError))" />
 
+                                    @if (!View.IsRelationshipsLoading && string.IsNullOrWhiteSpace(View.RelationshipsLoadError)) {
                                     @if (!View.Editor.Id.HasValue)
                                     {
                                         <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
@@ -681,7 +692,7 @@
                                                             <Button Text="Merge into current party"
                                                                     ButtonStyle="ButtonStyle.Warning"
                                                                     Size="ButtonSize.Small"
-                                                                    Click="@(() => View.OpenMergeDialog(candidate))"
+                                                                    Click="@(() => View.OpenMergeDialogAsync(candidate))"
                                                                     data-testid="@($"crmhr-merge-open-{candidate.Id:N}")" />
                                                         </Split>
                                                     </PanelCard>
@@ -689,14 +700,15 @@
                                             }
                                         </Stack>
                                     }
+                                    }
                                 </Stack>
                             </FormSection>
-                                    }
                                 </TabsItem>
                             </Tabs>
 
                         </Stack>
                     </EditForm>
+                    @EditorOverlays
                     </ChildContent>
                     <Footer>
                         <Split Breakpoint="LayoutBreakpoint.None"
@@ -711,6 +723,7 @@
                                         Click="View.CloseEditorDialogAsync"
                                         data-testid="crmhr-directory-record-close" />
                                 <Button Text="Save party"
+                                        Disabled="@SaveDisabled"
                                         Click="SaveFromFooterAsync"
                                         data-testid="crmhr-party-save-button" />
                             </Cluster>
@@ -719,9 +732,11 @@
                 </Dialog>
             }
 
-            <PartyMergeDialog IsOpen="@View.IsMergeDialogOpen"
-                              CurrentPartyDisplayName="@View.Editor.DisplayName"
+            <PartyMergeDialog @key="View.Merge.Opening" Presentation="@View.Merge"
                               Candidate="@View.MergeCandidate"
+                              Refresh="View.RefreshMergePreviewAsync"
+                              NoteStatusChanged="View.HandleMergeNoteStatusChanged"
+                              Overlays="@MergeOverlays"
                               OnClose="View.HandleMergeCloseAsync"
                               OnConfirm="View.HandleMergeConfirmAsync" />
 
@@ -740,7 +755,9 @@
                                                   ExportCsv="View.ExportPartyCsvAsync"
                                                   PreviewImport="View.PreviewPartyImportAsync"
                                                   ApplyImport="View.ApplyPartyImportAsync"
+                                                  StatusChanged="View.HandleImportStatusChanged"
                                                   ImportApplied="View.HandleImportAppliedAsync" />
+                        @ImportOverlays
                     </ChildContent>
                 </Dialog>
             }
@@ -750,12 +767,102 @@
 </PageScaffold>
 
 @code {
+    private const string FormId = "crmhr-directory-record-form";
     private EditContext? editorContext;
+    private EditContext? observedContext;
+    private NativeFormInspector browserInput = default!;
+    private TagEditor? tags;
+    private bool focusInvalid;
+    private bool disposed;
 
-    // The footer button sits outside the form element: it validates the same form before the host saves.
+    [Parameter] public RenderFragment? EditingStatus { get; set; }
+    [Parameter] public RenderFragment? EditorOverlays { get; set; }
+    [Parameter] public RenderFragment? ImportOverlays { get; set; }
+    [Parameter] public RenderFragment? MergeOverlays { get; set; }
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public EventCallback DirtyChanged { get; set; }
+    [Parameter] public EventCallback<PartyEditorInputChange> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> ValidationChanged { get; set; }
+    [Parameter] public long AffiliationRevision { get; set; }
+    [Parameter] public EventCallback<AffiliationInput> AffiliationInputChanged { get; set; }
+    [Parameter] public EventCallback<bool> AffiliationPendingChanged { get; set; }
+    [Parameter] public long RelationshipRevision { get; set; }
+    [Parameter] public EventCallback<RelationshipInput> RelationshipInputChanged { get; set; }
+    [Parameter] public EventCallback<bool> RelationshipPendingChanged { get; set; }
+    [Parameter] public EventCallback<bool> ChildInputChanged { get; set; }
+    [Parameter] public string PendingTagInput { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> PendingTagInputChanged { get; set; }
+    [Parameter] public RenderFragment? ActivityTimeline { get; set; }
+
+    private EditContext PartyContext() {
+        var current = ContextFor(ref editorContext, View.Editor);
+        if (!ReferenceEquals(current, observedContext)) {
+            UnsubscribeContext();
+            observedContext = current;
+            observedContext.OnFieldChanged += OnPartyFieldChanged;
+            observedContext.OnValidationStateChanged += OnValidationChanged;
+        }
+        return current;
+    }
+
+    private void OnPartyFieldChanged(object? sender, FieldChangedEventArgs args) {
+        if (PartyEditorFieldKey.From(args.FieldIdentifier, View.Editor) is { } key) {
+            _ = InputChanged.InvokeAsync(new(key));
+        } else {
+            _ = DirtyChanged.InvokeAsync();
+        }
+    }
+
+    private void OnValidationChanged(object? sender, ValidationStateChangedEventArgs args) =>
+        _ = ValidationChanged.InvokeAsync(observedContext?.GetValidationMessages().Any() == true);
+
+    private Task ReportPendingDate(FieldIdentifier field) => PartyEditorFieldKey.From(field, View.Editor) is { } key
+        ? InputChanged.InvokeAsync(new(key, PendingDateInput: true))
+        : throw new InvalidOperationException("The Party date control has no field identity.");
+
+    private async Task HandleTagsChangedAsync(IReadOnlyList<string> values) {
+        View.Editor.Tags = values;
+        await InputChanged.InvokeAsync(new(new(PartyEditableField.Tags)));
+    }
+
+    private Task HandleValidSubmitAsync() => tags?.IsInputFocused == true ? Task.CompletedTask : View.SaveAsync();
     private Task SaveFromFooterAsync() => SubmitAsync(editorContext, View.SaveAsync);
 
-    // Host-owned region: the host composes its adapter here.
-    [Parameter]
-    public RenderFragment? ActivityTimeline { get; set; }
+    public async Task<bool> ValidateInputsAsync() {
+        var context = editorContext ?? throw new InvalidOperationException("Open the Party form before inspecting its input.");
+        var draft = View.Editor;
+        var validity = await browserInput.InspectAsync();
+        if (disposed || !ReferenceEquals(draft, View.Editor)) {
+            return false;
+        }
+        var valid = context.Validate() && validity.IsValid;
+        if (!valid) {
+            if (validity.SectionIndex is int section && section != View.SelectedEditorTabIndex) {
+                await View.HandleEditorTabChangedAsync(section);
+            }
+            focusInvalid = true;
+            StateHasChanged();
+        }
+        return valid;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (focusInvalid && !disposed) {
+            focusInvalid = false;
+            await browserInput.FocusInvalidAsync();
+        }
+    }
+
+    private void UnsubscribeContext() {
+        if (observedContext is not null) {
+            observedContext.OnFieldChanged -= OnPartyFieldChanged;
+            observedContext.OnValidationStateChanged -= OnValidationChanged;
+        }
+    }
+
+    public ValueTask DisposeAsync() {
+        disposed = true;
+        UnsubscribeContext();
+        return ValueTask.CompletedTask;
+    }
 }

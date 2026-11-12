@@ -1,0 +1,171 @@
+@using CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Modules.Workbench.CanvasAdapters
+@implements IDisposable
+
+<section class="insights-support-specimen" data-testid="@($"support-{Name}")">
+    <TextBlock TextStyle="TextStyle.H4" Value="@($"{Name} selection and support")" />
+    <Cluster Gap="LayoutGap.Small">
+        <Button Text="No selection" Click="@(() => Select([]))" />
+        <Button Text="Single task" Click="@(() => Select(["a"]))" />
+        <Button Text="Multiple nodes" Click="@(() => Select(["a", "b"]))" />
+        <Button Text="Attachment and Workflow details" Click="@(() => Select(["file"]))" />
+        <Button Text="Replace view" Click="Replace" />
+        <Button Text="Restore windows" Click="RestoreWindows" />
+        <Button Text="Delay next menu" Click="@(() => delayMenu = true)" />
+        <Button Text="Release menu" Click="ReleaseMenu" />
+    </Cluster>
+    <TextBlock Value="@feedback" data-testid="support-feedback" />
+    <div class="cw-stage-surface insights-support-stage">
+        <InsightsSelectionWindow WindowId="@($"{instance}-selection")" Origin="@origin" WindowState="@windows[InsightsWindow.Selection]"
+            WindowChanged="WindowChanged" Title="Selection panel" Summary="Controlled presentation of native integrations"
+            Selection="@Selection" Dispatch="Dispatch" Help="Native details prepared by the scenario source" Tip="Show details" />
+        <ProjectStructureObjectIndexWindow WindowId="@($"{instance}-index")" TestId="support-index" AriaLabel="Object index"
+            Kicker="Object index" Title="Project object index" Summary="Two tasks and an attachment"
+            Origin="@origin" State="@windows[InsightsWindow.ObjectIndex]" StateChanged="WindowChanged"
+            IsLoaded="true" Nodes="@Nodes" SelectedNodeIds="@selected" SearchText="@search"
+            SearchTextChanged="@(intent => { if (intent.Origin == origin) search = intent.Text; })"
+            OnSelectNode="@(intent => { if (intent.Origin == origin) Select([intent.NodeId]); })"
+            OpenMenu="OpenMenu" OnExecuteNodeContextAction="MenuAction" />
+        <ProjectStructureSignalsWindow WindowId="@($"{instance}-signals")" TestId="support-signals" AriaLabel="Node signals"
+            Kicker="Signals" Title="Node signals" Summary="Stackable markers, progress and priority"
+            Origin="@origin" SelectedNodeIds="@selected" State="@windows[InsightsWindow.Signals]" StateChanged="WindowChanged"
+            Sections="@Signals" CanApplySignals="@(selected.Count > 0)" SelectionLabel="@($"{selected.Count} selected")"
+            SelectionHint="Controlled effects" OnApplyAction="Signal" />
+        <ProjectStructureCanvasHealthWindow WindowId="@($"{instance}-health")" TestId="support-health" AriaLabel="Canvas health"
+            Origin="@origin" SelectedNodeIds="@selected" State="@windows[InsightsWindow.Health]" StateChanged="WindowChanged"
+            SummaryState="@(new ProjectStructureValidationOverlaySummary(true, 2, 3, 1, selected.Count, ["Blocked task", "Review delivery"]))"
+            CanValidateSelected="@(selected.Count > 0)" ValidateSelected="Validate" />
+    </div>
+</section>
+
+@code {
+    [Parameter] public string Name { get; set; } = string.Empty;
+    private readonly Guid instance = Guid.NewGuid();
+    private InsightsOrigin origin = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 0);
+    private IReadOnlyList<string> selected = ["a"];
+    private readonly Dictionary<InsightsWindow, CanvasWorkbenchWindowState> windows = new();
+    private readonly HashSet<string> markers = [];
+    private string search = string.Empty;
+    private string border = string.Empty;
+    private string feedback = "Controlled effects only. Native file, task, runtime and Workflow owners are exercised in the application.";
+    private bool delayMenu;
+    private TaskCompletionSource? pendingMenu;
+    private InsightsMenu? menu;
+    private bool disposed;
+
+    private static readonly ProjectStructureSupportPanelContextAction[] Actions = [new("edit", "Edit task", "edit", "neutral"), new("delete", "Delete", "delete", "danger")];
+    private static readonly InsightsOutlineNode[] Nodes = [new("a", "Task A", "Ready", "Work item", "task_alt", "Delivery", "task", Actions),
+        new("b", "Task B", "Blocked", "Work item", "task_alt", "Implementation", "task", Actions),
+        new("file", "Workflow output", "Ready", "File", "description", "Accepted output", "mermaid", Actions)];
+
+    protected override void OnInitialized() => RestoreWindows();
+
+    private void RestoreWindows() {
+        foreach (var (window, left, width) in new[] { (InsightsWindow.Selection, 16, 420), (InsightsWindow.ObjectIndex, 452, 360), (InsightsWindow.Signals, 828, 360), (InsightsWindow.Health, 1204, 325) }) {
+            windows[window] = new() { IsVisible = true, Left = left, Top = 16, Width = width, Height = 700 };
+        }
+    }
+
+    private ProjectStructureSelectionPanelState Selection {
+        get {
+            var items = Nodes.Where(node => selected.Contains(node.Id)).Select(node => new ProjectStructureSelectionListItem(node.Id, node.Title, node.KindLabel, node.Status)).ToArray();
+            var file = selected.Contains("file");
+            return new($"{origin.ViewId}:{origin.SelectionRevision}:{border}:{feedback}", items, items.Length != 1 ? null : new(items[0].Id, items[0].Title,
+                items[0].KindLabel, "The complete selection renderer with safe display values.", items[0].Status, "25%", "High", string.Join(", ", markers),
+                [new("Stored", ProjectStructureSelectionBadgeStyle.Uploaded, "support-badge")],
+                file ? new() { Title = "Governed output", Description = "Authorized content stays with its native owner.", Facts = [new("Storage", "Managed"), new("Bytes", "129")] } : null,
+                file ? new(AttachmentPreviewKind.TextDocument, "Output diagram", "Native preview entry", "diagram.mmd", "text/plain", true, true, null, "neutral") : null,
+                file ? new("Original Workflow", "Completed", "Success", "Accepted output", "3/3", "100%", "fixture-run-1", "Accepted cutoff", ["file"], ["fixture-asset"], ["output/diagram.mmd"]) : null,
+                file, [new("edit", "Edit task", "edit", "neutral"), new("runtime:open", "Open runtime", "play_arrow", "neutral")], feedback, "neutral", true,
+                "Task", "Original project", [new("Native task fields", [new("Effort", "3.1256789 hours"), new("Price", "125.123456789 EUR")])],
+                [new("Node", items[0].Id), new("Accepted source", Name)]), feedback, "neutral", items.Length > 0, border, false, false);
+        }
+    }
+
+    private IReadOnlyList<ProjectStructureSignalSection> Signals => [
+        new("markers", "Markers", "Stack markers independently", new[] { "idea", "question", "risk" }.Select(id => new ProjectStructureSignalActionTile($"marker:{id}", id, "●", "sky", markers.Contains(id), id)).ToArray()),
+        new("progress", "Progress", "Preserve untracked and started states", new[] { "none", "started", "25", "50", "100" }.Select(id => new ProjectStructureSignalActionTile($"progress:{id}", id, "◷", "mint", false, id)).ToArray()),
+        new("priority", "Priority", "Current selection only", Enumerable.Range(0, 4).Select(value => new ProjectStructureSignalActionTile($"priority:{value}", $"Priority {value}", "!", "warn", false, $"Priority {value}")).ToArray())];
+
+    private void Select(IReadOnlyList<string> ids) {
+        selected = ids.ToArray();
+        origin = origin with { SelectionRevision = origin.SelectionRevision + 1 };
+        menu = null;
+    }
+    private void Replace() {
+        origin = origin with { ViewId = Guid.NewGuid() };
+        menu = null;
+    }
+    private void WindowChanged(InsightsWindowIntent intent) {
+        if (intent.Origin == origin) {
+            windows[intent.Window] = intent.State.Clone();
+        }
+    }
+    private void Dispatch(InsightsSelectionIntent intent) {
+        if (intent.Origin != origin || !selected.SequenceEqual(intent.NodeIds)) {
+            return;
+        }
+        switch (intent.Command) {
+            case InsightsSelectionCommand.Clear:
+                Select([]);
+                break;
+            case InsightsSelectionCommand.Focus focus:
+                Select([focus.NodeId]);
+                break;
+            case InsightsSelectionCommand.BorderName name:
+                border = name.Value;
+                break;
+            default:
+                feedback = $"{intent.Command.GetType().Name} accepted for {string.Join(", ", intent.NodeIds)} in {Name}; native owner integration remains explicit.";
+                break;
+        }
+    }
+    private void Signal(InsightsSignalIntent intent) {
+        if (intent.Origin != origin || !selected.SequenceEqual(intent.NodeIds)) {
+            return;
+        }
+        if (intent.ActionId.StartsWith("marker:", StringComparison.Ordinal)) {
+            var marker = intent.ActionId[7..];
+            if (!markers.Add(marker)) {
+                markers.Remove(marker);
+            }
+        }
+        feedback = $"{intent.ActionId} accepted for {string.Join(", ", intent.NodeIds)} in {Name}.";
+    }
+    private void Validate(InsightsValidateIntent intent) {
+        if (intent.Origin == origin) {
+            feedback = $"Controlled validation accepted for {string.Join(", ", intent.NodeIds)}. Native Health currently has no Validate capability.";
+        }
+    }
+    private async Task<InsightsMenu?> OpenMenu(InsightsMenuRequest request) {
+        if (request.Origin != origin) {
+            return null;
+        }
+        if (delayMenu) {
+            delayMenu = false;
+            pendingMenu = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            await pendingMenu.Task;
+        }
+        if (disposed || request.Origin != origin) {
+            return null;
+        }
+        if (!selected.Contains(request.NodeId)) {
+            Select([request.NodeId]);
+        }
+        menu = new(origin, request.OpeningId, request.NodeId, $"{selected.Count} selected nodes", selected.ToArray(), request.ClientX, request.ClientY,
+            Actions.Where(action => selected.Count == 1 || action.ActionId == "delete").ToArray());
+        await InvokeAsync(StateHasChanged);
+        return menu;
+    }
+    private void MenuAction(InsightsMenuIntent intent) {
+        if (ReferenceEquals(menu, intent.Menu) && intent.Menu.Origin == origin) {
+            feedback = $"Menu {intent.ActionId} for {string.Join(", ", intent.Menu.NodeIds)} in {Name}.";
+            menu = null;
+        }
+    }
+    private void ReleaseMenu() => pendingMenu?.TrySetResult();
+    public void Dispose() {
+        disposed = true;
+        ReleaseMenu();
+    }
+}

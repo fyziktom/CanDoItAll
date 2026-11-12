@@ -4,6 +4,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Infrastructure;
 
 namespace CanDoItAll.SharedProviders.E2E;
@@ -241,24 +242,24 @@ internal sealed class E2ePreparationService
                 "The repository root is not the CanDoItAll checkout root required by this E2E lane.");
         }
 
-        var expectedArtifactRoot = Path.GetFullPath(Path.Combine(
-            options.RepositoryRootPath,
-            ".artifacts",
-            "shared-providers-e2e"));
+        var artifactParent = Path.GetFullPath(Path.Combine(options.RepositoryRootPath, ".artifacts"));
+        var artifactName = Path.GetFileName(options.ArtifactRootPath);
         if (!string.Equals(
-                expectedArtifactRoot,
-                options.ArtifactRootPath,
+                artifactParent,
+                Path.GetDirectoryName(options.ArtifactRootPath),
                 OperatingSystem.IsWindows()
                     ? StringComparison.OrdinalIgnoreCase
-                    : StringComparison.Ordinal))
-        {
+                    : StringComparison.Ordinal) ||
+            artifactName.Length is < 20 or > 80 ||
+            !Regex.IsMatch(artifactName, "^shared-providers-e2e(?:-[a-z0-9]+){0,8}$",
+                RegexOptions.CultureInvariant | RegexOptions.NonBacktracking)) {
             throw new E2eSafeException(
-                "The artifact root must be exactly <repository>/.artifacts/shared-providers-e2e.");
+                "The artifact root must be a named shared-providers-e2e fixture directly below <repository>/.artifacts.");
         }
 
         EnsureArtifactPathAncestorsAreNotReparsePoints(
             options.RepositoryRootPath,
-            expectedArtifactRoot);
+            options.ArtifactRootPath);
     }
 
     private static void EnsureArtifactPathAncestorsAreNotReparsePoints(

@@ -26,6 +26,32 @@ The authoritative project and package dependency list is in [CanDoItAll.Modules.
 
 ## Architecture Notes
 
+Projects P1 rendering is in
+[CanDoItAll.Projects.UI](../../UI/CanDoItAll.Projects.UI/README.md): portfolio/cards/tree,
+hierarchy inspection, overview, all five editor steps, package controls and deletion notices.
+`ProjectsPage` retains acquisition, mutation admission, native services, agent context,
+navigation and real Files composition. See the
+[P1 boundary and evidence record](../../../docs/architecture/projects-portfolio-ui-p1.md).
+
+`ProjectsPage` owns the `/projects` URL through `ProjectsUrlCodec` (see
+[navigation state](../../../docs/architecture/navigation-state.md)): `projectId` opens the
+project overlay, `mode=editor` and `step` (`identity`, `dates`, `stack`, `links`, `review`)
+address an existing project's editor, `hierarchyId` and `filesId` the hierarchy and Files
+dialogs (one overlay at a time), and `q`, `status`, `partyCategory`, `party`, `parentId`,
+`scope`, `subprojects=false` and `view=files` the committed portfolio filters and view.
+Opening an overlay pushes and closing it goes Back to its parent entry (Replace for a deep
+link); overlay sections, instant filters and the debounced search replace; reset and the
+view push. A new project stays a draft outside the URL until its first save replaces the
+location with its identity. "Open dashboard tab" navigates with
+`WorkbenchNavigation.OpenTabHistoryState`, so only that command creates a dedicated
+Workbench tab. A location change reloads nothing but the overlay it addresses.
+
+Files P2 is deferred. `ProjectFilesPortfolioPane`, `ProjectFilesDialog`, their coordinators,
+the directory catalog, access state and managed viewer leases remain here. The extracted
+board supplies a typed Files slot using the existing shared Cards/Files projection; package
+transfer and profile safety remain in their existing owners. Workbench owns the native
+starter transaction through the compatible Projects-owned admitted seed port.
+
 This module owns project portfolio records and their product semantics. Keep that
 
 behavior here and expose it through typed services, Razor components, and module
@@ -230,3 +256,8 @@ reservation payloads remain explicitly imported history. The Workbench coordinat
 owns its native collections and uses the same actual target transaction. Preflight
 and final inspections remain separate; final checks run under all existing owner
 locks before any replacement.
+
+Committed Project definition and hierarchy hints have a native `IProjectCommittedChangeSink`
+contribution port. It runs from the existing post-physical-commit publisher, alongside the
+neutral Project feed. Workbench contributes root metadata to its bounded Structure feed;
+Projects does not reference Workbench. This port carries no form body or replay authority.

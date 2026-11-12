@@ -23,6 +23,10 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
         var rules = new[]
         {
             new ProjectDependencyRule(
+                "CanDoItAll.AgentFramework.Workflows.Definitions",
+                ["CanDoItAll.AgentFramework.Models"],
+                []),
+            new ProjectDependencyRule(
                 "CanDoItAll.AgentFramework.Workflows.Abstractions",
                 ["CanDoItAll.AgentFramework.Models"],
                 []),
@@ -40,6 +44,7 @@ public sealed class WorkflowFoundationHardeningCheckpointTests
                     "CanDoItAll.AgentFramework.Models",
                     "CanDoItAll.AgentFramework.WorkflowExecutors.Core",
                     "CanDoItAll.AgentFramework.Workflows.Abstractions",
+                    "CanDoItAll.AgentFramework.Workflows.Definitions",
                     "CanDoItAll.SharedKernel"
                 ],
                 ["Microsoft.Extensions.DependencyInjection.Abstractions"]),

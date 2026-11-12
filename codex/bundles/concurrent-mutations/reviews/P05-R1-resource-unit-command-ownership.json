@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "createdUtc": "2026-10-17T08:26:03.2588114Z",
+  "root": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-resource-unit-command-predecessors",
+  "purpose": "Preserve Resource Unit fixture before parent-authored explicit immutable command compile fix",
+  "source": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+  "predecessorSha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD",
+  "mainSuccessorSha256": "44AB450DE9762AC0BA5C13F5CA68A3EEF182C5791D1689C15E3F459FF23418F5",
+  "mainWritesAllowed": false,
+  "executionAllowed": false
+}

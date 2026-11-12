@@ -1,0 +1,69 @@
+@page "/"
+@implements IDisposable
+
+<PageTitle>Storage Recovery scenarios</PageTitle>
+<Stack GapScale="LayoutGap.Medium" @onkeydown="HandleKey">
+    <SectionHeading>Storage Recovery scenarios</SectionHeading>
+    <TextBlock TextStyle="TextStyle.Body2" Value="Simulation using the production renderer. No backend, provider, upload or model is registered." />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <label>Scenario
+            <InputSelect TValue="RecoveryScenario" Value="scenario" ValueChanged="ChangeScenarioAsync" ValueExpression="@(() => scenario)" data-testid="recovery-scenario">
+                @foreach (var value in Enum.GetValues<RecoveryScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+        </label>
+        <Button Text="Open recovery" Click="OpenAsync" data-testid="recovery-open-primary" />
+        <Button Text="Release delayed read" Click="Release" data-testid="recovery-release" />
+        <Button Text="Allow observation retry" Click="AllowRefresh" data-testid="recovery-allow-refresh" />
+    </Cluster>
+    <p data-testid="recovery-simulation-count">Simulated commands: @owner.Commands.Count</p>
+    <p data-testid="recovery-scenario-state">Observation failure: @owner.FailRefresh. Last key: @lastKey</p>
+    @if (interactive) {
+        <span data-testid="recovery-ready" hidden>Ready</span>
+    }
+    @if (session is { } current) {
+        <RecoveryDialog @key="current" Session="current" OnClose="Close" />
+    }
+</Stack>
+
+@code {
+    private RecoveryScenario scenario;
+    private RecoveryScenarioOwner owner = new();
+    private RecoverySession? session;
+    private bool interactive;
+    private string lastKey = string.Empty;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    private Task ChangeScenarioAsync(RecoveryScenario value) {
+        Close();
+        scenario = value;
+        owner = new(value);
+        return Task.CompletedTask;
+    }
+    private async Task OpenAsync() {
+        Close();
+        session = new(owner, RecoveryScenarioOwner.StorageId);
+        await session.RefreshAsync();
+    }
+    private void Release() => owner.Release();
+    private void AllowRefresh() => owner.FailRefresh = false;
+    private void HandleKey(KeyboardEventArgs args) {
+        lastKey = $"{args.Code} Alt={args.AltKey} Shift={args.ShiftKey}";
+        if (args.AltKey && args.ShiftKey && args.Code == "KeyR") {
+            Release();
+        }
+        if (args.AltKey && args.ShiftKey && args.Code == "KeyO") {
+            AllowRefresh();
+        }
+    }
+    private void Close() {
+        session?.Dispose();
+        session = null;
+    }
+    public void Dispose() => Close();
+}

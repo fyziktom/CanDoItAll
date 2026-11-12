@@ -783,8 +783,10 @@ public sealed class ProjectStructureGanttMutationServiceTests
         Assert.Equal(proposedEstimate.ExpectedCostCurrencyCode, metadata.ExpectedCostCurrencyCode);
     }
 
-    [Fact]
-    public async Task ApplyTaskDetailsAsync_accepts_exact_untracked_current_progress()
+    [Theory]
+    [InlineData(30, "progress")]
+    [InlineData(-1, "")]
+    public async Task ApplyTaskDetailsAsync_accepts_exact_untracked_current_progress(int proposedProgress, string expectedMode)
     {
         var task = CreateTask("custom:00000000000000000000000000000001", "Untracked", 0, 1);
         task.ProgressPercent = ProjectProgressPolicy.UntrackedPercent;
@@ -796,7 +798,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
             "Untracked",
             "Tracked",
             ProjectProgressPolicy.UntrackedPercent,
-            30,
+            proposedProgress,
             ProjectTaskEstimate.Empty(),
             ProjectTaskEstimate.Empty(),
             ScheduleChange: null,
@@ -811,8 +813,8 @@ public sealed class ProjectStructureGanttMutationServiceTests
 
         var persisted = await fixture.FindTaskAsync(task.NodeKey);
         Assert.Equal("Tracked", persisted.Title);
-        Assert.Equal(30, persisted.ProgressPercent);
-        Assert.Equal("progress", persisted.ProgressMode);
+        Assert.Equal(proposedProgress, persisted.ProgressPercent);
+        Assert.Equal(expectedMode, persisted.ProgressMode);
     }
 
     [Fact]

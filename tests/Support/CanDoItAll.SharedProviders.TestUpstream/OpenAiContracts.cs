@@ -97,7 +97,10 @@ public sealed record ResponsesResponse(
     string Status,
     string Model,
     IReadOnlyList<ResponseOutputItem> Output,
-    ResponseUsage Usage);
+    ResponseUsage Usage,
+    ResponseIncompleteDetails? IncompleteDetails = null);
+
+public sealed record ResponseIncompleteDetails(string Reason);
 
 public sealed record ResponseOutputItem(
     string Id,
@@ -141,6 +144,8 @@ public sealed record ResponseCompletedEvent(
     string Type,
     int SequenceNumber,
     ResponsesResponse Response);
+
+public sealed record ResponseOutputItemEvent(string Type, int SequenceNumber, int OutputIndex, ResponseOutputItem Item);
 
 public sealed record ImageGenerationRequest(
     string Model,

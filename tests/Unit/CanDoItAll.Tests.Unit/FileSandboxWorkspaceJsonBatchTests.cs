@@ -7,6 +7,24 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class FileSandboxWorkspaceJsonBatchTests {
     [Fact]
+    public async Task Directory_read_reuses_batch_policy_without_caching_contents_or_changing_order() {
+        using var fixture = new Files();
+        var paths = await fixture.CreateFilesAsync(12);
+        var records = await fixture.Store.LoadRecordsFromDirectoryAsync<Payload>(fixture.Root, default);
+        Assert.Equal(new[] { 0, 1, 10, 11, 2, 3, 4, 5, 6, 7, 8, 9 }, records.Select(record => record.Index));
+        Assert.Equal(3, fixture.Factory.PoliciesCreated);
+        Assert.Equal(13, fixture.Factory.PathChecks);
+        var timestamp = File.GetLastWriteTimeUtc(paths[2]);
+        await File.WriteAllTextAsync(paths[2], "{\"index\":9}");
+        File.SetLastWriteTimeUtc(paths[2], timestamp);
+        var updated = await fixture.Store.LoadRecordsFromDirectoryAsync<Payload>(fixture.Root, default);
+        Assert.Equal(9, updated[4].Index);
+        await File.WriteAllTextAsync(paths[2], "{invalid");
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.LoadRecordsFromDirectoryAsync<Payload>(fixture.Root, default));
+        Assert.Equal(0, fixture.Factory.ActiveReaders);
+    }
+
+    [Fact]
     public async Task Batch_bounds_parallel_reads_preserves_order_and_revalidates_every_path() {
         using var fixture = new Files();
         var paths = await fixture.CreateFilesAsync(12);

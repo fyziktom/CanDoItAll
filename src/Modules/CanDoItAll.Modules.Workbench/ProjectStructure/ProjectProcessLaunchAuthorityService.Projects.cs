@@ -28,8 +28,12 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         var saved = admission.Dispatch.SourceAuthority ?? throw Denied("The Process source authority must be reconciled before project mutation.");
         IAgentCatalogReadLease? held = null;
         try {
-            if (saved.Principal is ProcessLaunchPrincipal.AgentExecution source) {
-                held = await catalog.AcquireAgentReadLeaseAsync(source.Ceiling.AgentId, cancellationToken);
+            var sourceId = (saved.Principal as ProcessLaunchPrincipal.AgentExecution)?.Ceiling.AgentId;
+            var executorId = CreatedGrantTargets(admission, target).Count != 0 ? admission.Dispatch.Evidence.ExecutorAgentId : (Guid?)null;
+            if (sourceId.HasValue && executorId.HasValue && sourceId != executorId) {
+                held = await catalog.AcquireAgentsReadLeaseAsync([sourceId.Value, executorId.Value], cancellationToken);
+            } else if ((sourceId ?? executorId) is { } single) {
+                held = await catalog.AcquireAgentReadLeaseAsync(single, cancellationToken);
             }
             RequireProjectMutation(admission, target, operation, held);
             return new(this, admission, target, operation, held);
@@ -45,12 +49,24 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         ProjectProcessProjectOperation operation, IAgentCatalogReadLease? held) {
         var saved = admission.Dispatch.SourceAuthority!;
         RequireSource(saved, saved, held);
+        var createdTargets = CreatedGrantTargets(admission, target);
+        if (createdTargets.Count != 0) {
+            if (held is null) {
+                throw Denied("Created targets require the current executor's exact grants.");
+            }
+            RequireCatalogScope(held);
+            var executorId = admission.Dispatch.Evidence.ExecutorAgentId;
+            var executor = FindHeldAgent(held, executorId);
+            if (createdTargets.Any(project => !ProjectDefinitionGovernedReadPolicy.CurrentExecutorCanUseCreatedProject(executorId, executor, project))) {
+                throw Denied("The current Process executor no longer has access to an exact created target.");
+            }
+        }
         var original = admission.ProjectAdmission;
         if (target.ProjectId == Guid.Empty || target.ExistingProjects.IsDefault || !MatchesPurpose(operation, target.Purpose)) {
             throw Denied("The Process project operation does not match the actual owner mutation.");
         }
         var current = saved.Principal is ProcessLaunchPrincipal.AgentExecution source
-            ? CaptureProjectMutationCeiling(AgentProjectStructureAccessMetadata.Read(held!.Agent!.ConfigurationJson), source.Ceiling)
+            ? CaptureProjectMutationCeiling(AgentProjectStructureAccessMetadata.Read(FindHeldAgent(held!, source.Ceiling.AgentId)!.ConfigurationJson), source.Ceiling)
             : new ProcessProjectMutationCeiling(true, true, true, true);
         if (operation is not (ProjectProcessProjectOperation.Native or ProjectProcessProjectOperation.Update) && saved.ProjectMutations is null) {
             throw Denied("This saved Process has no original project-creation or hierarchy ceiling. Reconcile its source authority before this effect.");
@@ -110,6 +126,11 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         _ => false
     };
 
+    private static IReadOnlyCollection<ProjectWriteAdmission> CreatedGrantTargets(ProjectProcessMutationAdmission admission,
+        ProjectMutationTarget target) {
+        return target.ExistingProjects.Where(project => project != admission.ProjectAdmission).ToArray();
+    }
+
     private static bool MatchesPurpose(ProjectProcessProjectOperation operation, ProjectMutationPurpose purpose) => operation switch {
         ProjectProcessProjectOperation.Native or ProjectProcessProjectOperation.Update => purpose == ProjectMutationPurpose.ExistingWrite,
         ProjectProcessProjectOperation.CreateRoot => purpose is ProjectMutationPurpose.ReserveRoot or ProjectMutationPurpose.CreateRoot,
@@ -126,14 +147,58 @@ public sealed partial class ProjectProcessLaunchAuthorityService {
         await projectAdmissions.RequireConsumedCreationsForMutationAsync(reservations, cancellationToken);
     }
 
+    private async Task RequireProjectDeletionCommitAsync(ProjectProcessMutationAdmission admission, ProjectMutationTarget target,
+        ProjectProcessProjectOperation operation, IAgentCatalogReadLease? held, ProjectDeletionCommitTarget deletion,
+        CancellationToken cancellationToken) {
+        deletion.RequireOriginalTarget(target);
+        if (deletion.CancelledCreation is null || target.Reservation != deletion.CancelledCreation ||
+                admission.ProjectAdmission.ProjectId == deletion.Project.ProjectId) {
+            throw Denied("A Process may compensate only its exact created target while preserving its live source project.");
+        }
+        RequireProjectMutation(admission, target, operation, held);
+        var reservations = target.ExistingProjects.Where(project => project != admission.ProjectAdmission && project != deletion.Project)
+            .Select(project => admission.FindCreatedProject(project)!).ToArray();
+        await projectAdmissions.RequireConsumedCreationsForMutationAsync(reservations, cancellationToken);
+    }
+
     internal sealed class ProjectProcessProjectAuthorityLease(ProjectProcessLaunchAuthorityService owner,
         ProjectProcessMutationAdmission admission, ProjectMutationTarget target, ProjectProcessProjectOperation operation,
         IAgentCatalogReadLease? held) : IAsyncDisposable {
         private int disposed;
         internal ImmutableArray<ProjectWriteAdmission> SourceProjects => [admission.ProjectAdmission];
+        internal ValueTask<AgentToolInvocationPublicationLease> AcquireInvocationAsync(AgentToolInvocationClaim claim, CancellationToken cancellationToken) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            return claim.AcquirePublicationAsync(held
+                ?? throw Denied("The original hierarchy invocation requires its held executor catalog."), cancellationToken);
+        }
+
+        internal ProjectDeletionSourceRecovery CaptureDeletionRecoverySource() {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            owner.RequireProjectMutation(admission, target, operation, held);
+            return held switch {
+                null => new ProjectDeletionSourceRecovery.NoExternalSourceLease(),
+                IProjectDeletionSourceRecoveryLease source => source.CaptureDeletionRecoverySource(),
+                _ => throw new NotSupportedException("The acquired Process catalog has no original deletion recovery binding.")
+            };
+        }
 
         internal Task RequireForMutationAsync(CancellationToken cancellationToken) {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            return owner.RequireProjectMutationForTransactionAsync(admission, target, operation, held, cancellationToken);
+        }
+
+        internal Task RequireForDeletionCommitAsync(ProjectDeletionCommitTarget deletion, CancellationToken cancellationToken) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            return owner.RequireProjectDeletionCommitAsync(admission, target, operation, held, deletion, cancellationToken);
+        }
+
+        internal Task RequireForReservedCancellationCommitAsync(ProjectReservationCancellationTarget cancellation,
+            CancellationToken cancellationToken) {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+            target.RequireReservedCancellation(cancellation);
+            if (admission.ProjectAdmission.ProjectId == cancellation.Project.ProjectId) {
+                throw Denied("A never-created reservation cannot supply the Process live source project.");
+            }
             return owner.RequireProjectMutationForTransactionAsync(admission, target, operation, held, cancellationToken);
         }
 

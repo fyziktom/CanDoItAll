@@ -46,18 +46,18 @@ public sealed class ProviderProfilesSeamTests {
     [InlineData(true)]
     public async Task Core_read_failure_hides_form_and_retry_keeps_the_selected_target(bool catalogFails) {
         var reads = new Reads();
-        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
-        var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-name-input']");
         if (catalogFails) {
             reads.Catalog = _ => throw new InvalidOperationException("Catalog offline");
-            await cut.Find("[data-testid='providers-refresh']").ClickAsync();
-        } else {
+        }
+        await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
+        var cut = harness.Context.Render<AgentProviderProfilesPanel>();
+        if (!catalogFails) {
+            cut.WaitForElement("[data-testid='providers-name-input']");
             reads.Editor = (_, _) => throw new InvalidOperationException("Editor offline");
             await Node(cut, "Second").ClickAsync();
         }
         cut.WaitForElement("[data-testid='providers-load-failed']");
-        Assert.Equal(catalogFails ? "First" : "Second", cut.Find("h2.cda-title-xl").TextContent);
+        Assert.Equal(catalogFails ? "New provider profile" : "Second", cut.Find("h2.cda-title-xl").TextContent);
         Assert.Empty(cut.FindAll("form"));
         Assert.Empty(cut.FindAll("[data-testid='providers-save']"));
         reads.Catalog = _ => Task.FromResult(reads.Snapshot);
@@ -97,9 +97,9 @@ public sealed class ProviderProfilesSeamTests {
         } else {
             await Node(cut, "First").ClickAsync();
         }
-        cut.WaitForElement("[data-testid='providers-name-input']").Change("Keep my latest draft");
+        cut.WaitForElement("[data-testid='providers-name-input']").Input("Keep my latest draft");
         await cut.FindAll("button[role='tab']").Single(button => button.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
-        cut.Find("[data-testid='providers-suggested-models']").Change("Unsubmitted model text");
+        cut.Find("[data-testid='providers-suggested-models']").Input("Unsubmitted model text");
         Assert.Equal("Unsubmitted model text", cut.Find("[data-testid='providers-suggested-models']").GetAttribute("value"));
         if (newDraft) {
             await cut.Find("[data-testid='providers-refresh']").ClickAsync();
@@ -141,8 +141,11 @@ public sealed class ProviderProfilesSeamTests {
             return editor.Task;
         };
         var loading = catalogRead ? cut.Find("[data-testid='providers-refresh']").ClickAsync() : Node(cut, "Second").ClickAsync();
-        cut.WaitForElement("[data-testid='providers-editor-loading']");
-        await cut.InvokeAsync(cut.Instance.Dispose);
+        cut.WaitForAssertion(() => Assert.True(token.CanBeCanceled));
+        if (!catalogRead) {
+            cut.WaitForElement("[data-testid='providers-editor-loading']");
+        }
+        await cut.InvokeAsync(async () => await cut.Instance.DisposeAsync());
         Assert.True(token.IsCancellationRequested);
         await cut.InvokeAsync(() => {
             if (catalogRead) {
@@ -160,10 +163,13 @@ public sealed class ProviderProfilesSeamTests {
     [InlineData(true)]
     public async Task Secret_partial_failure_retains_saved_option_and_source_managed_actions(bool sourceManaged) {
         var reads = new Reads();
+        var revision = Guid.NewGuid();
         reads.Catalog = _ => Task.FromResult(new ProviderProfilesCatalog(
             [reads.First with { ConnectorPluginKey = sourceManaged ? ProviderConnectorKeys.SharedImport : string.Empty }],
-            new([], "Secret metadata offline")));
-        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, Name = "Saved", ApiKeyEnvironmentVariable = "secret:retained" });
+            new([], "Secret metadata offline")) {
+            Revisions = new Dictionary<Guid, CanDoItAll.AgentFramework.Core.ProviderConfigurationRevision> { [reads.First.Id] = new(revision) }
+        });
+        reads.Editor = (id, _) => Task.FromResult(new ProviderProfileEditorModel { Id = id, ExpectedConcurrencyToken = revision, Name = "Saved", ApiKeyEnvironmentVariable = "secret:retained" });
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton<IProviderProfilesReads>(reads));
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-secret-warning']");
@@ -187,7 +193,7 @@ public sealed class ProviderProfilesSeamTests {
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-name-input']");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
-        cut.Find("[data-testid='providers-name-input']").Change("Unsaved across sections");
+        cut.Find("[data-testid='providers-name-input']").Input("Unsaved across sections");
         Assert.Equal(new[] { "Connection", "Prices", "Runtime", "Thinking", "Sharing", "History" },
             cut.FindAll("button[role='tab']").Select(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim()));
         await cut.InvokeAsync(() => cut.FindAll("button[role='tab']").Single(button => button.QuerySelector(".cad-tabs__tab-text")!.TextContent.Trim() == label).ClickAsync());

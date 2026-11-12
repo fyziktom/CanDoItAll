@@ -1,0 +1,42 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+@if (Loading || Error is not null || Items.Count > 0) {
+    <Stack data-testid="project-pending-list">
+        <FormSection Title="Pending project saves" Description="Check a retained save explicitly. Opening this list never submits or retries a write.">
+            <Actions>
+                <Button Text="Refresh pending saves" ButtonStyle="ButtonStyle.Light" Disabled="@Loading" Click="Refresh" data-testid="project-pending-refresh" />
+            </Actions>
+            <ChildContent>
+                <Stack GapScale="LayoutGap.Small">
+                    @if (Loading) {
+                        <TextBlock Value="Reading retained save references…" />
+                    }
+                    @if (Error is not null) {
+                        <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@Error" /></Alert>
+                    }
+                    @foreach (var item in Items) {
+                        <Cluster Wrap="FlexWrap.Wrap" @key="item.Operation">
+                            <TextBlock Value="@($"{item.Stage} · {item.Operation.Id:D}")" />
+                            <Button Text="Review save" ButtonStyle="ButtonStyle.Light" Disabled="@Loading"
+                                    Click="@(() => Open.InvokeAsync(item.Operation))" data-testid="project-pending-open" />
+                        </Cluster>
+                    }
+                    @if (HasMore) {
+                        <Button Text="Show more retained saves" ButtonStyle="ButtonStyle.Light" Click="ShowMore" />
+                    }
+                </Stack>
+            </ChildContent>
+        </FormSection>
+    </Stack>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<ProjectPendingSubmissionMetadata> Items { get; set; } = [];
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool HasMore { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback ShowMore { get; set; }
+    [Parameter] public EventCallback<ProjectDefinitionOperation> Open { get; set; }
+}

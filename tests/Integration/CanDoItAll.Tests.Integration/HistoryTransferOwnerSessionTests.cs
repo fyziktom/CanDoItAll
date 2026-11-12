@@ -53,7 +53,7 @@ public sealed class HistoryTransferOwnerSessionTests {
         var sourceConnection = sourceDb.Database.GetDbConnection();
         var targetConnection = targetDb.Database.GetDbConnection();
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        var handler = new HistoryDatabaseTransferHandler([Participant(sessions)], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions));
+        var handler = new HistoryDatabaseTransferHandler([Participant(sessions)], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()));
         var context = new DatabaseTransferOperation(source.Profile, target.Profile, true);
         var preview = await handler.PreviewAsync(context);
         Assert.Equal("Transfer is a snapshot. Canonical source files and protection keys must remain accessible; they are not copied by this group.", preview.Warning);
@@ -89,7 +89,7 @@ public sealed class HistoryTransferOwnerSessionTests {
         await sourceDb.SaveChangesAsync();
         var sessions = new DatabaseTransferOwnerSessionRunner();
         var participant = new FailingAfterCopy(Participant(sessions));
-        var handler = new HistoryDatabaseTransferHandler([participant], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions));
+        var handler = new HistoryDatabaseTransferHandler([participant], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()));
 
         await Assert.ThrowsAsync<InjectedCopyFailure>(() => handler.TransferAsync(new(source.Profile, target.Profile, true)));
 
@@ -199,7 +199,7 @@ public sealed class HistoryTransferOwnerSessionTests {
         await targetDb.SaveChangesAsync();
         var before = JsonSerializer.Serialize(locator);
         var sessions = new DatabaseTransferOwnerSessionRunner();
-        var handler = new HistoryDatabaseTransferHandler([Participant(sessions)], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions));
+        var handler = new HistoryDatabaseTransferHandler([Participant(sessions)], sessions, DatabaseTransferTestSupport.For(new(source.Profile, target.Profile, true), sourceDb, targetDb, sessions, activation: await target.ActivateDatasetAsync()));
         var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => handler.TransferAsync(new(source.Profile, target.Profile, true)));
         Assert.Contains("retained canonical file locators", failure.Message);
         targetDb.ChangeTracker.Clear();
@@ -230,6 +230,7 @@ public sealed class HistoryTransferOwnerSessionTests {
     private sealed class InjectedCopyFailure : Exception;
 
     private sealed class FailingAfterCopy(AgentHistoryTransferParticipant inner) : IHistoryTransferParticipant {
+        public IReadOnlyCollection<Type> TargetEntityTypes => inner.TargetEntityTypes;
         public HistorySourceKind Kind => inner.Kind;
         public int Copied { get; private set; }
         public Task ValidateTargetAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken)

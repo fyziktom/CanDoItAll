@@ -133,7 +133,8 @@ public static class AgentFrameworkServiceCollectionExtensions
             new FixedAgentExecutionProfileGenerationSource(default));
         services.TryAddSingleton<WorkspaceBackedProviderProfileRegistry>(serviceProvider => new WorkspaceBackedProviderProfileRegistry(
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>(),
-            serviceProvider.GetRequiredService<IProviderProfileService>()));
+            serviceProvider.GetRequiredService<IProviderProfileService>(),
+            resolvedActivityWorkspaceIdentity));
         services.TryAddSingleton<IProviderProfileRegistry>(serviceProvider =>
             serviceProvider.GetRequiredService<WorkspaceBackedProviderProfileRegistry>());
         services.TryAddSingleton<IProviderRuntimeProfileSource>(serviceProvider =>

@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -51,7 +48,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         }
         await using var held = await catalog.AcquireAgentReadLeaseAsync(governance.AgentId, cancellationToken);
         RequireCatalogScope(held);
-        var agent = held.Agent ?? throw Denied("The process source Agent no longer exists.");
+        var agent = FindHeldAgent(held, governance.AgentId) ?? throw Denied("The process source Agent no longer exists.");
         var access = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
         var ceiling = CreateAgentCeiling(governance);
         var authority = new ProcessLaunchAuthority(new ProcessLaunchPrincipal.AgentExecution(ceiling, operation),
@@ -161,7 +158,7 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         RequireCatalogScope(held);
         RequireCeiling(source, project);
         RequireCeiling(current, project);
-        var agent = held.Agent;
+        var agent = FindHeldAgent(held, source.Ceiling.AgentId);
         if (agent is null || agent.Id != source.Ceiling.AgentId || agent.IsTemplate || agent.Status != AgentLifecycleStatus.Active ||
                 !agent.Permissions.CanUseTools) {
             throw Denied("The process source Agent is no longer active or permitted to use tools.");
@@ -204,35 +201,26 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         }
     }
 
-    private void RequireOperator(ProcessLaunchAuthority authority) {
-        var options = apiOptions.CurrentValue;
-        var surface = authority.Principal switch {
-            ProcessLaunchPrincipal.LocalOperator local => local.Surface,
-            ProcessLaunchPrincipal.AuthenticatedOperator => ProcessLaunchOperatorSurface.Api,
-            _ => throw Denied("The Process operator authority has an unsupported source channel.")
-        };
-        if (authority.PolicyFingerprint != OperatorFingerprint(surface) ||
-                surface == ProcessLaunchOperatorSurface.Api && (!options.Enabled ||
-                    authority.Principal is ProcessLaunchPrincipal.LocalOperator && options.Authorization.Enabled ||
-                    authority.Principal is ProcessLaunchPrincipal.AuthenticatedOperator authenticated &&
-                        (!options.Authorization.Enabled || authenticated.ExpiresAtUtc <= clock.GetUtcNow()))) {
-            throw Denied("The admitted Process operator authority has expired or its current policy denies the operation.");
+    internal void RequireHeldSource(ProcessLaunchAuthority authority, IAgentCatalogReadLease? held, bool mutation) {
+        authority.Validate();
+        RequireReadSource(authority, held);
+        if (mutation) {
+            RequireSource(authority, authority, held);
         }
     }
 
-    private string OperatorFingerprint(ProcessLaunchOperatorSurface surface) {
-        if (surface == ProcessLaunchOperatorSurface.UserInterface) {
-            return Hash("process-local-ui-v1");
-        }
+    internal static AgentDefinition? FindHeldAgent(IAgentCatalogReadLease held, Guid agentId)
+        => held.Agent?.Id == agentId ? held.Agent : held.Agents.SingleOrDefault(agent => agent.Id == agentId);
+
+    private void RequireOperator(ProcessLaunchAuthority authority) {
         var options = apiOptions.CurrentValue;
-        return Hash(JsonSerializer.Serialize(new {
-            options.Enabled,
-            AuthorizationEnabled = options.Authorization.Enabled,
-            options.Authorization.Issuer,
-            options.Authorization.Audience,
-            SigningKeyFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(options.Authorization.SigningKey)))
-        }));
+        var surface = ProjectProcessReadAuthorityPolicy.OperatorSurface(authority);
+        ProjectProcessReadAuthorityPolicy.RequireOperator(authority, options, OperatorFingerprint(surface), clock.GetUtcNow());
     }
+
+    private string OperatorFingerprint(ProcessLaunchOperatorSurface surface)
+        => ProjectProcessReadAuthorityPolicy.OperatorFingerprint(surface,
+            surface == ProcessLaunchOperatorSurface.UserInterface ? null : apiOptions.CurrentValue);
 
     private async Task RequireForMutationAsync(ProcessLaunchAuthority saved, ProcessLaunchAuthority caller,
         IAgentCatalogReadLease? held, ProcessLaunchLinkTarget? linkTarget, CancellationToken cancellationToken) {
@@ -256,21 +244,10 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
     private static ProjectWriteAdmission ToProject(ProcessProjectAdmission project)
         => new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId);
 
-    private static ProcessProjectAdmission? ResolveSourceProject(ProcessLaunchAuthority authority) {
-        if (authority.Principal is not ProcessLaunchPrincipal.AgentExecution { Ceiling: var ceiling } ||
-                ceiling.WorkspaceScopeKind != ProcessLaunchSourceScopeKind.Project) {
-            return null;
-        }
-        if (ceiling.SourceProjectAdmission is { } source) {
-            return source;
-        }
-        return ceiling.EffectiveSchemaVersion == ProcessLaunchAgentCeiling.LegacySchemaVersion &&
-            authority.ProjectAdmission is { } original && Guid.TryParse(ceiling.WorkspaceScopeKey, out var projectId) &&
-            original.ProjectId == projectId ? original
-            : throw Denied("The saved Process source has no original project lifetime binding.");
-    }
+    private static ProcessProjectAdmission? ResolveSourceProject(ProcessLaunchAuthority authority)
+        => ProjectProcessReadAuthorityPolicy.ResolveSourceProject(authority);
 
-    private async Task RequireSourceProjectCurrentAsync(ProcessLaunchAuthority authority, CancellationToken cancellationToken) {
+    internal async Task RequireSourceProjectCurrentAsync(ProcessLaunchAuthority authority, CancellationToken cancellationToken) {
         if (ResolveSourceProject(authority) is not { } source) {
             return;
         }
@@ -281,15 +258,8 @@ public sealed partial class ProjectProcessLaunchAuthorityService(
         }
     }
 
-    private static void RequireSourceProjectGrant(ProcessLaunchAuthority authority, AgentProjectStructureAccessSettings access) {
-        if (ResolveSourceProject(authority) is { } source && (!access.CanRead || !access.AllowAllProjects &&
-                (!access.AllowedProjectIds.Contains(source.ProjectId) ||
-                    !access.AllowedProjectLifetimes.Contains(new(source.DatabaseProfileId, source.ProjectId, source.LifetimeId))))) {
-            throw Denied("Current Agent read policy does not grant the original Process source project lifetime.");
-        }
-    }
-
-    private static string Hash(string value) => "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    private static void RequireSourceProjectGrant(ProcessLaunchAuthority authority, AgentProjectStructureAccessSettings access)
+        => ProjectProcessReadAuthorityPolicy.RequireSourceProjectGrant(authority, access);
 
     private static ProcessLaunchAuthorityRejectedException Denied(string message) => new(message);
 

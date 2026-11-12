@@ -17,6 +17,7 @@ public static class CollaborationModuleServiceCollectionExtensions
             IProjectTransferTargetStateParticipant,
             CollaborationProjectTransferTargetStateParticipant>());
         services.AddScoped<CollaborationService>();
+        services.AddScoped<ICollaborationWorkspaceOwner>(provider => provider.GetRequiredService<CollaborationService>());
         return services;
     }
 }

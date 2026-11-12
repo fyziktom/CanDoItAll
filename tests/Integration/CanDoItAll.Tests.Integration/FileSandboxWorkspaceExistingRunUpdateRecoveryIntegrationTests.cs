@@ -419,7 +419,7 @@ public sealed class FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTest
             1);
 
         var environment = CanDoItAllTestEnvironment.Create(
-            $"run-detail-update-recovery-{Guid.NewGuid():N}");
+            "run-detail-update-recovery");
         try
         {
             var profile =

@@ -13,12 +13,16 @@ internal static class ProcessTemplateKernelBuilder
     public static ProcessTemplateKernelBuildResult Build(
         ProcessTemplateDefinitionDocument definition,
         string packVersion,
-        StrategyId stepExecutionStrategyId)
+        StrategyId stepExecutionStrategyId,
+        string? executableIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentException.ThrowIfNullOrWhiteSpace(packVersion);
 
         var definitionContentHash = ComputeDefinitionContentHash(definition);
+        if (executableIdentity is not null) {
+            definitionContentHash = "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{definitionContentHash}:{executableIdentity}"))).ToLowerInvariant();
+        }
         var definitionId = CreateDefinitionId(definition.Key);
         var versionId = new ProcessDefinitionVersionId(CreateDeterministicGuid($"definition-version:{definition.Key}:{definitionContentHash}"));
         var stepIds = definition.Steps.ToDictionary(

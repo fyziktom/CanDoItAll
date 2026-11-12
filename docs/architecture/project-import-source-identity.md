@@ -1,0 +1,38 @@
+# JSON outline source identity
+
+JSON outline imports can preserve a caller's `sourceKey` in owner-created structured
+metadata. This supports reliable readback and recovery without putting identifiers in
+titles or human notes. Duplicate titles are allowed; source identity is independent.
+
+Each optional key starts with an ASCII letter or digit and has at most 128 characters,
+using ASCII letters, digits, hyphen, underscore, period, colon or slash. Keys are unique
+over the entire outline with ordinal case-sensitive comparison. A supplied null,
+number, empty/invalid string or duplicate fails with HTTP 400 before import writes.
+`requireSourceKeys: true` additionally rejects any node without a key and is accepted
+only for JsonOutline. Clients can discover this property in the live import schema;
+older hosts must be reported as unsupported before a client relies on persisted keys.
+
+The Workbench import service validates and parses the source before creating its
+container or source asset. During creation it writes `metadataJson.importSource` with
+`sourceKey`, numeric `sourceKind` and `containerNodeId`. The existing canonical task
+owner still creates task lifecycle/description metadata. The typed metadata envelope
+recognizes import identity so task creation, scheduling and later owner edits retain it.
+Generic task metadata writes remain forbidden. No caller-supplied arbitrary metadata is accepted through import.
+Omitted keys and other formats retain their existing behavior. Import is not atomic
+after validation; a write failure can still leave partial results and must not trigger
+a blind retry.
+
+The small identity record owns validation and serialization, independently exercised by
+unit tests. The existing import service remains the orchestration and mutation owner;
+no projects, registrations, partial classes or service interfaces are added. Raw HTTP
+tests cover same-title nodes, clean notes, exact identity readback and rejection before
+any nodes are created. Existing Mermaid/DOCX/XMind and raw task-update suites cover
+unchanged import and canonical task behavior. SharedInfo carries the API-user guidance
+and exact generated snapshot. External clients consume the published HTTP contract.
+
+## Validation
+
+Build Workbench and Web, then discover and run `ProjectStructureImportSourceIdentityTests`
+and `ProjectStructureImportIdentityRawJsonTests`. Include the existing import and
+task-update cases when changing metadata normalization. Follow [Testing](../testing.md)
+for the isolated PostgreSQL host, discovery counts and final portability enforcement.

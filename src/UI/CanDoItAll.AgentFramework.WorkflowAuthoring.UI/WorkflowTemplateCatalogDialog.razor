@@ -1,0 +1,26 @@
+<HeadContent><link rel="stylesheet" href="_content/CanDoItAll.AgentFramework.Workflows.UI/workflows.css" /></HeadContent>
+                <Dialog IsOpen="true"
+                        Title="Workflow templates"
+                        Eyebrow="Template catalogue"
+                        Subtitle="Templates load only when this catalogue is opened."
+                        Size="ModalSize.Wide"
+                        DenseChrome="true"
+                        OnClose="Closed"
+                        TestId="workflows-template-catalogue-dialog">
+                    <ChildContent>
+                        <WorkflowTemplateCatalogSurface Presentation="@Presentation" Intent="Intent" />
+</ChildContent>
+                    <Footer>
+                        <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+                            <Button Text="Close"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Click="Closed"
+                                    data-testid="workflows-template-catalogue-close" />
+                        </Cluster>
+                    </Footer>
+                </Dialog>
+@code {
+    [Parameter, EditorRequired] public WorkflowTemplatePresentation Presentation { get; set; } = default!;
+    [Parameter] public EventCallback<WorkflowIntent> Intent { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+}

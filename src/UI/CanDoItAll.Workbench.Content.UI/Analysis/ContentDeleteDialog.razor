@@ -1,0 +1,38 @@
+@namespace CanDoItAll.Workbench.Content.UI.Analysis
+@{
+    var state = State;
+    var actions = Actions;
+}
+<CanvasOverlayDialog CanvasScoped="CanvasScoped" AriaLabel="@state.AriaLabel"
+                     Kicker="@(state.IsBulk ? "Delete selection" : "Delete node")" Title="@state.Title"
+                     Summary="@state.ImpactCopy" DialogClass="project-structure-summary-dialog"
+                     Close="@(() => actions.Cancel())" DataTestId="content-delete-confirmation">
+    <Body>
+        @if (!string.IsNullOrWhiteSpace(state.Failure)) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="project-structure-delete-failure">@state.Failure</Alert>
+        }
+    </Body>
+    <Actions>
+        @if (state.ManagedAttachmentCount > 0) {
+            <Button Text="@(state.DeletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
+                    ButtonStyle="ButtonStyle.Base" data-testid="content-delete-retain"
+                    Click="@(() => actions.Confirm(ContentStorageDisposition.RetainManagedFiles))" />
+            <Button Text="@(state.DeletesMultipleNodes ? "Delete nodes and files"
+                    : state.ManagedAttachmentCount > 1 ? "Delete node and files" : "Delete node and file")"
+                    ButtonStyle="ButtonStyle.Danger" data-testid="content-delete-files"
+                    Click="@(() => actions.Confirm(ContentStorageDisposition.DeleteOwnedManagedFiles))" />
+        } else {
+            <Button Text="@(state.IsBulk ? "Delete selected" : "Delete")" ButtonStyle="ButtonStyle.Danger"
+                    data-testid="content-delete-files"
+                    Click="@(() => actions.Confirm(ContentStorageDisposition.DeleteOwnedManagedFiles))" />
+        }
+        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" data-testid="content-delete-cancel"
+                Click="@(() => actions.Cancel())" />
+    </Actions>
+</CanvasOverlayDialog>
+
+@code {
+    [Parameter] public bool CanvasScoped { get; set; }
+    [Parameter, EditorRequired] public ContentDeleteConfirmation State { get; set; } = default!;
+    [Parameter, EditorRequired] public ContentDeleteActions Actions { get; set; } = default!;
+}

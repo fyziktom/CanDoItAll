@@ -1,0 +1,54 @@
+{
+  "status": "Source-only; no execution or production edits",
+  "ownedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "newFacts": 2,
+  "unitUnionCases": 47,
+  "integrationCases": 15,
+  "inputs": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceJsonWriteCompatibilityTests.cs",
+      "sha256": "4925BA0A1D6E3F3BF075522EBA89BC5A04C1B7EAB6FB5880312E82D8E81FF0CA",
+      "bytes": 8937,
+      "parentBaseExists": false
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1bc-json-utf8-compatibility-source.md",
+      "sha256": "7417935B22B6C039696BC526FD2E7EC19438BEF83995A979644E03604EDA0855",
+      "bytes": 6204,
+      "parentBaseExists": false
+    }
+  ],
+  "unchangedRegressionSources": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceJsonBatchTests.cs",
+      "cases": 5,
+      "sha256": "ECF4476CA65E5DA46C150D0DDB4CBBF927AB93C0DDEC1D9ADB8495122CC43547"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+      "cases": 17,
+      "sha256": "ACC63D99867DC80AB7F54DD315E89F8FDD61A0E11895ADF4C5F9AB57D9684B07"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFilePublicationTests.cs",
+      "cases": 8,
+      "sha256": "80B2A726A703573E6F4BF31D3F89EB8B628A21661A3B877509652506269A3642"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileProviderUsageWindowTests.cs",
+      "cases": 15,
+      "sha256": "D6FC84DC6D198DA618103FA740738C2D48C1292E1489C21C414EF434DF0C63B0"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceUsageProjectionIntegrationTests.cs",
+      "cases": 15,
+      "sha256": "F3C532C7ED7E78345088B2EE731DB56E2F33D7938B8B614D09C634DF801E4404"
+    }
+  ],
+  "parkedProductionContext": {
+    "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+    "managedSha256": "6C41E0BC7584798E2E5AECE15536010CA0E14583052341F49C36980738CF189B",
+    "mainSha256": "D575EDEA1863934B698C205DA84A544EF8B03A23C7EBB62BD93E40743A0F4704",
+    "transferAuthorizedByThisInventory": false
+  }
+}

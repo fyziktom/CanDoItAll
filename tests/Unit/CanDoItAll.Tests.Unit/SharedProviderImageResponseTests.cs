@@ -60,6 +60,11 @@ public sealed class SharedProviderImageResponseTests {
     [InlineData("\"usage\":{\"input_tokens\":-1,\"output_tokens\":2,\"total_tokens\":1}")]
     [InlineData("\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"total_tokens\":3,\"private_url\":\"http://private.example\"}")]
     [InlineData("\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"total_tokens\":3,\"input_tokens_details\":{\"text_tokens\":\"secret\",\"image_tokens\":0}}")]
+    [InlineData("\"safety_identifier\":42")]
+    [InlineData("\"safety_identifier\":{}")]
+    [InlineData("\"safety_identifier\":[]")]
+    [InlineData("\"safety_identifier\":\"invalid\\u0000identifier\"")]
+    [InlineData("\"safety_identifier\":\"invalid\\nidentifier\"")]
     public void Invalid_or_private_metadata_is_rejected(string metadata) {
         var payload = Encoding.UTF8.GetBytes($$"""{"data":[{"b64_json":"AQID"}],{{metadata}}} """);
 
@@ -72,6 +77,41 @@ public sealed class SharedProviderImageResponseTests {
         Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
             "{\"data\":[{\"b64_json\":\"AQID\",\"url\":\"http://private.example\"}]}"u8.ToArray(),
             ModelId, SharedProviderRelayOperation.ImageGenerations));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("fixture-user-hash")]
+    [InlineData("private@example.test")]
+    [InlineData("http://private.example")]
+    public void Image_safety_identifier_is_accepted_without_disclosing_source_identity(string? identifier) {
+        var payload = Encoding.UTF8.GetBytes($$"""{"created":1713833628,"data":[{"b64_json":"AQID"}],"safety_identifier":{{JsonSerializer.Serialize(identifier)}}} """);
+
+        var result = SharedProviderRelayResponsePolicy.RewriteBuffered(payload, ModelId, SharedProviderRelayOperation.ImageGenerations);
+
+        using var document = JsonDocument.Parse(result);
+        Assert.False(document.RootElement.TryGetProperty("safety_identifier", out _));
+        Assert.Equal(1713833628, document.RootElement.GetProperty("created").GetInt64());
+        Assert.Equal(new byte[] { 1, 2, 3 }, document.RootElement.GetProperty("data")[0].GetProperty("b64_json").GetBytesFromBase64());
+        Assert.Equal(1, SharedProviderRelayUsageExtractor.ExtractBuffered(SharedProviderRelayOperation.ImageGenerations, result).ImageCount);
+    }
+
+    [Theory]
+    [InlineData(128, true)]
+    [InlineData(129, false)]
+    public void Image_safety_identifier_length_is_bounded(int length, bool accepted) {
+        var payload = Encoding.UTF8.GetBytes($$"""{"data":[{"b64_json":"AQID"}],"safety_identifier":"{{new string('a', length)}}"} """);
+
+        if (!accepted) {
+            Assert.Throws<InvalidDataException>(() => SharedProviderRelayResponsePolicy.RewriteBuffered(
+                payload, ModelId, SharedProviderRelayOperation.ImageGenerations));
+            return;
+        }
+
+        using var document = JsonDocument.Parse(SharedProviderRelayResponsePolicy.RewriteBuffered(
+            payload, ModelId, SharedProviderRelayOperation.ImageGenerations));
+        Assert.False(document.RootElement.TryGetProperty("safety_identifier", out _));
     }
 
     [Fact]

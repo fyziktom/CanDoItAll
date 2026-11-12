@@ -1,3 +1,9 @@
+using Microsoft.Extensions.Logging;
+using CanDoItAll.Infrastructure.Configuration;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using CanDoItAll.Agents.Storage;
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
@@ -101,13 +107,34 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IMcpSetupTestService, McpSetupTestService>();
         services.TryAddScoped<ICapabilityAccessPolicyEvaluator, CapabilityAccessPolicyEvaluator>();
         services.TryAddScoped<IAgentCapabilitySetupFlowService, AgentCapabilitySetupFlowService>();
+        services.TryAddSingleton<AgentConfigurationWriteContext>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped<AgentConfigurationChanges>(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new(provider.GetRequiredService<EditingChangeFeed>(),
+                () => new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<IEditingUiAccess>(), provider.GetRequiredService<AgentConfigurationWriteContext>(),
+                provider.GetRequiredService<ILogger<EditingObservation>>());
+        });
         services.AddScoped<IAgentCatalogMutationPolicy>(serviceProvider => new AgentProjectAccessCatalogPolicy(
             serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(),
-            serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id));
+            serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile.Id,
+            serviceProvider.GetRequiredService<AgentConfigurationWriteContext>()));
         services.AddScoped<ISandboxWorkspaceStore>(serviceProvider =>
         {
             var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
-            return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>());
+            var changes = serviceProvider.GetRequiredService<AgentConfigurationChanges>();
+            return new FileSandboxWorkspaceStore(workspaceRoot, scope, serviceProvider.GetRequiredService<IAgentCatalogMutationPolicy>(),
+                changes.Publisher(changes.Scope));
+        });
+        services.TryAddScoped<ISandboxWorkspaceHistoricalReadStore>(serviceProvider => {
+            var state = serviceProvider.GetRequiredService<IDatabaseRuntimeState>();
+            return new CanonicalAgentHistoricalReadStore(
+                serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile,
+                AgentHistoricalReceiptReviewService.RequireInitialized(state), state,
+                serviceProvider.GetRequiredService<IOptions<StorageOptions>>(),
+                serviceProvider.GetRequiredService<IHostEnvironment>());
         });
         services.TryAddScoped<IAgentUsageTotalsQueryService, AgentUsageTotalsQueryService>();
         services.TryAddScoped<IWorkspaceFileService>(serviceProvider =>
@@ -221,6 +248,33 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<IProviderModelAdministrationRuntime>()));
         services.TryAddScoped<ISandboxWorkspaceExecutionRunStore>(serviceProvider =>
             (ISandboxWorkspaceExecutionRunStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceProcessRunPageStore>(serviceProvider =>
+            (ISandboxWorkspaceProcessRunPageStore)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<ISandboxWorkspaceProcessRunIndexPreparation>(serviceProvider =>
+            (ISandboxWorkspaceProcessRunIndexPreparation)serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
+        services.TryAddScoped<AgentInheritedPlanningStopper>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,
+                (ISandboxWorkspaceExecutionRunLeaseStore)store, serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
+        });
+        services.TryAddScoped<AgentBackgroundExecutionStopper>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            return new((ISandboxWorkspaceExecutionRunStore)store, (ISandboxWorkspaceExecutionRunMutationStore)store,
+                (ISandboxWorkspaceExecutionRunLeaseStore)store, serviceProvider.GetRequiredService<IAgentExecutionCancellationRegistry>(),
+                serviceProvider.GetRequiredService<TimeProvider>());
+        });
+        services.TryAddScoped<AgentInheritedPlanningRunReader>(serviceProvider => {
+            var store = serviceProvider.GetRequiredService<ISandboxWorkspaceStore>();
+            var profile = serviceProvider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+            var journal = new AgentToolAdmissionJournal(store, new(profile.Id, profile.Runtime.Fingerprint,
+                serviceProvider.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration()),
+                serviceProvider.GetRequiredService<TimeProvider>(),
+                serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                serviceProvider.GetServices<IAgentChatContextAttachmentCodec>());
+            return new((ISandboxWorkspaceExecutionRunStore)store, journal,
+                serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
+        });
         services.TryAddScoped<ISandboxWorkspaceExecutionStore>(serviceProvider =>
             serviceProvider.GetRequiredService<ISandboxWorkspaceStore>());
         services.TryAddScoped<IAgentProviderUsageEvidenceStore>(serviceProvider =>
@@ -289,8 +343,23 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             WorkflowsExecutionAuthorityProvider>());
         services.AddScoped<IAgentExecutionAuthorityResolver, CanonicalAgentExecutionAuthorityResolver>();
+        services.AddScoped<IAgentHistoricalReceiptReviewService>(provider => {
+            var state = provider.GetRequiredService<IDatabaseRuntimeState>();
+            AgentHistoricalReceiptReviewService.RequireInitialized(state);
+            var canonical = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new AgentHistoricalReceiptReviewService(canonical.Profile, state,
+                provider.GetRequiredService<IOptions<StorageOptions>>(), provider.GetRequiredService<IHostEnvironment>(),
+                provider.GetServices<IAgentHistoricalReceiptSourceAuthorityProvider>(),
+                provider.GetRequiredService<Func<AgentHistoricalCatalogBasis, AgentHistoricalReceiptReadParticipants>>());
+        });
         services.AddScoped<IAgentConversationContextService, AgentConversationContextService>();
         services.AddScoped<IAgentTurnContextCaptureService, AgentTurnContextCaptureService>();
+        services.AddScoped<IAgentChatOperationExecutor, AgentChatOperationExecutor>();
+        services.TryAddSingleton<IAgentChatExecutionScopeFactory, AgentChatExecutionScopeFactory>();
+        services.TryAddSingleton<AgentChatBackgroundExecution>();
+        services.TryAddSingleton<IAgentChatExecutionCatalog>(provider => provider.GetRequiredService<AgentChatBackgroundExecution>());
+        services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AgentChatBackgroundExecution>());
+        services.AddScoped<AgentChatRecoveryService>();
         services.AddScoped<IAgentChatExecutionOrchestrator, AgentChatExecutionOrchestrator>();
         services.AddScoped<ActiveAgentChatRegistry>();
         services.AddScoped<IActiveAgentChatRegistry>(serviceProvider =>
@@ -325,7 +394,10 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentFrameworkWorkspaceActivityExecutionService>(serviceProvider =>
             serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
+        services.AddScoped<IAgentInheritedPlanningWorkspaceService>(serviceProvider =>
+            serviceProvider.GetRequiredService<CurrentProfileAgentFrameworkWorkspaceService>());
         services.AddScoped<IAgentChatAttachmentStagingService, AgentChatAttachmentStagingService>();
+        services.AddScoped<WorkflowDocumentStagingService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
         services.TryAddScoped<AgentAvatarGenerationService>();
@@ -403,16 +475,27 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<
             IWorkflowExternalResponseActorContextFactory,
             WorkflowExternalResponseActorContextFactory>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<EditingOperationContext>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new WorkflowChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>(), provider.GetRequiredService<ILogger<WorkflowChanges>>());
+        });
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogSearchService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowCatalogLookupService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
+        services.TryAddScoped<Pages.Authoring.WorkflowCatalogReader>();
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowSettingsService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.AddScoped<PersistentWorkflowStructureOutputStore>();
         services.AddScoped<IWorkflowStructureOutputStore>(serviceProvider =>
             serviceProvider.GetRequiredService<PersistentWorkflowStructureOutputStore>());
         services.TryAddScoped<IWorkflowProcessAssignmentRunQuery, PersistentWorkflowProcessAssignmentRunQuery>();
+        services.TryAddScoped<IWorkflowProcessCancellationRecovery, PersistentWorkflowProcessCancellationRecovery>();
         services.TryAddScoped<PersistentWorkflowRunStore>();
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowOverviewStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());

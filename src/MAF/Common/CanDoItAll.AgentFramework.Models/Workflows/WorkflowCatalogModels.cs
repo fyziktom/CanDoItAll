@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -50,34 +51,15 @@ public sealed record WorkflowCatalogItem(
     public string ExternalKey { get; init; } = string.Empty;
 }
 
-/// <summary>
-/// Body of <c>POST /api/workflows/definitions</c>: the complete content of a new workflow or of a new version of an
-/// existing one, with an optional concurrency precondition. Send every member; the content replaces the definition.
-/// </summary>
-/// <param name="Id">
-/// Identifier of the workflow to update; null creates a new workflow with a server-generated identifier. An unknown
-/// identifier creates a workflow with that identifier.
-/// </param>
-/// <param name="ExpectedVersionId">
-/// <c>versionId</c> of the current version as last read. When another save happened in between, the save is rejected
-/// with HTTP 400; null saves without this check. It must be null when creating a workflow.
-/// </param>
-/// <param name="Name">Display name; required and trimmed.</param>
-/// <param name="Description">Description; send an empty string for none. It is trimmed.</param>
-/// <param name="Status">
-/// Lifecycle status of the new version, as a JSON integer: 0 Draft, 1 Active, 2 Suspended, 3 Archived. It is stored
-/// as sent, so Active publishes the new version.
-/// </param>
-/// <param name="Graph">The complete node graph.</param>
-/// <param name="RuntimePolicy">Backend and run-kind policy of the workflow.</param>
+[Description("Complete new workflow content or a replacement version. Existing identifiers require the original expectedVersionId. Null is create-only absence; conflicts return HTTP 409 without storing content.")]
 public sealed record WorkflowDefinitionSaveRequest(
-    WorkflowId? Id,
-    WorkflowVersionId? ExpectedVersionId,
-    string Name,
-    string Description,
-    WorkflowLifecycleStatus Status,
-    WorkflowGraph Graph,
-    WorkflowRuntimePolicy RuntimePolicy)
+    [property: Description("Workflow to replace, or a chosen identifier for create-only creation. Null generates a new identifier.")] WorkflowId? Id,
+    [property: Description("Original versionId returned by the read; required for an existing workflow. Null declares create-only absence and never overwrites an existing identifier. Missing or stale originals return HTTP 409.")] WorkflowVersionId? ExpectedVersionId,
+    [property: Description("Display name; required and trimmed.")] string Name,
+    [property: Description("Description; send an empty string for none. It is trimmed.")] string Description,
+    [property: Description("Status of the stored version: 0 Draft, 1 Active, 2 Suspended, 3 Archived. Active publishes the version.")] WorkflowLifecycleStatus Status,
+    [property: Description("Complete graph to store, including all nodes, edges and settings.")] WorkflowGraph Graph,
+    [property: Description("Backend and run-kind policy to store with this version.")] WorkflowRuntimePolicy RuntimePolicy)
 {
     /// <summary>
     /// Input parameters the workflow expects; omitted or empty stores none. The list replaces the stored parameters.
@@ -174,7 +156,7 @@ public static class WorkflowDefinitionExchangeFormats
 
 public sealed record WorkflowDefinitionStatusChangeRequest(
     WorkflowId WorkflowId,
-    WorkflowVersionId? ExpectedVersionId,
+    [property: Description("Original version identifier last read; required. Missing or stale originals refuse the status change without storing a version.")] WorkflowVersionId? ExpectedVersionId,
     WorkflowLifecycleStatus Status);
 
 /// <summary>
@@ -194,25 +176,20 @@ public sealed record WorkflowDefinitionExportEnvelope(
     WorkflowValidationResult Validation,
     DateTimeOffset ExportedAtUtc);
 
-/// <summary>
-/// Body of <c>POST /api/workflows/definitions/import</c>: an export envelope and how to import it.
-/// </summary>
-/// <param name="Envelope">The export envelope, as produced by the export operation.</param>
-/// <param name="Name">Name of the imported workflow; null or blank keeps the name from the envelope.</param>
-/// <param name="Status">
-/// Lifecycle status of the imported version, as a JSON integer: 0 Draft, 1 Active, 2 Suspended, 3 Archived; null
-/// imports it as Draft.
-/// </param>
-/// <param name="PreserveWorkflowId">
-/// True to keep the source's workflow identifier, external identity and template provenance, which makes the import a
-/// new version of that workflow when it exists here; false to create a new workflow with a new identifier and no
-/// external identity or template provenance.
-/// </param>
+[Description("Create or conditionally replace a workflow from an export envelope. Preserving an existing workflow identifier requires its original expectedVersionId. Null means create-only absence; conflicts return HTTP 409 without changing the target.")]
 public sealed record WorkflowDefinitionImportRequest(
-    WorkflowDefinitionExportEnvelope Envelope,
-    string? Name,
-    WorkflowLifecycleStatus? Status,
-    bool PreserveWorkflowId);
+    [property: Description("Envelope produced by the workflow export operation.")] WorkflowDefinitionExportEnvelope Envelope,
+    [property: Description("Imported name; null or blank keeps the envelope name.")] string? Name,
+    [property: Description("Imported status: 0 Draft, 1 Active, 2 Suspended, 3 Archived; null imports as Draft.")] WorkflowLifecycleStatus? Status,
+    [property: Description("Keep the source identifier, external identity and template provenance. An existing identifier requires its original expectedVersionId. False creates a new identifier without external/template identity and forbids expectedVersionId.")] bool PreserveWorkflowId) {
+    [Description("Original version of the target workflow when replacing with preserveWorkflowId. Null declares create-only absence. Missing or stale originals return HTTP 409 and preserve the target.")]
+    public WorkflowVersionId? ExpectedVersionId { get; init; }
+}
+
+[Description("Delete exactly the originally observed workflow head and its stored definition versions. Runtime runs and components are retained.")]
+public sealed record WorkflowDefinitionDeleteRequest(
+    [property: Description("Workflow whose original head was observed.")] WorkflowId Id,
+    [property: Description("Required original version identifier; an empty, stale or missing target observation refuses deletion.")] WorkflowVersionId ExpectedVersionId);
 
 /// <summary>
 /// A stored workflow definition version with its validation result, computed when it was read.
@@ -289,6 +266,9 @@ public sealed record WorkflowSettings(
     WorkflowHumanInLoopPolicy HumanInLoopPolicy,
     AgentVoiceSettings? VoiceSettings = null)
 {
+    [Description("Original settings revision returned by GET. Null is create-only; replacing existing settings requires this exact value. A successful save returns the new revision.")]
+    public DateTimeOffset? UpdatedAtUtc { get; init; }
+
     public static WorkflowSettings Default { get; } = new(
         new WorkflowRuntimePolicy(
             WorkflowRuntimeBackendKind.InProcess,
@@ -317,7 +297,13 @@ public sealed record WorkflowSettings(
     /// The voice settings with defaults applied to missing or blank values; this is what agent voice mode uses.
     /// Computed; it is ignored when sent.
     /// </summary>
-    public AgentVoiceSettings NormalizedVoiceSettings => AgentVoiceSettingsNormalizer.Normalize(VoiceSettings);
+    public AgentVoiceSettings NormalizedVoiceSettings {
+        get {
+            var normalized = AgentVoiceSettingsNormalizer.Normalize(VoiceSettings);
+            normalized.UpdatedAtUtc = UpdatedAtUtc;
+            return normalized;
+        }
+    }
 }
 
 /// <summary>
@@ -357,6 +343,9 @@ public sealed record LlmCallComponentSaveRequest(
     WorkflowValueShape ResultShape,
     AgentPermissionsPolicy Permissions)
 {
+    [Description("Original component revision returned by the read. Null is create-only; replacing an existing or chosen-ID component requires its exact nonempty revision. Missing, empty or stale originals cannot overwrite it.")]
+    public Guid? ExpectedRevision { get; init; }
+
     /// <summary>
     /// Prompt Gallery item to bind the instructions to; null keeps the existing binding, or creates a new prompt for a
     /// component that has none.
@@ -369,6 +358,8 @@ public sealed record LlmCallComponentSaveRequest(
     /// </summary>
     public Guid? PromptVersionId { get; init; }
 }
+
+public sealed record WorkflowComponentDeleteRequest(WorkflowComponentId Id, Guid ExpectedRevision);
 
 /// <summary>
 /// A chat provider profile that LLM call components and nodes can use, returned by
@@ -408,7 +399,19 @@ public sealed record WorkflowProviderOption(
     bool SupportsTools,
     bool SupportsStructuredOutput,
     bool SupportsVision,
-    bool SupportsBackgroundResponses);
+    bool SupportsBackgroundResponses) {
+    /// <summary>
+    /// Model identifiers and display names published by the shared provider source; empty for local profiles.
+    /// Use each model's identifier, not its display name, when selecting a model.
+    /// </summary>
+    public IReadOnlyList<ProviderModelDisplayMetadata> ModelCatalog { get; init; } = [];
+
+    /// <summary>
+    /// True when the provider profile is imported from and managed by a shared provider source. Model selection
+    /// uses that source's published routing identifiers; custom model overrides are unavailable.
+    /// </summary>
+    public bool IsSourceManaged { get; init; }
+}
 
 /// <summary>
 /// Body of <c>POST /api/workflows/test-runs</c>: what to test and how. Identify the definition either with

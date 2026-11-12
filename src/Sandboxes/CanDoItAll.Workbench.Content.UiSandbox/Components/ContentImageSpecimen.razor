@@ -1,0 +1,73 @@
+@implements IDisposable
+
+<SurfaceCard data-testid="content-image-specimen" data-name="@Name">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
+        <DropDown TValue="ContentScenarioState" Data="@(Enum.GetValues<ContentScenarioState>())" @bind-Value="scenario" Change="@(_ => Reopen())" aria-label="Image state" Style="width:11rem" />
+        <DropDown TValue="ContentImagePhase" Data="@(Enum.GetValues<ContentImagePhase>())" @bind-Value="resultPhase" aria-label="Image outcome" Style="width:11rem" />
+        <Button Text="New opening" Click="Reopen" />
+        <Button Text="Release" Click="() => release?.TrySetResult()" />
+    </Cluster>
+    <div class="cw-stage-surface content-scenario-canvas">
+        @if (visible) {
+            var original = state;
+            <ContentImageDialog State="state" InitialDraft="@(new(Name, "Scenario image", "A safe geometric study", ContentAnalysisFixtures.ProviderId, string.Empty))"
+                Submit="@(draft => SubmitAsync(original, draft))" Close="@(() => Close(original))" />
+        }
+    </div>
+    <TextBlock TextStyle="TextStyle.Note" Value="@($"Scenario submissions: {submissions}. {message}")" data-testid="content-image-scenario-receipt" />
+</SurfaceCard>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    private ContentImageSetup state = new(Guid.NewGuid(), [], false, false, true);
+    private ContentScenarioState scenario;
+    private ContentImagePhase resultPhase = ContentImagePhase.Queued;
+    private TaskCompletionSource? release;
+    private bool visible = true;
+    private bool disposed;
+    private int submissions;
+    private string message = "No generation requested.";
+    protected override void OnInitialized() => Reopen();
+    private void Reopen() {
+        visible = true;
+        var phase = scenario switch {
+            ContentScenarioState.Partial => ContentImagePhase.ProviderCompleted,
+            ContentScenarioState.Unconfirmed => ContentImagePhase.Unconfirmed,
+            _ => ContentImagePhase.Ready
+        };
+        state = new(Guid.NewGuid(), scenario == ContentScenarioState.Empty ? [] : [ContentAnalysisFixtures.ImageProvider],
+            scenario == ContentScenarioState.Loading, false, phase == ContentImagePhase.Ready,
+            scenario == ContentScenarioState.Failed ? "The original provider catalog is unavailable." : string.Empty,
+            phase == ContentImagePhase.Ready ? null : new(Guid.NewGuid(), phase, "Observe the original operation before generating again.", "scenario:original", Guid.NewGuid(), true, phase == ContentImagePhase.ProviderCompleted));
+    }
+    private void Close(ContentImageSetup original) {
+        if (state.OpeningId == original.OpeningId) {
+            visible = false;
+        }
+    }
+    private async Task SubmitAsync(ContentImageSetup original, ContentImageDraft draft) {
+        var acceptedPhase = resultPhase;
+        var operation = Guid.NewGuid();
+        submissions++;
+        state = original with { IsBusy = true, CanSubmit = false };
+        await InvokeAsync(StateHasChanged);
+        if (scenario == ContentScenarioState.Pending) {
+            release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            await release.Task;
+        }
+        if (disposed || state.OpeningId != original.OpeningId) {
+            return;
+        }
+        message = $"Captured model: {(string.IsNullOrEmpty(draft.Model) ? "provider default" : draft.Model)}; title: {draft.Title}.";
+        state = state with { IsBusy = false, Receipt = new(operation, acceptedPhase,
+            $"Scenario {acceptedPhase}; no external generation was invoked.", $"scenario:{operation:D}", Guid.NewGuid(),
+            acceptedPhase is ContentImagePhase.ProviderCompleted or ContentImagePhase.MediaSaved,
+            acceptedPhase is ContentImagePhase.ProviderCompleted or ContentImagePhase.MediaSaved) };
+        await InvokeAsync(StateHasChanged);
+    }
+    public void Dispose() {
+        disposed = true;
+        release?.TrySetResult();
+    }
+}

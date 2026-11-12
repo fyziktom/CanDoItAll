@@ -115,7 +115,8 @@ public sealed class CapabilityCorrectnessIntegrationTests {
         var draft = await fixture.Catalog.GetAgentEditorAsync(fixture.Agent.Id);
         var attempt = new AgentCapabilityAssignmentAttempt(draft, fixture.Capability.Id);
         var before = await fixture.Store.LoadCatalogAsync();
-        await fixture.Catalog.DeleteCapabilityAsync(fixture.Capability.Id);
+        var original = await fixture.Catalog.GetCapabilityEditorAsync(fixture.Capability.Id);
+        await fixture.Catalog.DeleteCapabilityAsync(fixture.Capability.Id, original.ExpectedFingerprint!);
         var canonical = await fixture.Catalog.GetAgentEditorAsync(fixture.Agent.Id);
         Assert.True(canonical.ExpectedUpdatedAtUtc > draft.ExpectedUpdatedAtUtc);
         Assert.Equal(AgentCapabilityOperationStatus.DesiredStateSatisfied, attempt.Classify(canonical));
@@ -150,7 +151,7 @@ public sealed class CapabilityCorrectnessIntegrationTests {
     public async Task Missing_snapshot_source_is_infrastructure_unavailable_before_diagnostic_dispatch() {
         using var fixture = await CapabilityFileFixture.CreateAsync();
         var profiles = new ProviderProfileService();
-        var registry = new WorkspaceBackedProviderProfileRegistry(fixture.Store, profiles);
+        var registry = new WorkspaceBackedProviderProfileRegistry(fixture.Store, profiles, fixture.Identity);
         var catalog = new AgentFrameworkWorkspaceCatalogService(fixture.Store,
             DispatchProxy.Create<IAgentPackageService, UnusedCapabilityDependency>(), fixture.Proof, profiles,
             DispatchProxy.Create<IProviderDiagnosticsService, UnusedCapabilityDependency>(), registry,

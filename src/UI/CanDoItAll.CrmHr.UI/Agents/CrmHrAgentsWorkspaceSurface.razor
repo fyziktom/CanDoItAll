@@ -25,6 +25,9 @@
                              Tone="success" />
             </Stats>
             <Actions>
+                <PageHeaderActionButton Icon="refresh" Label="Refresh catalog"
+                                        TooltipText="Read the current page of agent cards."
+                                        Click="View.RefreshCatalog" data-testid="crmhr-agent-refresh-catalog" />
                 <PageHeaderActionButton Icon="smart_toy"
                                         Label="Open technical catalog"
                                         TooltipText="Open the AgentFramework technical catalog."
@@ -56,11 +59,15 @@
                 <PagedRecordBrowser TKey="Guid"
                                     TFilter="AiAgentValidationFilter"
                                     Loader="View.LoadAgentPageAsync"
+                                    RefreshVersion="View.CatalogRefreshVersion"
                                     InitialFilter="AiAgentValidationFilter.All"
                                     FilterOptions="@CrmHrAgentsWorkspacePresentation.ValidationFilters"
                                     Selection="@View.AgentSelection"
                                     SelectionChanged="@View.SelectPartyAsync"
+                                    Query="@View.CatalogQuery"
+                                    QueryChanged="View.HandleCatalogQueryChangedAsync"
                                     LoadFailed="@View.HandleAgentDirectoryLoadFailed"
+                                    MaximumSearchLength="AiAgentDirectoryQueryLimits.MaximumSearchLength"
                                     PageSize="@AiAgentDirectoryQueryLimits.DefaultPageSize"
                                     ShowTagFilter="false"
                                     ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
@@ -97,7 +104,11 @@
             </section>
 
             <CrmHrAgentRecordDialog IsOpen="@View.IsRecordDialogOpen"
+                                    Section="@View.RecordSection"
+                                    SectionChanged="View.SelectRecordSectionAsync"
                                     IsLoading="@View.IsWorkspaceLoading"
+                                    IsOutdated="@View.IsRecordOutdated"
+                                    Refresh="View.RefreshRecordAsync"
                                     Item="@View.SelectedDirectoryItem"
                                     Workspace="@View.SelectedWorkspace"
                                     Close="View.CloseRecordDialogAsync"

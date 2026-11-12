@@ -7,16 +7,24 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class Maf122RetainedNativeStateTests {
     [Theory]
-    [InlineData(false, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, false)]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
-    public async Task Genuine_120_pending_state_restores_native_authority_once(bool serviceManaged, bool streaming, bool approve) {
-        var fixture = await ReadFixtureAsync(serviceManaged, streaming, "pending");
+    [InlineData(false, false, false, 20)]
+    [InlineData(false, false, false, 22)]
+    [InlineData(false, true, false, 20)]
+    [InlineData(false, true, false, 22)]
+    [InlineData(true, false, false, 20)]
+    [InlineData(true, false, false, 22)]
+    [InlineData(true, true, false, 20)]
+    [InlineData(true, true, false, 22)]
+    [InlineData(false, false, true, 20)]
+    [InlineData(false, false, true, 22)]
+    [InlineData(false, true, true, 20)]
+    [InlineData(false, true, true, 22)]
+    [InlineData(true, false, true, 20)]
+    [InlineData(true, false, true, 22)]
+    [InlineData(true, true, true, 20)]
+    [InlineData(true, true, true, 22)]
+    public async Task Genuine_retained_pending_state_restores_native_authority_once(bool serviceManaged, bool streaming, bool approve, int writerMinor) {
+        var fixture = await ReadFixtureAsync(serviceManaged, streaming, "pending", writerMinor);
         var effects = new List<string>();
         using var client = new CompletionClient(serviceManaged);
         var agent = CreateAgent(client, effects);
@@ -37,17 +45,25 @@ public sealed class Maf122RetainedNativeStateTests {
     }
 
     [Theory]
-    [InlineData(false, false, "ordinary")]
-    [InlineData(false, true, "ordinary")]
-    [InlineData(true, false, "ordinary")]
-    [InlineData(true, true, "ordinary")]
-    [InlineData(false, false, "settled")]
-    [InlineData(false, true, "settled")]
-    [InlineData(true, false, "settled")]
-    [InlineData(true, true, "settled")]
-    public async Task Genuine_120_ordinary_and_settled_state_remains_readable_without_reexecuting_effects(
-        bool serviceManaged, bool streaming, string stage) {
-        var fixture = await ReadFixtureAsync(serviceManaged, streaming, stage);
+    [InlineData(false, false, "ordinary", 20)]
+    [InlineData(false, false, "ordinary", 22)]
+    [InlineData(false, true, "ordinary", 20)]
+    [InlineData(false, true, "ordinary", 22)]
+    [InlineData(true, false, "ordinary", 20)]
+    [InlineData(true, false, "ordinary", 22)]
+    [InlineData(true, true, "ordinary", 20)]
+    [InlineData(true, true, "ordinary", 22)]
+    [InlineData(false, false, "settled", 20)]
+    [InlineData(false, false, "settled", 22)]
+    [InlineData(false, true, "settled", 20)]
+    [InlineData(false, true, "settled", 22)]
+    [InlineData(true, false, "settled", 20)]
+    [InlineData(true, false, "settled", 22)]
+    [InlineData(true, true, "settled", 20)]
+    [InlineData(true, true, "settled", 22)]
+    public async Task Genuine_retained_ordinary_and_settled_state_remains_readable_without_reexecuting_effects(
+        bool serviceManaged, bool streaming, string stage, int writerMinor) {
+        var fixture = await ReadFixtureAsync(serviceManaged, streaming, stage, writerMinor);
         var effects = new List<string>();
         using var client = new CompletionClient(serviceManaged);
         var agent = CreateAgent(client, effects);
@@ -62,7 +78,7 @@ public sealed class Maf122RetainedNativeStateTests {
             Assert.Contains(client.Messages, message => message.Text == "ordinary");
         }
         if (stage == "settled") {
-            var pending = Assert.Single((await ReadFixtureAsync(serviceManaged, streaming, "pending")).Approvals);
+            var pending = Assert.Single((await ReadFixtureAsync(serviceManaged, streaming, "pending", writerMinor)).Approvals);
             var request = new ToolApprovalRequestContent(pending.RequestId,
                 new FunctionCallContent(pending.CallId, pending.Name, pending.Arguments));
             await RunAsync(agent, session, [new ChatMessage(ChatRole.User, [request.CreateResponse(true)])], streaming);
@@ -85,11 +101,11 @@ public sealed class Maf122RetainedNativeStateTests {
     private static Task<AgentResponse> RunAsync(AIAgent agent, AgentSession session, IReadOnlyList<ChatMessage> messages, bool streaming) =>
         streaming ? agent.RunStreamingAsync(messages, session).ToAgentResponseAsync() : agent.RunAsync(messages, session);
 
-    private static async Task<NativeFixture> ReadFixtureAsync(bool serviceManaged, bool streaming, string stage) {
+    private static async Task<NativeFixture> ReadFixtureAsync(bool serviceManaged, bool streaming, string stage, int writerMinor) {
         var file = $"{(serviceManaged ? "service" : "local")}-{(streaming ? "streaming" : "blocking")}-{stage}.json";
-        var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Maf120", "Native", file));
+        var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", $"Maf1{writerMinor}", "Native", file));
         var fixture = JsonSerializer.Deserialize<NativeFixture>(json, JsonSerializerOptions.Web)!;
-        Assert.Equal("1.20.0.0", fixture.MafVersion);
+        Assert.Equal($"1.{writerMinor}.0.0", fixture.MafVersion);
         Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
         return fixture;
     }

@@ -4,6 +4,8 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
@@ -127,8 +129,10 @@ public sealed class AgentFrameworkAiTechnicalAgentBridgePrivacyTests
             "CanDoItAll.Modules.AgentFramework.AgentFrameworkAiTechnicalAgentBridge",
             throwOnError: true)!;
         var constructor = Assert.Single(implementationType.GetConstructors());
+        var changes = new CrmHrChanges(new EditingChangeFeed(), new(EditingScopeKind.Dataset, ProfileId), new EditingOperationContext());
         return Assert.IsAssignableFrom<IAiTechnicalAgentBridge>(
-            constructor.Invoke([new AiTechnicalAgentProjectionStore(dbContextFactory, new CanonicalDatabase(), clock), workspaceFactory]));
+            constructor.Invoke([new AiTechnicalAgentProjectionStore(dbContextFactory, new CanonicalDatabase(), clock), workspaceFactory,
+                new AiAgentCreationGuard(dbContextFactory, changes)]));
     }
 
     private static AgentDefinition CreateAgent(

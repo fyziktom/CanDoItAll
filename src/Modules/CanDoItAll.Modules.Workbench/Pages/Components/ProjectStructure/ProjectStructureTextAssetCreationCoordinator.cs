@@ -1,6 +1,7 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Content.UI;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -36,8 +37,11 @@ internal sealed record ProjectStructureTextAssetCreationContext(
 
 internal sealed class ProjectStructureTextAssetSubmissionException(
     string message,
-    Exception innerException)
-    : Exception(message, innerException);
+    Exception innerException,
+    bool requiresObservation = false)
+    : Exception(message, innerException) {
+    public bool RequiresObservation { get; } = requiresObservation;
+}
 
 internal sealed class ProjectStructureTextAssetCreationCoordinator(
     DialogService dialogService,
@@ -135,7 +139,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
             definition.AcceptedFileTypes,
             definition.FilePrompt,
             definition.SubmitLabel);
-        Func<ProjectStructureTextAssetDialogResult, Task> persistSubmissionAsync = submission =>
+        Func<ProjectStructureTextAssetDialogResult, Task<ContentTextOutcome>> persistSubmissionAsync = submission =>
             PersistDialogSubmissionAsync(
                 context,
                 definition,
@@ -151,7 +155,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
                 {
                     [nameof(ProjectStructureTextAssetCreateDialog.CreateRequest)] = createRequest,
                     [nameof(ProjectStructureTextAssetCreateDialog.Definition)] = dialogDefinition,
-                    [nameof(ProjectStructureTextAssetCreateDialog.PersistSubmissionAsync)] = persistSubmissionAsync,
+                    [nameof(ProjectStructureTextAssetCreateDialog.PersistOutcomeAsync)] = persistSubmissionAsync,
                     [nameof(ProjectStructureTextAssetCreateDialog.CancellationToken)] = dialogCancellationToken
                 },
                 new DialogOptions
@@ -174,7 +178,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         }
     }
 
-    private async Task PersistDialogSubmissionAsync(
+    private async Task<ContentTextOutcome> PersistDialogSubmissionAsync(
         ProjectStructureTextAssetCreationContext context,
         ProjectStructureCreateLeafDefinition definition,
         ProjectFileSubtype subtype,
@@ -183,12 +187,14 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
     {
         try
         {
-            await CreateNodeAsync(
+            var created = await CreateNodeAsync(
                 context,
                 definition,
                 submission.CreateRequest,
                 submission.Media,
                 cancellationToken);
+            return new(ContentTextOutcomeKind.Committed, $"{created.Title} was saved.",
+                new(created.Id, created.RecordId, created.MediaOriginalFileName));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -197,17 +203,24 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         catch (ProjectStructureNodeCreatedWithFollowUpFailureException exception)
         {
             ReportCommittedWithFollowUpFailure(context, definition, subtype, exception);
+            var created = exception.CreatedNode;
+            return new(ContentTextOutcomeKind.PartialCommit, $"{created.Title} was saved. Observe the original project before continuing.",
+                new(created.Id, created.RecordId, created.MediaOriginalFileName));
+        }
+        catch (ProjectStructureTextAssetSubmissionException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
             LogFailure(context, definition, subtype, exception);
             throw new ProjectStructureTextAssetSubmissionException(
-                ResolveUserMessage(exception),
-                exception);
+                "The original file write is unconfirmed. Observe the original project before trying again.",
+                exception, requiresObservation: true);
         }
     }
 
-    private static async Task CreateNodeAsync(
+    private static async Task<ProjectStructureNode> CreateNodeAsync(
         ProjectStructureTextAssetCreationContext context,
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest,
@@ -223,6 +236,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
         {
             throw new InvalidOperationException("Text asset creation completed without a persisted node.");
         }
+        return created;
     }
 
     private void LogFailure(
@@ -258,7 +272,7 @@ internal sealed class ProjectStructureTextAssetCreationCoordinator(
     }
 
     private static string ResolveUserMessage(Exception exception)
-        => exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException
+        => exception is InvalidDataException or ProjectAssetCreationException or ProjectAssetContentValidationException or ProjectStructureTextAssetSubmissionException
             ? exception.Message
             : "The file could not be saved. Check the application logs for details.";
 

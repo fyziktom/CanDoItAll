@@ -16,6 +16,32 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class PluginsOwnerPersistenceTests {
     [Fact]
+    public async Task A_disconnected_pending_callback_cannot_restore_the_connection() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<PluginsDbContext>>();
+        var oauth = scope.ServiceProvider.GetRequiredService<PluginOAuthService>();
+        const string state = "fixture-disconnected-state";
+        var connection = new PluginConnectionRecord { PluginId = "owner.disconnect", ConnectionKey = "mail", DisplayName = "Fixture connection", IsEnabled = true };
+        await using (var database = await factory.CreateDbContextAsync()) {
+            database.Add(connection);
+            database.Add(new PluginOAuthSessionRecord {
+                StateHash = Convert.ToBase64String(SHA256.HashData(Encoding.ASCII.GetBytes(state))).TrimEnd('=').Replace('+', '-').Replace('/', '_'),
+                PluginId = connection.PluginId, ConnectionId = connection.Id, ConnectionKey = connection.ConnectionKey,
+                ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(10)
+            });
+            await database.SaveChangesAsync();
+        }
+
+        Assert.True((await oauth.DisconnectAsync(new(connection.PluginId), new(connection.Id))).IsSuccess);
+        var replay = await oauth.CompleteCallbackAsync(state, "unused-code", null, null);
+        Assert.Contains("reason=state-used", replay.OriginalString, StringComparison.Ordinal);
+        await using var read = await factory.CreateDbContextAsync();
+        Assert.Empty(await read.Set<PluginOAuthConnectionRecord>().Where(item => item.ConnectionId == connection.Id).ToListAsync());
+        Assert.Equal("disconnected", (await read.Set<PluginOAuthSessionRecord>().SingleAsync(item => item.ConnectionId == connection.Id)).ErrorCode);
+    }
+
+    [Fact]
     public async Task Runtime_model_preserves_all_six_schema_mappings_and_rejects_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<PluginsDbContext>>()
@@ -188,12 +214,16 @@ public sealed class PluginsOwnerPersistenceTests {
         Assert.NotEqual(installation.ConcurrencyToken, disabled.Value.ConcurrencyToken);
         var grantRevision = grants.Revision;
         var denied = await grants.SetAsync(pluginId,
-            new PluginGrantUpdateRequest(PluginCapabilityKind.OAuth2, PluginGrantState.Denied, Reason: "Owner denial"), "owner-write");
+            new PluginGrantUpdateRequest(PluginCapabilityKind.OAuth2, PluginGrantState.Denied, Reason: "Owner denial") {
+                ExpectedConcurrencyToken = grant.ConcurrencyToken
+            }, "owner-write");
         Assert.True(denied.IsSuccess);
         Assert.Equal(grantRevision + 1, grants.Revision);
         Assert.NotEqual(grant.ConcurrencyToken, denied.Value!.ConcurrencyToken);
         var renamed = await connections.SaveAsync(pluginId, new PluginConnectionSaveRequest(
-            new PluginConnectionId(connection.Id), connectionKey, "Edited connection", connection.SettingsJson), "owner-write");
+            new PluginConnectionId(connection.Id), connectionKey, "Edited connection", connection.SettingsJson, connection.IsEnabled) {
+                ExpectedConcurrencyToken = connection.ConcurrencyToken
+            }, "owner-write");
         Assert.True(renamed.IsSuccess);
         Assert.NotEqual(connection.ConcurrencyToken, renamed.Value!.ConcurrencyToken);
         var writtenLog = await logs.WriteAsync(new PluginLogWriteRequest(

@@ -124,10 +124,14 @@ public sealed class FileApplicationPreferenceService(
             WriteLocked(preferences);
         }
 
-        logger.LogInformation(
-            "Preferred file application saved. Extension={Extension} ExecutableName={ExecutableName}.",
-            normalized.Extension.Value,
-            Path.GetFileName(normalized.ExecutablePath));
+        try {
+            logger.LogInformation(
+                "Preferred file application saved. Extension={Extension} ExecutableName={ExecutableName}.",
+                normalized.Extension.Value,
+                Path.GetFileName(normalized.ExecutablePath));
+        } catch (Exception) {
+            throw new FileApplicationPreferenceCommittedException(normalized.Extension, false);
+        }
         return Task.CompletedTask;
     }
 
@@ -150,9 +154,13 @@ public sealed class FileApplicationPreferenceService(
 
         if (removed)
         {
-            logger.LogInformation(
-                "Preferred file application removed. Extension={Extension}.",
-                extension.Value);
+            try {
+                logger.LogInformation(
+                    "Preferred file application removed. Extension={Extension}.",
+                    extension.Value);
+            } catch (Exception) {
+                throw new FileApplicationPreferenceCommittedException(extension, true);
+            }
         }
 
         return Task.FromResult(removed);

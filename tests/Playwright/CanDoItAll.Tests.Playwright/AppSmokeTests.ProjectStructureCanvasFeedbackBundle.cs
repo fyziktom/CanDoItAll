@@ -370,6 +370,8 @@ public sealed partial class AppSmokeTests
         await CaptureCanvasSurfaceAsync(page, Path.Combine(artifactsDir, "01-before-copy-paste.png"));
 
         await PressCanvasShortcutAsync(page, "Control+C");
+        await Assertions.Expect(page.GetByText("Copy buffer is ready. Select a destination node and paste.", new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 30_000 });
         Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
         await AssertNativeDocumentCopyIsNotCapturedAsync(page);
 
@@ -412,6 +414,8 @@ public sealed partial class AppSmokeTests
 
         await SelectCanvasNodesAsync(page, [sourceBlockId, secondSourceId], sourceBlockId);
         await PressCanvasShortcutAsync(page, "Control+X");
+        await Assertions.Expect(page.GetByText("Cut buffer is ready with 2 branches. Select one destination node and paste.", new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 30_000 });
         Assert.Equal(string.Empty, await ReadCanvasClipboardTextAsync(page));
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(destinationBlockId));
@@ -520,7 +524,6 @@ public sealed partial class AppSmokeTests
                 }
             }");
         await page.Keyboard.PressAsync(shortcut);
-        await page.WaitForTimeoutAsync(280);
     }
 
     private static async Task FocusCanvasNodeAsync(IPage page, string nodeId, int zoomPercent = 100)

@@ -95,8 +95,8 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 var snapshot = session.CaptureOutput();
                 WriteOutputLogs(lifecycle, snapshot);
                 var message = lifecycle.KeepAlive
-                    ? $"Application started and {lifecycle.ProbeUrl} returned success. The owned process remains available through workspace_dotnet_stop."
-                    : $"Application started and {lifecycle.ProbeUrl} returned success. The owned process was stopped after smoke validation.";
+                    ? $"Application started and {lifecycle.ProbeUrl} returned success. Stop this owned host with workspace_dotnet_stop(startupReceiptPath: \"{lifecycle.StartupReceiptRelativePath}\"), even after a failed check. Keep verification scripts read-only; do not terminate this host by PID."
+                    : $"Application started and {lifecycle.ProbeUrl} returned success. The owned process was stopped after smoke validation. Cleanup evidence: {lifecycle.CleanupReceiptRelativePath}.";
 
                 WorkspaceProcessExecutionResult processResult;
                 WorkspaceOwnedProcessIdentity identity = session.Identity;
@@ -144,12 +144,18 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                     processResult,
                     cleanupAttempted: !lifecycle.KeepAlive,
                     cleanupSucceeded: lifecycle.KeepAlive ? null : processResult.ExitCode == 0);
+                if (!lifecycle.KeepAlive) {
+                    plan = PersistAutomaticCleanup(plan, lifecycle, identity, processResult, alreadyExited: false);
+                }
                 var startupJson = WriteJson(lifecycle.StartupReceiptFullPath, startup);
                 processResult = processResult with
                 {
                     Stdout = AppendJson(processResult.Stdout, startupJson)
                 };
-                return processRunner.CreateExecutionResult(plan, processResult, environmentVariables.Keys);
+                var result = processRunner.CreateExecutionResult(plan, processResult, environmentVariables.Keys);
+                return result.Succeeded
+                    ? result with { Message = $"{result.Message} {SensitiveTextRedactor.Redact(message)}" }
+                    : result;
             }
 
             WorkspaceProcessExecutionResult failedResult;
@@ -183,6 +189,8 @@ internal sealed class WorkspaceDotnetProcessLifecycle
                 failedResult.StdoutTruncated,
                 failedResult.StderrTruncated);
             WriteOutputLogs(lifecycle, failedSnapshot);
+            plan = PersistAutomaticCleanup(plan, lifecycle, session.Identity, failedResult,
+                alreadyExited: readiness == WorkspaceDotnetReadiness.ProcessExited);
             var failedStartup = CreateStartupReceipt(
                 plan,
                 lifecycle,
@@ -200,6 +208,30 @@ internal sealed class WorkspaceDotnetProcessLifecycle
             };
             return processRunner.CreateExecutionResult(plan, failedResult, environmentVariables.Keys);
         }
+    }
+
+    private WorkspaceCommandPlan PersistAutomaticCleanup(
+        WorkspaceCommandPlan plan,
+        WorkspaceDotnetRunLifecyclePlan lifecycle,
+        WorkspaceOwnedProcessIdentity identity,
+        WorkspaceProcessExecutionResult result,
+        bool alreadyExited) {
+        var succeeded = !result.ResidualProcessPossible;
+        var status = succeeded
+            ? alreadyExited ? WorkspaceProcessTerminationStatus.AlreadyExited : WorkspaceProcessTerminationStatus.Terminated
+            : WorkspaceProcessTerminationStatus.Failed;
+        WriteJson(lifecycle.CleanupReceiptFullPath, new WorkspaceDotnetCleanupReceipt(
+            SchemaVersion: 3,
+            Succeeded: succeeded,
+            Message: succeeded ? "The owned host cleanup completed." : result.FailureMessage,
+            StartupReceiptPath: lifecycle.StartupReceiptRelativePath,
+            CleanupReceiptPath: lifecycle.CleanupReceiptRelativePath,
+            ProcessId: identity.ProcessId,
+            TerminationStatus: status,
+            ResidualProcessPossible: result.ResidualProcessPossible,
+            StartedAtUtc: result.StartedAtUtc,
+            CompletedAtUtc: result.CompletedAtUtc));
+        return plan with { TargetPaths = [.. plan.TargetPaths, lifecycle.CleanupReceiptRelativePath] };
     }
 
     public async Task<WorkspaceCommandExecutionResult> StopAsync(

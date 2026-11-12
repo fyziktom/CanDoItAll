@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
@@ -211,11 +212,8 @@ public sealed class InMemoryWorkflowCatalogService :
             var workflowId = request.Id ?? WorkflowId.New();
             store.Definitions.TryGetValue(workflowId, out var versions);
             var current = versions is { Count: > 0 } ? versions[^1] : null;
-            if (request.ExpectedVersionId is { } expectedVersionId &&
-                current is not null &&
-                current.VersionId != expectedVersionId)
-            {
-                throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
+            if (current?.VersionId != request.ExpectedVersionId) {
+                throw new WorkflowDefinitionConcurrencyException($"Workflow definition '{workflowId}' was updated by another request.");
             }
 
             var stableIdentity = WorkflowStableIdentityPolicy.Resolve(request, current);
@@ -258,11 +256,8 @@ public sealed class InMemoryWorkflowCatalogService :
         {
             store.Definitions.TryGetValue(definition.Id, out var versions);
             var current = versions is { Count: > 0 } ? versions[^1] : null;
-            if (request.ExpectedVersionId is { } expectedVersionId &&
-                current is not null &&
-                current.VersionId != expectedVersionId)
-            {
-                throw new InvalidOperationException($"Workflow definition '{definition.Id}' was updated by another request.");
+            if (current?.VersionId != request.ExpectedVersionId) {
+                throw new WorkflowDefinitionConcurrencyException($"Workflow definition '{definition.Id}' was updated by another request.");
             }
 
             WorkflowStableIdentityPolicy.EnsureExternalIdentityIsUnique(
@@ -292,6 +287,10 @@ public sealed class InMemoryWorkflowCatalogService :
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (request.ExpectedVersionId is null) {
+            throw new WorkflowDefinitionConcurrencyException(
+                $"Workflow definition '{request.WorkflowId}' requires its original version for a status change.");
+        }
 
         var detail = await GetDefinitionAsync(request.WorkflowId, versionId: null, cancellationToken)
             ?? throw new KeyNotFoundException($"Workflow definition '{request.WorkflowId}' was not found.");
@@ -337,6 +336,9 @@ public sealed class InMemoryWorkflowCatalogService :
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Envelope);
         ArgumentNullException.ThrowIfNull(request.Envelope.Definition);
+        if (!request.PreserveWorkflowId && request.ExpectedVersionId.HasValue) {
+            throw new InvalidOperationException("A workflow import original version requires preserving the target workflow identifier.");
+        }
         if (!string.Equals(
             request.Envelope.SourceFormat,
             WorkflowDefinitionExchangeFormats.Current,
@@ -354,7 +356,7 @@ public sealed class InMemoryWorkflowCatalogService :
         return await SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
                 workflowId,
-                null,
+                request.ExpectedVersionId,
                 importedName,
                 source.Description,
                 importedStatus,
@@ -381,16 +383,18 @@ public sealed class InMemoryWorkflowCatalogService :
     }
 
     public async Task DeleteDefinitionAsync(
-        WorkflowId workflowId,
-        CancellationToken cancellationToken = default)
-    {
+        WorkflowDefinitionDeleteRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
         await store.Gate.WaitAsync(cancellationToken);
-        try
-        {
-            store.Definitions.Remove(workflowId);
-        }
-        finally
-        {
+        try {
+            store.Definitions.TryGetValue(request.Id, out var versions);
+            var current = versions is { Count: > 0 } ? versions[^1] : null;
+            if (request.ExpectedVersionId.Value == Guid.Empty || current?.VersionId != request.ExpectedVersionId) {
+                throw new WorkflowDefinitionConcurrencyException($"Workflow definition '{request.Id}' changed before deletion.");
+            }
+            store.Definitions.Remove(request.Id);
+        } finally {
             store.Gate.Release();
         }
     }
@@ -445,6 +449,7 @@ public sealed class InMemoryWorkflowCatalogService :
         {
             return store.Components.Values
                 .OrderBy(component => component.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(SnapshotComponent)
                 .ToArray();
         }
         finally
@@ -461,7 +466,7 @@ public sealed class InMemoryWorkflowCatalogService :
         try
         {
             store.Components.TryGetValue(componentId, out var component);
-            return component;
+            return component is null ? null : SnapshotComponent(component);
         }
         finally
         {
@@ -471,9 +476,10 @@ public sealed class InMemoryWorkflowCatalogService :
 
     public async Task<LlmCallComponent> SaveComponentAsync(
         LlmCallComponentSaveRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
+        request = JsonSerializer.Deserialize<LlmCallComponentSaveRequest>(JsonSerializer.Serialize(request))
+            ?? throw new InvalidOperationException("The workflow component submission could not be captured.");
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Model);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Instructions);
@@ -481,9 +487,19 @@ public sealed class InMemoryWorkflowCatalogService :
         ArgumentNullException.ThrowIfNull(request.InputShape);
         ArgumentNullException.ThrowIfNull(request.ResultShape);
 
+        var id = request.Id ?? WorkflowComponentId.New();
+        LlmCallComponent? original;
+        await store.Gate.WaitAsync(cancellationToken);
+        try {
+            store.Components.TryGetValue(id, out original);
+            DemandComponentOriginal(id, request.ExpectedRevision, original);
+        } finally {
+            store.Gate.Release();
+        }
         var now = DateTimeOffset.UtcNow;
-        var component = new LlmCallComponent(
-            request.Id ?? WorkflowComponentId.New(),
+        var revision = Guid.NewGuid();
+        var component = SnapshotComponent(new LlmCallComponent(
+            id,
             request.Name.Trim(),
             request.ProviderProfileId,
             request.Model.Trim(),
@@ -493,87 +509,109 @@ public sealed class InMemoryWorkflowCatalogService :
             request.InputShape,
             request.ResultShape,
             request.Permissions,
-            CreatedAtUtc: now,
-            UpdatedAtUtc: now);
+            CreatedAtUtc: original?.CreatedAtUtc ?? now,
+            UpdatedAtUtc: now) {
+            Revision = revision,
+            LifetimeId = original?.LifetimeId ?? revision,
+            PromptArtifactId = request.PromptArtifactId ?? original?.PromptArtifactId,
+            PromptVersionId = request.PromptVersionId ?? original?.PromptVersionId,
+            PromptUpdatedAtUtc = original?.PromptUpdatedAtUtc
+        });
 
         var validation = validator.Validate(
-            CreateComponentValidationDefinition(component),
+            WorkflowDefinitionValidator.CreateComponentValidationDefinition(component),
             [component]);
         var providerIssues = await providerCompatibility.ValidateComponentAsync(
             component,
             cancellationToken);
         var issues = validation.Issues.Concat(providerIssues).ToArray();
-        if (issues.Length > 0)
-        {
+        if (issues.Length > 0) {
             throw new InvalidOperationException(string.Join(" ", issues.Select(issue => issue.Message)));
         }
 
         await store.Gate.WaitAsync(cancellationToken);
-        try
-        {
-            if (store.Components.TryGetValue(component.Id, out var current))
-            {
-                component = component with { CreatedAtUtc = current.CreatedAtUtc };
-            }
-
+        try {
+            store.Components.TryGetValue(component.Id, out var current);
+            DemandComponentOriginal(component.Id, request.ExpectedRevision, current);
             store.Components[component.Id] = component;
-            return component;
-        }
-        finally
-        {
+            return SnapshotComponent(component);
+        } finally {
             store.Gate.Release();
         }
     }
 
     public async Task DeleteComponentAsync(
-        WorkflowComponentId componentId,
-        CancellationToken cancellationToken = default)
-    {
+        WorkflowComponentDeleteRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
         await store.Gate.WaitAsync(cancellationToken);
-        try
-        {
-            store.Components.Remove(componentId);
-        }
-        finally
-        {
+        try {
+            if (!store.Components.TryGetValue(request.Id, out var current) || request.ExpectedRevision == Guid.Empty ||
+                current.Revision != request.ExpectedRevision) {
+                throw new WorkflowComponentConcurrencyException(request.Id);
+            }
+            store.Components.Remove(request.Id);
+        } finally {
             store.Gate.Release();
         }
     }
 
-    public Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(store.Settings);
+    private static void DemandComponentOriginal(WorkflowComponentId id, Guid? expected, LlmCallComponent? current) {
+        if (expected == Guid.Empty || current?.Revision != expected) {
+            throw new WorkflowComponentConcurrencyException(id);
+        }
     }
 
-    public Task<WorkflowSettings> SaveSettingsAsync(
+    private static LlmCallComponent SnapshotComponent(LlmCallComponent component)
+        => JsonSerializer.Deserialize<LlmCallComponent>(JsonSerializer.Serialize(component))
+            ?? throw new InvalidOperationException("The workflow component snapshot could not be read.");
+
+    public async Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default) {
+        await store.Gate.WaitAsync(cancellationToken);
+        try {
+            return SnapshotSettings(store.Settings);
+        } finally {
+            store.Gate.Release();
+        }
+    }
+
+    public async Task<WorkflowSettings> SaveSettingsAsync(
         WorkflowSettings settings,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(settings);
-        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0)
-        {
+        settings = SnapshotSettings(settings);
+        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0) {
             throw new InvalidOperationException("Workflow artifact inline payload limit must be positive.");
         }
 
-        if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0)
-        {
+        if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0) {
             throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
         }
 
         var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
             settings.DefaultRuntimePolicy,
             runtimeBackendCatalog);
-        if (runtimeIssues.Count > 0)
-        {
+        if (runtimeIssues.Count > 0) {
             throw new InvalidOperationException(
                 $"Workflow default runtime policy is invalid: {string.Join(" ", runtimeIssues.Select(issue => issue.Message))}");
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-        store.Settings = settings;
-        return Task.FromResult(settings);
+        await store.Gate.WaitAsync(cancellationToken);
+        try {
+            if (settings.UpdatedAtUtc != store.Settings.UpdatedAtUtc) {
+                throw new WorkflowSettingsConcurrencyException();
+            }
+            var accepted = settings with { UpdatedAtUtc = WorkflowEditRevision.Next(settings.UpdatedAtUtc) };
+            store.Settings = accepted;
+            return SnapshotSettings(accepted);
+        } finally {
+            store.Gate.Release();
+        }
     }
+
+    private static WorkflowSettings SnapshotSettings(WorkflowSettings settings)
+        => JsonSerializer.Deserialize<WorkflowSettings>(JsonSerializer.Serialize(settings))
+            ?? throw new InvalidOperationException("The workflow settings snapshot could not be read.");
 
     private static WorkflowCatalogItem MapCatalogItem(WorkflowDefinition definition)
         => WorkflowStableIdentityLookupService.MapCatalogItem(definition);
@@ -661,82 +699,5 @@ public sealed class InMemoryWorkflowCatalogService :
         return allComponents
             .Where(component => referencedComponentIds.Contains(component.Id))
             .ToArray();
-    }
-
-    private static WorkflowDefinition CreateComponentValidationDefinition(LlmCallComponent component)
-    {
-        var start = new WorkflowNodeId("start");
-        var llm = new WorkflowNodeId("llm");
-        var end = new WorkflowNodeId("end");
-        return new WorkflowDefinition(
-            WorkflowId.New(),
-            WorkflowVersionId.New(),
-            "Component validation",
-            "Internal component validation workflow.",
-            WorkflowLifecycleStatus.Draft,
-            new WorkflowGraph(
-                start,
-                [
-                    new WorkflowNode(
-                        start,
-                        WorkflowNodeKind.Start,
-                        "Start",
-                        [],
-                        new WorkflowNodeSettings(
-                            ComponentId: null,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: string.Empty,
-                            InputShape: component.InputShape,
-                            ResultShape: component.InputShape)),
-                    new WorkflowNode(
-                        llm,
-                        WorkflowNodeKind.LlmCall,
-                        "LLM",
-                        [],
-                        new WorkflowNodeSettings(
-                            component.Id,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: component.Instructions,
-                            InputShape: component.InputShape,
-                            ResultShape: component.ResultShape)),
-                    new WorkflowNode(
-                        end,
-                        WorkflowNodeKind.End,
-                        "End",
-                        [],
-                        new WorkflowNodeSettings(
-                            ComponentId: null,
-                            AgentId: null,
-                            SubworkflowId: null,
-                            ExternalRequestKind: null,
-                            Instructions: string.Empty,
-                            InputShape: component.ResultShape,
-                            ResultShape: component.ResultShape))
-                ],
-                [
-                    new WorkflowEdge(
-                        new WorkflowEdgeId("start-to-llm"),
-                        start,
-                        SourcePortId: null,
-                        llm,
-                        TargetPortId: null,
-                        WorkflowEdgeKind.Direct,
-                        ConditionExpression: string.Empty),
-                    new WorkflowEdge(
-                        new WorkflowEdgeId("llm-to-end"),
-                        llm,
-                        SourcePortId: null,
-                        end,
-                        TargetPortId: null,
-                        WorkflowEdgeKind.Direct,
-                        ConditionExpression: string.Empty)
-                ]),
-            WorkflowSettings.Default.DefaultRuntimePolicy,
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
     }
 }

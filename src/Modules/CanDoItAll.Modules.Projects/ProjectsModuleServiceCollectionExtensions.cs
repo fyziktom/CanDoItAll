@@ -3,6 +3,8 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -20,8 +22,50 @@ public static class ProjectsModuleServiceCollectionExtensions
             IAgentExecutionSourceAuthorityProvider,
             ProjectsExecutionAuthorityProvider>());
         services.AddScoped<ProjectsService>();
+        services.AddScoped<ProjectDefinitionWriter>();
+        services.AddScoped<ProjectDefinitionReader>();
+        services.AddScoped<ProjectDefinitionReceiptReader>();
+        services.AddScoped<ProjectDefinitionOperationProtocol>();
+        services.AddScoped<ProjectLifecycleWriter>();
+        services.AddScoped<ProjectLifecycleOperationProtocol>();
+        services.AddScoped<ProjectLifecycleReceiptReader>();
+        services.AddScoped<ProjectLifecycleCurrentWriteAuthority>();
+        services.AddScoped<ProjectDeletionCompletionOwner>();
+        services.AddScoped<ProjectDeletionCompletionReader>();
+        services.AddScoped<IProjectDeletionCompletionQuery>(provider => provider.GetRequiredService<ProjectDeletionCompletionReader>());
+        services.AddScoped<ProjectDeletionCompletionDispatcher>();
+        services.AddScoped<ProjectDeletionCompletionProjection>();
+        services.AddScoped<ProjectCreationCompensationOwner>();
+        services.AddScoped<ProjectCreationCompensationReader>();
+        services.AddScoped<ProjectReservationCancellationOwner>();
+        services.AddScoped<ProjectReservationCancellationReader>();
+        services.AddScoped<ProjectCreationCleanupAuthority>();
+        services.AddSingleton<IProjectDefinitionRecoveryCodec, ProjectDefinitionRecoveryCodec>();
+        services.AddScoped<Pages.ProjectNativeDefinitionOperations>();
+        services.AddSingleton<IProjectLifecycleRecoveryCodec, ProjectLifecycleRecoveryCodec>();
+        services.AddScoped<ProjectLifecycleHierarchyReader>();
+        services.AddScoped<Pages.ProjectNativeLifecycleOperations>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectDefinitionReceiptRetention>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IFiniteOperationReceiptRetentionParticipant, ProjectLifecycleReceiptRetention>());
+        services.AddOptions<ProjectDefinitionOperationOptions>().Validate(options => options.IsValid(),
+            "Projects definition operation limits and deadlines must remain within supported bounds.").ValidateOnStart();
         services.AddScoped<IProjectSummaryQueryService>(provider => provider.GetRequiredService<ProjectsService>());
         services.AddScoped<ProjectWriteAdmissionService>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<EditingOperationContext>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.AddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new ProjectChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>(), provider.GetServices<IProjectCommittedChangeSink>());
+        });
+        services.AddScoped(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            return new ProjectAssignmentChanges(provider.GetRequiredService<EditingChangeFeed>(),
+                new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation),
+                provider.GetRequiredService<EditingOperationContext>());
+        });
         services.AddScoped<ProjectWriteSelectionQuery>();
         services.AddScoped<ProjectRecordQueryService>();
         services.AddScoped<ProjectsProfileTransferStore>();

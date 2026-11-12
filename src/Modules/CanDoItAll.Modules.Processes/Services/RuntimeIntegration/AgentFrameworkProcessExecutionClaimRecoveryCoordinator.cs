@@ -34,7 +34,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
     IProcessRuntimeStateStore stateStore,
     IProcessInstancePlanStore planStore,
     IProcessRuntimeStepAssignmentStore assignmentStore,
-    IProcessRuntimeUnitOfWork unitOfWork,
+    ProcessDecisionResultCoordinator resultCoordinator,
     IProcessRuntimeDispatchQueue dispatchQueue,
     ProcessRuntimeBranchSignalApplicationService branchSignalRouter,
     ProcessRuntimeProjectionCatchupService projectionCatchupService,
@@ -72,7 +72,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                     normalizedRequestedBy,
                     cancellationToken).ConfigureAwait(false);
             }
-            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumConcurrencyRetries)
+            catch (Exception failure) when (attempt < MaximumConcurrencyRetries &&
+                failure is ProcessRuntimeOptimisticConcurrencyException or ProcessDecisionException { Reason: ProcessDecisionRefusal.StaleExpectation })
             {
                 await Task.Delay(ConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
             }
@@ -110,7 +111,8 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
                     normalizedRequestedBy,
                     cancellationToken).ConfigureAwait(false);
             }
-            catch (ProcessRuntimeOptimisticConcurrencyException) when (attempt < MaximumConcurrencyRetries)
+            catch (Exception failure) when (attempt < MaximumConcurrencyRetries &&
+                failure is ProcessRuntimeOptimisticConcurrencyException or ProcessDecisionException { Reason: ProcessDecisionRefusal.StaleExpectation })
             {
                 await Task.Delay(ConcurrencyRetryDelay, cancellationToken).ConfigureAwait(false);
             }
@@ -198,8 +200,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
             assignment,
             executionRun);
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
-        var engine = new ProcessRuntimeEngine(unitOfWork);
-        var commit = await engine.SubmitStrategyResultAsync(
+        var commit = await resultCoordinator.SubmitAsync(
             state,
             CreateContext(requestedBy),
             new SubmitStrategyResultCommand(
@@ -401,8 +402,7 @@ internal sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinator(
         }
 
         var result = CreateRecoveredStrategyResult(executionRun, adapterResult);
-        var engine = new ProcessRuntimeEngine(unitOfWork);
-        var commit = await engine.SubmitStrategyResultAsync(
+        var commit = await resultCoordinator.SubmitAsync(
             state,
             context,
             new SubmitStrategyResultCommand(

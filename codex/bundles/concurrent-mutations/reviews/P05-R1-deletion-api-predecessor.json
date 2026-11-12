@@ -1,0 +1,8 @@
+{
+  "kind": "Managed-only stage2 actual HTTP proof ownership before edit",
+  "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsApiDeletionIntegrationTests.cs",
+  "managedSha256": "8B32EAA323EB114A7F05583594A4A18336E87DBCD05A32D66FB99743796062A7",
+  "mainSha256": "8B32EAA323EB114A7F05583594A4A18336E87DBCD05A32D66FB99743796062A7",
+  "backup": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-before.cs.txt",
+  "intendedChange": "Extend existing actual HTTP deletion Fact with acknowledged owner disposal fault and explicit recovery flag; two Facts unchanged."
+}

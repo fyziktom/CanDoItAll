@@ -1,0 +1,161 @@
+{
+  "kind": "source-only C3 dormant owner",
+  "authoredFacts": 42,
+  "optInLongRunningFacts": 1,
+  "buildOrExecutionPerformed": false,
+  "mainEdited": false,
+  "entries": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperation.cs",
+      "parentBaseSha256": null,
+      "sha256": "1C00592BAFBE308046A78A5D5763685F40AFB17635C4FBF967F2B56C76919038",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperationCodec.cs",
+      "parentBaseSha256": null,
+      "sha256": "85C68D6B9A76A152A8538A02F9EF1DFAFC448F09F0CAA95AB652D9109D5F960D",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanReceiptRecord.cs",
+      "parentBaseSha256": null,
+      "sha256": "4D576C70656EA7D7FB46C619849EC512E96C129839909F740C9ABA849E006B21",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanOperationProtocol.cs",
+      "parentBaseSha256": null,
+      "sha256": "8387A209DEFA2316CEC6BAF1A9E3FA8112158CF78F99059DD460E8246A7EC4EC",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanReceiptReader.cs",
+      "parentBaseSha256": null,
+      "sha256": "F7437BE60551A816C9FF38F77E67ED6280D374628BC4518836FC1A11B081054C",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublisher.cs",
+      "parentBaseSha256": null,
+      "sha256": "DD852268A6CA1A14FDA180B51BF1878124662332CBFFE5F0C3272FF0D8894D3B",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublicationAuthority.cs",
+      "parentBaseSha256": null,
+      "sha256": "D0DC01C10CD167E32F4B2731FF302BC978FB32BF1265B8719BD6E12EDF8AD57E",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/WorkbenchTaskPlanFiniteOperations.cs",
+      "parentBaseSha256": null,
+      "sha256": "54B9E19E806FA72106EB8F12FA0FCAA41843FC22C16860322935CF3D07171633",
+      "state": "new"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanBasis.cs",
+      "parentBaseSha256": "ADEC878FF714C550F0B6D48DFECAB3DD4F7E354F45FD71F02D75628040F6E832",
+      "sha256": "505733E1088ED625A51EFF9B3DC1714D07B10F495475E09F9F3FA1D611CEA612",
+      "state": "changed-existing"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Persistence/WorkbenchDbContext.cs",
+      "parentBaseSha256": "1DED64CDA1D230CA625816A114417E5A7C64CFDF669A49DDA6D876F621FBFC88",
+      "sha256": "5EAF44F81F3702A4F8039067539074A14B36E0A05843B0C50B5B169D7DC0FA63",
+      "state": "changed-existing"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+      "parentBaseSha256": "5732A4A6518FEB83FA58F483F71F5086531A6C4A234856A9532600B26C0D3443",
+      "sha256": "54DB12820CB973123F26CC66A13049C6DE9CC59E8190E000B6C1B42E9E355F4E",
+      "state": "changed-existing"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/DatabaseTransfer/WorkbenchProjectTransferTargetStateParticipant.cs",
+      "parentBaseSha256": "48844FD833DFA1A3F9A9A7E99D433323796FA0D946863BF8C1C85A2BE0FAEF0D",
+      "sha256": "445492580C49098B1A0F3081EDC1C60E0760E53862EA48C30E7024C3166A6ADA",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanOperationContractTests.cs",
+      "parentBaseSha256": null,
+      "sha256": "5820E72EC2AC62FE466BB023BC0AF1E8BE62EAF592C865EC54E5C1231D0C1EF9",
+      "state": "new"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationTests.cs",
+      "parentBaseSha256": null,
+      "sha256": "9D2C378F8FC0D211CF894FC1AA0D478AD9ACA49DA70B2C75D30D016B6C97DC60",
+      "state": "new"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanCurrentnessTests.cs",
+      "parentBaseSha256": null,
+      "sha256": "0E779345606AD3804932148664AC190190D585C162FA6B588106B73E13FFA707",
+      "state": "new"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanRetentionTests.cs",
+      "parentBaseSha256": null,
+      "sha256": "5F5BBB16AA460CE66CA8680AB89F713858D772F59DF3C4A879499722DE3B9717",
+      "state": "new"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationFixture.cs",
+      "parentBaseSha256": null,
+      "sha256": "4B59BA27C56A0334925FA7BFC2F45B98126AF9A02734A3FEA4A5411F50D1EF3E",
+      "state": "new"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationPerformanceTests.cs",
+      "parentBaseSha256": null,
+      "sha256": "0796CE9A68F63525F3D3543CA7B79F1E83A5344ED11479EF50A7BD826F7363AB",
+      "state": "new"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTransferTargetStateArchitectureTests.cs",
+      "parentBaseSha256": "6940A6FEEE908A20733B8E3FB20F0EDF77D88B0BAB4159937E6A58C9E6D0761D",
+      "sha256": "C9507945024E82EECD0A9168741DF44AF436DF26030E28AA678FAC9848252814",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/WorkbenchOwnerPersistenceTests.cs",
+      "parentBaseSha256": "7E57FD61AF24BF8AE68F5DA6751421D3400DC71FACBAE586C144F010FF207B6D",
+      "sha256": "5B01AC873D61CB7D49C8E8A3260CC63394CB63FDD92AFF5B4D328F98DEF7CDE7",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferOwnerInspectionTests.cs",
+      "parentBaseSha256": "B29F964B1D941DBB091836638CBEEDAB06166D5518911A06E09E5F66A69DBCB7",
+      "sha256": "8A8EF1B38D9F57707E2B52E966B302E11F621527E66A9DA76509B7B58A3B674B",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/SharedProviderPremergeUpgradeTests.cs",
+      "parentBaseSha256": "084D5EB670C4E3C5951307F446ED1887E84010D2005657546AF6F47D9C80883B",
+      "sha256": "F5F5212326398718AFE86D1224D53501EBEE76AC3A6C990E4AB7397B6D8FBE85",
+      "state": "changed-existing"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalProjectMigrationAssertions.cs",
+      "parentBaseSha256": "84E04E102ABCB477B10B802D365EE0E93816A1F6BA05F7FB7C25D8171F95F1AA",
+      "sha256": "1004F8CB322530197E17D041BD5F1B65F14B3BE4E22A702BF00935ABA3AF7356",
+      "state": "changed-existing"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P04-C3-task-plan-publisher.md",
+      "parentBaseSha256": null,
+      "sha256": "736E04F325B27DE14F769B346792F1218968319D3ABFF5F020C5A0FF0CA0BB61",
+      "state": "new"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-dormant-source-review.md",
+      "parentBaseSha256": null,
+      "sha256": "1D506B3251C7A9A93D59DBE890DF5364B0B89F7C142A2177B581E69F4F739D37",
+      "state": "new"
+    }
+  ],
+  "supersededInventorySha256": "36271A74D14FD7E83167CE6B39AA54A8FCC1B0E0B7697E11873D72E0685AEED8",
+  "amendment": "Independent peer reviewed lost commit acknowledgement plus cleanup conflict repair; source only, unchanged 42 focused Facts and 1 opt-in Fact."
+}

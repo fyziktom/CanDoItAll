@@ -22,7 +22,7 @@ public sealed class AgentSettingsSurfaceTests {
         }
         if (scenario == VoiceSettingsScenario.ProviderPartial) {
             Assert.Equal(presentation.Source!.SynthesisProviderId!.Value.ToString("D"), cut.Find("[data-testid='agents-voice-tts-provider']").GetAttribute("value"));
-            Assert.Contains("Existing provider (catalog unavailable)", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Existing provider (unavailable in current catalog)", cut.Markup, StringComparison.Ordinal);
         }
     }
     [Theory]
@@ -73,15 +73,15 @@ public sealed class AgentSettingsSurfaceTests {
         var presentation = FloatingChatSettingsSandboxFixture.Create(FloatingChatSettingsScenario.Ready);
         var intents = new List<FloatingChatSettingsIntent>();
         var cut = context.Render<FloatingChatSettingsSurface>(p => p.Add(x => x.Presentation, presentation).Add(x => x.Intent, value => intents.Add(value)));
-        cut.Find("[data-testid='floating-agent-chat-retention']").Change("25");
-        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Change("9");
-        cut.Find("[data-testid='floating-agent-chat-maximum-prepared']").Change("7");
-        cut.Find("[data-testid='floating-agent-chat-prepared-retention']").Change("30");
+        cut.Find("[data-testid='floating-agent-chat-retention']").Input("25");
+        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Input("9");
+        cut.Find("[data-testid='floating-agent-chat-maximum-prepared']").Input("7");
+        cut.Find("[data-testid='floating-agent-chat-prepared-retention']").Input("30");
         cut.Find("[data-testid='floating-agent-chat-adaptive']").Change(false);
         cut.Find("[data-testid='floating-agent-chat-settings-save']").Click();
         Assert.Equal(new FloatingChatSettingsValues(25, 9, 7, false, 30), Assert.Single(intents).Submission);
         Assert.Equal(12, presentation.Source!.MaximumActiveChats);
-        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Change("5");
+        cut.Find("[data-testid='floating-agent-chat-maximum-active']").Input("5");
         Assert.Equal(9, intents[0].Submission!.MaximumActiveChats);
     }
     private static BunitContext Context() {

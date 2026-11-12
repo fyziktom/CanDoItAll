@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Quartz.Spi;
 
 namespace CanDoItAll.Modules.SchedulerPlanner;
 
@@ -26,8 +28,13 @@ public sealed class SchedulerPlannerTriggerScheduler(
 {
     private const string JobGroup = "candoitall-scheduler-planner";
     private const string TriggerGroup = "candoitall-scheduler-planner-runtime";
+    private static readonly ConditionalWeakTable<ISchedulerFactory, SemaphoreSlim> ProjectionGates = new();
+    private readonly SemaphoreSlim projectionGate = ProjectionGates.GetValue(schedulerFactory, static _ => new(1, 1));
 
-    public async Task SynchronizeAsync(CancellationToken cancellationToken = default)
+    public Task SynchronizeAsync(CancellationToken cancellationToken = default)
+        => ProjectAsync(() => SynchronizeAllCoreAsync(cancellationToken), cancellationToken);
+
+    private async Task SynchronizeAllCoreAsync(CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var plans = await dbContext.Set<SchedulerPlan>()
@@ -46,13 +53,25 @@ public sealed class SchedulerPlannerTriggerScheduler(
 
         foreach (var plan in plans)
         {
-            await SynchronizePlanAsync(scheduler, plan, cancellationToken);
+            await SynchronizePlanAsync(dbContext, scheduler, plan, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task SynchronizePlanAsync(
+    public Task SynchronizePlanAsync(Guid planId, CancellationToken cancellationToken = default)
+        => ProjectAsync(() => SynchronizeOneCoreAsync(planId, cancellationToken), cancellationToken);
+
+    private async Task ProjectAsync(Func<Task> project, CancellationToken cancellationToken) {
+        await projectionGate.WaitAsync(cancellationToken);
+        try {
+            await project();
+        } finally {
+            projectionGate.Release();
+        }
+    }
+
+    private async Task SynchronizeOneCoreAsync(
         Guid planId,
         CancellationToken cancellationToken = default)
     {
@@ -71,34 +90,38 @@ public sealed class SchedulerPlannerTriggerScheduler(
             return;
         }
 
-        await SynchronizePlanAsync(scheduler, plan, cancellationToken);
+        await SynchronizePlanAsync(dbContext, scheduler, plan, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SynchronizePlanAsync(
+        SchedulerPlannerDbContext dbContext,
         IScheduler scheduler,
         SchedulerPlan plan,
         CancellationToken cancellationToken)
     {
         var jobKey = BuildJobKey(plan.Id);
         var triggerKey = BuildTriggerKey(plan.Id);
+        var projection = await PrepareProjectionAsync(dbContext, plan, jobKey, triggerKey, cancellationToken);
 
         if (await scheduler.CheckExists(jobKey, cancellationToken))
         {
             await scheduler.DeleteJob(jobKey, cancellationToken);
         }
 
-        if (!plan.IsEnabled)
-        {
+        if (projection.Trigger is null) {
             plan.NextPlannedFireAtUtc = null;
             plan.UpdatedAtUtc = clock.GetUtcNow();
+            logger.LogInformation("Scheduler plan {PlanId} has no runtime trigger. Projection={Projection}, Enabled={IsEnabled}.",
+                plan.Id, projection.Kind, plan.IsEnabled);
             return;
         }
 
-        var quartzTrigger = BuildQuartzTrigger(plan, jobKey, triggerKey);
+        var quartzTrigger = projection.Trigger;
         var job = JobBuilder.Create<SchedulerPlannerQuartzJob>()
             .WithIdentity(jobKey)
             .UsingJobData(SchedulerPlannerQuartzJob.PlanIdKey, plan.Id.ToString("N"))
+            .UsingJobData(SchedulerPlannerQuartzJob.DefinitionRevisionKey, plan.DefinitionRevision.ToString("N"))
             .UsingJobData(SchedulerPlannerQuartzJob.SchedulerTriggerIdKey, plan.SchedulerTriggerId.ToString("N"))
             .UsingJobData(SchedulerPlannerQuartzJob.SchedulerTriggerKeyKey, plan.SchedulerTriggerKey)
             .RequestRecovery()
@@ -115,6 +138,20 @@ public sealed class SchedulerPlannerTriggerScheduler(
             plan.NextPlannedFireAtUtc);
     }
 
+    private async Task<SchedulerPlanProjection> PrepareProjectionAsync(SchedulerPlannerDbContext database, SchedulerPlan plan,
+        JobKey jobKey, TriggerKey triggerKey, CancellationToken cancellationToken) {
+        if (!plan.IsEnabled) {
+            return new(SchedulerPlanProjectionKind.Disabled, null);
+        }
+        var trigger = (IOperableTrigger)BuildQuartzTrigger(plan, jobKey, triggerKey);
+        trigger.Validate();
+        var latest = await database.Set<SchedulerPlanRun>().AsNoTracking().Where(row => row.PlanId == plan.Id)
+            .OrderByDescending(row => row.FiredAtUtc).FirstOrDefaultAsync(cancellationToken);
+        var admission = latest is null ? null : await database.Set<SchedulerFireAdmissionRecord>().AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == latest.Id, cancellationToken);
+        return SchedulerPlanProjection.Prepare(plan, trigger, latest, admission, clock.GetUtcNow());
+    }
+
     private static ITrigger BuildQuartzTrigger(
         SchedulerPlan plan,
         JobKey jobKey,
@@ -124,11 +161,10 @@ public sealed class SchedulerPlannerTriggerScheduler(
             .WithIdentity(triggerKey)
             .ForJob(jobKey);
 
-        builder = plan.StartAtUtc.HasValue
-            ? builder.StartAt(plan.StartAtUtc.Value)
-            : builder.StartNow();
+        var start = plan.StartAtUtc ?? SystemTime.UtcNow();
+        builder = builder.StartAt(start);
 
-        if (plan.EndAtUtc.HasValue)
+        if (plan.EndAtUtc.HasValue && (plan.StartAtUtc.HasValue || plan.EndAtUtc >= start))
         {
             builder = builder.EndAt(plan.EndAtUtc.Value);
         }
@@ -139,7 +175,8 @@ public sealed class SchedulerPlannerTriggerScheduler(
         {
             SchedulerPlanMisfirePolicy.DoNothing => cronBuilder.WithMisfireHandlingInstructionDoNothing(),
             SchedulerPlanMisfirePolicy.IgnoreMisfire => cronBuilder.WithMisfireHandlingInstructionIgnoreMisfires(),
-            _ => cronBuilder.WithMisfireHandlingInstructionFireAndProceed()
+            SchedulerPlanMisfirePolicy.FireOnceNow => cronBuilder.WithMisfireHandlingInstructionFireAndProceed(),
+            _ => throw new ArgumentOutOfRangeException(nameof(plan.MisfirePolicy))
         };
 
         return builder
@@ -182,6 +219,7 @@ public sealed class SchedulerPlannerQuartzJob(
     ILogger<SchedulerPlannerQuartzJob> logger) : IJob
 {
     public const string PlanIdKey = "CanDoItAll.SchedulerPlanner.PlanId";
+    public const string DefinitionRevisionKey = "CanDoItAll.SchedulerPlanner.DefinitionRevision";
     public const string SchedulerTriggerIdKey = "CanDoItAll.SchedulerPlanner.TriggerId";
     public const string SchedulerTriggerKeyKey = "CanDoItAll.SchedulerPlanner.TriggerKey";
 
@@ -194,7 +232,9 @@ public sealed class SchedulerPlannerQuartzJob(
             Guid.NewGuid(),
             Guid.NewGuid(),
             context.FireTimeUtc,
-            context.NextFireTimeUtc);
+            context.NextFireTimeUtc) {
+            ExpectedDefinitionRevision = ParseRequiredGuid(context.MergedJobDataMap.GetString(DefinitionRevisionKey), DefinitionRevisionKey)
+        };
 
         try
         {

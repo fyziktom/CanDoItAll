@@ -148,3 +148,13 @@ Shadow mode remains available for non-critical telemetry comparison, but it must
 ## Limitations
 
 Structured output support depends on the configured provider and transport. Compatible OpenAI and Azure OpenAI chat-completion clients may use JSON-schema response format; ordinary function-tool support does not imply tool-approval support. Post-generation validation remains mandatory. Manual and auto-approved approval continuations preserve the structured contract and are validated before a governed run can complete successfully.
+
+Workflow JSON validation retains usage on failure. If invalid output reaches the configured
+output-token limit, the diagnostic identifies budget exhaustion; it does not accept partial
+JSON or retry effects. Managed workflow examples allow 8,192 output tokens to accommodate
+their structured result and preserved project context.
+
+Project Structure observes the canonical workflow status while a selected run or start
+dialog is active. The host fences updates by project authority, selection, and dialog
+opening; the renderer does not own execution state. Closing or changing the view retires
+observation without replaying or cancelling the accepted workflow.

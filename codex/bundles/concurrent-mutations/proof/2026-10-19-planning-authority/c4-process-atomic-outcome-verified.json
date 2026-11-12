@@ -1,0 +1,1317 @@
+{
+  "candidate": "c4-process-atomic-outcome-verified",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T17:02:29.1501067+00:00",
+      "State": "Completed",
+      "RunnerPid": 60024,
+      "ChildPid": 60948,
+      "ChildStartedUtc": "2026-10-20T17:02:29.1836831Z",
+      "ExitCode": 0,
+      "Seconds": 62.8650608,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 180717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T17:05:46.5263874+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 47368,
+      "ChildStartedUtc": "2026-10-20T17:05:46.5353113Z",
+      "ExitCode": 0,
+      "Seconds": 0.0719128,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 287,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-atomic-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests"
+      ],
+      "StartedUtc": "2026-10-20T17:04:35.7382893+00:00",
+      "State": "Completed",
+      "RunnerPid": 61268,
+      "ChildPid": 33796,
+      "ChildStartedUtc": "2026-10-20T17:04:35.7802002Z",
+      "ExitCode": 0,
+      "Seconds": 2.4393239,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3458,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T17:05:38.8969103+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 17416,
+      "ChildStartedUtc": "2026-10-20T17:05:38.9009787Z",
+      "ExitCode": 0,
+      "Seconds": 7.6080895,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-atomic-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests",
+        "--logger",
+        "trx;LogFileName=atomic-outcome.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-verified"
+      ],
+      "StartedUtc": "2026-10-20T17:07:45.5667423+00:00",
+      "State": "Completed",
+      "RunnerPid": 40448,
+      "ChildPid": 60220,
+      "ChildStartedUtc": "2026-10-20T17:07:45.6226126Z",
+      "ExitCode": 0,
+      "Seconds": 130.2832117,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4414,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "freeze-candidate",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-verified/Freeze-Browser.py",
+        "freeze"
+      ],
+      "StartedUtc": "2026-10-20T17:06:18.4028016+00:00",
+      "State": "Completed",
+      "RunnerPid": 59460,
+      "ChildPid": 29804,
+      "ChildStartedUtc": "2026-10-20T17:06:18.4497891Z",
+      "ExitCode": 0,
+      "Seconds": 42.5714723,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 233,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome-verified/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T17:07:39.3096204+00:00",
+      "State": "Completed",
+      "RunnerPid": 52152,
+      "ChildPid": 45692,
+      "ChildStartedUtc": "2026-10-20T17:07:39.3623436Z",
+      "ExitCode": 0,
+      "Seconds": 136.8151444,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T17:03:12.2383468+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 57420,
+      "ChildStartedUtc": "2026-10-20T17:03:12.2713844Z",
+      "ExitCode": 0,
+      "Seconds": 0.1310672,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-verified/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T17:05:38.3289398+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 31036,
+      "ChildStartedUtc": "2026-10-20T17:05:38.3330472Z",
+      "ExitCode": 0,
+      "Seconds": 0.5449783,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-verified/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T17:03:15.9857273+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 61108,
+      "ChildStartedUtc": "2026-10-20T17:03:16.0039718Z",
+      "ExitCode": 0,
+      "Seconds": 142.3182562,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 454,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T17:03:12.4265063+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 61868,
+      "ChildStartedUtc": "2026-10-20T17:03:12.4324026Z",
+      "ExitCode": 0,
+      "Seconds": 0.4715091,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T17:03:13.0517373+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 61408,
+      "ChildStartedUtc": "2026-10-20T17:03:13.0552441Z",
+      "ExitCode": 0,
+      "Seconds": 2.7041534,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T17:03:12.9141533+00:00",
+      "State": "Completed",
+      "RunnerPid": 57744,
+      "ChildPid": 28020,
+      "ChildStartedUtc": "2026-10-20T17:03:12.9165553Z",
+      "ExitCode": 0,
+      "Seconds": 0.1244892,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "verify-candidate",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-atomic-outcome-verified/Freeze-Browser.py",
+        "verify"
+      ],
+      "StartedUtc": "2026-10-20T17:10:04.2529670+00:00",
+      "State": "Completed",
+      "RunnerPid": 47964,
+      "ChildPid": 58124,
+      "ChildStartedUtc": "2026-10-20T17:10:04.3044782Z",
+      "ExitCode": 0,
+      "Seconds": 41.5379633,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 40,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "eb423e12-1ac4-481e-947a-6ca249796d1d",
+      "testId": "63e8df90-882c-bc7a-49e1-00f9f2af8967",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: WrongTerminalStep)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9356497",
+      "startTime": "2026-10-20T13:08:22.9649434-04:00",
+      "endTime": "2026-10-20T13:08:27.8976500-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "eb423e12-1ac4-481e-947a-6ca249796d1d",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "76344d9c-85c2-47e3-bdcf-3de8549e9a01",
+      "testId": "21d46cd4-627d-f741-3762-4c32def70e25",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9229533",
+      "startTime": "2026-10-20T13:09:26.2214248-04:00",
+      "endTime": "2026-10-20T13:09:31.1441391-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "76344d9c-85c2-47e3-bdcf-3de8549e9a01",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "133a60ba-81e8-4190-a95c-6ab6d6a496b1",
+      "testId": "f4304594-18a5-9ca4-3037-c571ced1a4aa",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.8989575",
+      "startTime": "2026-10-20T13:08:53.2473624-04:00",
+      "endTime": "2026-10-20T13:08:58.1469740-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "133a60ba-81e8-4190-a95c-6ab6d6a496b1",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "845af42e-dc6b-4890-9af4-ef5637feca41",
+      "testId": "3caa397f-bc9c-21e0-67d1-420518029d27",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: Allocation)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:25.1552039",
+      "startTime": "2026-10-20T13:07:49.9067559-04:00",
+      "endTime": "2026-10-20T13:08:15.0423678-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "845af42e-dc6b-4890-9af4-ef5637feca41",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "784d8083-d4a4-43b3-9fe9-9e809b3f0a2d",
+      "testId": "8fdfbd4e-0611-d3d0-7f2d-debf265ee927",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: RetainedClaim)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7959534",
+      "startTime": "2026-10-20T13:08:33.0407025-04:00",
+      "endTime": "2026-10-20T13:08:37.8362006-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "784d8083-d4a4-43b3-9fe9-9e809b3f0a2d",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "bd126170-1b9b-414c-b55e-9a1a2ec71677",
+      "testId": "0fc0a082-86b1-bfc4-e53d-fbc08da68505",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:07.0030591",
+      "startTime": "2026-10-20T13:09:43.4397082-04:00",
+      "endTime": "2026-10-20T13:09:50.4421138-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bd126170-1b9b-414c-b55e-9a1a2ec71677",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "3fb9c98c-049f-4476-b9a6-157e174af4c4",
+      "testId": "448d7a85-4e45-d203-005f-9915314c28eb",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.8711611",
+      "startTime": "2026-10-20T13:09:12.6529848-04:00",
+      "endTime": "2026-10-20T13:09:19.5240258-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3fb9c98c-049f-4476-b9a6-157e174af4c4",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "225f26c0-c356-4beb-9347-5b7b8417d2f7",
+      "testId": "3c7ed3f0-e20a-cdde-f178-89898363998c",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7307110",
+      "startTime": "2026-10-20T13:08:58.1480064-04:00",
+      "endTime": "2026-10-20T13:09:02.8784684-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "225f26c0-c356-4beb-9347-5b7b8417d2f7",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "e2dc0c2c-65a6-469d-b659-074dd8c48cf7",
+      "testId": "1a7f9ad8-dc09-ddd1-f696-2bcbf6d18635",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9834040",
+      "startTime": "2026-10-20T13:09:07.6703308-04:00",
+      "endTime": "2026-10-20T13:09:12.6522137-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e2dc0c2c-65a6-469d-b659-074dd8c48cf7",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "574aadb4-660f-4a18-ade7-58fc957722f3",
+      "testId": "44efa81d-1c83-e055-7d52-a63cd9513e99",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.2931580",
+      "startTime": "2026-10-20T13:09:31.1450595-04:00",
+      "endTime": "2026-10-20T13:09:43.4383805-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "574aadb4-660f-4a18-ade7-58fc957722f3",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "6deb267b-b7d5-4551-9ca8-bea23cf24a5f",
+      "testId": "469e369e-68fa-6d58-11c2-ff8c921e8774",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.1210318",
+      "startTime": "2026-10-20T13:09:50.4432048-04:00",
+      "endTime": "2026-10-20T13:09:55.5639250-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6deb267b-b7d5-4551-9ca8-bea23cf24a5f",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "ffc61249-287b-451d-8b23-406cae2e155d",
+      "testId": "7b185c8a-420b-eeb9-72de-65cec0097c3d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: StepClaim)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.1414320",
+      "startTime": "2026-10-20T13:08:27.8986377-04:00",
+      "endTime": "2026-10-20T13:08:33.0397239-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ffc61249-287b-451d-8b23-406cae2e155d",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "83263c74-92dd-44e8-9aef-0f4a8d1e008d",
+      "testId": "269008d3-a133-9928-8c21-aa489934bd08",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.6956700",
+      "startTime": "2026-10-20T13:09:19.5253003-04:00",
+      "endTime": "2026-10-20T13:09:26.2205055-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "83263c74-92dd-44e8-9aef-0f4a8d1e008d",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "3b40d5f7-f1b5-4d90-81f7-c1699dbabf41",
+      "testId": "dd53232b-1e1e-f75a-429c-da5e67577c9a",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.7891111",
+      "startTime": "2026-10-20T13:09:02.8802174-04:00",
+      "endTime": "2026-10-20T13:09:07.6693658-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3b40d5f7-f1b5-4d90-81f7-c1699dbabf41",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "d3a35b34-3134-4947-8894-f241b89dcb39",
+      "testId": "b786c12e-8a71-38c9-41f0-7d6b2a027814",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: OwnerRevision)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:07.9166374",
+      "startTime": "2026-10-20T13:08:15.0689961-04:00",
+      "endTime": "2026-10-20T13:08:22.9613743-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d3a35b34-3134-4947-8894-f241b89dcb39",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "83278777-0b7a-4b9b-ad27-8813171592b3",
+      "testId": "b7fcc100-f11c-c78a-9b24-5bbc27bc35f0",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.0946345",
+      "startTime": "2026-10-20T13:08:48.1530464-04:00",
+      "endTime": "2026-10-20T13:08:53.2465397-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "83278777-0b7a-4b9b-ad27-8813171592b3",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "06b51fe8-32e4-4b62-ad9f-969d570818ca",
+      "testId": "f630a83e-3169-df88-6ff7-8c8ea38e3ab6",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: NonterminalStep)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.9971635",
+      "startTime": "2026-10-20T13:08:43.1526133-04:00",
+      "endTime": "2026-10-20T13:08:48.1494350-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "06b51fe8-32e4-4b62-ad9f-969d570818ca",
+      "trx": "atomic-outcome.trx"
+    },
+    {
+      "executionId": "29c47f12-8bf4-409b-9fda-f8ffcc83de0e",
+      "testId": "a0a6ed40-e87a-0ee1-5e16-73a19ed4b239",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: UnclosedSibling)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.3148991",
+      "startTime": "2026-10-20T13:08:37.8370789-04:00",
+      "endTime": "2026-10-20T13:08:43.1516693-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "29c47f12-8bf4-409b-9fda-f8ffcc83de0e",
+      "trx": "atomic-outcome.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-before.json": {
+      "snapshotId": "snap-20261020160906-8e205a26",
+      "projects": [
+        {
+          "name": "CanDoItAll.Processes.Application",
+          "projectId": "proj-candoitall-processes-application"
+        },
+        {
+          "name": "CanDoItAll.Processes.Persistence",
+          "projectId": "proj-candoitall-processes-persistence"
+        },
+        {
+          "name": "CanDoItAll.Processes.Runtime",
+          "projectId": "proj-candoitall-processes-runtime"
+        }
+      ],
+      "counts": {
+        "documents": 221,
+        "types": 728,
+        "members": 6651,
+        "findings": 208,
+        "diagnostics": 189
+      },
+      "types": [
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c4dd107dbe25",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessDecisionStore",
+          "members": 24,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 318,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-5ee7958f0864",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork",
+          "members": 43,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 13,
+            "column": 1,
+            "endLine": 1116,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-4184aa083c85",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.LinkedChildRun",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 1107,
+            "column": 5,
+            "endLine": 1109,
+            "endColumn": 42
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-268df69e2acd",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.LinkedChildStateRow",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 1111,
+            "column": 5,
+            "endLine": 1115,
+            "endColumn": 38
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-74fac6df6056",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessRuntimeUnitOfWork.PreparedLaunchMutationAuthority",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 388,
+            "column": 5,
+            "endLine": 389,
+            "endColumn": 88
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04e7f20991b0",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 152,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-9dff49ed0d39",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.ChildDocument",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 148,
+            "column": 5,
+            "endLine": 149,
+            "endColumn": 99
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-94786217f2ca",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandDocument",
+          "members": 13,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 137,
+            "column": 5,
+            "endLine": 145,
+            "endColumn": 6
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c1ae03788721",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandKind",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 136,
+            "column": 5,
+            "endLine": 136,
+            "endColumn": 76
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-21a7043e4105",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.Document",
+          "members": 7,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 150,
+            "column": 5,
+            "endLine": 151,
+            "endColumn": 61
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04ddcbf64f97",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.GenerationDocument",
+          "members": 8,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 146,
+            "column": 5,
+            "endLine": 147,
+            "endColumn": 102
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b5201002f7bd",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCommand",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 70,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-3210bac0defe",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionTransitions",
+          "members": 15,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 163,
+            "endColumn": 2
+          }
+        }
+      ],
+      "findings": [
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-2d3564c13e24",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 318,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-6e8d4c84459d",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessRuntimeUnitOfWork.cs",
+            "line": 13,
+            "column": 1,
+            "endLine": 1116,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-cee9ec3da8e0",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 152,
+            "endColumn": 2
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-persistenc-1fb48e16c11e",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 137,
+            "column": 5,
+            "endLine": 145,
+            "endColumn": 6
+          }
+        },
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-processes-runtime-ca-c1efec01c3ee",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "title": "Type with many members",
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 163,
+            "endColumn": 2
+          }
+        }
+      ],
+      "cycles": []
+    },
+    "architecture-after.json": {
+      "snapshotId": "snap-20261020164303-8e205a26",
+      "counts": {
+        "projects": 3,
+        "documents": 221,
+        "types": 729,
+        "members": 6655,
+        "findings": 208,
+        "diagnostics": 189
+      },
+      "types": [
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c4dd107dbe25",
+          "name": "CanDoItAll.Processes.Persistence.EfProcessDecisionStore",
+          "members": 24,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/EfProcessDecisionStore.cs",
+            "line": 10,
+            "column": 1,
+            "endLine": 325,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04e7f20991b0",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 8,
+            "column": 1,
+            "endLine": 165,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-9dff49ed0d39",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.ChildDocument",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 161,
+            "column": 5,
+            "endLine": 162,
+            "endColumn": 99
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-94786217f2ca",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandDocument",
+          "members": 14,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 148,
+            "column": 5,
+            "endLine": 158,
+            "endColumn": 6
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-c1ae03788721",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.CommandKind",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 147,
+            "column": 5,
+            "endLine": 147,
+            "endColumn": 76
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-21a7043e4105",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.Document",
+          "members": 7,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 163,
+            "column": 5,
+            "endLine": 164,
+            "endColumn": 61
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-persistence-candoitall-pr-04ddcbf64f97",
+          "name": "CanDoItAll.Processes.Persistence.ProcessDecisionReceiptCodec.GenerationDocument",
+          "members": 8,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Persistence/ProcessDecisionReceiptCodec.cs",
+            "line": 159,
+            "column": 5,
+            "endLine": 160,
+            "endColumn": 102
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b8d847f6c290",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionChangePhase",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 85,
+            "column": 1,
+            "endLine": 86,
+            "endColumn": 81
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-31967730571e",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionClosure",
+          "members": 5,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 80,
+            "column": 1,
+            "endLine": 84,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-b5201002f7bd",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCommand",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 9,
+            "column": 1,
+            "endLine": 74,
+            "endColumn": 2
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-830519fed06e",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionCompletion",
+          "members": 2,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 7,
+            "column": 1,
+            "endLine": 7,
+            "endColumn": 59
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-202905617218",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionEnrollment",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 78,
+            "column": 1,
+            "endLine": 79,
+            "endColumn": 74
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-36ae6e9c31ea",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionPhaseChange",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 5,
+            "endColumn": 96
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-74256f8565e2",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionReceipt",
+          "members": 6,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 90,
+            "column": 1,
+            "endLine": 91,
+            "endColumn": 85
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-94a5886ff90c",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionReconciliation",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 92,
+            "column": 1,
+            "endLine": 92,
+            "endColumn": 136
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-8e08dd7e0447",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionRefresh",
+          "members": 4,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 87,
+            "column": 1,
+            "endLine": 88,
+            "endColumn": 117
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-312cebdf4e9b",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionRefreshKind",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 6,
+            "column": 1,
+            "endLine": 6,
+            "endColumn": 90
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-6522cf149a4c",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionStart",
+          "members": 3,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionCommands.cs",
+            "line": 76,
+            "column": 1,
+            "endLine": 77,
+            "endColumn": 84
+          }
+        },
+        {
+          "id": "type-proj-candoitall-processes-runtime-candoitall-proces-3210bac0defe",
+          "name": "CanDoItAll.Processes.Runtime.ProcessDecisionTransitions",
+          "members": 15,
+          "source": {
+            "path": "src/Processes/CanDoItAll.Processes.Runtime/ProcessDecisionTransitions.cs",
+            "line": 5,
+            "column": 1,
+            "endLine": 181,
+            "endColumn": 2
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-applicat-fce782ac5116",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-application",
+          "toId": "proj-candoitall-processes-runtime",
+          "weight": 1
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-9acbe0d8d422",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-persistence",
+          "toId": "proj-candoitall-processes-application",
+          "weight": 1
+        },
+        {
+          "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-73d917e4f5f7",
+          "kind": "ProjectReference",
+          "fromId": "proj-candoitall-processes-persistence",
+          "toId": "proj-candoitall-processes-runtime",
+          "weight": 1
+        }
+      ],
+      "cycles": [],
+      "newFindings": [],
+      "review": "Four existing owners, typed completion enum/property, no new service/interface/runtime partial/project reference/migration. Current bounded child validation remains in persistence. Unit-of-work unchanged. Existing diagnostics require direct build evidence. Full selected outcome proof pending."
+    },
+    "prerequisite-reference.json": {
+      "previous": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome",
+      "retainedProofSha256": "EBD98D11B3C71C2DDDBB638ED12E2A07B7B388935E2F60D0561A23C5250CC61E",
+      "reusedPassedCases": 82,
+      "repeatedCases": 18,
+      "review": "Actual prior production/Unit commands with unchanged source/runtime inputs; current Integration build and full static gate. Failed initial SQL cases remain recorded."
+    },
+    "discovery-review.json": {
+      "lanes": [
+        {
+          "id": "atomic-outcome",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "filter": "FullyQualifiedName~ProcessDecisionCompletionPersistenceTests",
+          "expectedDiscovery": 18,
+          "actualDiscovery": 18,
+          "testNames": [
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Completed, accepted: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Failed, accepted: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_step_result_claim_child_generation_and_exact_work_commit_together(status: Cancelled, accepted: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: NonterminalStep)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: WrongTerminalStep)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: StepClaim)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: RetainedClaim)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: UnclosedSibling)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: OwnerRevision)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Incompatible_terminal_state_or_accounting_rolls_back_the_whole_outcome(denial: Allocation)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: False)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Failure_after_sql_flush_rolls_back_result_work_and_terminal_phase(accepted: True)",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Lost_commit_acknowledgement_replays_original_receipt_without_another_work_charge",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.A_completed_command_cannot_replay_without_its_original_completion",
+            "CanDoItAll.Tests.Integration.Processes.ProcessDecisionCompletionPersistenceTests.Terminal_completion_does_not_trust_a_corrupted_open_child_counter"
+          ]
+        }
+      ],
+      "expectedTotal": 18,
+      "actualTotal": 18
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9708,
+      "runtimeFiles": 2915,
+      "sourceSha256": "D788550A3D551598D6111DD1AF55EBAB91B2B0A6C68582DB56D60D3E4D2A01F3",
+      "runtimeSha256": "F10F46F2675AAFF0295CA5292F6D1CAC24E3405DBDD18DF1270C9E4D6FBBCA6F"
+    },
+    "final-resource-reconciliation.json": {
+      "outcome": "Final18 atomic completion SQL cases passed. Exact source and runtime comparison preserves the initial82 passes;100 distinct selected behaviors pass across the single-fixture corrections. Earlier failures and guard corrections are retained. Historical cleanup denials remain unchanged.",
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T17:13:51.4323916+00:00",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\b287bf57-d211-4bfd-84de-cba87fb34d2d.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\a51f338b-af5a-496c-8b37-9fa0ff8005c4.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_35240_20261020_130931_697.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_60220_20261020_130745_973.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\MSBuildTemp01iscmez.q4t",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\7bf58dd2-440c-4774-bd2e-d9017d44f947.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ylltmz45.gsc",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\4kvf0sol.aqw",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\2sxdpcqd.rga",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_19760_20261020_130911_322.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rb3akmku.0ee",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\4eyldvzc.ixn",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\mat-debug-53092.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\4jn1x4by.l2i",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "remainingObservedProcesses": []
+    },
+    "production-bridge.json": {
+      "previousCandidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-atomic-outcome",
+      "sourceChanges": [
+        "codex/bundles/concurrent-mutations/plan/execution-plan.md",
+        "codex/bundles/concurrent-mutations/readme.md",
+        "codex/bundles/concurrent-mutations/validation/2026-10-20-atomic-process-outcome.md",
+        "tests/integration/candoitall.tests.integration/processdecisioncompletionpersistencetests.cs"
+      ],
+      "runtimeChanges": [
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.pdb"
+      ],
+      "productionAndUnitInputsUnchanged": true,
+      "review": "Only the arranged result hash is corrected to the existing sha256-prefixed lowercase digest shape after two retained failed attempts. All18 affected SQL cases repeat; unchanged55 Unit and27 legacy/material/scope SQL cases retain exact reviewed production/helper inputs. No assertions weakened or production change."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T17:07:39.3096204+00:00",
+      "observerSeconds": 136.8151444,
+      "commands": [
+        {
+          "command": "execute-atomic-outcome",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T17:07:45.5667423+00:00",
+          "seconds": 130.2832117
+        }
+      ]
+    },
+    "portability-review.json": {
+      "enforcement": "RESULT: PASS (15651 reviewed executable-source findings unchanged)",
+      "baselineChanged": false,
+      "reviewedFindings": 15651,
+      "added": 0,
+      "stale": 0
+    },
+    "observer-start-confirmation.json": {
+      "identityConfirmed": true,
+      "confirmedUtc": "2026-10-20T17:07:44.7807303+00:00",
+      "observerPid": 45692,
+      "observerStartedUtc": "2026-10-20T17:07:39.3623436Z"
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

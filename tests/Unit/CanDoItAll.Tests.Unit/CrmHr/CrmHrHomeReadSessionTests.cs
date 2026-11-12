@@ -24,7 +24,7 @@ public sealed class CrmHrHomeReadSessionTests
     {
         var query = new ScriptedHomeQuery();
         var changes = 0;
-        using var session = new CrmHrHomeReadSession(query) { Changed = () => { changes++; return Task.CompletedTask; } };
+        using var session = new CrmHrHomeReadSession(query.GetAsync) { Changed = () => { changes++; return Task.CompletedTask; } };
 
         var load = session.LoadAsync();
 
@@ -47,7 +47,7 @@ public sealed class CrmHrHomeReadSessionTests
     public async Task Failed_read_is_failed_with_safe_copy_and_never_a_zero_result()
     {
         var query = new ScriptedHomeQuery();
-        using var session = new CrmHrHomeReadSession(query);
+        using var session = new CrmHrHomeReadSession(query.GetAsync);
 
         var load = session.LoadAsync();
         query.Fail(new InvalidOperationException("Npgsql: relation \"Parties\" does not exist"));
@@ -64,7 +64,7 @@ public sealed class CrmHrHomeReadSessionTests
     public async Task Retry_after_a_failure_reads_again_and_duplicate_or_stale_retries_are_ignored()
     {
         var query = new ScriptedHomeQuery();
-        using var session = new CrmHrHomeReadSession(query);
+        using var session = new CrmHrHomeReadSession(query.GetAsync);
         var load = session.LoadAsync();
         query.Fail(new IOException("offline"));
         await load;
@@ -95,7 +95,7 @@ public sealed class CrmHrHomeReadSessionTests
     public async Task A_second_load_of_the_same_instance_issues_no_request()
     {
         var query = new ScriptedHomeQuery();
-        using var session = new CrmHrHomeReadSession(query);
+        using var session = new CrmHrHomeReadSession(query.GetAsync);
 
         var first = session.LoadAsync();
         await session.LoadAsync();
@@ -114,7 +114,7 @@ public sealed class CrmHrHomeReadSessionTests
     {
         var query = new ScriptedHomeQuery();
         var changes = 0;
-        var session = new CrmHrHomeReadSession(query) { Changed = () => { changes++; return Task.CompletedTask; } };
+        var session = new CrmHrHomeReadSession(query.GetAsync) { Changed = () => { changes++; return Task.CompletedTask; } };
         var load = session.LoadAsync();
         Assert.Equal(1, changes);
 
@@ -142,7 +142,7 @@ public sealed class CrmHrHomeReadSessionTests
     public async Task Read_completion_tracks_the_current_read_and_completes_after_a_late_outcome_was_fenced()
     {
         var query = new ScriptedHomeQuery();
-        var session = new CrmHrHomeReadSession(query);
+        var session = new CrmHrHomeReadSession(query.GetAsync);
         Assert.True(session.ReadCompletion.IsCompletedSuccessfully);
 
         var load = session.LoadAsync();
@@ -171,8 +171,8 @@ public sealed class CrmHrHomeReadSessionTests
     {
         var failing = new ScriptedHomeQuery();
         var succeeding = new ScriptedHomeQuery();
-        using var first = new CrmHrHomeReadSession(failing);
-        using var second = new CrmHrHomeReadSession(succeeding);
+        using var first = new CrmHrHomeReadSession(failing.GetAsync);
+        using var second = new CrmHrHomeReadSession(succeeding.GetAsync);
 
         var firstLoad = first.LoadAsync();
         var secondLoad = second.LoadAsync();
@@ -189,7 +189,7 @@ public sealed class CrmHrHomeReadSessionTests
     public async Task A_throwing_render_callback_does_not_change_the_accepted_read()
     {
         var query = new ScriptedHomeQuery();
-        using var session = new CrmHrHomeReadSession(query) { Changed = () => throw new InvalidOperationException("render failed") };
+        using var session = new CrmHrHomeReadSession(query.GetAsync) { Changed = () => throw new InvalidOperationException("render failed") };
 
         var load = session.LoadAsync();
         query.Complete(Snapshot);
@@ -197,6 +197,28 @@ public sealed class CrmHrHomeReadSessionTests
 
         Assert.Equal(CrmHrHomePhase.Ready, session.Presentation.Phase);
         Assert.Equal(42, session.Presentation.Overview!.Totals.Parties);
+    }
+
+    [Fact]
+    public async Task Explicit_refresh_requires_the_current_ready_generation_and_coalesces_duplicate_requests() {
+        var query = new ScriptedHomeQuery();
+        using var session = new CrmHrHomeReadSession(query.GetAsync);
+        var load = session.LoadAsync();
+        query.Complete(Snapshot);
+        await load;
+        var originalGeneration = session.Presentation.Generation;
+
+        var refresh = session.RefreshAsync(originalGeneration);
+        await session.RefreshAsync(originalGeneration);
+        await session.RefreshAsync(session.Presentation.Generation);
+        Assert.Equal(2, query.Calls.Count);
+
+        query.Complete(Snapshot with { PartyCount = 51 });
+        await refresh;
+        Assert.Equal(CrmHrHomePhase.Ready, session.Presentation.Phase);
+        Assert.Equal(51, session.Presentation.Overview!.Totals.Parties);
+        await session.RefreshAsync(originalGeneration);
+        Assert.Equal(2, query.Calls.Count);
     }
 
     private static CrmHrHomePartyPreviewModel Party(string name, PartyType type, bool isSensitive = false)

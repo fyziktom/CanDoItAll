@@ -19,6 +19,7 @@ public sealed record ChatWorkspaceIntent(long Revision, ChatWorkspaceAction Acti
 public sealed record ChatWorkspacePresentation {
     public long Revision { get; init; }
     public ConversationHeaderPresentation Header { get; init; } = new(new("Selected agent", null, "AI", "Selected agent"), []);
+    public PresentationBadge? RunStatus { get; init; }
     public ChatSessionHeader? Session { get; init; }
     public ImmutableArray<ConversationMessagePresentation> Messages { get; init; } = [];
     public ImmutableArray<ConversationMessagePresentation> TransientMessages { get; init; } = [];
@@ -33,6 +34,7 @@ public sealed record ChatWorkspacePresentation {
     public string DraftPrompt { get; init; } = "";
     public int ComposerKey { get; init; }
     public bool IsBusy { get; init; }
+    public bool IsSendBlocked { get; init; }
     public bool AutoApproval { get; init; }
     public string ComposerGuidance { get; init; } = "";
     public ImmutableArray<string> Attachments { get; init; } = [];

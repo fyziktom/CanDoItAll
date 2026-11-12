@@ -8,12 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Application.UiSandbox/CanDoItAll.Application.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Processes.UiSandbox/CanDoItAll.Processes.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.64.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
     <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +25,38 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Fixtures/storage-preview.pdf" LogicalName="CanDoItAll.Tests.Playwright.Fixtures.storage-preview.pdf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Modules/CanDoItAll.Modules.Workbench.Planning.Contracts/CanDoItAll.Modules.Workbench.Planning.Contracts.csproj" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox.csproj" />
+    <ProjectReference Include="../../Support/CanDoItAll.McpTestHost/CanDoItAll.McpTestHost.csproj" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Projects.Files.UiSandbox/CanDoItAll.Projects.Files.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.Editor.UiSandbox/CanDoItAll.AgentFramework.Editor.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.Providers.UiSandbox/CanDoItAll.AgentFramework.Providers.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/CanDoItAll.AgentFramework.UiSandbox.csproj" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.SchedulerPlanner.UiSandbox/CanDoItAll.SchedulerPlanner.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Memory.UiSandbox/CanDoItAll.Memory.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Resources.UiSandbox/CanDoItAll.Resources.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.UiSandbox/CanDoItAll.Workspace.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.ApiAccess.UiSandbox/CanDoItAll.Workspace.ApiAccess.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.StorageCatalog.UiSandbox/CanDoItAll.Workspace.StorageCatalog.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.StorageRecovery.UiSandbox/CanDoItAll.Workspace.StorageRecovery.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.DataSources.UiSandbox/CanDoItAll.Workspace.DataSources.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Configuration.UiSandbox/CanDoItAll.Configuration.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Workspace.StorageSelection.UiSandbox/CanDoItAll.Workspace.StorageSelection.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="../PluginsBrowserFixture/ProbeProtocol.cs" Link="Plugins/ProbeProtocol.cs" />
+    <ProjectReference Include="../PluginsBrowserFixture/PluginsBrowserFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/CanDoItAll.Plugins.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <Compile Include="../TestLabBrowserFixture/ProbeProtocol.cs" Link="TestLab/ProbeProtocol.cs" />
+    <Compile Include="../StorageCatalogBrowserFixture/ProbeProtocol.cs" Link="StorageCatalog/ProbeProtocol.cs" />
+    <Compile Include="../StorageRecoveryBrowserFixture/ProbeProtocol.cs" Link="StorageRecovery/ProbeProtocol.cs" />
+    <ProjectReference Include="../StorageRecoveryBrowserFixture/StorageRecoveryBrowserFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../StorageCatalogBrowserFixture/StorageCatalogBrowserFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../TestLabBrowserFixture/TestLabBrowserFixture.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.Collaboration.UiSandbox/CanDoItAll.Collaboration.UiSandbox.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Sandboxes/CanDoItAll.TestLab.UiSandbox/CanDoItAll.TestLab.UiSandbox.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\..\tools\ApiAccess\ApiPasswordHash\ApiPasswordHash.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\Support\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
     <ProjectReference Include="..\..\..\src\App\CanDoItAll.Web\CanDoItAll.Web.csproj" />

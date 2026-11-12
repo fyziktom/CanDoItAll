@@ -1,0 +1,70 @@
+@namespace CanDoItAll.Workbench.Operators.UI.Runtime
+@{
+    var view = View;
+    var execute = Execute;
+    var close = Close;
+}
+<div class="operator-quick-actions">
+<CanvasOverlayDialog CanvasScoped="CanvasScoped" AriaLabel="@($"{view.Title} quick actions")"
+                     Kicker="Node quick actions" Title="@view.Title" Summary="@view.Summary"
+                     DialogClass="project-structure-quick-action-dialog" FillBody="true"
+                     DataTestId="project-structure-node-quick-actions" Close="close">
+    <Actions>
+        <Pill Tone="PillTone.Info" Text="@view.NodeLabel" />
+        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="close" />
+    </Actions>
+    <Body>
+        <div class="operator-quick-actions__body">
+            @if (!string.IsNullOrWhiteSpace(view.Notes)) {
+                <PanelCard Soft="true" data-testid="project-structure-quick-action-notes">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                        <TextBlock TextStyle="TextStyle.Note" Value="@view.Notes" Class="whitespace-pre-wrap break-words" />
+                    </Stack>
+                </PanelCard>
+            }
+            <Grid Columns="2" Gap="LayoutGap.Medium" Class="operator-quick-actions__grid">
+                @foreach (var action in view.Actions) {
+                    <Button ButtonStyle="@Style(action.Tone)" Variant="Variant.Outlined" Class="operator-quick-actions__card"
+                            data-testid="@action.TestId" Disabled="@(action.IsDisabled || submitting == view.OpeningId)"
+                            Click="@(() => DispatchAsync(view, action, execute))">
+                        <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Center">
+                            <Icon Name="@action.Icon" />
+                            <TextBlock TextStyle="TextStyle.Subtitle2" Value="@action.Label" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="@action.Description" />
+                        </Stack>
+                    </Button>
+                }
+            </Grid>
+        </div>
+    </Body>
+</CanvasOverlayDialog>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public OperatorQuickActionsView View { get; set; } = default!;
+    [Parameter] public bool CanvasScoped { get; set; } = true;
+    [Parameter] public EventCallback<int> Execute { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+    private Guid? submitting;
+    private async Task DispatchAsync(OperatorQuickActionsView view, OperatorQuickAction action, EventCallback<int> callback) {
+        if (view.OpeningId != View.OpeningId || submitting == view.OpeningId || action.IsDisabled) {
+            return;
+        }
+        submitting = view.OpeningId;
+        try {
+            await callback.InvokeAsync(action.Index);
+        } finally {
+            if (submitting == view.OpeningId) {
+                submitting = null;
+            }
+        }
+    }
+    private static ButtonStyle Style(OperatorActionTone tone) => tone switch {
+        OperatorActionTone.Information => ButtonStyle.Info,
+        OperatorActionTone.Success => ButtonStyle.Success,
+        OperatorActionTone.Warning => ButtonStyle.Warning,
+        OperatorActionTone.Danger => ButtonStyle.Danger,
+        _ => ButtonStyle.Primary
+    };
+}

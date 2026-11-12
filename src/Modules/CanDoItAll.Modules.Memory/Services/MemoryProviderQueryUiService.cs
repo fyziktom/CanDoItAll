@@ -14,6 +14,10 @@ public sealed class MemoryProviderQueryUiService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(editor);
+        editor = editor.Capture();
+        if (string.IsNullOrWhiteSpace(editor.Query)) {
+            throw new MemoryActionRefusedException("Enter a query before submitting it.");
+        }
         var requiredCapability = editor.UseAsyncQuery
             ? MemoryCapabilityIds.ContextQueryAsync
             : MemoryCapabilityIds.ContextQuerySync;
@@ -32,8 +36,8 @@ public sealed class MemoryProviderQueryUiService(
         var result = await operationHandler.ExecuteQueryAsync(request, cancellationToken);
 
         return new MemoryProviderQueryUiResult(
-            result.Status,
-            result.Diagnostic,
+            MemoryProviderUiRecordMapper.ToUiStatus(result.Status),
+            MemoryProviderUiRecordMapper.SafeDiagnostic(result.Status, result.Diagnostic),
             result.OperationRecord is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(result.OperationRecord),
             result.Output,
             result.AcceptedOperation,

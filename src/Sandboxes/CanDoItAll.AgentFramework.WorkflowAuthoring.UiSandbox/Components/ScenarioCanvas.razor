@@ -1,0 +1,15 @@
+<WorkflowCanvasSurface @key="Scenario" Definition="Scenario.Definition" Components="@([WorkflowScenario.Component])"
+    ProviderOptions="@([WorkflowScenario.Provider])" Executors="Scenario.Executors" Backends="WorkflowScenario.Backends"
+    OwnerToken="Scenario.OwnerToken" DocumentOperations="Scenario.DocumentOperations" PreviewOperations="Scenario.PreviewOperations"
+    BindPrompt="Scenario.BindAsync" DefinitionSaved="Changed" PreviewRunCompleted="Changed" ComponentLibraryChanged="Changed">
+    <PromptPicker Context="picker"><ScenarioPromptPicker Context="picker" /></PromptPicker>
+    <SettingsRenderer Context="settings">
+        <WorkflowImageGenerationSettingsSurface Schema="settings.Descriptor.ConfigurationSchema" State="settings.State"
+            StateChanged="settings.StateChanged" Providers="@([WorkflowScenario.Provider with { Purpose = ProviderProfilePurpose.ImageGeneration }])"
+            TestIdPrefix="@settings.TestIdPrefix" />
+    </SettingsRenderer>
+</WorkflowCanvasSurface>
+@code {
+    [Parameter, EditorRequired] public WorkflowScenario Scenario { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+}

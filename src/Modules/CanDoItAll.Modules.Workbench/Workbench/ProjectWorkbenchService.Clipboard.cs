@@ -12,10 +12,12 @@ public sealed partial class ProjectWorkbenchService
         string targetParentNodeKey,
         ProjectStructureClipboardCopyTaskPolicy taskPolicy = ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
-    {
+        ProjectStructureAgentContext? mutationOwner = null,
+        IReadOnlyCollection<ProjectStructureNode>? expectedNodes = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetParentNodeKey);
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -29,6 +31,8 @@ public sealed partial class ProjectWorkbenchService
             projectId,
             targetParentNodeKey);
         var assembly = await projectStructureAssemblyService.LoadAsync(dbContext, projectId, cancellationToken);
+        ProjectStructureGraphStateGuard.EnsureCurrent(mutationOwner, projectId, sourceRootNodeKeys, [targetParentNodeKey], true, assembly.Nodes, assembly.Links);
+        ProjectStructureNodeExpectations.EnsureCurrent(expectedNodes, assembly.Nodes);
         ProjectStructureEditableForestResolver.ValidateTarget(
             projectId,
             normalizedTargetNodeKey,
@@ -192,7 +196,7 @@ public sealed partial class ProjectWorkbenchService
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
 
         return new ProjectStructureClipboardCopyResult(
             forest.RootNodeKeys.Select(nodeKey => nodeKeyMap[nodeKey]).ToList(),

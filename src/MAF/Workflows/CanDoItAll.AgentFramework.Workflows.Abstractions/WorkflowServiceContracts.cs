@@ -35,7 +35,7 @@ public interface IWorkflowCatalogService
         CancellationToken cancellationToken = default);
 
     Task DeleteDefinitionAsync(
-        WorkflowId workflowId,
+        WorkflowDefinitionDeleteRequest request,
         CancellationToken cancellationToken = default);
 
     Task<WorkflowValidationResult> ValidateDefinitionAsync(
@@ -69,7 +69,7 @@ public interface IWorkflowComponentLibraryService
         CancellationToken cancellationToken = default);
 
     Task DeleteComponentAsync(
-        WorkflowComponentId componentId,
+        WorkflowComponentDeleteRequest request,
         CancellationToken cancellationToken = default);
 }
 

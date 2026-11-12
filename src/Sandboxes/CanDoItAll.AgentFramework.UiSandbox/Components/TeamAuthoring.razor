@@ -1,0 +1,145 @@
+@page "/teams"
+@page "/teams/{Scenario}"
+@using CanDoItAll.AgentFramework.UI.Teams
+@implements IDisposable
+@inject NotificationService Notifications
+
+<PageTitle>Technical team authoring sandbox</PageTitle>
+<main class="team-authoring-sandbox" data-testid="team-authoring-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
+    <Stack GapScale="LayoutGap.Medium">
+        <Cluster Gap="LayoutGap.Medium">
+            <h1>Technical team authoring sandbox</h1>
+            <label>Scenario
+                <select value="@selected" @onchange="ChangeScenario" class="cda-input" data-testid="team-scenario">
+                    @foreach (var state in Enum.GetValues<TeamAuthoringState>()) {
+                        <option value="@state">@state</option>
+                    }
+                </select>
+            </label>
+            <Button Text="Edit membership" Disabled="@(fixture.Team is null)" Click="OpenMembers" data-testid="team-open-members" />
+            <Button Text="Second metadata editor" Click="() => secondOpen = true" data-testid="team-second-editor" />
+            <Button Text="Reopen editor" Click="Reopen" data-testid="team-reopen" />
+            <Button Text="Release held operation" Click="fixture.Release" data-testid="team-release" />
+            <Button Text="Delete stored team" Disabled="@(fixture.Team is null)" Click="fixture.Delete" data-testid="team-delete-fixture" />
+        </Cluster>
+        <Alert AlertStyle="AlertStyle.Info">Simulated catalog with independent stored fixtures and actual team controls. Membership changes grouping only; this host grants no runtime permissions.</Alert>
+        <p role="status" data-testid="team-fixture-state">Teams: @fixture.TeamCount; metadata writes: @fixture.MetadataWrites; member writes: @fixture.MemberWrites; members: @(fixture.Team?.AgentIds.Count ?? 0); accepted: @accepted</p>
+        <SurfaceCard>
+            <TeamMetadataEditor @key="activation" Operations="fixture.Operations" TeamId="editorId" OwnerCancellationToken="lifetime.Token" Completed="Saved" Cancelled="Reopen" />
+        </SurfaceCard>
+    </Stack>
+</main>
+@if (memberTeam is { } memberOwner) {
+    <Dialog IsOpen="true" Title="Edit team membership" Size="ModalSize.Wide" DenseChrome="true" OnClose="() => memberTeam = null" TestId="team-members-dialog">
+        <ChildContent>
+            <TeamMembersSelector Team="memberOwner" Agents="fixture.Agents" PrivateAgentIds="PrivateAgents" OwnerCancellationToken="lifetime.Token"
+                                 Completed="result => SaveMembers(memberOwner, result)" Cancelled="() => memberTeam = null" />
+        </ChildContent>
+    </Dialog>
+}
+@if (secondOpen) {
+    <Dialog IsOpen="true" Title="Independent team metadata editor" Size="ModalSize.Compact" DenseChrome="true" OnClose="() => secondOpen = false" TestId="team-second-dialog">
+        <ChildContent>
+            <TeamMetadataEditor Operations="fixture.Operations" TeamId="fixture.TeamId" OwnerCancellationToken="lifetime.Token"
+                                Completed="id => secondOpen = false" Cancelled="() => secondOpen = false" />
+        </ChildContent>
+    </Dialog>
+}
+@if (iconCompletion is { } iconOwner) {
+    <Dialog IsOpen="true" Title="Choose team icon" Size="ModalSize.Wide" DenseChrome="true" OnClose="() => iconOwner.TrySetResult(null)" TestId="team-icon-dialog">
+        <ChildContent>
+            <TeamIconPicker SelectedIcon="@initialIcon" OwnerCancellationToken="lifetime.Token" Completed="icon => iconOwner.TrySetResult(icon)" Cancelled="() => iconOwner.TrySetResult(null)" />
+        </ChildContent>
+    </Dialog>
+}
+<Tooltip />
+
+@code {
+    [Parameter] public string? Scenario { get; set; }
+    private TeamAuthoringState selected = TeamAuthoringState.Existing;
+    private TeamAuthoringScenario fixture = default!;
+    private CancellationTokenSource lifetime = new();
+    private Guid activation = Guid.NewGuid();
+    private Guid? editorId;
+    private Guid? accepted;
+    private AgentTeamDefinition? memberTeam;
+    private bool secondOpen;
+    private bool interactive;
+    private TaskCompletionSource<string?>? iconCompletion;
+    private string? initialIcon;
+    private IReadOnlyCollection<Guid> PrivateAgents => fixture.Agents.Take(1).Select(agent => agent.Id).ToArray();
+    protected override void OnParametersSet() {
+        var next = Enum.TryParse<TeamAuthoringState>(Scenario, true, out var value) ? value : TeamAuthoringState.Existing;
+        if (fixture is null || next != selected) {
+            selected = next;
+            Reset();
+        }
+    }
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) {
+        selected = Enum.Parse<TeamAuthoringState>(args.Value!.ToString()!);
+        Reset();
+    }
+    private void Reset() {
+        fixture?.Release();
+        fixture = new(selected, ChooseIconAsync);
+        accepted = null;
+        Reopen();
+    }
+    private void Reopen() {
+        lifetime.Cancel();
+        lifetime.Dispose();
+        lifetime = new();
+        memberTeam = null;
+        secondOpen = false;
+        editorId = fixture.TeamId;
+        activation = Guid.NewGuid();
+    }
+    private void Saved(Guid id) {
+        accepted = id;
+        editorId = id;
+    }
+    private void OpenMembers() => memberTeam = fixture.Team;
+    private void SaveMembers(AgentTeamDefinition owner, TeamMembershipSelection result) {
+        if (!ReferenceEquals(memberTeam, owner) || result.TeamId != owner.Id) {
+            return;
+        }
+        try {
+            fixture.SaveMembers(result);
+            memberTeam = null;
+        } catch (InvalidOperationException) {
+            memberTeam = null;
+            Notifications.Error("Membership rejected", "A selected agent or the team is unavailable. Reopen membership to review the stored references.");
+        }
+    }
+    private async Task<string?> ChooseIconAsync(string selectedIcon, CancellationToken token) {
+        var owner = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        iconCompletion?.TrySetCanceled();
+        iconCompletion = owner;
+        initialIcon = selectedIcon;
+        await InvokeAsync(StateHasChanged);
+        try {
+            return await owner.Task.WaitAsync(token);
+        } finally {
+            if (ReferenceEquals(iconCompletion, owner)) {
+                iconCompletion = null;
+                if (!disposed) {
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        lifetime.Cancel();
+        lifetime.Dispose();
+        fixture.Release();
+        iconCompletion?.TrySetCanceled();
+    }
+    private bool disposed;
+}

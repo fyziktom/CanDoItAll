@@ -468,7 +468,7 @@ public sealed class AgentFrameworkProcessExecutionClaimRecoveryCoordinatorTests
             runtimeStore,
             planStore,
             assignmentStore,
-            runtimeStore,
+            ProcessDecisionResultTestComposition.Legacy(runtimeStore),
             new ProcessRuntimeDispatchQueue(),
             branchSignalRouter,
             projectionCatchupService,

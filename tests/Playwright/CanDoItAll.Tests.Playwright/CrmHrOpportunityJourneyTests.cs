@@ -118,7 +118,7 @@ public sealed class CrmHrOpportunityJourneyTests
             await Assertions.Expect(detailDialog).ToContainTextAsync("Advanced from Proposal to Negotiation.");
             var advanced = await ReadAsync(owner, opportunityId);
             Assert.Equal(OpportunityStage.Negotiation, advanced.Stage);
-            var negotiationEntry = Assert.Single(advanced.StageHistory.Where(item => item.Stage == OpportunityStage.Negotiation));
+            var negotiationEntry = Assert.Single(advanced.StageHistory, item => item.Stage == OpportunityStage.Negotiation);
             Assert.Equal("Advanced from Proposal to Negotiation.", negotiationEntry.Notes);
             Assert.Equal(3, advanced.StageHistory.Count);
             Assert.Equal(52000.75m, advanced.Amount);
@@ -267,7 +267,7 @@ public sealed class CrmHrOpportunityJourneyTests
         await using var scope = owner.CreateAsyncScope();
         var page = await scope.ServiceProvider.GetRequiredService<IOpportunityPipelineQueryService>()
             .SearchAsync(new OpportunityPipelineQuery(accountId, title));
-        var item = Assert.Single(page.Items.Where(candidate => string.Equals(candidate.Title, title, StringComparison.Ordinal)));
+        var item = Assert.Single(page.Items, candidate => string.Equals(candidate.Title, title, StringComparison.Ordinal));
         Assert.Equal(1, page.TotalCount);
         return await ReadAsync(owner, item.Id);
     }
@@ -293,6 +293,7 @@ public sealed class CrmHrOpportunityJourneyTests
         var profile = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "Synthetic account of the opportunity journey.",
             LastChangedBy = "playwright-tests"

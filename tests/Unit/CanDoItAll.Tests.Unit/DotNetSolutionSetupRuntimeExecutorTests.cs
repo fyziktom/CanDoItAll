@@ -363,7 +363,7 @@ public sealed class DotNetSolutionSetupRuntimeExecutorTests
                        request.Arguments.Contains("blazorwasm", StringComparer.OrdinalIgnoreCase));
         Assert.Contains(appRequest.Arguments, argument => string.Equals(argument, "--pwa", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(
-            ["new", "blazorwasm", "--pwa", "--framework", "net8.0", "-n", "Calculator"],
+            ["new", "blazorwasm", "--pwa", "--framework", "net8.0", "-n", "Calculator", "--output", "Calculator"],
             appRequest.Arguments);
     }
 

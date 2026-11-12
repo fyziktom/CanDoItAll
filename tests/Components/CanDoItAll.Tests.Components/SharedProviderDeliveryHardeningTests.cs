@@ -16,7 +16,7 @@ public sealed class SharedProviderDeliveryHardeningTests {
         proxy.CanonicalAliasOverride = "Canonical alias";
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var cut = harness.Context.Render<SharedProviderManagementPanel>(p => p.Add(x => x.ProviderProfileId, proxy.Id));
-        cut.WaitForElement("[data-testid='shared-provider-import-alias']").Change("Different requested alias");
+        cut.WaitForElement("[data-testid='shared-provider-import-alias']").Input("Different requested alias");
         await cut.Find("[data-testid='shared-provider-import-save']").ClickAsync();
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-warning']"));

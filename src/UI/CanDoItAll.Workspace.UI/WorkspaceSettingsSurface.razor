@@ -1,0 +1,83 @@
+@namespace CanDoItAll.Workspace.UI
+@implements IDisposable
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Settings" Title="Workspace defaults and data sources" Compact="true"
+                    Description="Manage workspace defaults, runtime data sources, encrypted secrets, and API access. Provider profiles are managed from Agents.">
+            <Stats>
+                <CompactStat Label="providers" Value="@Defaults.Providers.Count.ToString()" />
+                <CompactStat Label="enabled" Value="@Defaults.Providers.Count(item => item.IsEnabled).ToString()" Tone="success" />
+                <CompactStat Label="secrets" Value="@Secrets.Secrets.Count.ToString()" />
+            </Stats>
+        </PageHeader>
+    </Header>
+    <Lead>
+        <SecondaryTabs Items="Tabs" SelectedKey="@Section.ToString()" SelectedKeyChanged="SelectAsync" />
+    </Lead>
+    <ChildContent>
+        @switch (Section) {
+            case WorkspaceSection.Workspace:
+                <WorkspaceDefaultsSurface State="Defaults" />
+                break;
+            case WorkspaceSection.Secrets:
+                <WorkspaceSecretsSurface State="Secrets" />
+                break;
+            case WorkspaceSection.Files:
+                <WorkspaceFilesSurface State="Files" />
+                break;
+            case WorkspaceSection.ProviderHistory:
+                @History
+                break;
+            default:
+                @DeferredSection?.Invoke(Section)
+                break;
+        }
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [Parameter] public WorkspaceSection Section { get; set; }
+    [Parameter] public EventCallback<WorkspaceSection> SectionChanged { get; set; }
+    [Parameter, EditorRequired] public IWorkspaceDefaultsState Defaults { get; set; } = default!;
+    [Parameter, EditorRequired] public IWorkspaceSecretsState Secrets { get; set; } = default!;
+    [Parameter, EditorRequired] public IWorkspaceFilesState Files { get; set; } = default!;
+    [Parameter] public RenderFragment? History { get; set; }
+    [Parameter] public RenderFragment<WorkspaceSection>? DeferredSection { get; set; }
+    [Parameter] public string ApiStatusLabel { get; set; } = "Not loaded";
+    private IWorkspaceDefaultsState? defaultsSubscription;
+    private IWorkspaceSecretsState? secretsSubscription;
+    private IReadOnlyList<SecondaryTabItem> Tabs => [
+        new(nameof(WorkspaceSection.Workspace), "Workspace"),
+        new(nameof(WorkspaceSection.DataSources), "Data Sources"),
+        new(nameof(WorkspaceSection.Storage), "Storage"),
+        new(nameof(WorkspaceSection.Files), "Files"),
+        new(nameof(WorkspaceSection.ProviderHistory), "Provider history"),
+        new(nameof(WorkspaceSection.Secrets), "Secrets", Secrets.Secrets.Count.ToString()),
+        new(nameof(WorkspaceSection.Providers), "Providers", Defaults.Providers.Count.ToString()),
+        new(nameof(WorkspaceSection.ApiAccess), "API Access", ApiStatusLabel)
+    ];
+
+    private Task SelectAsync(string key) => Enum.TryParse<WorkspaceSection>(key, out var section) && Enum.IsDefined(section)
+        ? SectionChanged.InvokeAsync(section)
+        : throw new ArgumentOutOfRangeException(nameof(key));
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(defaultsSubscription, Defaults) || !ReferenceEquals(secretsSubscription, Secrets)) {
+            Dispose();
+            defaultsSubscription = Defaults;
+            secretsSubscription = Secrets;
+            defaultsSubscription.Changed += Changed;
+            secretsSubscription.Changed += Changed;
+        }
+    }
+
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() {
+        if (defaultsSubscription is not null) {
+            defaultsSubscription.Changed -= Changed;
+        }
+        if (secretsSubscription is not null) {
+            secretsSubscription.Changed -= Changed;
+        }
+    }
+}

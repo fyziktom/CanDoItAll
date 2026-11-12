@@ -4,12 +4,28 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskCreateDialogTests
 {
+    [Fact]
+    public async Task A_task_without_a_submit_owner_is_rejected_and_keeps_its_draft() {
+        await using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var result = OpenDialog(context, [], hasOwner: false);
+        host.WaitForElement("[data-testid='project-structure-task-create-title']");
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-task-create-title']").InputAsync(new() { Value = "Retained without owner" }));
+
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new()));
+
+        Assert.False(result.IsCompleted);
+        Assert.Contains("not connected", host.Find("[data-testid='planning-task-save-result']").TextContent, StringComparison.Ordinal);
+        Assert.Equal("Retained without owner", host.Find("[data-testid='project-structure-task-create-title']").GetAttribute("value"));
+    }
+
     [Fact]
     public async Task Dialog_emits_default_pure_effort_and_normalized_expected_cost()
     {
@@ -157,7 +173,8 @@ public sealed class ProjectStructureTaskCreateDialogTests
         IReadOnlyList<ProjectStructureTaskResourceOption> resources,
         bool isEditMode = false,
         ProjectStructureTaskResourceSelection? initialAssignee = null,
-        bool canChangeDirectAssignee = true)
+        bool canChangeDirectAssignee = true,
+        bool hasOwner = true)
     {
         var request = new CanvasWorkbenchCreateActionRequest(
             ProjectStructureTaskActionIds.Create,
@@ -188,7 +205,9 @@ public sealed class ProjectStructureTaskCreateDialogTests
                 [nameof(ProjectStructureTaskCreateDialog.ResourceOptions)] = resources,
                 [nameof(ProjectStructureTaskCreateDialog.IsEditMode)] = isEditMode,
                 [nameof(ProjectStructureTaskCreateDialog.InitialAssignee)] = initialAssignee,
-                [nameof(ProjectStructureTaskCreateDialog.CanChangeDirectAssignee)] = canChangeDirectAssignee
+                [nameof(ProjectStructureTaskCreateDialog.CanChangeDirectAssignee)] = canChangeDirectAssignee,
+                [nameof(ProjectStructureTaskCreateDialog.Submitted)] = hasOwner
+                    ? new Func<ProjectStructureTaskDialogResult, Task<PlanningTaskSaveResult>>(_ => Task.FromResult(PlanningTaskSaveResult.Accepted)) : null
             },
             new DialogOptions
             {

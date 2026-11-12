@@ -1,0 +1,730 @@
+{
+  "candidate": "c4-inherited-product-source-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T12:19:02.5474705+00:00",
+      "State": "Completed",
+      "RunnerPid": 48108,
+      "ChildPid": 56672,
+      "ChildStartedUtc": "2026-10-20T12:19:02.5790551Z",
+      "ExitCode": 0,
+      "Seconds": 63.2791573,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 345115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T12:21:12.4901772+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 13372,
+      "ChildStartedUtc": "2026-10-20T12:21:12.4953170Z",
+      "ExitCode": 0,
+      "Seconds": 0.1402298,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 2984,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-registered-source",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessInheritedSourcePolicyTests"
+      ],
+      "StartedUtc": "2026-10-20T12:20:19.3586002+00:00",
+      "State": "Completed",
+      "RunnerPid": 56780,
+      "ChildPid": 53900,
+      "ChildStartedUtc": "2026-10-20T12:20:19.4092787Z",
+      "ExitCode": 0,
+      "Seconds": 2.3953069,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2728,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T12:21:07.2656378+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 28460,
+      "ChildStartedUtc": "2026-10-20T12:21:07.2675109Z",
+      "ExitCode": 0,
+      "Seconds": 5.2139525,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-registered-source",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessInheritedSourcePolicyTests",
+        "--logger",
+        "trx;LogFileName=registered-source.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-product-source-final"
+      ],
+      "StartedUtc": "2026-10-20T12:22:38.8102997+00:00",
+      "State": "Completed",
+      "RunnerPid": 58560,
+      "ChildPid": 44904,
+      "ChildStartedUtc": "2026-10-20T12:22:38.8420438Z",
+      "ExitCode": 0,
+      "Seconds": 116.7960507,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3639,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-product-source-final/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T12:22:23.1472691+00:00",
+      "State": "Completed",
+      "RunnerPid": 51636,
+      "ChildPid": 53464,
+      "ChildStartedUtc": "2026-10-20T12:22:23.1747583Z",
+      "ExitCode": 0,
+      "Seconds": 132.9451826,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T12:19:32.8974225+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 34828,
+      "ChildStartedUtc": "2026-10-20T12:19:32.9351556Z",
+      "ExitCode": 0,
+      "Seconds": 0.1507195,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-product-source-final/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T12:21:06.8062190+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 42440,
+      "ChildStartedUtc": "2026-10-20T12:21:06.8168066Z",
+      "ExitCode": 0,
+      "Seconds": 0.4481571,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-inherited-product-source-final/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T12:19:36.6200148+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 40136,
+      "ChildStartedUtc": "2026-10-20T12:19:36.6567068Z",
+      "ExitCode": 0,
+      "Seconds": 90.1389717,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 451,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T12:19:33.1135494+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 54420,
+      "ChildStartedUtc": "2026-10-20T12:19:33.1176244Z",
+      "ExitCode": 0,
+      "Seconds": 0.4843655,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T12:19:33.7888087+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 55924,
+      "ChildStartedUtc": "2026-10-20T12:19:33.7931987Z",
+      "ExitCode": 0,
+      "Seconds": 2.6947062,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T12:19:33.6153790+00:00",
+      "State": "Completed",
+      "RunnerPid": 21136,
+      "ChildPid": 56636,
+      "ChildStartedUtc": "2026-10-20T12:19:33.6194921Z",
+      "ExitCode": 0,
+      "Seconds": 0.1564968,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "b37bb1c3-76a1-40b9-adc8-7044337872f0",
+      "testId": "e471d654-7068-8485-8253-1746acd92a62",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: False, sameExecutor: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.4327976",
+      "startTime": "2026-10-20T08:24:23.2900607-04:00",
+      "endTime": "2026-10-20T08:24:29.7227340-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b37bb1c3-76a1-40b9-adc8-7044337872f0",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "5340d0c3-b58d-4989-98b2-ea646f37a6d0",
+      "testId": "103e8692-569f-9cae-5823-fd3a81700505",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Source_await_cannot_leave_an_earlier_generation_or_canceled_operation_authorized(initial: False, cancel: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.6069086",
+      "startTime": "2026-10-20T08:23:26.1234138-04:00",
+      "endTime": "2026-10-20T08:23:31.7301863-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "5340d0c3-b58d-4989-98b2-ea646f37a6d0",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "508d072f-0e7e-4dcc-b144-0e53ca4097ce",
+      "testId": "e8163afe-d812-f000-8785-edc82fc6171a",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Current_original_launcher_revocation_preserves_only_the_remaining_read_permission(revokeRead: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.7751097",
+      "startTime": "2026-10-20T08:23:06.7586140-04:00",
+      "endTime": "2026-10-20T08:23:13.5323470-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "508d072f-0e7e-4dcc-b144-0e53ca4097ce",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "22bb3728-1f01-4b54-be6c-d8afdb6a2b61",
+      "testId": "9e55f30c-1640-3bb0-f588-d5f568463068",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: True, sameExecutor: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.6503627",
+      "startTime": "2026-10-20T08:24:12.6400477-04:00",
+      "endTime": "2026-10-20T08:24:23.2896039-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "22bb3728-1f01-4b54-be6c-d8afdb6a2b61",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "8a555693-7167-46af-8cc9-35b294ffb8b8",
+      "testId": "2af5eace-4b36-96fb-a7dc-40315a8793bc",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Ordinary_initial_admission_and_reservation_do_not_borrow_selected_child_authority",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.8095381",
+      "startTime": "2026-10-20T08:23:55.9053182-04:00",
+      "endTime": "2026-10-20T08:24:01.7142931-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "8a555693-7167-46af-8cc9-35b294ffb8b8",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "05bc5e83-e479-4f60-8ad9-f517fcc97535",
+      "testId": "5f49aeda-00c5-f537-638f-9ab9b86489cc",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Source_await_cannot_leave_an_earlier_generation_or_canceled_operation_authorized(initial: True, cancel: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.1885243",
+      "startTime": "2026-10-20T08:23:43.3778312-04:00",
+      "endTime": "2026-10-20T08:23:49.5661456-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "05bc5e83-e479-4f60-8ad9-f517fcc97535",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "0664f909-0e3e-4b74-b5a7-1c4d74acadc1",
+      "testId": "9bf65f28-8d61-b4c8-0e5a-52a59244e738",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Saved_child_cannot_replace_the_original_parent_freshness_policy(historical: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.7604434",
+      "startTime": "2026-10-20T08:23:19.3626166-04:00",
+      "endTime": "2026-10-20T08:23:26.1228357-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0664f909-0e3e-4b74-b5a7-1c4d74acadc1",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "54dec1c7-ee10-4e70-97ec-d6a8cd9bd96f",
+      "testId": "832abc74-197a-a23f-22c5-23169e4d3a19",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Expired_parent_claim_keeps_original_read_but_cannot_authorize_dispatch",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.6708302",
+      "startTime": "2026-10-20T08:24:29.7231960-04:00",
+      "endTime": "2026-10-20T08:24:35.3939089-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "54dec1c7-ee10-4e70-97ec-d6a8cd9bd96f",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "93de459e-dcf1-436f-a8c0-3f0a002c39b6",
+      "testId": "4c16e9ad-eb27-f9c6-4ebf-3895326a5e0e",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Source_await_cannot_leave_an_earlier_generation_or_canceled_operation_authorized(initial: False, cancel: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.0734589",
+      "startTime": "2026-10-20T08:23:31.7306881-04:00",
+      "endTime": "2026-10-20T08:23:37.8039694-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "93de459e-dcf1-436f-a8c0-3f0a002c39b6",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "ef709ab6-409d-4156-a963-041a3cd0e97a",
+      "testId": "badf488b-5f15-ace8-91b2-477c87d613c1",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Source_await_cannot_leave_an_earlier_generation_or_canceled_operation_authorized(initial: True, cancel: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.5729090",
+      "startTime": "2026-10-20T08:23:37.8044557-04:00",
+      "endTime": "2026-10-20T08:23:43.3772569-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ef709ab6-409d-4156-a963-041a3cd0e97a",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "628bcad2-d108-494b-aea5-2acf2fe93ec8",
+      "testId": "8c3add03-7a5b-3543-1f40-b29090ba4e16",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Initial_selected_source_still_rejects_forged_execution_lineage_before_SQL",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:17.3416320",
+      "startTime": "2026-10-20T08:22:41.1660803-04:00",
+      "endTime": "2026-10-20T08:22:58.5150579-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "628bcad2-d108-494b-aea5-2acf2fe93ec8",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "301c4481-0dcb-4fc5-8dab-75a8d058af87",
+      "testId": "1905ba2c-e236-e21f-b823-a05b8c21b63d",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: True, sameExecutor: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.9242811",
+      "startTime": "2026-10-20T08:24:01.7147881-04:00",
+      "endTime": "2026-10-20T08:24:12.6389161-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "301c4481-0dcb-4fc5-8dab-75a8d058af87",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "aea638da-e710-47c9-8da4-c006e3355e73",
+      "testId": "ce85383e-cecd-c7bd-eeef-2c159bfd8f8c",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Current_original_launcher_revocation_preserves_only_the_remaining_read_permission(revokeRead: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:08.2401779",
+      "startTime": "2026-10-20T08:22:58.5292487-04:00",
+      "endTime": "2026-10-20T08:23:06.7569380-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "aea638da-e710-47c9-8da4-c006e3355e73",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "d075e6ce-413c-4edb-a36c-606bfe1a2f37",
+      "testId": "e41af134-7ce6-b154-02f2-7e15329f90b6",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Missing_execution_registration_refuses_initial_and_saved_paths_before_SQL",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:06.3379538",
+      "startTime": "2026-10-20T08:23:49.5668818-04:00",
+      "endTime": "2026-10-20T08:23:55.9044193-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d075e6ce-413c-4edb-a36c-606bfe1a2f37",
+      "trx": "registered-source.trx"
+    },
+    {
+      "executionId": "0b66f301-9a9c-4664-9fb2-7a4cc2c53ca8",
+      "testId": "f4e98846-4034-ea48-d0e1-a2a29e3c083e",
+      "testName": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Saved_child_cannot_replace_the_original_parent_freshness_policy(historical: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.8293333",
+      "startTime": "2026-10-20T08:23:13.5330037-04:00",
+      "endTime": "2026-10-20T08:23:19.3620691-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0b66f301-9a9c-4664-9fb2-7a4cc2c53ca8",
+      "trx": "registered-source.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020113410-6de05ed1",
+      "afterSnapshot": "snap-20261020114836-6de05ed1",
+      "before": {
+        "projectCount": 3,
+        "typeCount": 832,
+        "memberCount": 7898,
+        "serviceRegistrationCount": 1,
+        "entityCount": 31,
+        "findingCount": 290,
+        "openQuestionCount": 1,
+        "diagnosticCount": 190
+      },
+      "after": {
+        "projectCount": 3,
+        "typeCount": 833,
+        "memberCount": 7907,
+        "serviceRegistrationCount": 1,
+        "entityCount": 31,
+        "findingCount": 291,
+        "openQuestionCount": 1,
+        "diagnosticCount": 190
+      },
+      "newFindings": [
+        {
+          "findingId": "finding-type-size-type-proj-candoitall-modules-processes-ca-1d764ed7ee7f",
+          "ruleId": "COMPLEXITY-002",
+          "severity": "Info",
+          "category": "Complexity",
+          "title": "Type with many members",
+          "description": "CanDoItAll.Modules.Processes.ProcessToolBackgroundSourcePolicy exposes 9 source members.",
+          "rationale": "Large types often become aggregation points for unrelated behavior.",
+          "confidence": 0.71,
+          "relatedIds": [
+            "type-proj-candoitall-modules-processes-candoitall-module-98913698d00a"
+          ],
+          "source": {
+            "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessToolBackgroundSourcePolicy.cs",
+            "line": 11,
+            "column": 1,
+            "endLine": 110,
+            "endColumn": 2
+          }
+        }
+      ],
+      "cyclesUnchanged": true,
+      "cycles": [],
+      "review": "Registered Process initial and schema7 live sources use exact canonical parent/content, original accepted full policy and current generation fences. One cohesive shared binding decoder replaces historical duplication. Query result carries immutable original policy already read; persisted dispatch snapshot and fingerprints stay unchanged. Generic decision-policy dispatch and inherited ordinary reservation remain refused. No project references, runtime partials, new interfaces or global cache. Product producer/manager and atomic outcomes remain gated. One new informational COMPLEXITY-002 finding reports9 members on the110-line ProcessToolBackgroundSourcePolicy. Reviewed: these are its existing reservation/live entry, explicit inherited entry, one shared observer/query and current-profile check, all owning Process source authorization. The pure canonical binding decoder is shared with history; splitting this small policy would add indirection without a separate owner. Two existing findings only moved source lines. No scoped cycle.",
+      "validationOutcome": {
+        "repeatExecuted": 15,
+        "repeatPassed": 15,
+        "retainedUnchangedRegressionPasses": 138,
+        "distinctSelectedPasses": 153,
+        "initialExecuted": 153,
+        "initialPassed": 152,
+        "initialFailed": 1,
+        "exactTestOnlyProductionBridge": true
+      }
+    },
+    "discovery-review.json": {
+      "expected": 15,
+      "actual": 15,
+      "previousRegressionCount": 138,
+      "filter": "FullyQualifiedName~ProcessInheritedSourcePolicyTests"
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9642,
+      "runtimeFiles": 3650,
+      "sourceSha256": "8652A2D781ED1BBDB3BC68D18661420DBCF67AA9B8DF85AC09A7EE14E9BED6BA",
+      "runtimeSha256": "F5C2F6ABA790FF0CD65340E1AEA78AB4A8BEF2C4C421030F3824AB4E2294A619"
+    },
+    "final-resource-reconciliation.json": {
+      "databaseNameDelta": [],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_44904_20261020_082239_041.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\gblr4rm4.dv0",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rv0yub3j.q14",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "remainingObservedProcesses": [],
+      "recordedUtc": "2026-10-20T12:25:06.6309903+00:00",
+      "outcome": "All15 corrected registered Process source cases pass. Exact source/runtime bridge retains138 other passing cases:153 distinct selected cases pass. Initial152/153 and its fixture error remain retained. Historical cleanup denials remain unchanged.",
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ]
+    },
+    "production-bridge.json": {
+      "exactTestOnlyDelta": true,
+      "productionSourceUnchanged": true,
+      "productionRuntimeUnchanged": true,
+      "comparedRuntimeFiles": 3650,
+      "runtimeTestAssemblyChanges": [
+        "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+        "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb"
+      ],
+      "changes": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessInheritedSourcePolicyTests.cs",
+          "before": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessInheritedSourcePolicyTests.cs",
+            "exists": true,
+            "bytes": 12306,
+            "sha256": "6D816A2BD1C06499F0E6ADAED5F599804EB06E490BB697BB656F2192F47BAD33"
+          },
+          "after": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessInheritedSourcePolicyTests.cs",
+            "exists": true,
+            "bytes": 12635,
+            "sha256": "19617656B0638EDEBE7677B45F9B89D5E8119FB6461CD6412699EFA46851814F"
+          }
+        }
+      ],
+      "retainedRegressionPasses": 138,
+      "initialExecuted": 153,
+      "initialPassed": 152,
+      "initialFailed": 1,
+      "requiredRepeat": 15,
+      "repair": "Remove every permission that implies read, then assert normalized persisted launcher read/write flags before source observation."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T12:22:23.1472691+00:00",
+      "observerSeconds": 132.9451826,
+      "commands": [
+        {
+          "command": "execute-registered-source",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T12:22:38.8102997+00:00",
+          "seconds": 116.7960507
+        }
+      ]
+    },
+    "portability-review.json": {
+      "reviewedFindings": 15647,
+      "baselineSha256": "E1C3650F55E8968C2921AC7E4A47D9246667E79CEBE2CC671D4691143FFE4702",
+      "intentionalDelta": 0,
+      "finalEnforcementWithoutWriteBaseline": true
+    },
+    "observer-start-confirmation.json": {
+      "confirmedUtc": "2026-10-20T12:22:38.2207921+00:00",
+      "observerStartedUtc": "2026-10-20T12:22:23.1747583Z",
+      "identityConfirmed": true,
+      "observerPid": 53464
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\registered-source-observations.json",
+        "data": {
+          "samples": [
+            {
+              "test": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: False, sameExecutor: False)",
+              "milliseconds": 12.793,
+              "queries": 4
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: True, sameExecutor: False)",
+              "milliseconds": 86.229,
+              "queries": 4
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.ProcessInheritedSourcePolicyTests.Registered_source_admits_and_publishes_the_exact_child_then_reads_its_original_receipt(agentSource: True, sameExecutor: True)",
+              "milliseconds": 72.09,
+              "queries": 4
+            }
+          ],
+          "qualification": "Three actual prepared-launch observations under concurrent test load; no sustained capacity or latency guarantee. Four exact Process queries plus existing source Project/catalog authorization. Full policy comparison adds no SQL."
+        }
+      }
+    ]
+  }
+}

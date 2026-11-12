@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using CanDoItAll.Processes.Runtime;
 
 namespace CanDoItAll.Processes.Persistence;
 
@@ -47,8 +48,11 @@ internal sealed class ProcessRuntimeStateEntityConfiguration : IEntityTypeConfig
         builder.Property(state => state.Status).HasConversion<string>().HasMaxLength(64).IsRequired();
         builder.Property(state => state.ConcurrencyToken).IsConcurrencyToken();
         builder.Property(state => state.BlockedRecoveryActionsJson).IsRequired();
-        builder.HasIndex(state => state.RootRunId);
+        builder.HasIndex(state => new { state.RootRunId, state.RunId });
         builder.HasIndex(state => state.Status);
+        builder.HasIndex(state => state.RunId, ProcessCancellationRecoveryStaging.StoppedRootIndexName)
+            .HasDatabaseName(ProcessCancellationRecoveryStaging.StoppedRootIndexName)
+            .HasFilter(ProcessCancellationRecoveryStaging.StoppedRootFilter);
         builder.HasIndex(state => new { state.UpdatedAtUtc, state.RunId })
             .IsDescending(true, true);
 
@@ -83,7 +87,9 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeStepAssignmentEntity> builder)
     {
-        builder.ToTable("process_runtime_step_assignments");
+        builder.ToTable("process_runtime_step_assignments", table => table.HasCheckConstraint(
+            "CK_process_runtime_step_assignments_decision_policy",
+            $"\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND {ProcessDecisionDataPolicyAdmission.MaximumUtf8Bytes}"));
         builder.HasKey(assignment => new { assignment.RunId, assignment.StepInstanceId });
         builder.Property(assignment => assignment.StepKey).HasMaxLength(256).IsRequired();
         builder.Property(assignment => assignment.RoleKey).HasMaxLength(256).IsRequired();
@@ -102,6 +108,7 @@ internal sealed class ProcessRuntimeStepAssignmentEntityConfiguration : IEntityT
         builder.Property(assignment => assignment.OperationTargetScope).HasMaxLength(128).IsRequired();
         builder.Property(assignment => assignment.LaunchVariablesJson).IsRequired();
         builder.Property(assignment => assignment.CapabilityScopeJson).IsRequired();
+        builder.Property(assignment => assignment.DecisionDataPolicyJson).HasColumnType("text");
         builder.Property(assignment => assignment.BranchGateSourceStepKey).HasMaxLength(256);
         builder.Property(assignment => assignment.BranchGateRequiredOutcomeKey).HasMaxLength(256);
         builder.HasIndex(assignment => assignment.PlanId);
@@ -245,9 +252,18 @@ internal sealed class ProcessRuntimeIdempotencyEntityConfiguration : IEntityType
 {
     public void Configure(EntityTypeBuilder<ProcessRuntimeIdempotencyEntity> builder)
     {
-        builder.ToTable("process_runtime_idempotency_keys");
+        builder.ToTable("process_runtime_idempotency_keys", table => table.HasCheckConstraint(
+            "CK_process_runtime_idempotency_keys_decision_budget",
+            $"\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND {ProcessDecisionBudgetReceiptCodec.MaximumUtf8Bytes}"));
         builder.HasKey(key => new { key.RunId, key.CommandId });
         builder.Property(key => key.Outcome).HasConversion<string>().HasMaxLength(64).IsRequired();
+        builder.Property(key => key.DecisionBudgetReceiptJson).HasColumnType("text");
+        builder.Property(key => key.DecisionRunScopeReceiptJson).HasColumnType("text");
+        builder.ToTable(table => table.HasCheckConstraint("CK_process_idempotency_scope_receipt",
+            $"\"DecisionRunScopeReceiptJson\" IS NULL OR octet_length(\"DecisionRunScopeReceiptJson\") BETWEEN 1 AND {ProcessDecisionRunScopeReceiptCodec.MaximumUtf8Bytes}"));
+        builder.Property(key => key.DecisionReceiptJson).HasColumnType("text");
+        builder.ToTable(table => table.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision",
+            $"\"DecisionReceiptJson\" IS NULL OR octet_length(\"DecisionReceiptJson\") BETWEEN 1 AND {ProcessDecisionReceiptCodec.MaximumUtf8Bytes}"));
     }
 }
 

@@ -22,6 +22,26 @@
     private Guid? resolvingItemId;
     private bool itemDetailsDirty;
     private bool disposed;
+    private DialogReference? guardedParent;
+    private Func<Task<bool>>? previousGuard;
+
+    protected override void OnParametersSet() {
+        if (Dialog is not null && !ReferenceEquals(guardedParent, Dialog)) {
+            guardedParent = Dialog;
+            previousGuard = Dialog.BeforeClose;
+            Dialog.BeforeClose = BeforeParentCloseAsync;
+        }
+    }
+    private async Task<bool> BeforeParentCloseAsync() {
+        if (previousGuard is not null && !await previousGuard()) {
+            return false;
+        }
+        if (itemDetailsDialog is { } child && !child.Result.IsCompleted) {
+            await child.CloseAsync();
+            return child.Result.IsCompleted;
+        }
+        return true;
+    }
 
     // Supplied by DialogHost so this picker closes only itself, never an unrelated dialog on top of it.
     [CascadingParameter]
@@ -231,6 +251,9 @@
         }
 
         disposed = true;
+        if (guardedParent?.BeforeClose == BeforeParentCloseAsync) {
+            guardedParent.BeforeClose = previousGuard;
+        }
         lifetime.Cancel();
         lifetime.Dispose();
     }

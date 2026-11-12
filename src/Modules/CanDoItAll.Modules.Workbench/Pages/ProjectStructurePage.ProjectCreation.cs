@@ -1,7 +1,9 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -18,48 +20,106 @@ public partial class ProjectStructurePage
         ProjectObjectType.Link
     ];
 
-    private readonly List<StarterObjectDraft> projectCreateStarterObjects = [];
-    private ProjectEditorModel projectCreateEditor = new();
+    private ProjectEditorDraft projectCreateDraft = new(new());
+    private List<StarterObjectDraft> projectCreateStarterObjects => projectCreateDraft.StarterObjects;
+    private ProjectEditorModel projectCreateEditor => projectCreateDraft.Model;
     private IReadOnlyList<ProjectSummary> projectCreateProjectSummaries = [];
+    private ProjectStructureAuthoringOpening? projectCreateOpening;
+    private ProjectStructureAuthoringOpening? projectCreateParentOpening;
     private ProjectStructureProjectHierarchyDialogState? projectHierarchyDialogBeforeCreate;
     private string? projectCreateMessage;
     private int projectCreateWizardStep;
     private bool showProjectCreateModal;
+    private ProjectModalHost? projectCreateModal;
 
     private IReadOnlyList<SecondaryTabItem> ProjectCreateWizardTabs => ProjectCreateWizardSteps
         .Select((step, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {step}"))
         .ToList();
 
     private bool IsProjectCreateErrorMessage
-        => !string.IsNullOrWhiteSpace(projectCreateMessage) &&
-           (projectCreateMessage.StartsWith("Unable", StringComparison.OrdinalIgnoreCase) ||
-            projectCreateMessage.StartsWith("No ", StringComparison.OrdinalIgnoreCase));
+        => projectCreateDraft.IsError;
 
-    private async Task OpenProjectCreateDialogAsync()
-    {
-        projectHierarchyDialogBeforeCreate = projectHierarchyDialog;
+    private async Task OpenProjectCreateDialogAsync() {
+        var parent = hierarchyOpening;
+        var dialog = projectHierarchyDialog;
+        if (parent is null || dialog is null || parent.IsBusy || parent.RequiresObservation || !IsCurrentAuthoring(parent, hierarchyOpening)) {
+            return;
+        }
+        var opening = new ProjectStructureAuthoringOpening(parent.Context, parent.Node);
+        projectCreateOpening = opening;
+        projectCreateParentOpening = parent;
+        projectHierarchyDialogBeforeCreate = dialog;
         projectHierarchyDialog = null;
-        projectCreateEditor = await ProjectsService.GetAsync(null);
-        projectCreateProjectSummaries = await ProjectsService.ListAsync();
-        projectCreateStarterObjects.Clear();
-        projectCreateWizardStep = 0;
-        projectCreateMessage = null;
-        showProjectCreateModal = true;
-        await InvokeAsync(StateHasChanged);
+        try {
+            if (projectCreateAccess is { } previous) {
+                previous.Stop();
+                await previous.DisposeAsync();
+            }
+            if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
+                return;
+            }
+            var access = new ProjectRootCreationAccess(ProjectCreateChanges, ProjectCreateUiAccess,
+                ProjectCreateProjectChanges, ProjectCreateObservationLogger);
+            projectCreateAccess = access;
+            await access.OpenAsync();
+            var acquired = await access.ReadAsync(token => ProjectCreateDefinitions.AcquireEditorAsync(null, token), deferredCompletionCts.Token);
+            var (context, pending) = await ReadProjectCreatePendingAsync(acquired.Scope, access);
+            var summaries = await access.ReadAsync(_ => ProjectsService.ListAsync(), deferredCompletionCts.Token);
+            if (!IsCurrentAuthoring(opening, projectCreateOpening) || !ReferenceEquals(parent, hierarchyOpening)) {
+                access.Stop();
+                return;
+            }
+            projectCreateDraft = new(acquired.Model, acquired.Scope);
+            projectCreateContext = context;
+            projectCreatePending = pending;
+            projectCreateProjectSummaries = summaries;
+            projectCreateWizardStep = 0;
+            projectCreateMessage = null;
+            showProjectCreateModal = true;
+        } catch (Exception exception) {
+            if (IsCurrentAuthoring(opening, projectCreateOpening)) {
+                projectCreateRecoveryNotice = "Project creation is unavailable because its original context or retained saves could not be read. Open Projects recovery before trying again.";
+                Logger.LogWarning(exception, "Workbench root-create editor could not acquire its original dataset context.");
+                projectCreateOpening = null;
+                await RestoreProjectHierarchyAsync(opening, parent, dialog);
+            }
+        }
+        await RenderAuthoringOutcomeAsync();
     }
 
-    private async Task CloseProjectCreateDialogAsync()
-    {
+    private bool IsProjectCreateRoute(string location) {
+        var absolute = Navigation.ToAbsoluteUri(location);
+        if (!new Uri(Navigation.BaseUri).IsBaseOf(absolute)) {
+            return false;
+        }
+        var path = Navigation.ToBaseRelativePath(absolute.AbsoluteUri).Split('?', '#')[0].TrimEnd('/');
+        return string.Equals(path, ProjectStructureUrlCodec.Route(ProjectId).TrimStart('/'), StringComparison.OrdinalIgnoreCase) &&
+            AgentChatNavigationIdentity.CreateForLocation(Navigation.BaseUri, absolute.AbsoluteUri, OwnedQueryRemovals) == StructureNavigationFence;
+    }
+
+    private async Task CloseProjectCreateDialogAsync(ProjectStructureAuthoringOpening? opening) {
+        if (opening is null || !ReferenceEquals(opening, projectCreateOpening)) {
+            return;
+        }
+        RetireProjectCreateSession();
+        projectCreateOpening = null;
         showProjectCreateModal = false;
         projectCreateMessage = null;
+        await RestoreProjectHierarchyAsync(opening, projectCreateParentOpening, projectHierarchyDialogBeforeCreate);
+        await RenderAuthoringOutcomeAsync();
+    }
 
-        if (projectHierarchyDialogBeforeCreate is { } dialogState)
-        {
-            projectHierarchyDialog = await RefreshProjectHierarchyDialogAsync(dialogState);
+    private async Task RestoreProjectHierarchyAsync(ProjectStructureAuthoringOpening creation,
+        ProjectStructureAuthoringOpening? parent, ProjectStructureProjectHierarchyDialogState? dialog, Guid? selectedId = null) {
+        if (parent is null || dialog is null || !IsCurrentAuthoring(parent, hierarchyOpening)) {
+            return;
+        }
+        var refreshed = await RefreshProjectHierarchyDialogAsync(parent, dialog, selectedId);
+        if (IsCurrentAuthoring(parent, hierarchyOpening) &&
+            (projectCreateOpening is null || ReferenceEquals(projectCreateOpening, creation))) {
+            projectHierarchyDialog = refreshed;
             projectHierarchyDialogBeforeCreate = null;
         }
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private Task IgnoreProjectCreateModeChangeAsync()
@@ -98,64 +158,6 @@ public partial class ProjectStructurePage
 
     private void NextProjectCreateStep()
         => projectCreateWizardStep = Math.Min(ProjectCreateWizardSteps.Length - 1, projectCreateWizardStep + 1);
-
-    private async Task SaveProjectCreateAsync()
-    {
-        var result = await ProjectsService.SaveAsync(projectCreateEditor);
-        projectCreateMessage = result.IsSuccess
-            ? "Project saved."
-            : string.Join(" ", result.Errors.Select(error => error.Message));
-        projectCreateProjectSummaries = await ProjectsService.ListAsync();
-
-        if (!result.IsSuccess)
-        {
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        if (projectCreateStarterObjects.Count > 0)
-        {
-            await ProjectWorkbenchSeedService.SeedProjectObjectsAsync(
-                result.Value,
-                projectCreateStarterObjects
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Title))
-                    .Select(item => new ProjectObjectSeedDraft(item.ObjectType, item.Title, item.Subtitle, item.Subtitle))
-                    .ToList());
-            projectCreateStarterObjects.Clear();
-        }
-
-        projectCreateEditor = await ProjectsService.GetAsync(result.Value);
-        showProjectCreateModal = false;
-
-        if (projectHierarchyDialogBeforeCreate is { } dialogState)
-        {
-            projectHierarchyDialog = await RefreshProjectHierarchyDialogAsync(dialogState, result.Value);
-            workflowFeedback = $"{projectCreateEditor.Name} was created. Select it below to connect it.";
-            workflowFeedbackTone = "mint";
-            projectHierarchyDialogBeforeCreate = null;
-        }
-
-        projectCreateMessage = null;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task SaveProjectCreateAndOpenStructureAsync()
-    {
-        var pendingHierarchyDialog = projectHierarchyDialogBeforeCreate;
-        await SaveProjectCreateAsync();
-
-        if (projectCreateEditor.Id.HasValue)
-        {
-            projectHierarchyDialogBeforeCreate = null;
-            projectHierarchyDialog = null;
-            showProjectCreateModal = false;
-            projectCreateMessage = null;
-            OpenStructure(projectCreateEditor.Id.Value);
-            return;
-        }
-
-        projectHierarchyDialogBeforeCreate = pendingHierarchyDialog;
-    }
 
     private Task DeleteProjectCreateAsync()
         => Task.CompletedTask;

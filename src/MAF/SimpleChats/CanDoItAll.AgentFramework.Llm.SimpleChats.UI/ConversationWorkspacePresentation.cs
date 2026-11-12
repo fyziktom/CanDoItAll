@@ -5,16 +5,18 @@ namespace CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 
 public enum ConversationWorkspaceAction {
     Select, LoadMoreConversations, LoadMoreMessages, ReloadSelected, NewConversation, Rename, Archive,
-    DraftChanged, Send, CancelResponse, Reconcile, Abandon
+    DraftChanged, Send, CancelResponse, Reconcile, Abandon, RefreshConversations, DiscardDraft, KeepEditing
 }
 public sealed record ConversationWorkspaceIntent(long Generation, ConversationWorkspaceAction Action,
-    Guid? ConversationId = null, string? Text = null);
+    Guid? ConversationId = null, string? Text = null, Guid? OperationId = null);
 public sealed record ConversationWorkspaceSelection(Guid ConversationId, string Title, string DefinitionName,
     ConversationHeaderPresentation Header);
 public sealed record ConversationWorkspacePresentation {
     public long Generation { get; init; }
     public bool IsAuthorizing { get; init; } = true;
     public bool CanRead { get; init; }
+    public bool UpdatesAvailable { get; init; }
+    public bool RequiresDiscard { get; init; }
     public bool CanManage { get; init; }
     public bool IsLoading { get; init; }
     public bool IsMutating { get; init; }
@@ -30,6 +32,7 @@ public sealed record ConversationWorkspacePresentation {
     public int ComposerKey { get; init; }
     public string ErrorMessage { get; init; } = "";
     public string? OperationStatus { get; init; }
+    public Guid? ActiveOperationId { get; init; }
     public ConversationWorkspaceSelection? Selected { get; init; }
     public ImmutableArray<ConversationThreadPresentation> Threads { get; init; } = [];
     public ImmutableArray<ConversationMessagePresentation> Messages { get; init; } = [];

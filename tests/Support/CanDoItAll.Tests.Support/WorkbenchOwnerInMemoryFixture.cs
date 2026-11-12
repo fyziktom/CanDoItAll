@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -33,7 +34,7 @@ public sealed class WorkbenchOwnerInMemoryFixture {
         Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
         Projects = new(ProjectsFactory, projects.Options, Transactions);
         Hierarchy = new(ProjectsFactory, projects.Options, Transactions);
-        Admissions = new ProjectWriteAdmissionService(ProjectsFactory, projects.Options, Transactions, new CanonicalDatabase(profile));
+        Admissions = new ProjectWriteAdmissionService(ProjectsFactory, projects.Options, Transactions, new CanonicalDatabase(profile), DatabaseTransferTestSupport.UnconfiguredActivation());
         MutationScopes = new(Projects, Admissions, Transactions);
     }
 

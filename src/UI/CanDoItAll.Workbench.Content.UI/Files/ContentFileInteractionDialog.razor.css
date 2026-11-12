@@ -1,0 +1,2 @@
+::deep .content-file-interaction-layout { height: 100%; min-height: 0; width: 100%; overflow: hidden; }
+::deep .content-file-interaction { flex: 1 1 0; min-height: 0; overflow: hidden; width: 100%; }

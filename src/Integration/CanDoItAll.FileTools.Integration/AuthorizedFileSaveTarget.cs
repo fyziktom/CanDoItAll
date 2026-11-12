@@ -16,15 +16,19 @@ internal sealed class AuthorizedFileSaveTarget(
 {
     private readonly FileAccessHandleOptions _options = ValidateOptions(options.Value);
     private FileReference? _boundFile;
+    private Func<CancellationToken, ValueTask>? _authorizeWrite;
 
-    public AuthorizedFileSaveTarget For(FileReference file)
-        => new(coordinator, contextProvider, drivers, changeSink, options, logger) { _boundFile = file };
+    public AuthorizedFileSaveTarget For(FileReference file, Func<CancellationToken, ValueTask>? authorizeWrite = null)
+        => new(coordinator, contextProvider, drivers, changeSink, options, logger) { _boundFile = file, _authorizeWrite = authorizeWrite };
 
     public async ValueTask<FileSaveTargetResult> SaveAsync(
         FileSaveRequest request,
         CancellationToken cancellationToken = default)
     {
         EnsureBoundFile(request.File);
+        if (_authorizeWrite is not null) {
+            await _authorizeWrite(cancellationToken);
+        }
         FileAccessContext context = await contextProvider.GetCurrentAsync(cancellationToken);
         AuthorizedStorageFile authorized = await coordinator.ResolveAsync(
             request.File,
@@ -49,7 +53,25 @@ internal sealed class AuthorizedFileSaveTarget(
                 "Revision-aware saving is not supported by this storage provider.");
         }
 
+        async ValueTask AuthorizeCommitAsync(CancellationToken token) {
+            try {
+                if (_authorizeWrite is not null) {
+                    await _authorizeWrite(token);
+                }
+                var currentContext = await contextProvider.GetCurrentAsync(token);
+                await coordinator.ResolveAsync(request.File, currentContext, FileAccessOperation.Edit, token);
+                if (overwrite) {
+                    await coordinator.ResolveAsync(request.File, currentContext, FileAccessOperation.Overwrite, token);
+                }
+            } catch (Exception failure) when (failure is FileAccessDeniedException or UnauthorizedAccessException) {
+                logger.LogWarning("Authorized file write admission refused. Handle={HandleHash} Actor={ActorHash} FailureType={FailureType}.",
+                    FileAccessLogIdentity.Hash(request.File.Value), FileAccessLogIdentity.Hash(context.ActorId.Value), failure.GetType().Name);
+                throw;
+            }
+        }
+
         byte[] content = await ReadAllBoundedAsync(request.Content, _options.MaximumContentBytes, cancellationToken);
+        await AuthorizeCommitAsync(cancellationToken);
         try
         {
             StorageRevisionedWriteResult result = await revisioned.ReplaceAsync(
@@ -60,7 +82,8 @@ internal sealed class AuthorizedFileSaveTarget(
                     request.ExpectedRevision is { } expected
                         ? new StorageContentRevision(expected.Value)
                         : null,
-                    allowOverwrite: overwrite),
+                    allowOverwrite: overwrite,
+                    authorizeCommit: AuthorizeCommitAsync),
                 cancellationToken);
             logger.LogInformation(
                 "Authorized file content saved. Handle={HandleHash} Actor={ActorHash} Bytes={ByteCount} CorrelationId={CorrelationId}.",

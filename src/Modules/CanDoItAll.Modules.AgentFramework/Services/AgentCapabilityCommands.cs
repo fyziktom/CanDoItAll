@@ -33,8 +33,7 @@ public sealed class AgentCapabilityCommands(IAgentFrameworkWorkspaceService work
             return new(CapabilityVerificationDisposition.CanceledBeforeDiagnostic);
         }
         try {
-            await workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
-            return new(CapabilityVerificationDisposition.Committed);
+            return await workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
         } catch (CapabilityVerificationException exception) {
             return exception.Outcome;
         } catch (Exception exception) {
@@ -51,6 +50,8 @@ public sealed class AgentCapabilityCommands(IAgentFrameworkWorkspaceService work
             var id = await workspace.SaveAgentAsync(attempt.CreateRequest(), cancellationToken);
             return id == attempt.AgentId ? AgentCapabilityOperationStatus.Committed : AgentCapabilityOperationStatus.Unconfirmed;
         } catch (AgentDirectoryProjectionSynchronizationException exception) when (exception.AgentId == attempt.AgentId) {
+            return AgentCapabilityOperationStatus.CommittedWithWarning;
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) when (exception.Accepted.Id == attempt.AgentId) {
             return AgentCapabilityOperationStatus.CommittedWithWarning;
         } catch (AgentCatalogConcurrencyException) {
             return AgentCapabilityOperationStatus.Conflict;

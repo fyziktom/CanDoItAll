@@ -1,0 +1,458 @@
+using System.Collections.Concurrent;
+using System.Data.Common;
+using CanDoItAll.Composition;
+using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Search;
+using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Resources;
+using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Npgsql;
+
+namespace CanDoItAll.Tests.Integration;
+
+public sealed partial class ResourceMetadataOwnerTests {
+    [Fact]
+    public async Task Independent_original_replacements_have_one_acceptance_and_one_exact_Search_projection() {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = await fixture.CreateAsync();
+        await using var other = fixture.Application.Services.CreateAsyncScope();
+        var outcomes = await Task.WhenAll(fixture.Service.SaveAsync(fixture.Replace(original, "First")),
+            other.ServiceProvider.GetRequiredService<ResourcesService>().SaveAsync(fixture.Replace(original, "Second")));
+        var accepted = Assert.Single(outcomes.OfType<ResourceMetadataSaveOutcome.Accepted>());
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged, Assert.Single(outcomes.OfType<ResourceMetadataSaveOutcome.Rejected>()).Reason);
+        Assert.Equal(accepted.Snapshot, await ResourceMetadataTestCommands.FoundAsync(fixture.Service, original.Expected.ResourceId));
+        await fixture.AssertSearchAsync(accepted.Snapshot);
+    }
+
+    [Fact]
+    public async Task Explicit_absence_does_not_overwrite_a_concurrent_creation() {
+        await using var fixture = await Fixture.CreateAsync();
+        var command = await fixture.NewAsync();
+        var outcomes = await Task.WhenAll(fixture.Service.SaveAsync(command), fixture.Service.SaveAsync(command));
+        var accepted = Assert.Single(outcomes.OfType<ResourceMetadataSaveOutcome.Accepted>());
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged, Assert.Single(outcomes.OfType<ResourceMetadataSaveOutcome.Rejected>()).Reason);
+        Assert.Equal(command.Expected.ResourceId, accepted.Snapshot.Expected.ResourceId);
+        await using var owner = await fixture.OwnerAsync();
+        Assert.Single(await owner.Set<ProjectResource>().ToArrayAsync());
+        await fixture.AssertSearchAsync(accepted.Snapshot);
+    }
+
+    [Fact]
+    public async Task Accepted_normalization_and_noop_revision_are_exact_and_SQL_compares_original_revision() {
+        var probe = new Probe();
+        await using var fixture = await Fixture.CreateAsync(probe);
+        var original = await fixture.CreateAsync();
+        var command = fixture.Replace(original, "  normalized  ");
+        probe.Armed = true;
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await fixture.Service.SaveAsync(command));
+        Assert.Equal("normalized", accepted.Snapshot.Values.Name);
+        Assert.Equal("  normalized  ", command.Values.Name);
+        Assert.Equal(original.CreatedAtUtc, accepted.Snapshot.CreatedAtUtc);
+        Assert.NotEqual(original.Expected.Revision, accepted.Snapshot.Expected.Revision);
+        var update = Assert.Single(probe.Updates);
+        Assert.Contains("\"Revision\"", update.Sql[update.Sql.IndexOf("WHERE", StringComparison.Ordinal)..], StringComparison.Ordinal);
+        Assert.Contains(original.Expected.Revision.Value, update.Ids);
+        var noop = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await fixture.Service.SaveAsync(fixture.Replace(accepted.Snapshot, "normalized")));
+        Assert.Equal(accepted.Snapshot.Values, noop.Snapshot.Values);
+        Assert.NotEqual(accepted.Snapshot.Expected.Revision, noop.Snapshot.Expected.Revision);
+    }
+
+    [Fact]
+    public async Task Stale_delete_and_original_binding_reject_after_rebind_without_removing_newer_Search() {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = await fixture.CreateAsync();
+        var nextProject = await OwnerPostcommitTestProbe.CreateProjectAsync(fixture.Services, "Other project");
+        var editor = fixture.Service.CreateEditor(original);
+        editor.ExpectedProjectAdmission = nextProject;
+        editor.ProjectId = nextProject.ProjectId;
+        var moved = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await fixture.Service.SaveAsync(ResourceMetadataTestCommands.Replace(original, editor)));
+        Assert.Equal(new ResourceProjectBinding.Bound(nextProject.ProjectId, nextProject.LifetimeId), moved.Snapshot.Expected.Project);
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged,
+            Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await fixture.Service.DeleteAsync(new(original.Expected))).Reason);
+        var forged = new ResourceMetadataExpectation.Existing(original.Expected.Context, original.Expected.ResourceId,
+            moved.Snapshot.Expected.Revision, original.Expected.Project);
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged,
+            Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await fixture.Service.DeleteAsync(new(forged))).Reason);
+        await fixture.AssertSearchAsync(moved.Snapshot);
+        Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await fixture.Service.DeleteAsync(new(moved.Snapshot.Expected)));
+        Assert.IsType<ResourceMetadataReadResult.Missing>(await fixture.Service.ReadAsync(original.Expected.ResourceId));
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceMissing,
+            Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await fixture.Service.DeleteAsync(new(moved.Snapshot.Expected))).Reason);
+    }
+
+    [Fact]
+    public async Task Reactivation_fences_original_namespace_even_with_unchanged_revision_and_values() {
+        await using var fixture = await Fixture.CreateAsync();
+        var original = await fixture.CreateAsync();
+        var profile = fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+        await fixture.Services.GetRequiredService<DatasetActivationCoordinator>().ReactivateAsync(profile, original.Expected.Context.Namespace, Guid.NewGuid());
+        Assert.Equal(ResourceMetadataRejectionReason.DatasetChanged,
+            Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(await fixture.Service.SaveAsync(fixture.Replace(original, "Old dataset"))).Reason);
+        Assert.Equal(ResourceMetadataRejectionReason.DatasetChanged,
+            Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await fixture.Service.DeleteAsync(new(original.Expected))).Reason);
+        var current = await ResourceMetadataTestCommands.FoundAsync(fixture.Service, original.Expected.ResourceId);
+        Assert.NotEqual(original.Expected.Context, current.Expected.Context);
+        Assert.Equal(original.Expected.Revision, current.Expected.Revision);
+        Assert.Equal(original.Values, current.Values);
+    }
+
+    [Fact]
+    public async Task Awaited_owner_creation_cannot_change_the_captured_proposal_or_target() {
+        var probe = new Probe();
+        await using var fixture = await Fixture.CreateAsync(probe);
+        var editor = fixture.Editor("Captured");
+        var command = await ResourceMetadataTestCommands.NewAsync(fixture.Service, editor);
+        var other = await OwnerPostcommitTestProbe.CreateProjectAsync(fixture.Services, "Later selection");
+        probe.PauseCreation = true;
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var pending = fixture.Service.SaveAsync(command, deadline.Token);
+        Exception? primaryFailure = null;
+        try {
+            await probe.CreationPaused.Task.WaitAsync(deadline.Token);
+            editor.Name = "Later name";
+            editor.ProjectId = other.ProjectId;
+            editor.ExpectedProjectAdmission = other;
+            editor.Configuration.SetText("endpointUrl", "https://example.invalid/later");
+            probe.ResumeCreation.TrySetResult();
+            var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await pending);
+            Assert.Equal("Captured", accepted.Snapshot.Values.Name);
+            Assert.Equal(new ResourceProjectBinding.Bound(fixture.Admission.ProjectId, fixture.Admission.LifetimeId), accepted.Snapshot.Expected.Project);
+            Assert.DoesNotContain("later", accepted.Snapshot.Values.ConfigJson, StringComparison.Ordinal);
+            await fixture.AssertSearchAsync(accepted.Snapshot);
+        } catch (Exception failure) {
+            primaryFailure = failure;
+            throw;
+        } finally {
+            probe.ResumeCreation.TrySetResult();
+            await FinishOwnerOperationAsync(pending, deadline, primaryFailure);
+        }
+    }
+
+    [Fact]
+    public async Task Waiting_project_gate_reads_the_committed_new_revision_before_replacement() {
+        var probe = new Probe();
+        await using var fixture = await Fixture.CreateAsync(probe);
+        var original = await fixture.CreateAsync();
+        await using var holder = await fixture.OwnerAsync();
+        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await SerializableMutationScope.AcquireRelationalScopeLocksAsync(holder,
+            [ProjectMutationScopeKeys.ForProject(fixture.Admission.ProjectId)], CancellationToken.None);
+        probe.Armed = true;
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var pending = fixture.Service.SaveAsync(fixture.Replace(original, "Stale waiter"), deadline.Token);
+        Exception? primaryFailure = null;
+        try {
+            var pid = await probe.WaitingPid.Task.WaitAsync(deadline.Token);
+            var profile = fixture.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
+            await using var observer = new NpgsqlConnection(profile.ConnectionString);
+            await observer.OpenAsync(deadline.Token);
+            await using var query = new NpgsqlCommand("SELECT @holder = ANY(pg_blocking_pids(@pid))", observer);
+            query.Parameters.AddWithValue("pid", pid);
+            query.Parameters.AddWithValue("holder", ((NpgsqlConnection)holder.Database.GetDbConnection()).ProcessID);
+            while (!(bool)(await query.ExecuteScalarAsync(deadline.Token))!) {
+                await Task.Delay(TimeSpan.FromMilliseconds(10), deadline.Token);
+            }
+            var row = await holder.Set<ProjectResource>().SingleAsync(resource => resource.Id == original.Expected.ResourceId, deadline.Token);
+            row.Revision = Guid.NewGuid();
+            row.Name = "Intervening retained metadata";
+            await holder.SaveChangesAsync(deadline.Token);
+            await transaction.CommitAsync(deadline.Token);
+            Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged,
+                Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(await pending).Reason);
+            Assert.Equal(row.Revision, (await ResourceMetadataTestCommands.FoundAsync(fixture.Service, row.Id)).Expected.Revision.Value);
+        } catch (Exception failure) {
+            primaryFailure = failure;
+            throw;
+        } finally {
+            await FinishOwnerOperationAsync(pending, deadline, primaryFailure, transaction);
+        }
+    }
+
+    [Fact]
+    public async Task Enlisted_Search_failures_roll_back_both_owners_for_save_and_header_only_delete() {
+        var probe = new OwnerPostcommitTestProbe();
+        await using var fixture = await Fixture.CreateAsync(configure: probe.ConfigureServices);
+        var original = await fixture.CreateAsync();
+        probe.AfterSearch = (_, _, _, _) => throw new IOException("Private fixture diagnostic must not reach the public outcome.");
+        var save = Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(await fixture.Service.SaveAsync(fixture.Replace(original, "Must roll back")));
+        Assert.Equal(ResourceMetadataRejectionReason.PersistenceUnavailable, save.Reason);
+        Assert.Null(save.Message);
+        var delete = Assert.IsType<ResourceMetadataDeleteOutcome.Rejected>(await fixture.Service.DeleteAsync(new(original.Expected)));
+        Assert.Equal(ResourceMetadataRejectionReason.PersistenceUnavailable, delete.Reason);
+        Assert.Equal(original, await ResourceMetadataTestCommands.FoundAsync(fixture.Service, original.Expected.ResourceId));
+        await fixture.AssertSearchAsync(original);
+        probe.AfterSearch = null;
+        Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await fixture.Service.DeleteAsync(new(original.Expected)));
+        await using var search = await fixture.SearchAsync();
+        Assert.False(await search.Set<SearchDocument>().AnyAsync(row => row.SourceType == SearchDocument.ResourceSourceType));
+    }
+
+    [Fact]
+    public async Task Real_commit_lost_ack_and_conflicting_cleanup_remain_unconfirmed_without_receipt_inference() {
+        var probe = new Probe(Fault.LostAckAndCleanup);
+        await using var fixture = await Fixture.CreateAsync(probe);
+        var command = await fixture.NewAsync();
+        probe.Armed = true;
+        var outcome = Assert.IsType<ResourceMetadataSaveOutcome.Unconfirmed>(await fixture.Service.SaveAsync(command));
+        Assert.Same(command, outcome.Command);
+        Assert.Equal(1, probe.Commits);
+        Assert.Equal(1, probe.CleanupFaults);
+        var actual = await ResourceMetadataTestCommands.FoundAsync(fixture.Service, command.Expected.ResourceId);
+        await fixture.AssertSearchAsync(actual);
+        Assert.Equal(ResourceMetadataRejectionReason.ResourceChanged,
+            Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(await fixture.Service.SaveAsync(command)).Reason);
+        Assert.Equal(1, probe.Commits);
+    }
+
+    [Fact]
+    public async Task Acknowledged_commit_survives_cleanup_and_activity_failure_with_its_exact_snapshot() {
+        var probe = new Probe(Fault.Cleanup);
+        var publication = new OwnerPostcommitTestProbe();
+        var diagnostics = new FailingDiagnostics();
+        await using var fixture = await Fixture.CreateAsync(probe, services => {
+            publication.ConfigureServices(services);
+            services.AddSingleton<ILogger<ResourceMetadataWriter>>(diagnostics);
+        });
+        var command = await fixture.NewAsync();
+        probe.Armed = true;
+        diagnostics.Armed = true;
+        publication.AfterActivity = (_, _, _) => throw new IOException("Activity failed after the commit.");
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await fixture.Service.SaveAsync(command));
+        Assert.Equal(ResourceMetadataSecondaryDiagnostic.CleanupPending, accepted.Diagnostic);
+        Assert.Equal(2, diagnostics.Failures);
+        Assert.Equal(1, probe.Commits);
+        Assert.Equal(1, probe.CleanupFaults);
+        Assert.Equal(accepted.Snapshot, await ResourceMetadataTestCommands.FoundAsync(fixture.Service, command.Expected.ResourceId));
+        await fixture.AssertSearchAsync(accepted.Snapshot);
+    }
+
+    [Fact]
+    public async Task Writer_persists_curated_configuration_and_reuses_exact_metadata_per_project_object() {
+        await using var fixture = await Fixture.CreateAsync();
+        var storageId = Guid.NewGuid();
+        var config = new StorageObjectResourceConfig(ResourceFileSourceKey.ForStorage(storageId).Value, storageId,
+            StorageProviderKind.FileSystem, StorageLocatorKind.RelativePath, "folder/file.txt", "file.txt", "text/plain", 42);
+        var request = new StorageObjectResourceWriteRequest(fixture.Admission.ProjectId, "Stored file", ResourceSensitivity.Sensitive,
+            config, fixture.Admission, await fixture.Service.ReadContextAsync(), Guid.NewGuid());
+        var writer = fixture.Services.GetRequiredService<IStorageObjectResourceWriter>();
+        var first = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(request));
+        var again = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(request with { ResourceId = Guid.NewGuid(), Name = "Not a rename", Sensitivity = ResourceSensitivity.Normal }));
+        Assert.True(first.Created);
+        Assert.False(again.Created);
+        Assert.Equal(first.Snapshot, again.Snapshot);
+        await using var owner = await fixture.OwnerAsync();
+        var row = Assert.Single(await owner.Set<ProjectResource>().AsNoTracking().ToArrayAsync());
+        Assert.Equal(StorageObjectResourceConnectorPlugin.PluginKey, row.ConnectorPluginKey);
+        Assert.Equal(StorageObjectResourceConnectorPlugin.SchemaVersion, row.ConfigSchemaVersion);
+        Assert.Equal(ResourceValidationStatus.Valid, row.ValidationStatus);
+        Assert.Equal(ResourceSensitivity.Sensitive, row.Sensitivity);
+        Assert.Equal(StorageObjectResourceConnectorPlugin.Serialize(config), row.ConfigJson);
+        Assert.DoesNotContain("folder/file.txt", row.LocationOrIdentifier, StringComparison.Ordinal);
+        foreach (var forbidden in new[] { "handle", "route", "metadata" }) {
+            Assert.DoesNotContain(forbidden, row.ConfigJson, StringComparison.OrdinalIgnoreCase);
+        }
+        await fixture.AssertSearchAsync(first.Snapshot);
+        var ordinary = fixture.Replace(first.Snapshot, "Ordinary overwrite");
+        Assert.Equal(ResourceMetadataRejectionReason.GovernedResource,
+            Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(await fixture.Service.SaveAsync(ordinary)).Reason);
+    }
+
+    [Fact]
+    public async Task Duplicate_governed_matches_refuse_without_repair_or_arbitrary_reuse() {
+        await using var fixture = await Fixture.CreateAsync();
+        var storage = Guid.NewGuid();
+        var config = new StorageObjectResourceConfig(ResourceFileSourceKey.ForStorage(storage).Value, storage,
+            StorageProviderKind.FileSystem, StorageLocatorKind.RelativePath, "duplicate.txt", "duplicate.txt", "text/plain", 1);
+        var request = new StorageObjectResourceWriteRequest(fixture.Admission.ProjectId, "First", ResourceSensitivity.Normal,
+            config, fixture.Admission, await fixture.Service.ReadContextAsync(), Guid.NewGuid());
+        var writer = fixture.Services.GetRequiredService<IStorageObjectResourceWriter>();
+        var accepted = Assert.IsType<StorageObjectResourceWriteResult.Accepted>(await writer.SaveAsync(request));
+        await using (var owner = await fixture.OwnerAsync()) {
+            var retained = await owner.Set<ProjectResource>().AsNoTracking().SingleAsync();
+            retained.Id = Guid.NewGuid();
+            retained.Revision = Guid.NewGuid();
+            owner.Add(retained);
+            await owner.SaveChangesAsync();
+        }
+        var outcome = Assert.IsType<StorageObjectResourceWriteResult.Rejected>(await writer.SaveAsync(request with { ResourceId = Guid.NewGuid() }));
+        Assert.Equal(ResourceMetadataRejectionReason.DuplicatePromotion, outcome.Reason);
+        await using var read = await fixture.OwnerAsync();
+        Assert.Equal(2, await read.Set<ProjectResource>().CountAsync());
+        await fixture.AssertSearchAsync(accepted.Snapshot);
+    }
+
+    private static async Task FinishOwnerOperationAsync(Task pending, CancellationTokenSource cancellation,
+        Exception? primaryFailure, IAsyncDisposable? blocker = null) {
+        var failures = new List<Exception>();
+        try {
+            cancellation.Cancel();
+        } catch (Exception failure) {
+            failures.Add(failure);
+        }
+        if (blocker is not null) {
+            try {
+                await blocker.DisposeAsync();
+            } catch (Exception failure) {
+                failures.Add(failure);
+            }
+        }
+        try {
+            await pending;
+        } catch (Exception failure) {
+            if (!ReferenceEquals(failure, primaryFailure)) {
+                failures.Add(failure);
+            }
+        }
+        if (failures.Count > 0) {
+            if (primaryFailure is not null) {
+                failures.Insert(0, primaryFailure);
+            }
+            throw new AggregateException("Resource owner assertion or terminal cleanup failed.", failures);
+        }
+    }
+
+    private sealed class Fixture(TestApplication application, AsyncServiceScope scope, ProjectWriteAdmission admission) : IAsyncDisposable {
+        public TestApplication Application => application;
+        public IServiceProvider Services => scope.ServiceProvider;
+        public ProjectWriteAdmission Admission => admission;
+        public ResourcesService Service => Services.GetRequiredService<ResourcesService>();
+        public static async Task<Fixture> CreateAsync(Probe? probe = null, Action<IServiceCollection>? configure = null) {
+            var application = await TestApplication.CreateAsync(new() { ConfigureServices = services => {
+                configure?.Invoke(services);
+                probe?.Configure(services);
+            } });
+            var scope = application.Services.CreateAsyncScope();
+            try {
+                var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(scope.ServiceProvider, "Resource original-state proof");
+                return new(application, scope, admission);
+            } catch (Exception failure) {
+                await TestFixtureCleanup.DisposeAfterFailureAsync(failure, scope, application);
+                throw;
+            }
+        }
+        public ResourceEditorModel Editor(string name = "Original resource") => new() {
+            ProjectId = admission.ProjectId, ExpectedProjectAdmission = admission, Name = name,
+            ConnectorPluginKey = WebhookResourceConnectorPlugin.PluginKey, ConfigSchemaVersion = "1.0",
+            ConfigJson = "{\"endpointUrl\":\"https://example.invalid/original\",\"method\":\"post\"}"
+        };
+        public Task<ReplaceResourceMetadataCommand> NewAsync() => ResourceMetadataTestCommands.NewAsync(Service, Editor());
+        public async Task<ResourceMetadataSnapshot> CreateAsync()
+            => Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await Service.SaveAsync(await NewAsync())).Snapshot;
+        public ReplaceResourceMetadataCommand Replace(ResourceMetadataSnapshot original, string name)
+            => new(original.Expected, admission, ResourceMetadataValues.Capture(Editor(name)));
+        public Task<ResourcesDbContext> OwnerAsync() => Services.GetRequiredService<IDbContextFactory<ResourcesDbContext>>().CreateDbContextAsync();
+        public Task<SearchDbContext> SearchAsync() => Services.GetRequiredService<IDbContextFactory<SearchDbContext>>().CreateDbContextAsync();
+        public async Task AssertSearchAsync(ResourceMetadataSnapshot snapshot) {
+            await using var search = await SearchAsync();
+            var key = snapshot.Expected.ResourceId.ToString();
+            var document = await search.Set<SearchDocument>().SingleAsync(row => row.SourceType == SearchDocument.ResourceSourceType && row.SourceKey == key);
+            Assert.Equal(snapshot.Values.Name, document.Title);
+            Assert.Equal(snapshot.Values.Description, document.Summary);
+            Assert.Equal(Assert.IsType<ResourceProjectBinding.Bound>(snapshot.Expected.Project).ProjectId, document.ProjectId);
+            Assert.Contains(snapshot.Values.LocationOrIdentifier, document.Body, StringComparison.Ordinal);
+        }
+        public async ValueTask DisposeAsync() {
+            try {
+                await scope.DisposeAsync();
+            } finally {
+                await application.DisposeAsync();
+            }
+        }
+    }
+
+    private sealed class FailingDiagnostics : ILogger<ResourceMetadataWriter> {
+        public bool Armed { get; set; }
+        public int Failures { get; private set; }
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {
+            if (Armed) {
+                Failures++;
+                throw new IOException("The diagnostic sink failed after the committed operation.");
+            }
+        }
+    }
+
+    private enum Fault { None, LostAckAndCleanup, Cleanup }
+    private sealed class Probe(Fault fault = Fault.None) {
+        public bool Armed { get; set; }
+        public bool PauseCreation { get; set; }
+        public TaskCompletionSource CreationPaused { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ResumeCreation { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<int> WaitingPid { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public ConcurrentDictionary<Guid, byte> Mutations { get; } = new();
+        public ConcurrentQueue<(string Sql, Guid[] Ids)> Updates { get; } = new();
+        public ConcurrentQueue<string> Reads { get; } = new();
+        public Fault Failure => fault;
+        public int Commits;
+        public int CleanupFaults;
+        public void Configure(IServiceCollection services) => services.AddSingleton<IDbContextFactory<ResourcesDbContext>>(provider =>
+            new Factory(new DbContextOptionsBuilder<ResourcesDbContext>(provider.GetRequiredService<DbContextOptions<ResourcesDbContext>>())
+                .AddInterceptors(new SaveProbe(this), new CommitProbe(this), new DisposalProbe(this), new CommandProbe(this)).Options, this));
+    }
+    private sealed class Factory(DbContextOptions<ResourcesDbContext> options, Probe probe) : IDbContextFactory<ResourcesDbContext> {
+        public ResourcesDbContext CreateDbContext() => new(options);
+        public async Task<ResourcesDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) {
+            if (probe.PauseCreation) {
+                probe.PauseCreation = false;
+                probe.CreationPaused.TrySetResult();
+                await probe.ResumeCreation.Task.WaitAsync(cancellationToken);
+            }
+            return new(options);
+        }
+    }
+    private sealed class SaveProbe(Probe probe) : SaveChangesInterceptor {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default) {
+            if (probe.Armed && eventData.Context is { } context) {
+                probe.Mutations.TryAdd(context.ContextId.InstanceId, 0);
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+    private sealed class CommitProbe(Probe probe) : DbTransactionInterceptor {
+        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) {
+            if (eventData.Context is { } context && probe.Mutations.ContainsKey(context.ContextId.InstanceId)) {
+                Interlocked.Increment(ref probe.Commits);
+                if (probe.Failure == Fault.LostAckAndCleanup) {
+                    throw new IOException("Lost acknowledgement after actual Resource commit.");
+                }
+            }
+            return Task.CompletedTask;
+        }
+    }
+    private sealed class DisposalProbe(Probe probe) : DbConnectionInterceptor {
+        public override Task ConnectionDisposedAsync(DbConnection connection, ConnectionEndEventData eventData) {
+            if (probe.Failure != Fault.None && eventData.Context is { } context && probe.Mutations.TryRemove(context.ContextId.InstanceId, out _)) {
+                Interlocked.Increment(ref probe.CleanupFaults);
+                throw new DbUpdateConcurrencyException("Cleanup cannot prove that the actual commit rolled back.");
+            }
+            return Task.CompletedTask;
+        }
+    }
+    private sealed class CommandProbe(Probe probe) : DbCommandInterceptor {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command, CommandEventData eventData,
+            InterceptionResult<int> result, CancellationToken cancellationToken = default) {
+            if (probe.Armed && command.CommandText.Contains("pg_advisory_xact_lock", StringComparison.Ordinal) && command.Connection is NpgsqlConnection connection) {
+                probe.WaitingPid.TrySetResult(connection.ProcessID);
+            }
+            return ValueTask.FromResult(result);
+        }
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
+            InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
+            if (probe.Armed) {
+                probe.Reads.Enqueue(command.CommandText);
+            }
+            if (probe.Armed && command.CommandText.Contains("UPDATE \"Resources_ProjectResources\"", StringComparison.Ordinal)) {
+                probe.Updates.Enqueue((command.CommandText, command.Parameters.Cast<DbParameter>().Select(parameter => parameter.Value).OfType<Guid>().ToArray()));
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+}

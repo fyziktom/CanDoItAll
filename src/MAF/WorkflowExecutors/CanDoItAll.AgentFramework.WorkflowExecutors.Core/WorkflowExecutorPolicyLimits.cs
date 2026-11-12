@@ -1,20 +1,19 @@
+using CanDoItAll.AgentFramework.Workflows.Definitions;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 public static class WorkflowExecutorPolicyLimits
 {
-    public const int MinTimeoutSeconds = 1;
-    public const int MaxTimeoutSeconds = 3600;
-    public const int MinRetryAttempts = 0;
-    public const int MaxRetryAttempts = 10;
-    public const int MinRetryDelayMilliseconds = 0;
-    public const int MaxRetryDelayMilliseconds = 600000;
+    public const int MinTimeoutSeconds = WorkflowExecutionPolicyRules.MinTimeoutSeconds;
+    public const int MaxTimeoutSeconds = WorkflowExecutionPolicyRules.MaxTimeoutSeconds;
+    public const int MinRetryAttempts = WorkflowExecutionPolicyRules.MinRetryAttempts;
+    public const int MaxRetryAttempts = WorkflowExecutionPolicyRules.MaxRetryAttempts;
+    public const int MinRetryDelayMilliseconds = WorkflowExecutionPolicyRules.MinRetryDelayMilliseconds;
+    public const int MaxRetryDelayMilliseconds = WorkflowExecutionPolicyRules.MaxRetryDelayMilliseconds;
 
     public static bool IsValid(WorkflowExecutorExecutionPolicy policy)
-        => policy.TimeoutSeconds is >= MinTimeoutSeconds and <= MaxTimeoutSeconds &&
-           policy.MaxRetryAttempts is >= MinRetryAttempts and <= MaxRetryAttempts &&
-           policy.RetryDelayMilliseconds is >= MinRetryDelayMilliseconds and <= MaxRetryDelayMilliseconds;
+        => WorkflowExecutionPolicyRules.IsValid(policy);
 
     public static void ThrowIfInvalid(
         WorkflowExecutorExecutionPolicy policy,

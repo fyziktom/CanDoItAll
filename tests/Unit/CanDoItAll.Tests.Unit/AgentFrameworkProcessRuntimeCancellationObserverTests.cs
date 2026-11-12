@@ -3,19 +3,42 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
+using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Inherited_markers_are_never_repaired_by_the_legacy_observer(bool listedAsInherited, bool schemaOnly) {
+        var processRunId = ProcessRunId.New();
+        var legacy = CreateRun(processRunId);
+        var journal = AgentInheritedPlanningTestData.Create();
+        journal = schemaOnly ? journal with { PlanningDecision = null }
+            : journal with { SchemaVersion = AgentToolJournalRecord.PlanningSchemaVersion };
+        var inherited = new ExecutionRunDetail(legacy with { ToolAdmission = journal }, null, [], []);
+        var store = new RecordingExecutionRunStore(inherited) { ListedRun = listedAsInherited ? inherited.Run : legacy };
+        var cleanup = new RecordingProcessLeaseCleaner();
+        var observer = new AgentFrameworkProcessRuntimeCancellationObserver(new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance), store, cleanup,
+            NullLogger<AgentFrameworkProcessRuntimeCancellationObserver>.Instance);
+        await observer.OnRunsCancelledAsync(new(processRunId, [processRunId], "fixture", "Stop parent.", DateTimeOffset.UtcNow));
+        Assert.Same(inherited, await store.GetExecutionRunDetailAsync(inherited.Run.Id));
+        Assert.Empty(cleanup.CleanedExecutionRunIds);
+        Assert.Equal(1, store.CandidateReads);
+    }
+
     [Fact]
     public async Task OnRunsCancelled_signals_active_execution_and_marks_execution_record_cancelled()
     {
         var processRunId = ProcessRunId.New();
         var run = CreateRun(processRunId);
         var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
-        var registry = new AgentExecutionCancellationRegistry();
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
         var processLeaseCleaner = new RecordingProcessLeaseCleaner();
         using var registration = registry.Register(run, CancellationToken.None);
         var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
@@ -51,7 +74,7 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
         var processRunId = ProcessRunId.New();
         var run = CreateRun(processRunId);
         var store = new RecordingExecutionRunStore(new ExecutionRunDetail(run, null, [], []));
-        var registry = new AgentExecutionCancellationRegistry();
+        var registry = new AgentExecutionCancellationRegistry(NullLogger<AgentExecutionCancellationRegistry>.Instance);
         var processLeaseCleaner = new RecordingProcessLeaseCleaner(throwOnCleanup: true);
         var observer = new AgentFrameworkProcessRuntimeCancellationObserver(
             registry,
@@ -130,6 +153,8 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
 
     private sealed class RecordingExecutionRunStore(ExecutionRunDetail detail) : ISandboxWorkspaceExecutionRunStore
     {
+        internal ExecutionRunRecord? ListedRun { get; set; }
+        internal int CandidateReads { get; private set; }
         private readonly Dictionary<Guid, ExecutionRunDetail> details = new()
         {
             [detail.Run.Id] = detail
@@ -137,9 +162,15 @@ public sealed class AgentFrameworkProcessRuntimeCancellationObserverTests
 
         public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
             CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Cancellation must use selected Process candidates.");
+
+        public Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunCandidatesAsync(ExecutionRunQuery query,
+            CancellationToken cancellationToken = default)
         {
+            Assert.Equal([detail.Run.ProcessRunId], query.ProcessRunIds);
+            CandidateReads++;
             return Task.FromResult<IReadOnlyList<ExecutionRunRecord>>(
-                details.Values.Select(item => item.Run).ToArray());
+                ListedRun is { } selected ? [selected] : details.Values.Select(item => item.Run).ToArray());
         }
 
         public Task<ExecutionRunRecord?> GetExecutionRunAsync(

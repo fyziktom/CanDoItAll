@@ -1,4 +1,5 @@
 @using CanDoItAll.Modules.Projects
+@implements IDisposable
 
 @if (IsOpen && Opportunity is not null)
 {
@@ -12,8 +13,9 @@
             TestId="crmhr-opportunity-conversion-dialog"
             OnClose="HandleCloseAsync">
         <ChildContent>
-            <Stack GapScale="LayoutGap.Large">
-                @if (!string.IsNullOrWhiteSpace(Message))
+            <EditForm EditContext="context" OnSubmit="@(_ => HandleSaveAsync())" id="crmhr-opportunity-conversion-form">
+            <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+                @if (Editing is null && !string.IsNullOrWhiteSpace(Message))
                 {
                     <PanelCard Soft="true"
                                data-testid="crmhr-opportunity-conversion-message">
@@ -21,6 +23,8 @@
                                    Value="@Message" />
                     </PanelCard>
                 }
+
+                @Editing
 
                 <Grid Gap="LayoutGap.Large"
                       ColumnsLg="2">
@@ -45,9 +49,9 @@
                     <FormSection Title="Project target"
                                  Description="Choose an existing project with a paged query or create a new delivery record.">
                         <ChildContent>
-                            <Stack GapScale="LayoutGap.Medium">
+                            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" Class="w-full">
                                 <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
-                                    <InputCheckbox @bind-Value="draft.LinkExistingProject"
+                                    <InputCheckbox @bind-Value="draft.LinkExistingProject" @bind-Value:after="InputChanged.InvokeAsync"
                                                    data-testid="crmhr-opportunity-conversion-link-existing" />
                                     <span>Link an existing project</span>
                                 </label>
@@ -86,28 +90,28 @@
                                 }
                                 else
                                 {
-                                    <Stack GapScale="LayoutGap.XSmall">
+                                    <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
                                         <label class="cda-field-label">Project name</label>
-                                        <InputText @bind-Value="draft.ProjectName"
-                                                   class="cda-input"
+                                        <NativeValueInput TValue="string" @bind-Value="draft.ProjectName" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                   class="cda-input w-full"
                                                    data-testid="crmhr-opportunity-conversion-name" />
                                     </Stack>
-                                    <Stack GapScale="LayoutGap.XSmall">
+                                    <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
                                         <label class="cda-field-label">Description</label>
-                                        <InputTextArea @bind-Value="draft.ProjectDescription"
-                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="draft.ProjectDescription" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                       class="cda-input cda-input--textarea w-full min-h-[7rem]"
                                                        data-testid="crmhr-opportunity-conversion-description" />
                                     </Stack>
-                                    <Stack GapScale="LayoutGap.XSmall">
+                                    <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
                                         <label class="cda-field-label">Objective</label>
-                                        <InputTextArea @bind-Value="draft.ProjectObjective"
-                                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="draft.ProjectObjective" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                       class="cda-input cda-input--textarea w-full min-h-[7rem]"
                                                        data-testid="crmhr-opportunity-conversion-objective" />
                                     </Stack>
-                                    <Stack GapScale="LayoutGap.XSmall">
+                                    <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
                                         <label class="cda-field-label">Current phase</label>
-                                        <InputText @bind-Value="draft.CurrentPhase"
-                                                   class="cda-input"
+                                        <NativeValueInput TValue="string" @bind-Value="draft.CurrentPhase" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                   class="cda-input w-full"
                                                    data-testid="crmhr-opportunity-conversion-phase" />
                                     </Stack>
                                 }
@@ -139,6 +143,7 @@
                     </ChildContent>
                 </FormSection>
             </Stack>
+            </EditForm>
         </ChildContent>
         <Footer>
             <Split Breakpoint="LayoutBreakpoint.None"
@@ -155,7 +160,7 @@
                             data-testid="crmhr-opportunity-conversion-cancel" />
                     <Button Text="Save conversion"
                             ButtonStyle="ButtonStyle.Info"
-                            Disabled="IsBusy"
+                            Disabled="@(IsBusy || SaveDisabled || isProjectPickerOpen)"
                             IsBusy="IsBusy"
                             Click="HandleSaveAsync"
                             data-testid="crmhr-opportunity-conversion-save" />
@@ -177,9 +182,19 @@
                            DataTestId="crmhr-opportunity-conversion-project-picker" />
 
 @code {
-    private CrmOpportunityConversionEditorModel draft = new();
+    private CrmOpportunityConversionEditorModel draft => Model;
+    private EditContext context = default!;
+    private CrmOpportunityConversionEditorModel? configuredModel;
+    private long configuredOpening = -1;
+    private long pickerOpening = -1;
+    private bool disposed;
     private bool isProjectPickerOpen;
-    private bool wasOpen;
+    [Parameter] public long Opening { get; set; }
+    [Parameter] public bool SaveDisabled { get; set; }
+    [Parameter] public EventCallback InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PickerChanged { get; set; }
+    [Parameter] public EventCallback<ProjectRecordPickerSelection> ProjectSelected { get; set; }
+    [Parameter] public RenderFragment? Editing { get; set; }
 
     [Parameter]
     public bool IsOpen { get; set; }
@@ -212,12 +227,13 @@
 
     protected override void OnParametersSet()
     {
-        if (IsOpen && !wasOpen)
-        {
-            draft = Clone(Model);
+        if (!ReferenceEquals(configuredModel, Model) || configuredOpening != Opening) {
+            configuredModel = Model;
+            configuredOpening = Opening;
+            context = new(Model);
+            isProjectPickerOpen = false;
+            pickerOpening = -1;
         }
-
-        wasOpen = IsOpen;
     }
 
     private string ResolveExistingProjectLabel()
@@ -233,62 +249,70 @@
             : "Project selected";
     }
 
-    private void OpenProjectPicker()
+    private async Task OpenProjectPicker()
     {
+        if (disposed) {
+            return;
+        }
+        pickerOpening = Opening;
         isProjectPickerOpen = true;
+        await PickerChanged.InvokeAsync(true);
     }
 
-    private void ClearExistingProject()
+    private async Task ClearExistingProject()
     {
         draft.ExistingProjectId = null;
         draft.ExpectedProjectAdmission = null;
+        draft.ExpectedProjectBasis = null;
+        await InputChanged.InvokeAsync();
     }
 
-    private Task CloseProjectPickerAsync()
+    private async Task CloseProjectPickerAsync()
     {
         isProjectPickerOpen = false;
-        return Task.CompletedTask;
+        pickerOpening = -1;
+        await PickerChanged.InvokeAsync(false);
     }
 
     private async Task HandleProjectSelectedAsync(ProjectRecordPickerSelection selection)
     {
+        if (disposed || !isProjectPickerOpen || pickerOpening != Opening) {
+            return;
+        }
         draft.ExistingProjectId = selection.ProjectId;
         draft.ExpectedProjectAdmission = new CanDoItAll.Modules.Projects.ProjectWriteAdmission(
             DatabaseProfileId, selection.ProjectId, selection.LifetimeId
                 ?? throw new InvalidOperationException("The selected project row has no lifetime binding."));
-        await CloseProjectPickerAsync();
+        draft.ExpectedProjectBasis = null;
+        await InputChanged.InvokeAsync();
+        await ProjectSelected.InvokeAsync(selection);
+        if (!disposed) {
+            await CloseProjectPickerAsync();
+        }
     }
 
     private async Task HandleCloseAsync()
     {
-        draft = Clone(Model);
-        isProjectPickerOpen = false;
-        wasOpen = false;
+        if (disposed) {
+            return;
+        }
         await Close.InvokeAsync();
     }
 
     private Task HandleSaveAsync()
     {
-        return Save.InvokeAsync(draft);
+        return disposed || IsBusy || SaveDisabled || isProjectPickerOpen ? Task.CompletedTask : Save.InvokeAsync(draft);
     }
 
-    private static CrmOpportunityConversionEditorModel Clone(
-        CrmOpportunityConversionEditorModel source)
-    {
-        return new CrmOpportunityConversionEditorModel
-        {
-            OpportunityId = source.OpportunityId,
-            ExpectedUpdatedAtUtc = source.ExpectedUpdatedAtUtc,
-            LinkExistingProject = source.LinkExistingProject,
-            ExistingProjectId = source.ExistingProjectId,
-            ExpectedProjectAdmission = source.ExpectedProjectAdmission,
-            ProjectName = source.ProjectName,
-            ProjectDescription = source.ProjectDescription,
-            ProjectObjective = source.ProjectObjective,
-            CurrentPhase = source.CurrentPhase,
-            LastChangedBy = source.LastChangedBy
-        };
+    private async Task SetTextAsync() {
+        if (disposed) {
+            return;
+        }
+
+        await InputChanged.InvokeAsync();
     }
+
+    public void Dispose() => disposed = true;
 
     private static string ResolveValueLabel(CrmOpportunityDetailModel opportunity)
     {

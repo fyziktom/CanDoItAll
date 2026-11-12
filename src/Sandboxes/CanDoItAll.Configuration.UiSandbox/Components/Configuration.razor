@@ -1,0 +1,59 @@
+@page "/"
+
+<Stack GapScale="LayoutGap.Medium" Class="p-6">
+    <h1>Configuration renderer scenarios</h1>
+    <p>In-memory fields and reference metadata. No providers or secret values are loaded.</p>
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Validate fields" Click="Validate" data-testid="configuration-validate" />
+        <Button Text="Rerender" Click="Rerender" data-testid="configuration-rerender" />
+        <Button Text="Acquire new state" Click="Acquire" data-testid="configuration-acquire" />
+    </Cluster>
+    <ConfigurationSchemaRenderer Schema="Schema" State="state" Secrets="Secrets" Validation="validation"
+                                 StateChanged="Changed" />
+    <p data-testid="configuration-version">Revision: @revision</p>
+    @if (interactive) {
+        <span data-testid="configuration-ready"></span>
+    }
+</Stack>
+
+@code {
+    private const string TextKey = "title";
+    private const string NumberKey = "count";
+    private const string BooleanKey = "enabled";
+    private const string PayloadKey = "payload";
+    private const string SecretKey = "secret";
+    private const string ChoiceKey = "mode";
+    private static readonly Guid MissingSecret = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly IReadOnlyList<ConfigurationSecretOption> Secrets = [new(Guid.Parse("22222222-2222-2222-2222-222222222222"), "Reference metadata")];
+    private static readonly ConfigurationSchema Schema = new("1.0", [
+        new(TextKey, "Title", ConfigurationFieldType.Text, true, "Non-English content is supported."),
+        new(NumberKey, "Count", ConfigurationFieldType.Number, false, "An integer value."),
+        new(BooleanKey, "Enabled", ConfigurationFieldType.Boolean, false, ""),
+        new(PayloadKey, "Payload", ConfigurationFieldType.Json, false, "JSON input is kept as typed."),
+        new(SecretKey, "Secret reference", ConfigurationFieldType.SecretReference, false, "Only reference metadata is available."),
+        new(ChoiceKey, "Mode", ConfigurationFieldType.Select, false, "") { Options = [new("read", "Read"), new("write", "Write")] }
+    ]);
+    private ConfigurationState state = CreateState();
+    private ConfigurationValidationResult? validation;
+    private int revision;
+    private bool interactive;
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    private void Validate() => validation = new ConfigurationSchemaValidator().Validate(Schema, state);
+    private void Rerender() => revision++;
+    private void Changed(ConfigurationState _) => revision++;
+    private void Acquire() {
+        state = CreateState();
+        validation = null;
+        revision++;
+    }
+    private static ConfigurationState CreateState() {
+        var value = new ConfigurationState();
+        value.SetText(SecretKey, MissingSecret.ToString("D"));
+        return value;
+    }
+}

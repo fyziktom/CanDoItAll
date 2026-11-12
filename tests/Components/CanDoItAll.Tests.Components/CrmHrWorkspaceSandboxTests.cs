@@ -105,6 +105,25 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
 
     // --- Workforce -------------------------------------------------------------------------------
 
+    [Fact]
+    public void Deferred_workforce_header_keeps_its_record_snapshot_when_the_owner_clears_selection() {
+        var view = new CrmHrWorkforceSandboxView(context.Services.GetRequiredService<CrmHrSandboxPartyStore>());
+        view.Apply(CrmHrWorkforceWorkspaceSandboxScenario.SelectedExisting);
+        var displayName = view.SelectedWorkspace!.DisplayName;
+        var cut = context.Render<CrmHrWorkforceWorkspaceSurface>(p => p.Add(x => x.View, view));
+        var header = cut.FindComponents<Split>().Single(component =>
+            component.Markup.Contains("Selected workforce record", StringComparison.Ordinal));
+        var deferredHeader = header.Instance.ChildContent!;
+
+        view.Apply(CrmHrWorkforceWorkspaceSandboxScenario.Catalog);
+
+        Assert.Null(view.SelectedWorkspace);
+        var deferred = context.Render(deferredHeader);
+        Assert.Contains(displayName, deferred.Markup, StringComparison.Ordinal);
+        cut.Render();
+        Assert.Empty(cut.FindAll("[data-testid='crmhr-workforce-record-dialog']"));
+    }
+
     [Theory]
     [InlineData("catalog", "data-testid=\"crmhr-workforce-catalog\"")]
     [InlineData("selected-existing", "Elena Ward")]
@@ -134,7 +153,7 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='crmhr-workforce-job-title']")));
 
         cut.Find("[data-testid='crmhr-workforce-job-title']").Change("Senior Delivery Lead");
-        cut.Find("#crmhr-workforce-profile-form").Submit();
+        cut.Find("[data-testid='crmhr-workforce-profile-form']").Submit();
 
         cut.WaitForAssertion(() => Assert.Equal("Save workforce profile", cut.Find("[data-testid='crmhr-sandbox-intent']").TextContent));
     }
@@ -175,6 +194,7 @@ public sealed class CrmHrWorkspaceSandboxTests : IDisposable
     [Theory]
     [InlineData("catalog", "data-testid=\"crmhr-agent-catalog\"")]
     [InlineData("selected-existing", "Atlas Ops Agent")]
+    [InlineData("non-default-section", "AgentFramework owns this runtime")]
     [InlineData("loading", "Loading CRM-HR agent details")]
     [InlineData("unavailable-references", "Scheduler Agent")]
     [InlineData("empty", "No projected AI agents")]

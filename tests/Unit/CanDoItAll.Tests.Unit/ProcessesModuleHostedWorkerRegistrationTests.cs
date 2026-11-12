@@ -114,6 +114,7 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
     public void Add_processes_module_resolves_dispatch_and_blocked_recovery_pipeline()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         var configuration = new ConfigurationBuilder().Build();
         services.AddSingleton<ICanonicalRuntimeDatabase>(new TestCanonicalRuntimeDatabase());
         services.AddScoped<IProcessRuntimeStrategyFactoryResolver, UnusableStrategyFactoryResolver>();
@@ -122,6 +123,7 @@ public sealed class ProcessesModuleHostedWorkerRegistrationTests
         services.RemoveAll<IProcessStepExecutionDriver>();
         services.RemoveAll<IProcessRuntimeStepAssignmentRepairService>();
         services.RemoveAll<IProcessRuntimeRunCancellationObserver>();
+        services.RemoveAll<IProcessAuthoringStore>();
 
         using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions

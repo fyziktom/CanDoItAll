@@ -467,7 +467,7 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
             model.EndUtc,
             ProjectStructureNodeRequestMetadata.ResolveMetadataJson(model.MetadataJson, model.Metadata),
             model.LeaseToken,
-            model.DurationSeconds);
+            model.DurationSeconds) { ExpectedState = model.ExpectedState };
     }
 
     public override void Write(Utf8JsonWriter writer, ProjectStructureNodeEditInput value, JsonSerializerOptions options)
@@ -476,6 +476,7 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
             writer,
             new ProjectStructureNodeEditJsonModel
             {
+                ExpectedState = value.ExpectedState,
                 Title = value.Title,
                 Subtitle = value.Subtitle,
                 Notes = value.Notes,
@@ -494,6 +495,8 @@ internal sealed class ProjectStructureNodeEditInputJsonConverter : JsonConverter
 
     private sealed class ProjectStructureNodeEditJsonModel
     {
+        public ProjectStructureNodeState? ExpectedState { get; set; }
+
         public string? Title { get; set; }
 
         public string? Subtitle { get; set; }

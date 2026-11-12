@@ -25,4 +25,7 @@
     <ProjectReference Include="..\CanDoItAll.Conversations.Components\CanDoItAll.Conversations.Components.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../CanDoItAll.AppComponents.EmbeddedBrowser/CanDoItAll.AppComponents.EmbeddedBrowser.csproj" />
+  </ItemGroup>
 </Project>

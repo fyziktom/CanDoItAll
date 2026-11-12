@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -5,7 +6,29 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed record AgentToolReceiptReconciliationAdmission(
     AgentToolSessionAdmission Session,
     AgentToolApprovalBinding Binding,
-    AgentToolPreparedPayload Payload);
+    AgentToolPreparedPayload Payload) {
+    [JsonIgnore]
+    public AgentToolPinnedReceiptEvidence? PinnedEvidence { get; internal init; }
+    [JsonIgnore]
+    public AgentPlanningDecisionObservation? Planning { get; internal init; }
+    [JsonIgnore]
+    internal AgentToolPriorReceiptObservation? PriorInvocations { get; init; }
+}
+
+public sealed class AgentToolPinnedReceiptEvidence {
+    internal AgentToolPinnedReceiptEvidence(Guid dispatchLeaseId, long runRevision, long journalRevision,
+        DateTimeOffset executionCreatedAtUtc) {
+        DispatchLeaseId = dispatchLeaseId;
+        RunRevision = runRevision;
+        JournalRevision = journalRevision;
+        ExecutionCreatedAtUtc = executionCreatedAtUtc;
+    }
+
+    public Guid DispatchLeaseId { get; }
+    public long RunRevision { get; }
+    public long JournalRevision { get; }
+    public DateTimeOffset ExecutionCreatedAtUtc { get; }
+}
 
 public sealed record AgentToolReceiptObservation(AgentToolCommittedEffect? CommittedEffect, AgentToolProtocolEnvelope? Receipt) {
     public static AgentToolReceiptObservation NotObserved { get; } = new(null, null);
@@ -18,36 +41,55 @@ public interface IAgentToolReceiptReconciliationProvider {
 }
 
 public sealed class AgentToolReceiptAccessDeniedException()
-    : InvalidOperationException("Current authorization does not permit reading this cancelled proposal's owner receipt.");
+    : InvalidOperationException("Current authorization does not permit reading this proposal's owner receipt.");
+
+public sealed class AgentToolReceiptReadUnavailableException(Exception innerException)
+    : InvalidOperationException("Current authorization for this proposal's owner receipt could not be verified.", innerException);
 
 internal enum AgentToolReceiptReconciliationPurpose {
     UncertainEffect,
-    CachedReceiptDisclosure
+    CachedReceiptDisclosure,
+    PreparedSavedEffect
 }
 
 public sealed class AgentToolReceiptReconciliationClaim {
     private readonly AgentToolAdmissionJournal owner;
 
     internal AgentToolReceiptReconciliationClaim(AgentToolAdmissionJournal owner, AgentToolRunLease lease,
-        AgentToolApprovalBinding binding, AgentToolReceiptReconciliationPurpose purpose = AgentToolReceiptReconciliationPurpose.UncertainEffect) {
+        AgentToolApprovalBinding binding, AgentToolReceiptReconciliationPurpose purpose = AgentToolReceiptReconciliationPurpose.UncertainEffect,
+        Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>>? currentRead = null,
+        AgentToolReceiptReconciliationCursor? position = null) {
         this.owner = owner;
         Lease = lease;
         Binding = binding;
         Purpose = purpose;
+        CurrentRead = currentRead;
+        Position = position;
     }
 
     internal AgentToolRunLease Lease { get; }
     internal AgentToolApprovalBinding Binding { get; }
     internal AgentToolReceiptReconciliationPurpose Purpose { get; }
+    internal Func<AgentToolSessionObservation, CancellationToken, ValueTask<bool>>? CurrentRead { get; }
+    internal AgentToolReceiptReconciliationCursor? Position { get; }
 
     public ValueTask<AgentToolReceiptReconciliationAdmission> RequireAsync(CancellationToken cancellationToken = default)
         => owner.RequireReceiptReconciliationAsync(this, cancellationToken);
 
+    public async ValueTask<AgentToolPriorReceiptObservation> RequirePriorInvocationsAsync(
+        CancellationToken cancellationToken = default)
+        => (await owner.RequireReceiptReconciliationAsync(this, cancellationToken, includePrior: true)).PriorInvocations
+            ?? throw new AgentToolAdmissionException("tool-admission.prior-receipts-unavailable",
+                "The receipt owner did not provide verified prior invocation read evidence.");
+
     internal void RequireOwner(AgentToolAdmissionJournal candidate) {
         Lease.RequireOwner(candidate);
-        if (!ReferenceEquals(candidate, owner) || !Lease.ReconciliationOnly || !ReferenceEquals(AgentToolRunLease.Current, Lease)) {
+        if (!ReferenceEquals(candidate, owner) || Lease.Mode is not (AgentToolRunLeaseMode.CancelledReceiptReconciliation or
+                AgentToolRunLeaseMode.InterruptedEffectReconciliation or AgentToolRunLeaseMode.SavedEffectDispatch) ||
+            Lease.Mode == AgentToolRunLeaseMode.SavedEffectDispatch && Purpose != AgentToolReceiptReconciliationPurpose.PreparedSavedEffect ||
+            !ReferenceEquals(AgentToolRunLease.Current, Lease)) {
             throw new AgentToolAdmissionException("tool-admission.reconciliation-claim-lost",
-                "A live canonical read-only cancellation reconciliation claim is required.");
+                "A live canonical read-only receipt reconciliation claim is required.");
         }
     }
 }

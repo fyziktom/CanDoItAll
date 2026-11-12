@@ -1,4 +1,5 @@
 @using CanDoItAll.Web.Composition
+@inject INavigationInterception NavigationInterception
 
 <Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="ModuleAssemblies.All" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
@@ -7,4 +8,10 @@
     </Found>
 </Router>
 
-
+@code {
+    // The Router turns on client-side navigation only after its first render. A page that writes its URL state while it
+    // becomes interactive (a canonical form, a default selection) would otherwise make blazor.web.js fetch and render the
+    // whole page again, so the circuit turns it on before any page renders. The Router's own call later changes nothing.
+    protected override Task OnInitializedAsync()
+        => RendererInfo.IsInteractive ? NavigationInterception.EnableNavigationInterceptionAsync() : Task.CompletedTask;
+}

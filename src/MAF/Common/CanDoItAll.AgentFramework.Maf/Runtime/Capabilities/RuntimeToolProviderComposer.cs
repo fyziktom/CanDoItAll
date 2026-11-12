@@ -98,7 +98,7 @@ internal sealed class RuntimeToolProviderComposer(
                 allToolMetadata));
             var tools = filtered.Tools
                 .Select(tool => WrapRuntimeProviderToolForApproval(tool, request.SuppressApprovalRequirements,
-                    filtered.Metadata.SingleOrDefault(metadata => metadata.ToolName == tool.Name)))
+                    filtered.Metadata.SingleOrDefault(metadata => metadata.ToolName == tool.Name), request.Context))
                 .ToList();
             EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(toolProvider, request.State.Tools, tools);
             var toolMetadata = filtered.Metadata;
@@ -149,10 +149,20 @@ internal sealed class RuntimeToolProviderComposer(
     private AITool WrapRuntimeProviderToolForApproval(
         AITool tool,
         bool suppressApprovalRequirements,
-        AgentRuntimeToolMetadata? metadata)
+        AgentRuntimeToolMetadata? metadata,
+        AgentRuntimeToolProviderContext context)
     {
+        var governedApproval = metadata is {
+            ApprovalPolicy: AgentRuntimeToolApprovalPolicy.GovernedProcessAuthority,
+            PrepareAdmission: not null, AuthorizeAdmissionAsync: not null
+        } && context is {
+            Purpose: AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+            ToolAdmissionSupport: AgentToolAdmissionSupport.Recoverable,
+            AdmittedToolSession.BackgroundSource: not null,
+            Governance: null
+        };
         if (metadata?.Unavailability is not null ||
-            suppressApprovalRequirements && metadata?.PrepareAdmission is null ||
+            suppressApprovalRequirements && (metadata?.PrepareAdmission is null || governedApproval) ||
             tool is not AIFunction function ||
             !toolPolicies.RequiresApprovalByDefault(tool.Name)) {
             return tool;
@@ -283,6 +293,10 @@ internal sealed class RuntimeToolProviderComposer(
         }
 
         foreach (var metadata in declaredMetadata) {
+            if (metadata.ApprovalPolicy == AgentRuntimeToolApprovalPolicy.GovernedProcessAuthority &&
+                (metadata.PrepareAdmission is null || metadata.AuthorizeAdmissionAsync is null)) {
+                throw new InvalidOperationException($"Runtime tool '{metadata.ToolName}' requires prepared admission and current owner authorization for governed approval.");
+            }
             if (!ToolCapabilityRegistry.TryResolve(metadata.ToolName, out _) &&
                 toolPolicies.TryResolve(metadata.ToolName, out var policy) &&
                 (metadata.OperationKind != MapRuntimeToolOperationKind(policy.Classification) ||

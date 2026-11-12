@@ -41,6 +41,8 @@ public partial class CrmHrCrmPage : ICrmHrCrmWorkspaceView
     bool ICrmHrCrmWorkspaceView.IsAccountDialogOpen => isAccountDialogOpen;
     bool ICrmHrCrmWorkspaceView.IsOpportunityConversionBusy => isOpportunityConversionBusy;
     int ICrmHrCrmWorkspaceView.SelectedCrmRecordTabIndex => SelectedCrmRecordTabIndex;
+    PagedRecordQueryState<PartyRecordScope>? ICrmHrCrmWorkspaceView.CatalogQuery => CatalogQuery;
+    Task ICrmHrCrmWorkspaceView.HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change) => HandleCatalogQueryChangedAsync(change);
     IReadOnlyList<PartyOptionModel> ICrmHrCrmWorkspaceView.ParticipantOptions => ParticipantOptions;
     CrmOpportunityDetailModel? ICrmHrCrmWorkspaceView.SelectedOpportunity => SelectedOpportunity;
     Guid? ICrmHrCrmWorkspaceView.SelectedConnectionPartyId => SelectedConnectionPartyId;
@@ -56,17 +58,17 @@ public partial class CrmHrCrmPage : ICrmHrCrmWorkspaceView
     Task ICrmHrCrmWorkspaceView.CloseConnectionPartyPickerAsync() => CloseConnectionPartyPickerAsync();
     Task ICrmHrCrmWorkspaceView.ConfirmConnectionPartyAsync(Guid partyId) => ConfirmConnectionPartyAsync(partyId);
     void ICrmHrCrmWorkspaceView.ClearConnectionParty(int index) => ClearConnectionParty(index);
-    void ICrmHrCrmWorkspaceView.UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds) => UpdateConnectedRecordProjects(index, projectIds);
+    Task ICrmHrCrmWorkspaceView.UpdateConnectedRecordProjects(int index, IReadOnlyList<Guid> projectIds) => UpdateConnectedRecordProjects(index, projectIds);
     string ICrmHrCrmWorkspaceView.ResolveConnectionPartyLabel(Guid partyId) => ResolveConnectionPartyLabel(partyId);
     Task ICrmHrCrmWorkspaceView.SaveConnectedRecordsAsync() => SaveConnectedRecordsAsync();
     Task ICrmHrCrmWorkspaceView.SaveInteractionAsync() => SaveInteractionAsync();
     Task ICrmHrCrmWorkspaceView.SelectOpportunityAsync(Guid opportunityId) => SelectOpportunityAsync(opportunityId);
     Task ICrmHrCrmWorkspaceView.SaveOpportunityAsync(CrmOpportunityEditorModel model) => SaveOpportunityAsync(model);
-    Task ICrmHrCrmWorkspaceView.AdvanceOpportunityStageAsync(Guid opportunityId) => AdvanceOpportunityStageAsync(opportunityId);
-    void ICrmHrCrmWorkspaceView.OpenOpportunityCreateDialog() => OpenOpportunityCreateDialog();
+    Task ICrmHrCrmWorkspaceView.AdvanceOpportunityStageAsync(CrmOpportunityStageAdvance intent) => AdvanceOpportunityStageAsync(intent);
+    Task ICrmHrCrmWorkspaceView.OpenOpportunityCreateDialog() => OpenOpportunityCreateDialog();
     Task ICrmHrCrmWorkspaceView.CloseOpportunityCreateDialogAsync() => CloseOpportunityCreateDialogAsync();
     Task ICrmHrCrmWorkspaceView.CloseOpportunityDetailDialogAsync() => CloseOpportunityDetailDialogAsync();
-    void ICrmHrCrmWorkspaceView.OpenOpportunityEditDialog() => OpenOpportunityEditDialog();
+    Task ICrmHrCrmWorkspaceView.OpenOpportunityEditDialog() => OpenOpportunityEditDialog();
     Task ICrmHrCrmWorkspaceView.CloseOpportunityEditDialogAsync() => CloseOpportunityEditDialogAsync();
     Task ICrmHrCrmWorkspaceView.OpenConversionDialogAsync() => OpenConversionDialogAsync();
     Task ICrmHrCrmWorkspaceView.CloseOpportunityConversionDialogAsync() => CloseOpportunityConversionDialogAsync();
@@ -75,6 +77,5 @@ public partial class CrmHrCrmPage : ICrmHrCrmWorkspaceView
     Task ICrmHrCrmWorkspaceView.HandleAccountBrowserLoadFailedAsync(Exception exception) => HandleAccountBrowserLoadFailedAsync(exception);
     Task ICrmHrCrmWorkspaceView.HandleOpportunityPickerLoadFailedAsync(Exception exception) => HandleOpportunityPickerLoadFailedAsync(exception);
     Task ICrmHrCrmWorkspaceView.OpenLinkedProjectAsync() => OpenLinkedProjectAsync();
-    void ICrmHrCrmWorkspaceView.ToggleInteractionParticipant(Guid partyId, ChangeEventArgs args) => ToggleInteractionParticipant(partyId, args);
     void ICrmHrCrmWorkspaceView.OpenAgentChats() => OpenAgentChats();
 }

@@ -39,6 +39,10 @@ public static class InteractiveServerServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Scoped<IInteractiveAccessPrincipalProvider>(
             serviceProvider => serviceProvider
                 .GetRequiredService<LocalOperatorAuthenticationStateProvider>()));
+        services.Replace(ServiceDescriptor.Scoped<CanDoItAll.Modules.Prompts.IPromptGalleryUiAccess,
+            CanDoItAll.Web.Api.WebPromptGalleryUiAccess>());
+        services.Replace(ServiceDescriptor.Scoped<CanDoItAll.Editing.IEditingUiAccess,
+            CanDoItAll.Web.Api.WebEditingUiAccess>());
         return services;
     }
 }

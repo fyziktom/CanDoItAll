@@ -71,9 +71,13 @@ internal sealed class ProjectStructureFileActionCoordinator(
     public async ValueTask<ProjectStructureFileBrowserWorkspace> OpenAsync(
         ProjectStructureFileCollectionRequest request,
         bool includeSubprojects,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         ScopeResolution scopeResolution = await ResolveScopesAsync(
             request,
             includeSubprojects,
@@ -86,7 +90,10 @@ internal sealed class ProjectStructureFileActionCoordinator(
         foreach (FileToolsSemanticScope scope in scopeResolution.Scopes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            FileToolsBrowseSession session = await browseSessionFactory.CreateAsync(scope, cancellationToken);
+            FileToolsBrowseSession session = await browseSessionFactory.CreateAsync(scope, cancellationToken, authorizeRead);
+            if (authorizeRead is not null) {
+                await authorizeRead(cancellationToken);
+            }
             defaultSort ??= session.DefaultSort;
             if (session.DefaultSort != defaultSort)
             {
@@ -150,13 +157,15 @@ internal sealed class ProjectStructureFileActionCoordinator(
             sourceScopes,
             sourceActions,
             revision,
-            includeSubprojects);
+            includeSubprojects,
+            providers.ToDictionary(provider => provider.Descriptor.Id));
     }
 
     public async ValueTask<ProjectStructureKnownFileInteraction> ActivateAsync(
         ProjectStructureFileBrowserWorkspace workspace,
         FileBrowserItemKey itemKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         if (workspace.IsDisposed)
@@ -165,6 +174,16 @@ internal sealed class ProjectStructureFileActionCoordinator(
         }
 
         FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
+        async ValueTask AuthorizeOriginalReadAsync(CancellationToken token) {
+            if (authorizeRead is not null) {
+                await authorizeRead(token);
+            }
+            await workspace.RequireSourceReadAsync(itemKey.SourceId, token);
+            if (authorizeRead is not null) {
+                await authorizeRead(token);
+            }
+        }
+        await AuthorizeOriginalReadAsync(cancellationToken);
 
         FileToolsKnownFileActivation activation = await itemActivator.ActivateAsync(
             scope,
@@ -173,9 +192,11 @@ internal sealed class ProjectStructureFileActionCoordinator(
             cancellationToken);
         try
         {
+            await AuthorizeOriginalReadAsync(cancellationToken);
             FileToolsKnownFileSession session = await knownFileSessionFactory.CreateAsync(
                 activation.Request,
-                cancellationToken);
+                cancellationToken, AuthorizeOriginalReadAsync);
+            await AuthorizeOriginalReadAsync(cancellationToken);
             var request = new FileInteractionRequest(
                 session.File,
                 activation.FileName,
@@ -198,7 +219,8 @@ internal sealed class ProjectStructureFileActionCoordinator(
         CancellationToken cancellationToken = default)
     {
         FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
-        return itemActionService.LaunchAsync(scope, itemKey, action, cancellationToken);
+        return itemActionService.LaunchAsync(scope, itemKey, action, cancellationToken,
+            token => workspace.RequireSourceReadAsync(itemKey.SourceId, token));
     }
 
     public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
@@ -207,7 +229,8 @@ internal sealed class ProjectStructureFileActionCoordinator(
         CancellationToken cancellationToken = default)
     {
         FileToolsSemanticScope scope = ResolveScope(workspace, itemKey.SourceId);
-        return itemActionService.AuthorizeDownloadAsync(scope, itemKey, cancellationToken);
+        return itemActionService.AuthorizeDownloadAsync(scope, itemKey, cancellationToken,
+            token => workspace.RequireSourceReadAsync(itemKey.SourceId, token));
     }
 
     private static FileToolsSemanticScope ResolveScope(
@@ -279,6 +302,7 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
 {
     private IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes;
     private IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions;
+    private IReadOnlyDictionary<FileBrowserSourceId, IFileBrowserProvider> sourceProviders;
     private bool disposed;
 
     public ProjectStructureFileBrowserWorkspace(
@@ -287,12 +311,14 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
         IReadOnlyDictionary<FileBrowserSourceId, FileToolsSemanticScope> sourceScopes,
         IReadOnlyDictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability> sourceActions,
         string revision,
-        bool includeSubprojects)
+        bool includeSubprojects,
+        IReadOnlyDictionary<FileBrowserSourceId, IFileBrowserProvider> sourceProviders)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Browser = browser ?? throw new ArgumentNullException(nameof(browser));
         this.sourceScopes = sourceScopes ?? throw new ArgumentNullException(nameof(sourceScopes));
         this.sourceActions = sourceActions ?? throw new ArgumentNullException(nameof(sourceActions));
+        this.sourceProviders = sourceProviders ?? throw new ArgumentNullException(nameof(sourceProviders));
         if (!sourceScopes.Keys.ToHashSet().SetEquals(sourceActions.Keys))
         {
             throw new ArgumentException("Every file source must declare host action availability.", nameof(sourceActions));
@@ -313,6 +339,15 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
     public int SourceCount => sourceScopes.Count;
 
     public bool IsDisposed => disposed;
+
+    public async ValueTask RequireSourceReadAsync(FileBrowserSourceId sourceId, CancellationToken cancellationToken) {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (!sourceProviders.TryGetValue(sourceId, out var provider)) {
+            throw new FileAccessDeniedException(FileAccessFailureCode.SourceUnavailable, "The original file collection source is unavailable.");
+        }
+        await provider.GetRootAsync(FileBrowserMetadataRequest.Standard, cancellationToken);
+        ObjectDisposedException.ThrowIf(disposed, this);
+    }
 
     public bool TryGetScope(FileBrowserSourceId sourceId, out FileToolsSemanticScope? scope)
         => sourceScopes.TryGetValue(sourceId, out scope);
@@ -335,6 +370,7 @@ internal sealed class ProjectStructureFileBrowserWorkspace : IAsyncDisposable
         disposed = true;
         sourceScopes = new Dictionary<FileBrowserSourceId, FileToolsSemanticScope>();
         sourceActions = new Dictionary<FileBrowserSourceId, FileToolsBrowseSourceActionAvailability>();
+        sourceProviders = new Dictionary<FileBrowserSourceId, IFileBrowserProvider>();
         await Browser.DisposeAsync();
     }
 }

@@ -1,3 +1,4 @@
+@using CanDoItAll.Editing
 @namespace CanDoItAll.CrmHr.UI.Recruiting
 @inherits CrmHrWorkspaceSurface<ICrmHrRecruitingWorkspaceView>
 
@@ -55,7 +56,7 @@
                         </Actions>
                     </ListPanelHeader>
 
-                    <PagedRecordBrowser @key="View.ApplicationBrowserRevision"
+                    <PagedRecordBrowser RefreshVersion="@(View.ApplicationBrowserRevision + CatalogRefreshVersion)"
                                         TKey="Guid"
                                         TFilter="RecruitmentApplicationScope"
                                         Loader="View.LoadApplicationPageAsync"
@@ -64,7 +65,10 @@
                                         ShowTagFilter="false"
                                         Selection="@View.ApplicationSelection"
                                         SelectionChanged="View.SelectApplicationAsync"
+                                        Query="@View.CatalogQuery"
+                                        QueryChanged="View.HandleCatalogQueryChangedAsync"
                                         LoadFailed="View.HandleApplicationPageLoadFailed"
+                                        MaximumSearchLength="RecruitmentApplicationQueryLimits.MaximumSearchLength"
                                         PageSize="@RecruitmentApplicationQueryLimits.DefaultPageSize"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
                                         GridMode="PagedRecordGridMode.BoundedCatalog"
@@ -91,6 +95,7 @@
                         TestId="crmhr-recruiting-record-dialog"
                         OnClose="View.CloseRecruitmentDialogAsync">
                     <ChildContent>
+                    @RecordUpdates
                     @if (recruitmentWorkspace.HasSelectedApplication)
                     {
                         <SurfaceCard>
@@ -116,8 +121,8 @@
                                         <StatusBadge Tone="@CrmHrRecruitingWorkspacePresentation.ResolveBindingTone(recruitmentWorkspace.CandidateBindingStatus)"
                                                      Text="@CrmHrRecruitingWorkspacePresentation.FormatBinding(recruitmentWorkspace.CandidateBindingStatus)" />
                                     }
-                                    <StatusBadge Tone="@CrmHrRecruitingWorkspacePresentation.ResolveStageTone(View.ApplicationEditor.Stage)" Text="@View.ApplicationEditor.Stage.ToString()" />
-                                    <StatusBadge Tone="@CrmHrRecruitingWorkspacePresentation.ResolveDecisionTone(View.ApplicationEditor.Decision)" Text="@View.ApplicationEditor.Decision.ToString()" />
+                                    <StatusBadge Tone="@CrmHrRecruitingWorkspacePresentation.ResolveStageTone(recruitmentWorkspace.Application.Stage)" Text="@recruitmentWorkspace.Application.Stage.ToString()" />
+                                    <StatusBadge Tone="@CrmHrRecruitingWorkspacePresentation.ResolveDecisionTone(recruitmentWorkspace.Application.Decision)" Text="@recruitmentWorkspace.Application.Decision.ToString()" />
                                 </Cluster>
                             </Split>
 
@@ -148,7 +153,7 @@
 
                         <Tabs SelectedIndex="@View.SelectedRecruitingTabIndex"
                               SelectedIndexChanged="View.HandleRecruitingTabChangedAsync"
-                              RenderMode="TabRenderMode.Server"
+                              RenderMode="TabRenderMode.Client"
                               Variant="TabsVariant.WorkspaceSecondary"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Wrap"
@@ -157,7 +162,8 @@
                             <TabsItem Text="Application"
                                       Icon="person_search"
                                       data-testid="crmhr-recruiting-tab-application">
-                            <CandidatePipeline Draft="View.ApplicationEditor"
+                            <CandidatePipeline @key="View.ApplicationEditor" Draft="View.ApplicationEditor" Editing="ApplicationEditing"
+                                               InputChanged="ApplicationInputChanged" SaveDisabled="ApplicationSaveDisabled" RetainedCandidateInput="RetainedCandidateInput" WritesDisabled="WritesDisabled"
                                                StageHistory="recruitmentWorkspace.StageHistory"
                                                HasWorkforceProfile="recruitmentWorkspace.HasWorkforceProfile"
                                                SaveApplication="View.SaveApplicationAsync"
@@ -169,7 +175,8 @@
                             <TabsItem Text="Interviews"
                                       Icon="event"
                                       data-testid="crmhr-recruiting-tab-interviews">
-                            <InterviewSchedulePanel Draft="View.InterviewEditor"
+                            <InterviewSchedulePanel @key="View.InterviewEditor" Draft="View.InterviewEditor"
+                                                    InputChanged="InterviewInputChanged" SaveDisabled="InterviewSaveDisabled" WritesDisabled="WritesDisabled"
                                                     Interviews="recruitmentWorkspace.Interviews"
                                                     SaveInterview="View.SaveInterviewAsync"
                                                     ResetInterview="View.ResetInterviewAsync"
@@ -185,7 +192,10 @@
                             <TabsItem Text="Development"
                                       Icon="school"
                                       data-testid="crmhr-recruiting-tab-development">
-                            <OnboardingChecklistPanel SupportDraft="View.SupportEditor"
+                            @SupportEditing
+                            <OnboardingChecklistPanel DatabaseProfileId="View.DatabaseProfileId"
+                                                      TaskInputChanged="TaskInputChanged" SupportInputChanged="SupportInputChanged"
+                                                      TaskSaveDisabled="TaskSaveDisabled" SupportSaveDisabled="SupportSaveDisabled" WritesDisabled="WritesDisabled" SupportDraft="View.SupportEditor"
                                                       CurrentAssignments="recruitmentWorkspace.SupportAssignments"
                                                       TaskDraft="View.TaskEditor"
                                                       Tasks="recruitmentWorkspace.LifecycleTasks"
@@ -198,84 +208,9 @@
                             <TabsItem Text="Conversion"
                                       Icon="group_add"
                                       data-testid="crmhr-recruiting-tab-conversion">
-                            <FormSection Title="Hiring conversion"
-                                         Description="Convert an approved candidate on the same Party identity. Technical-agent activation remains a separate AgentFramework command.">
-                                    <SurfaceCard>
-                                        @if (recruitmentWorkspace.HasWorkforceProfile)
-                                        {
-                                            <div class="rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-700" data-testid="crmhr-recruiting-convert-existing-callout">
-                                                This candidate already has a workforce profile. Saving conversion updates that existing identity instead of creating another person.
-                                            </div>
-                                        }
-
-                                        @if (View.ConversionEligibilityError is { } conversionError)
-                                        {
-                                            <Alert AlertStyle="AlertStyle.Warning" Class="mt-4">
-                                                @conversionError.Message
-                                            </Alert>
-                                        }
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
-                                            <FormField Text="Workforce kind">
-                                                <InputSelect @bind-Value="View.ConversionEditor.WorkforceKind" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
-                                                    @foreach (var workforceKind in Enum.GetValues<WorkforceKind>())
-                                                    {
-                                                        <option value="@workforceKind">@workforceKind</option>
-                                                    }
-                                                </InputSelect>
-                                            </FormField>
-                                            <FormField Text="Job title">
-                                                <InputText @bind-Value="View.ConversionEditor.JobTitle" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
-                                            </FormField>
-                                            <FormField Text="Discipline">
-                                                <InputText @bind-Value="View.ConversionEditor.Discipline" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
-                                            </FormField>
-                                        </Grid>
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
-                                            <FormField Text="Seniority">
-                                                <InputText @bind-Value="View.ConversionEditor.Seniority" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
-                                            </FormField>
-                                            <PartyPicker Label="Home unit"
-                                                         TestIdPrefix="crmhr-recruiting-convert-home-unit"
-                                                         AllowedScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                                         InitialScope="@(PartyRecordScope.Organizations | PartyRecordScope.OrganizationUnits)"
-                                                         SelectedPartyId="@View.ConversionEditor.HomeUnitPartyId"
-                                                         SelectedPartyIdChanged="View.SetConversionHomeUnitAsync" />
-                                            <PartyPicker Label="Manager"
-                                                         TestIdPrefix="crmhr-recruiting-convert-manager"
-                                                         AllowedScope="PartyRecordScope.People"
-                                                         InitialScope="PartyRecordScope.People"
-                                                         ExcludedPartyId="@View.SelectedPartyId"
-                                                         SelectedPartyId="@View.ConversionEditor.ManagerPartyId"
-                                                         SelectedPartyIdChanged="View.SetConversionManagerAsync" />
-                                        </Grid>
-
-                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-                                            <FormField Text="Start date"><InputDate @bind-Value="View.ConversionEditor.StartDate" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
-                                            <FormField Text="Location"><InputText @bind-Value="View.ConversionEditor.Location" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
-                                            <FormField Text="Time zone"><InputText @bind-Value="View.ConversionEditor.TimeZone" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
-                                            <FormField Text="Capacity h/week"><InputNumber @bind-Value="View.ConversionEditor.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
-                                        </Grid>
-
-                                        <div class="mt-4">
-                                            <FormField Text="Notes">
-                                                <InputTextArea @bind-Value="View.ConversionEditor.Notes" class="cda-input cda-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
-                                            </FormField>
-                                        </div>
-
-                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
-                                            <Button Text="Convert to workforce"
-                                                    Disabled="@(View.ConversionEligibilityError is not null)"
-                                                    Click="View.ConvertCandidateAsync"
-                                                    data-testid="crmhr-recruiting-convert-save-button" />
-                                            @if (View.SelectedPartyId.HasValue)
-                                            {
-                                                <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="View.OpenWorkforceAsync" data-testid="crmhr-recruiting-convert-open-workforce" />
-                                            }
-                                        </Cluster>
-                                    </SurfaceCard>
-                            </FormSection>
+                            <RecruitmentConversionForm @key="View.ConversionEditor" Draft="View.ConversionEditor" CandidatePartyId="View.SelectedPartyId"
+                                HasWorkforceProfile="recruitmentWorkspace.HasWorkforceProfile" EligibilityError="View.ConversionEligibilityError" SaveDisabled="ConversionSaveDisabled"
+                                Save="View.ConvertCandidateAsync" OpenWorkforce="View.OpenWorkforceAsync" InputChanged="ConversionInputChanged" Editing="ConversionEditing" />
                             </TabsItem>
                             }
                         </Tabs>
@@ -308,6 +243,23 @@
 </PageScaffold>
 
 @code {
+    [Parameter] public long CatalogRefreshVersion { get; set; }
+    [Parameter] public RenderFragment? RecordUpdates { get; set; }
+    [Parameter] public RenderFragment? ApplicationEditing { get; set; }
+    [Parameter] public RenderFragment? ConversionEditing { get; set; }
+    [Parameter] public RenderFragment? SupportEditing { get; set; }
+    [Parameter] public bool WritesDisabled { get; set; }
+    [Parameter] public bool ApplicationSaveDisabled { get; set; }
+    [Parameter] public bool RetainedCandidateInput { get; set; }
+    [Parameter] public bool InterviewSaveDisabled { get; set; }
+    [Parameter] public bool TaskSaveDisabled { get; set; }
+    [Parameter] public bool SupportSaveDisabled { get; set; }
+    [Parameter] public bool ConversionSaveDisabled { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentApplicationField>> ApplicationInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentInterviewField>> InterviewInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentTaskField>> TaskInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentSupportField>> SupportInputChanged { get; set; }
+    [Parameter] public EventCallback<RecordInput<RecruitmentConversionField>> ConversionInputChanged { get; set; }
     // Host-owned region: the host composes its adapter here.
     [Parameter]
     public RenderFragment? AgentEvidence { get; set; }

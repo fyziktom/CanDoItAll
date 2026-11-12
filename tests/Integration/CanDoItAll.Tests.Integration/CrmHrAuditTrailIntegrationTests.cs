@@ -153,19 +153,21 @@ public sealed class CrmHrAuditTrailIntegrationTests
         var hrService = scope.ServiceProvider.GetRequiredService<HrService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var createResult = await partyDirectoryService.SavePartyAsync(BuildPartyEditor("Mila Archive", null, PartyLifecycleStatus.Active));
+        var createResult = await partyDirectoryService.SavePartyAsync(BuildPartyEditor("Mila Archive", PartyLifecycleStatus.Active));
         Assert.True(createResult.IsSuccess);
 
         var savedParty = await partyDirectoryService.GetPartyAsync(createResult.Value);
         Assert.NotNull(savedParty);
 
-        var archiveResult = await partyDirectoryService.SavePartyAsync(BuildPartyEditor("Mila Archive", savedParty.Id, PartyLifecycleStatus.Archived));
+        savedParty.LifecycleStatus = PartyLifecycleStatus.Archived;
+        var archiveResult = await partyDirectoryService.SavePartyAsync(savedParty);
         Assert.True(archiveResult.IsSuccess);
 
         savedParty = await partyDirectoryService.GetPartyAsync(createResult.Value);
         Assert.NotNull(savedParty);
 
-        var reactivateResult = await partyDirectoryService.SavePartyAsync(BuildPartyEditor("Mila Archive", savedParty.Id, PartyLifecycleStatus.Active));
+        savedParty.LifecycleStatus = PartyLifecycleStatus.Active;
+        var reactivateResult = await partyDirectoryService.SavePartyAsync(savedParty);
         Assert.True(reactivateResult.IsSuccess);
 
         var workforceResult = await hrService.SaveWorkforceProfileAsync(new WorkforceProfileEditorModel
@@ -205,11 +207,10 @@ public sealed class CrmHrAuditTrailIntegrationTests
         Assert.True(workspace.UpdatedAtUtc > DateTimeOffset.MinValue);
     }
 
-    private static PartyEditorModel BuildPartyEditor(string displayName, Guid? id, PartyLifecycleStatus status)
+    private static PartyEditorModel BuildPartyEditor(string displayName, PartyLifecycleStatus status)
     {
         return new PartyEditorModel
         {
-            Id = id,
             PartyType = PartyType.Person,
             LifecycleStatus = status,
             DisplayName = displayName,

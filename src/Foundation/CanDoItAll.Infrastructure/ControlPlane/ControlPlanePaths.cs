@@ -11,6 +11,9 @@ public interface IControlPlanePathResolver
 {
     string ResolveRootPath();
 
+    string ResolveRootPathForRead()
+        => throw new NotSupportedException("This control-plane resolver does not support read-only path observation.");
+
     string ResolveDatabaseProfilesRootPath();
 
     string ResolveCatalogFilePath();
@@ -96,10 +99,13 @@ public sealed class ControlPlanePathResolver(
 
     public string ResolveRootPath()
     {
-        var path = ControlPlanePathDefaults.ResolveControlPlaneRootPath(hostEnvironment, _options);
+        var path = ResolveRootPathForRead();
         durableFileWriter.EnsureDirectory(path, path, requirePrivateUnixMode: true);
         return path;
     }
+
+    public string ResolveRootPathForRead()
+        => ControlPlanePathDefaults.ResolveControlPlaneRootPath(hostEnvironment, _options);
 
     public string ResolveDatabaseProfilesRootPath()
     {

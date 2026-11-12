@@ -19,15 +19,23 @@ public sealed class LlmChatOperationApplicationService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        LlmChatSendAdmission? accepted = null;
         try
         {
-            var admissionResult = await admissionService.AdmitAsync(command, cancellationToken).ConfigureAwait(false);
+            Result<LlmChatSendAdmission> admissionResult;
+            try {
+                admissionResult = await admissionService.AdmitAsync(command, cancellationToken).ConfigureAwait(false);
+            } catch (LlmChatCommittedException<Result<LlmChatSendAdmission>> exception) when (exception.Accepted.IsSuccess) {
+                accepted = exception.Accepted.Value!;
+                throw;
+            }
             if (admissionResult.IsFailure)
             {
                 return Result<LlmChatOperationDetails>.Failure(admissionResult.Errors);
             }
 
             var admission = admissionResult.Value!;
+            accepted = admission;
             if (!admission.Operation.IsTerminal &&
                 admission.Operation.Status != LlmChatOperationStatus.RecoveryRequired)
             {
@@ -36,12 +44,29 @@ public sealed class LlmChatOperationApplicationService(
 
             var details = await stateMachine.ResolveExistingAsync(admission.Operation, cancellationToken)
                 .ConfigureAwait(false);
-            return details.IsSuccess
-                ? Result<LlmChatOperationDetails>.Success(details.Value! with
-                {
-                    Replayed = !admission.Created
-                })
-                : details;
+            if (details.IsFailure) {
+                throw new InvalidOperationException("The admitted operation needs a current-state read.");
+            }
+            return Result<LlmChatOperationDetails>.Success(details.Value! with { Replayed = !admission.Created });
+        }
+        catch (Exception exception) when (accepted is not null) {
+            if (!accepted.Operation.IsTerminal && accepted.Operation.Status != LlmChatOperationStatus.RecoveryRequired) {
+                try {
+                    dispatchSignal.Signal();
+                } catch (Exception signalFailure) {
+                    exception = new AggregateException(exception, signalFailure);
+                }
+            }
+            logger.LogWarning("Operation {OperationId} is admitted; reconciliation failed with {FailureType}.",
+                accepted.Operation.Id.Value, exception.GetType().Name);
+            var snapshot = new LlmChatOperationDetails(accepted.Operation, null, []) {
+                Replayed = !accepted.Created,
+                LastEventSequence = accepted.Operation.LastEventSequence
+            };
+            throw new LlmChatCommittedException<Result<LlmChatOperationDetails>>(Result<LlmChatOperationDetails>.Success(snapshot), exception);
+        }
+        catch (UnauthorizedAccessException) {
+            throw;
         }
         catch (ArgumentException exception)
         {

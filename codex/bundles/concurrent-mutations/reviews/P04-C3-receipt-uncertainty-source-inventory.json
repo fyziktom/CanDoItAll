@@ -1,0 +1,217 @@
+{
+  "kind": "C3 receipt-first uncertainty source-only amendment",
+  "supersedesOnlyFourSourceHashes": true,
+  "predecessorInventories": [
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P04-C3-source-inventory.json",
+      "sha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+      "bytes": 7673
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-parent-seam-source-inventory.json",
+      "sha256": "4B37BEF865C2FC7C882B1C219A403ACDEB6B00B9032F76B2D758AB570A2C9E25",
+      "bytes": 7374
+    }
+  ],
+  "source": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanPublisher.cs",
+      "sha256": "59B1613121A02134D82469DF377AFA744EBAA0FA055E184AC2E80A5E9FBC74C9",
+      "bytes": 14242,
+      "managedPredecessorSha256": "DD852268A6CA1A14FDA180B51BF1878124662332CBFFE5F0C3272FF0D8894D3B",
+      "managedPredecessorPath": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanPublisher.cs.txt",
+      "parentBaseSha256": null,
+      "parentBaseState": "absent"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/Planning/ProjectTaskPlanReceiptReader.cs",
+      "sha256": "CE15C369C057720B7A23BD3FBC17F5AB827D382EF3C39DA62AFB05A5442AE14F",
+      "bytes": 13326,
+      "managedPredecessorSha256": "F7437BE60551A816C9FF38F77E67ED6280D374628BC4518836FC1A11B081054C",
+      "managedPredecessorPath": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanReceiptReader.cs.txt",
+      "parentBaseSha256": null,
+      "parentBaseState": "absent"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationTests.cs",
+      "sha256": "BD32CF8B71327F985570F49EBCF8BC5398028678C8F705D212F79E4DD0F53BF0",
+      "bytes": 27439,
+      "managedPredecessorSha256": "9D2C378F8FC0D211CF894FC1AA0D478AD9ACA49DA70B2C75D30D016B6C97DC60",
+      "managedPredecessorPath": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanOperationTests.cs.txt",
+      "parentBaseSha256": null,
+      "parentBaseState": "absent"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanRetentionTests.cs",
+      "sha256": "C769CE4C633B46C7D8E7B117C9A8246B06D97D9091F4F9F0B59810CC4FA1C66D",
+      "bytes": 21942,
+      "managedPredecessorSha256": "5F5BBB16AA460CE66CA8680AB89F713858D772F59DF3C4A879499722DE3B9717",
+      "managedPredecessorPath": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanRetentionTests.cs.txt",
+      "parentBaseSha256": null,
+      "parentBaseState": "absent"
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/validation/P04-C3-receipt-uncertainty-amendment.md",
+    "sha256": "65A92B423CC0A4159EB3DAEF5ED13BDCF23DEEEE2E02A357D1A9EDC80433DB85",
+    "bytes": 4747
+  },
+  "preservedPredecessors": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/P04-C3-source-inventory.json.txt",
+      "sha256": "8B3FF71B2F5558784E64F3CA3FC12F58B94074D26833CA6AFC95BB1B0E69E232",
+      "bytes": 7673
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanOperationTests.cs.txt",
+      "sha256": "9D2C378F8FC0D211CF894FC1AA0D478AD9ACA49DA70B2C75D30D016B6C97DC60",
+      "bytes": 24278
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanPublisher.cs.txt",
+      "sha256": "DD852268A6CA1A14FDA180B51BF1878124662332CBFFE5F0C3272FF0D8894D3B",
+      "bytes": 14172
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanReceiptReader.cs.txt",
+      "sha256": "F7437BE60551A816C9FF38F77E67ED6280D374628BC4518836FC1A11B081054C",
+      "bytes": 13116
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P04-C3-receipt-uncertainty-predecessors/ProjectTaskPlanRetentionTests.cs.txt",
+      "sha256": "5F5BBB16AA460CE66CA8680AB89F713858D772F59DF3C4A879499722DE3B9717",
+      "bytes": 16884
+    }
+  ],
+  "counts": {
+    "changedClassFacts": 20,
+    "newRows": 0,
+    "dormantOwnerOrdinaryFacts": 42,
+    "separateLongRunningFacts": 1,
+    "parentSeamOrdinaryRows": 187,
+    "separateParentLiveProcessRows": 2,
+    "selectorsOrAttributesChanged": false
+  },
+  "testCountEvidence": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectTaskPlanOperationContractTests.cs",
+      "sha256": "5820E72EC2AC62FE466BB023BC0AF1E8BE62EAF592C865EC54E5C1231D0C1EF9",
+      "bytes": 14427,
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests",
+      "factRows": 10,
+      "theoryRows": 0,
+      "skippedRows": 0,
+      "lane": "ordinary",
+      "methods": [
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Caller_proposal_and_acknowledgement_capture_original_values_without_list_or_byte_aliases",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Empty_identity_unknown_kind_version_and_noncanonical_digest_are_refused",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Semantic_digest_includes_original_operation_basis_policy_source_and_proposal_order",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Original_capture_time_is_intent_identity_but_not_material_change_history",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Fixed_pool_registration_snapshots_timing_and_never_aliases_projects_or_accepts_unbounded_deadlines",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Accepted_codec_retains_exact_ordered_ids_defaults_and_bytes_independent_of_later_rows",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Actual_receipt_payload_and_metadata_are_bounded_before_they_can_be_replayed",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Duplicate_unknown_missing_non_utc_and_inconsistent_retained_fields_never_become_acceptance",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Stored_result_requires_exact_indexed_identity_source_digest_and_issued_horizon",
+        "CanDoItAll.Tests.Unit.ProjectTaskPlanOperationContractTests.Outcome_knowledge_cannot_label_commit_uncertainty_as_a_definite_rejection"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationTests.cs",
+      "sha256": "BD32CF8B71327F985570F49EBCF8BC5398028678C8F705D212F79E4DD0F53BF0",
+      "bytes": 27439,
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests",
+      "factRows": 14,
+      "theoryRows": 0,
+      "skippedRows": 0,
+      "lane": "ordinary",
+      "methods": [
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.One_batch_commits_exact_tasks_bindings_and_receipt_without_per_task_reads_or_global_binding_lock",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Concurrent_identical_addresses_return_one_exact_committed_batch",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Reusing_an_address_for_changed_intent_never_appends_another_batch",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Same_operation_identifier_in_another_trusted_caller_partition_has_distinct_evidence",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Failure_after_real_flush_rolls_back_both_task_rows_and_receipt",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Lost_acknowledgement_after_real_commit_recovers_the_original_exact_receipt",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Acknowledged_commit_survives_source_release_failure_without_reclassifying_effect",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Lost_commit_acknowledgement_and_revoked_or_unavailable_disclosure_remain_unconfirmed",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Historical_replay_requires_current_read_but_not_new_write_authority_or_tighter_policy",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Duplicate_found_after_source_acquisition_releases_sql_and_first_source_before_independent_disclosure",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Admission_deadline_is_rechecked_after_an_actual_project_lock_wait",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Wrong_namespace_caller_future_epoch_and_corrupt_protocol_never_dispatch_authority",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Save_time_validation_failure_leaves_no_receipt_and_no_partial_batch",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationTests.Original_source_generation_and_complete_additional_admissions_are_required_before_effect"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanCurrentnessTests.cs",
+      "sha256": "0E779345606AD3804932148664AC190190D585C162FA6B588106B73E13FFA707",
+      "bytes": 16757,
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests",
+      "factRows": 12,
+      "theoryRows": 0,
+      "skippedRows": 0,
+      "lane": "ordinary",
+      "methods": [
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Empty_original_set_detects_native_task_insert_before_owner_exclusion",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Actual_held_native_writer_commit_is_visible_after_project_advisory_wait",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Native_status_progress_and_priority_each_invalidate_the_original_material_set",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Lifecycle_task_exit_and_entry_change_the_complete_set_even_with_same_node_occurrence",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Timing_and_compensated_execution_fields_are_material_even_when_pricing_is_excluded",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Native_deletion_removes_an_occurrence_and_refuses_stale_append",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Reparented_context_is_material_even_though_publisher_only_appends_flat_tasks",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Actual_clipboard_copy_adds_new_occurrences_to_the_complete_task_set",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Native_cross_project_move_changes_both_original_source_and_destination_bases",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Project_scalar_definition_revision_is_part_of_the_original_basis",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Same_occurrence_exact_value_restoration_is_current_and_does_not_claim_change_history_equality",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanCurrentnessTests.Excluded_layout_and_estimate_edits_do_not_create_false_material_conflicts"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanRetentionTests.cs",
+      "sha256": "C769CE4C633B46C7D8E7B117C9A8246B06D97D9091F4F9F0B59810CC4FA1C66D",
+      "bytes": 21942,
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests",
+      "factRows": 6,
+      "theoryRows": 0,
+      "skippedRows": 0,
+      "lane": "ordinary",
+      "methods": [
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Dormant_owner_has_exact_pool_participant_and_retained_receipt_blocks_business_import",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Disclosure_rechecks_target_lifetime_and_dataset_after_awaited_current_read",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Invalid_stored_bytes_versions_and_indexed_facts_withhold_detail_without_running_disclosure",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Row_and_byte_bounded_purge_preserves_active_evidence_and_other_owner_pool",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Locked_retained_row_is_observed_as_remaining_work_and_not_false_empty",
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanRetentionTests.Coherent_lookup_keeps_copied_evidence_across_concurrent_retirement_and_purge"
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanOperationPerformanceTests.cs",
+      "sha256": "0796CE9A68F63525F3D3543CA7B79F1E83A5344ED11479EF50A7BD826F7363AB",
+      "bytes": 10476,
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationPerformanceTests",
+      "factRows": 1,
+      "theoryRows": 0,
+      "skippedRows": 0,
+      "lane": "LongRunning",
+      "methods": [
+        "CanDoItAll.Tests.Integration.ProjectTaskPlanOperationPerformanceTests.Measure_bounded_dormant_task_plan_publication_and_exact_replay"
+      ]
+    }
+  ],
+  "validation": {
+    "csharpSyntaxErrors": 0,
+    "fourFileWhitespaceCheckPassed": true,
+    "peerReview": "PASS: persistence owner, all four exact source hashes",
+    "compilationPerformed": false,
+    "testsExecuted": false,
+    "portabilityStaticExecuted": false,
+    "databaseAccessPerformed": false,
+    "mainEdited": false,
+    "migrationGenerated": false
+  },
+  "limits": [
+    "Parent build/discovery/runtime/static validation pending.",
+    "No accepted-without-payload public variant; caller known acceptance stays sticky.",
+    "Original-basis producer authentication remains the separate C4 held-claim/publication-binding gate.",
+    "No C4 activation, schema/model change or capacity qualification."
+  ]
+}

@@ -107,13 +107,15 @@ public sealed class ProjectStructureFileActionCoordinatorTests
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
             FileToolsLocalFileAction action,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => ValueTask.FromException<FileToolsBrowseItemActionResult>(new InvalidOperationException("Unexpected file launch."));
 
         public ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
             FileToolsSemanticScope scope,
             FileBrowserItemKey itemKey,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => ValueTask.FromException<IFileToolsDownloadLease>(new InvalidOperationException("Unexpected file download."));
     }
 
@@ -143,7 +145,8 @@ public sealed class ProjectStructureFileActionCoordinatorTests
 
         public ValueTask<FileToolsBrowseSession> CreateAsync(
             FileToolsSemanticScope scope,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             IFileBrowserProvider provider = new NoopFileBrowserProvider(scope.Id.Value);
@@ -195,7 +198,9 @@ public sealed class ProjectStructureFileActionCoordinatorTests
     {
         public ValueTask<FileToolsKnownFileSession> CreateAsync(
             FileToolsKnownFileRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null,
+            Func<CancellationToken, ValueTask>? authorizeWrite = null)
             => ValueTask.FromException<FileToolsKnownFileSession>(new InvalidOperationException("Unexpected session creation."));
     }
 

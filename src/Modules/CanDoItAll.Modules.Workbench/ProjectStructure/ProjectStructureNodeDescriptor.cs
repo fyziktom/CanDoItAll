@@ -3,8 +3,6 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Workbench;
 
-public sealed record ProjectStructureNodeFact(string Label, string Value);
-
 internal sealed record ProjectStructureCompactPathPresentation(
     string Label,
     string DisplayText,

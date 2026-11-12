@@ -1,6 +1,8 @@
 .llm-chat-conversation-workspace {
-    height: min(72rem, calc(100vh - 16rem));
-    min-height: 38rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
     min-width: 0;
     overflow: hidden;
 }

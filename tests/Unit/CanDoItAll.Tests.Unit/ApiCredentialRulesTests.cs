@@ -147,6 +147,6 @@ public sealed class ApiCredentialRulesTests {
     private static FileApiUserStore CreateStore(CanDoItAllTestEnvironment environment) {
         var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
         return new(new ControlPlanePathResolver(Options.Create(new ControlPlaneOptions { RootPath = environment.ControlPlaneRootPath }),
-            environment.CreateHostEnvironment(nameof(ApiCredentialRulesTests)), writer), writer);
+            environment.CreateHostEnvironment(nameof(ApiCredentialRulesTests)), writer), writer, new PhysicalFileSystemPathPolicyFactory());
     }
 }

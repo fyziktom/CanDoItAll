@@ -55,7 +55,9 @@ public sealed class WorkbenchStateService(
             return;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var snapshot = await stateStore.LoadAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         var failures = new List<WorkbenchRestoreFailure>();
 
         if (snapshot is not null &&
@@ -133,8 +135,9 @@ public sealed class WorkbenchStateService(
         LastRestoreReport = new WorkbenchRestoreReport(clock.GetUtcNow(), _tabs.Count, failures);
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
-        _initialized = true;
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        _initialized = true;
         NotifyStateChanged();
     }
 
@@ -201,6 +204,7 @@ public sealed class WorkbenchStateService(
 
     public async Task TrackTabAsync(WorkbenchTabDescriptor descriptor, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var normalizedRoute = NormalizeRoute(descriptor.Route);
         var normalizedArtifactKey = string.IsNullOrWhiteSpace(descriptor.ArtifactKey)
             ? $"{descriptor.TabKind}:{normalizedRoute}"
@@ -270,6 +274,7 @@ public sealed class WorkbenchStateService(
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -325,6 +330,7 @@ public sealed class WorkbenchStateService(
 
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -342,6 +348,7 @@ public sealed class WorkbenchStateService(
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -364,6 +371,7 @@ public sealed class WorkbenchStateService(
 
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -387,6 +395,7 @@ public sealed class WorkbenchStateService(
             ?? _tabs.FirstOrDefault()?.TabId;
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -415,6 +424,7 @@ public sealed class WorkbenchStateService(
         _tabs.AddRange(ordered.Select((tab, orderIndex) => tab with { Order = orderIndex }));
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -444,6 +454,7 @@ public sealed class WorkbenchStateService(
         ActiveTabId ??= _tabs.FirstOrDefault()?.TabId;
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -479,6 +490,7 @@ public sealed class WorkbenchStateService(
         EnsureActiveTabIsAwake();
         AutoSleepBackgroundTabs();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -491,6 +503,7 @@ public sealed class WorkbenchStateService(
 
         _recentTabs.Clear();
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -504,6 +517,7 @@ public sealed class WorkbenchStateService(
 
         ReplaceTab(tab with { IsPinned = !tab.IsPinned, CanClose = tab.IsPinned });
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -522,6 +536,7 @@ public sealed class WorkbenchStateService(
 
         ReplaceTab(tab with { IsSleeping = !tab.IsSleeping });
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -547,6 +562,7 @@ public sealed class WorkbenchStateService(
         _tabs.Clear();
         _tabs.AddRange(ordered.Select((tab, newIndex) => tab with { Order = newIndex }));
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -560,6 +576,7 @@ public sealed class WorkbenchStateService(
 
         ReplaceTab(tab with { IsDirty = isDirty });
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -573,6 +590,7 @@ public sealed class WorkbenchStateService(
 
         ReplaceTab(tab with { SnapshotJson = snapshotJson });
         await PersistAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NotifyStateChanged();
     }
 
@@ -581,6 +599,7 @@ public sealed class WorkbenchStateService(
 
     private async Task PersistAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var snapshot = new WorkbenchSessionSnapshot(
             SnapshotVersion,
             ActiveTabId,

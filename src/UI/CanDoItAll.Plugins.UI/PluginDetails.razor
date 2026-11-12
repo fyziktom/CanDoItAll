@@ -1,0 +1,70 @@
+@namespace CanDoItAll.Plugins.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+
+<Tabs SelectedIndex="@SelectedIndex" SelectedIndexChanged="ChangeSection"
+      Variant="TabsVariant.WorkspaceSecondary" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Plugin detail sections">
+    <TabItems>
+        <TabsItem Text="Main info" Icon="info" data-testid="plugins-tab-main" />
+        <TabsItem Text="Executors" Icon="account_tree" BadgeText="@PluginsPageHelpers.ResolveExecutorBadge(Plugin)" data-testid="plugins-tab-executors" />
+        <TabsItem Text="Settings" Icon="tune" BadgeText="@(Settings is null ? null : PluginsPageHelpers.ResolveSettingsBadge(Settings))" data-testid="plugins-tab-settings" />
+        <TabsItem Text="Connections" Icon="link" BadgeText="@Settings?.Connections.Count.ToString()" data-testid="plugins-tab-connections" />
+        <TabsItem Text="Logs" Icon="receipt_long" data-testid="plugins-tab-logs" />
+        <TabsItem Text="Grants" Icon="verified_user" BadgeText="@Settings?.Grants.Count.ToString()" data-testid="plugins-tab-grants" />
+    </TabItems>
+</Tabs>
+<div class="mt-4">
+    @switch (Workspace.View.Section) {
+        case PluginSection.Main:
+            <PluginMainInfoTab Plugin="@Plugin" />
+            break;
+        case PluginSection.Executors:
+            <PluginExecutorsTab Plugin="@Plugin" />
+            break;
+        case PluginSection.Logs:
+            <PluginReadNotice Status="@Workspace.View.InstallationLogs.Status" Label="Installation logs" />
+            <PluginReadNotice Status="@Workspace.View.RuntimeLogs.Status" Label="Runtime logs" />
+            <PluginLogsTab Plugin="@Plugin" InstallationLogs="@Workspace.View.InstallationLogs.Value"
+                InstallationStatus="@Workspace.View.InstallationLogs.Status" RuntimeStatus="@Workspace.View.RuntimeLogs.Status"
+                RuntimeLogs="@Workspace.View.RuntimeLogs.Value" ShowAllPluginLogs="@Workspace.View.ShowAllLogs"
+                OnSetLogScope="Workspace.SetLogScopeAsync" />
+            break;
+        default:
+            <PluginReadNotice Status="@Workspace.View.Settings.Status" Label="Settings" />
+            @if (Settings is not null) {
+                @switch (Workspace.View.Section) {
+                    case PluginSection.Settings:
+                        <PluginSettingsTab Plugin="@Plugin" Settings="@Settings" Workspace="@Workspace" />
+                        break;
+                    case PluginSection.Connections:
+                        <PluginReadNotice Status="@Workspace.View.OAuth.Status" Label="OAuth status" />
+                        <PluginConnectionsTab Plugin="@Plugin" Settings="@Settings" Workspace="@Workspace" />
+                        break;
+                    case PluginSection.Grants:
+                        <PluginGrantsTab Plugin="@Plugin" Settings="@Settings" Workspace="@Workspace" />
+                        break;
+                }
+            } else if (Workspace.View.Settings.IsCurrent) {
+                <EmptyState Title="Plugin references are missing" Description="The manifest remains available. Refresh to read settings again." />
+            }
+            break;
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PluginCatalogItem Plugin { get; set; } = default!;
+    [Parameter, EditorRequired] public IPluginsWorkspace Workspace { get; set; } = default!;
+    private PluginSettingsDetail? Settings => Workspace.View.Settings.Value?.CatalogItem.PluginId == Plugin.PluginId
+        ? Workspace.View.Settings.Value : null;
+    private int SelectedIndex => Workspace.View.Section switch {
+        PluginSection.Main => 0, PluginSection.Executors => 1, PluginSection.Settings => 2,
+        PluginSection.Connections => 3, PluginSection.Logs => 4, PluginSection.Grants => 5,
+        _ => throw new ArgumentOutOfRangeException()
+    };
+    private void ChangeSection(int index) => Workspace.SelectSection(index switch {
+        0 => PluginSection.Main, 1 => PluginSection.Executors, 2 => PluginSection.Settings,
+        3 => PluginSection.Connections, 4 => PluginSection.Logs, 5 => PluginSection.Grants,
+        _ => throw new ArgumentOutOfRangeException(nameof(index))
+    });
+}

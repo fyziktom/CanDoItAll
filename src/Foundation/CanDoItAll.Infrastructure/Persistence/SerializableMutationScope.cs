@@ -60,8 +60,7 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                 relationalLocks,
                 cancellationToken);
             IDbContextTransaction? transaction = null;
-            try
-            {
+            try {
                 transaction = await dbContext.Database.BeginTransactionAsync(
                     IsolationLevel.Serializable,
                     cancellationToken);
@@ -70,15 +69,19 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                     normalizedScopeKeys,
                     cancellationToken);
                 return new(transaction, acquiredRelationalLocks);
-            }
-            catch
-            {
-                if (transaction is not null)
-                {
-                    await transaction.DisposeAsync();
+            } catch (Exception acquisitionFailure) {
+                try {
+                    if (transaction is not null) {
+                        await transaction.DisposeAsync();
+                    }
+                } catch (Exception cleanupFailure) {
+                    throw new AggregateException(
+                        "Mutation scope acquisition and transaction cleanup both failed.",
+                        acquisitionFailure,
+                        cleanupFailure);
+                } finally {
+                    ReleaseProcessLocks(acquiredRelationalLocks);
                 }
-
-                ReleaseProcessLocks(acquiredRelationalLocks);
                 throw;
             }
         }
@@ -131,6 +134,27 @@ public sealed class SerializableMutationScope : IAsyncDisposable
                 $"SELECT pg_advisory_xact_lock(hashtextextended({scopeKey}, 0))",
                 cancellationToken);
         }
+    }
+
+    public static async Task<bool> TryAcquireRelationalScopeLocksAsync(DbContext context,
+        IReadOnlyList<string> orderedKeys, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(orderedKeys);
+        if (!context.Database.IsNpgsql() || context.Database.CurrentTransaction is null) {
+            throw new InvalidOperationException("Nonwaiting scope exclusion requires an active PostgreSQL transaction.");
+        }
+        string[] keys = orderedKeys.Take(1025).ToArray();
+        if (keys.Length is 0 or > 1024 || keys.Length != orderedKeys.Count ||
+            keys.Any(string.IsNullOrWhiteSpace) ||
+            !keys.SequenceEqual(keys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))) {
+            throw new ArgumentException("Nonwaiting scope exclusion requires bounded, distinct, ordinal keys.");
+        }
+        // A false result retains any acquired locks until this transaction ends.
+        return await context.Database.SqlQuery<bool>($"""
+            SELECT bool_and(held.acquired) AS "Value"
+            FROM (SELECT pg_try_advisory_xact_lock(hashtextextended(k.key, 0)) AS acquired
+                  FROM unnest({keys}) WITH ORDINALITY AS k(key, position) ORDER BY k.position) AS held
+            """).SingleAsync(cancellationToken);
     }
 
     private static IReadOnlyList<SemaphoreSlim> ResolveProcessLocks(
@@ -232,22 +256,18 @@ public sealed class SerializableMutationScope : IAsyncDisposable
         return false;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (disposed)
-        {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
             return;
         }
 
         disposed = true;
-        if (transaction is not null)
-        {
-            await transaction.DisposeAsync();
-        }
-
-        for (var index = processLocks.Count - 1; index >= 0; index--)
-        {
-            processLocks[index].Release();
+        try {
+            if (transaction is not null) {
+                await transaction.DisposeAsync();
+            }
+        } finally {
+            ReleaseProcessLocks(processLocks);
         }
     }
 }

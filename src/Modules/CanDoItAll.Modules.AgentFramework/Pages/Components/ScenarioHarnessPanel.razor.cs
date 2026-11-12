@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using Microsoft.AspNetCore.Components;
@@ -69,18 +70,7 @@ public partial class ScenarioHarnessPanel
         {
             scenarioSnapshots[selectedScenarioId] = await ScenarioService.RunScenarioAsync(scenarioAgentId, selectedScenarioId);
             var snapshot = scenarioSnapshots[selectedScenarioId];
-            if (snapshot.HasPendingApprovals)
-            {
-                Notify("warning", $"{selectedScenarioId} is waiting on approval before the evidence pack can finish.");
-            }
-            else if (snapshot.LatestRun?.State == ExecutionState.Completed)
-            {
-                Notify("success", $"{selectedScenarioId} finished and refreshed its evidence pack.");
-            }
-            else
-            {
-                Notify("info", $"{selectedScenarioId} refreshed its latest scenario state.");
-            }
+            NotifySnapshot(snapshot);
         }
         catch (Exception exception)
         {
@@ -119,11 +109,7 @@ public partial class ScenarioHarnessPanel
                 SelectedSnapshot.LatestRun.Id,
                 approved);
 
-            Notify(
-                approved ? "success" : "warning",
-                approved
-                    ? $"{selectedScenarioId} resumed after approval."
-                    : $"{selectedScenarioId} was rejected and refreshed its evidence state.");
+            NotifySnapshot(scenarioSnapshots[selectedScenarioId]);
         }
         catch (Exception exception)
         {
@@ -162,6 +148,12 @@ public partial class ScenarioHarnessPanel
             ExecutionState.Failed => "danger",
             _ => "info"
         };
+    }
+
+    private void NotifySnapshot(ScenarioHarnessSnapshot snapshot) {
+        var presentation = AgentScenarioCompletionPresentation.From(snapshot.LatestRun, snapshot.LatestDetail?.EffectContinuation,
+            snapshot.HasPendingApprovals, snapshot.ResponsePreview);
+        Notify(presentation.Tone, presentation.Message);
     }
 
     private void Notify(string tone, string message)

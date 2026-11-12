@@ -1,5 +1,6 @@
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -9,6 +10,9 @@ public sealed class ProjectProcessAssetProposalCodec : IAgentToolProposalPrepare
     public const string RevisionToolName = "project_structure_asset_create_revision";
     public const int SemanticVersion = 1;
     internal static JsonSerializerOptions Json => ProjectStructureProcessProposalCodec.SerializerOptions;
+    private static readonly JsonSerializerOptions ArgumentJson = new(Json) {
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public bool Supports(string toolName)
         => toolName is ProjectStructureToolPolicy.ProjectStructureAssetCreate or RevisionToolName;
@@ -16,9 +20,9 @@ public sealed class ProjectProcessAssetProposalCodec : IAgentToolProposalPrepare
     public AgentToolPreparedPayload Prepare(string toolName, JsonElement arguments) {
         RequireUniqueProperties(arguments);
         object input = toolName switch {
-            ProjectStructureToolPolicy.ProjectStructureAssetCreate => arguments.Deserialize<ProjectProcessAssetCreateProposal>(Json)
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate => arguments.Deserialize<ProjectProcessAssetCreateProposal>(ArgumentJson)
                 ?? throw new JsonException("A typed asset creation proposal is required."),
-            RevisionToolName => arguments.Deserialize<ProjectProcessAssetRevisionProposal>(Json)
+            RevisionToolName => arguments.Deserialize<ProjectProcessAssetRevisionProposal>(ArgumentJson)
                 ?? throw new JsonException("A typed asset revision proposal is required."),
             _ => throw new ArgumentException("This codec only admits asset creation and revision.", nameof(toolName))
         };

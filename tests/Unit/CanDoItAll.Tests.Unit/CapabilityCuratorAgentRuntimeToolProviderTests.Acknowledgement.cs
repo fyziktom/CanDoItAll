@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Mcp.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using Microsoft.Extensions.AI;
@@ -7,6 +8,37 @@ using ModelCapabilityKind = CanDoItAll.AgentFramework.Models.CapabilityKind;
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed partial class CapabilityCuratorAgentRuntimeToolProviderTests {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Native_known_commit_failure_records_the_effect_without_repeating_the_command(bool assignment, bool directory) {
+        var harness = CreateHarness();
+        var tools = await CreateToolDictionaryAsync(harness);
+        var target = harness.Workspace.Agents.Single(item => item.Id == harness.TargetAgentId);
+        harness.Workspace.FailCatalogAfterPrimary = !directory;
+        harness.Workspace.FailDirectoryAfterPrimary = directory;
+        var tool = assignment ? CapabilityCuratorToolPolicy.CapabilityCuratorAssignmentUpdate : CapabilityCuratorToolPolicy.CapabilityCuratorSave;
+        object request = assignment
+            ? new CapabilityCuratorAssignmentUpdateInput(target.Id, harness.CustomCapabilityId, CapabilityCuratorAssignmentAction.Attach, target.UpdatedAtUtc)
+            : CreateInlineSkillCandidate("native-accepted-skill", "Native accepted skill", "Exact instructions.");
+        using var capture = AgentToolInvocationEffectScope.Begin();
+        var failure = await Assert.ThrowsAnyAsync<Exception>(() => Assert.IsAssignableFrom<AIFunction>(tools[tool])
+            .InvokeAsync(new AIFunctionArguments { ["request"] = request }).AsTask());
+        if (directory) {
+            Assert.IsType<AgentDirectoryProjectionSynchronizationException>(failure);
+        } else if (assignment) {
+            Assert.IsType<AgentCatalogCommittedException<AgentDefinition>>(failure);
+        } else {
+            Assert.IsType<AgentCatalogCommittedException<CapabilityEditorModel>>(failure);
+        }
+        var id = assignment ? target.Id : harness.Workspace.Capabilities.Single(item => item.Key == "native-accepted-skill").Id;
+        Assert.Equal(new AgentToolCommittedEffect(assignment ? "agent-catalog" : "capability-catalog", id.ToString("D")), capture.CommittedEffect);
+        Assert.True(harness.Workspace.WriteCompleted);
+        Assert.Equal(assignment ? 0 : 1, harness.Workspace.SaveCapabilityCallCount);
+        Assert.DoesNotContain("Private", failure.Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorSave, CuratorOwnerAcknowledgementFault.BeforeOwner)]
     [InlineData(CapabilityCuratorToolPolicy.CapabilityCuratorSave, CuratorOwnerAcknowledgementFault.BeforeReceipt)]

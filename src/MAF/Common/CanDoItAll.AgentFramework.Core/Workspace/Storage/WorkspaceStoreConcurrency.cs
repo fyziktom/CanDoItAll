@@ -6,6 +6,16 @@ public sealed record SandboxWorkspaceCatalogSnapshot(
     SandboxWorkspaceCatalog Catalog,
     CatalogDataRevision Revision);
 
+public sealed class SandboxWorkspaceCatalogCommittedException(SandboxWorkspaceCatalog accepted, Exception innerException)
+    : Exception("The workspace catalog is saved, but a secondary effect requires reconciliation.", innerException) {
+    public SandboxWorkspaceCatalog Accepted { get; } = accepted;
+}
+
+public sealed class AgentCatalogCommittedException<T>(T accepted, Exception innerException)
+    : Exception("The configuration is saved, but a secondary update requires reconciliation.", innerException) {
+    public T Accepted { get; } = accepted;
+}
+
 public sealed record AgentWorkspaceCatalogSnapshot(
     AgentExecutionActivityWorkspaceIdentity Workspace,
     SandboxWorkspaceCatalogSnapshot Snapshot);
@@ -61,4 +71,22 @@ public sealed class SandboxWorkspaceConcurrencyException : InvalidOperationExcep
     public long ExpectedRevision { get; }
 
     public long ActualRevision { get; }
+}
+
+public enum SandboxWorkspacePublicationConflictKind {
+    OriginalBytesChanged,
+    PendingRecoveryChanged,
+    WriteSetChanged
+}
+
+public sealed class SandboxWorkspacePublicationConflictException : InvalidOperationException {
+    public SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind kind)
+        : base("The prepared workspace publication was not applied because its original state or write set changed. Reconcile current state before a new explicit mutation.") {
+        if (!Enum.IsDefined(kind)) {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        Kind = kind;
+    }
+
+    public SandboxWorkspacePublicationConflictKind Kind { get; }
 }

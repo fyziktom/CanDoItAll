@@ -8,7 +8,7 @@ public sealed partial class CollaborationService(
     IDbContextFactory<CollaborationDbContext> dbContextFactory,
     IClock clock,
     IActivityStream activityStream,
-    ILogger<CollaborationService> logger)
+    ILogger<CollaborationService> logger) : ICollaborationWorkspaceOwner
 {
     private const string LocalOperatorKey = "local-user";
     private const string LocalOperatorName = "Local operator";

@@ -19,7 +19,7 @@ public sealed class OwnerPostcommitPageTests {
     [InlineData(PostcommitOwner.Resource, PostcommitFault.Activity)]
     [InlineData(PostcommitOwner.TestPlan, PostcommitFault.Search)]
     [InlineData(PostcommitOwner.TestPlan, PostcommitFault.Activity)]
-    public async Task Confirmed_owner_fault_warns_and_keeps_ids_for_explicit_same_editor_save(PostcommitOwner owner, PostcommitFault fault) {
+    public async Task Owner_fault_preserves_atomic_Search_refusal_or_confirmed_followup_warning(PostcommitOwner owner, PostcommitFault fault) {
         var probe = new OwnerPostcommitTestProbe();
         await using var harness = await ComponentTestHarness.CreateAsync(probe.ConfigureServices);
         var services = harness.Context.Services;
@@ -29,6 +29,20 @@ public sealed class OwnerPostcommitPageTests {
         var originalEditor = Editor(page);
         probe.ArmFault(owner, fault, new InvalidOperationException("Owner postcommit failure"));
         await SubmitAsync(page);
+        if (owner == PostcommitOwner.Resource && fault == PostcommitFault.Search) {
+            var registry = ((ResourcesPage)page.Instance).Registry;
+            Assert.Equal(CanDoItAll.Resources.UI.ResourceEffectState.Refused, Assert.Single(registry.Receipts).State);
+            Assert.Null(EditorId(page));
+            Assert.Same(originalEditor, Editor(page));
+            Assert.Empty(await services.GetRequiredService<ResourcesService>().ListAsync());
+            Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
+                message => message.Severity == NotificationSeverity.Error && message.Summary == "Resource save failed");
+            Assert.DoesNotContain(services.GetRequiredService<NotificationService>().Messages,
+                message => message.Severity is NotificationSeverity.Success or NotificationSeverity.Warning);
+            await SubmitAsync(page);
+            await AssertSavedAsync(services, owner, admission, RequiredId(EditorId(page)), "Retained resource");
+            return;
+        }
         var id = RequiredId(EditorId(page));
         Assert.Same(originalEditor, Editor(page));
         AssertWarning(services, owner, id);
@@ -218,15 +232,22 @@ public sealed class OwnerPostcommitPageTests {
         var original = OwnerPostcommitTestProbe.Plan(admission);
         var saved = await owner.SaveAsync(original);
         Assert.True(saved.IsSuccess);
-        var page = Render(harness, PostcommitOwner.TestPlan, admission.ProjectId, saved.Value);
-        var oldIds = ChildIds(page);
-        Assert.Equal(3, oldIds.Length);
+        var oldIds = new[] { RequiredId(Assert.Single(original.Cases).Id),
+            RequiredId(Assert.Single(original.Evidence).Id), RequiredId(Assert.Single(original.Runs).Id) };
         await using (var database = await services.GetRequiredService<IDbContextFactory<TestLabDbContext>>().CreateDbContextAsync()) {
             database.RemoveRange(await database.Set<TestCaseRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             database.RemoveRange(await database.Set<TestEvidenceRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             database.RemoveRange(await database.Set<TestRunRecord>().Where(item => item.TestPlanId == saved.Value).ToListAsync());
             await database.SaveChangesAsync();
         }
+        var page = Render(harness, PostcommitOwner.TestPlan, admission.ProjectId, saved.Value);
+        var replacements = OwnerPostcommitTestProbe.Plan(admission);
+        await page.InvokeAsync(() => {
+            var draft = Assert.IsType<TestPlanEditorModel>(Editor(page));
+            draft.Cases = replacements.Cases;
+            draft.Evidence = replacements.Evidence;
+            draft.Runs = replacements.Runs;
+        });
         probe.ArmFault(PostcommitOwner.TestPlan, PostcommitFault.Search, new InvalidOperationException("Postcommit replacement fault"));
         await SubmitAsync(page);
         Assert.Equal(saved.Value, EditorId(page));
@@ -244,21 +265,31 @@ public sealed class OwnerPostcommitPageTests {
     [Theory]
     [InlineData(PostcommitFault.Search)]
     [InlineData(PostcommitFault.Activity)]
-    public async Task Resource_delete_after_commit_warns_and_clears_original_selection(PostcommitFault fault) {
+    public async Task Resource_delete_preserves_atomic_Search_refusal_or_confirmed_deletion_warning(PostcommitFault fault) {
         var probe = new OwnerPostcommitTestProbe();
         await using var harness = await ComponentTestHarness.CreateAsync(probe.ConfigureServices);
         var services = harness.Context.Services;
         var admission = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Delete UI state");
         var owner = services.GetRequiredService<ResourcesService>();
-        var saved = await owner.SaveAsync(OwnerPostcommitTestProbe.Resource(services, admission));
-        Assert.True(saved.IsSuccess);
-        var page = Render(harness, PostcommitOwner.Resource, admission.ProjectId, saved.Value);
+        var saved = await CreateResourceAsync(services, admission);
+        var id = saved.Expected.ResourceId;
+        var page = Render(harness, PostcommitOwner.Resource, admission.ProjectId, id);
         probe.ArmFault(PostcommitOwner.Resource, fault, new InvalidOperationException("Delete postcommit boundary"));
         await DeleteAsync(page);
+        if (fault == PostcommitFault.Search) {
+            Assert.Equal(id, EditorId(page));
+            Assert.Equal(saved, Assert.IsType<ResourceMetadataReadResult.Found>(await owner.ReadAsync(id)).Snapshot);
+            Assert.Equal(CanDoItAll.Resources.UI.ResourceEffectState.Refused, Assert.Single(((ResourcesPage)page.Instance).Registry.Receipts).State);
+            Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
+                message => message.Severity == NotificationSeverity.Error && message.Summary == "Resource delete failed");
+            Assert.DoesNotContain(services.GetRequiredService<NotificationService>().Messages,
+                message => message.Severity is NotificationSeverity.Success or NotificationSeverity.Warning);
+            return;
+        }
         Assert.Null(EditorId(page));
-        Assert.Null((await owner.GetAsync(saved.Value)).Id);
-        Assert.DoesNotContain(await owner.ListAsync(), item => item.Id == saved.Value);
-        AssertWarning(services, PostcommitOwner.Resource, saved.Value, deleted: true);
+        Assert.IsType<ResourceMetadataReadResult.Missing>(await owner.ReadAsync(id));
+        Assert.DoesNotContain(await owner.ListAsync(), item => item.Id == id);
+        AssertWarning(services, PostcommitOwner.Resource, id, deleted: true);
     }
 
     [Theory]
@@ -273,7 +304,7 @@ public sealed class OwnerPostcommitPageTests {
         await FillAsync(page, owner, services, original);
         var editor = Editor(page);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(original.ProjectId, expectedProjectAdmission: original);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, original.ProjectId, expectedProjectAdmission: original);
         var recreated = await projects.CreateAsync(original.ProjectId, new ProjectEditorModel { Name = "Different lifetime" });
         Assert.True(recreated.IsSuccess);
         var current = await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId);
@@ -281,6 +312,10 @@ public sealed class OwnerPostcommitPageTests {
         await SubmitAsync(page);
         Assert.Same(editor, Editor(page));
         Assert.Null(EditorId(page));
+        if (owner == PostcommitOwner.Resource) {
+            var registry = ((ResourcesPage)page.Instance).Registry;
+            Assert.True(registry.Receipts.Count > 0, $"Resource dispatch was not reached. Access={registry.Access}; Error={registry.Error}");
+        }
         Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
             message => message.Severity == NotificationSeverity.Error && message.Summary ==
                 (owner == PostcommitOwner.Resource ? "Resource save failed" : "Test plan save failed"));
@@ -296,16 +331,18 @@ public sealed class OwnerPostcommitPageTests {
         await using var harness = await ComponentTestHarness.CreateAsync(probe.ConfigureServices);
         var services = harness.Context.Services;
         var original = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Original deletion target");
-        var unrelated = await OwnerPostcommitTestProbe.CreateProjectAsync(services, "Unrelated deletion admission");
         var owner = services.GetRequiredService<ResourcesService>();
-        var saved = await owner.SaveAsync(OwnerPostcommitTestProbe.Resource(services, original));
-        Assert.True(saved.IsSuccess);
-        var page = Render(harness, PostcommitOwner.Resource, original.ProjectId, saved.Value);
-        await page.InvokeAsync(() => Assert.IsType<ResourceEditorModel>(Editor(page)).ExpectedProjectAdmission = unrelated);
+        var saved = await CreateResourceAsync(services, original);
+        var id = saved.Expected.ResourceId;
+        var page = Render(harness, PostcommitOwner.Resource, original.ProjectId, id);
+        var changed = owner.CreateEditor(saved);
+        changed.Name = "Another writer's revision";
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await owner.SaveAsync(new(saved.Expected, original, ResourceMetadataValues.Capture(changed))));
+        Assert.NotEqual(saved.Expected.Revision, accepted.Snapshot.Expected.Revision);
         var searchReturns = probe.SearchReturns;
         await DeleteAsync(page);
-        Assert.Equal(saved.Value, EditorId(page));
-        Assert.Equal(saved.Value, (await owner.GetAsync(saved.Value)).Id);
+        Assert.Equal(id, EditorId(page));
+        Assert.Equal(accepted.Snapshot, Assert.IsType<ResourceMetadataReadResult.Found>(await owner.ReadAsync(id)).Snapshot);
         Assert.Equal(searchReturns, probe.SearchReturns);
         Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
             message => message.Severity == NotificationSeverity.Error && message.Summary == "Resource delete failed");
@@ -323,18 +360,33 @@ public sealed class OwnerPostcommitPageTests {
         page.WaitForAssertion(() => {
             Assert.Equal(projectId, EditorProject(page));
             Assert.Equal(id, EditorId(page));
+            if (owner == PostcommitOwner.Resource) {
+                var registry = ((ResourcesPage)page.Instance).Registry;
+                Assert.Equal(ResourceViewAccess.Ready, registry.Access);
+                Assert.NotNull(registry.Draft.Editor.ExpectedProjectAdmission);
+                Assert.Same(registry.Draft.Editor, Editor(page));
+            }
         }, TimeSpan.FromSeconds(30));
         harness.Context.Services.GetRequiredService<NotificationService>().Messages.Clear();
         return page;
     }
 
     private static async Task FillAsync(IRenderedComponent<IComponent> page, PostcommitOwner owner, IServiceProvider services, ProjectWriteAdmission admission) {
+        if (owner == PostcommitOwner.Resource) {
+            await page.InvokeAsync(() => page.Find("[data-testid='resource-plugin-select']")
+                .ChangeAsync(new ChangeEventArgs { Value = ResourceConnectorPluginKeys.WebLink }));
+            page.WaitForAssertion(() => Assert.Equal(ResourceConnectorPluginKeys.WebLink, Assert.IsType<ResourceEditorModel>(Editor(page)).ConnectorPluginKey));
+        }
         await page.InvokeAsync(() => {
             if (owner == PostcommitOwner.Resource) {
                 var target = Assert.IsType<ResourceEditorModel>(Editor(page));
                 var source = OwnerPostcommitTestProbe.Resource(services, admission);
                 target.ConnectorPluginKey = source.ConnectorPluginKey;
-                target.Configuration = source.Configuration;
+                foreach (var field in source.Configuration.Values) {
+                    target.Configuration.SetText(field.Key, field.Value);
+                }
+                target.ConfigSchemaVersion = services.GetRequiredService<ResourceConnectorPluginRegistry>()
+                    .Resolve(source.ConnectorPluginKey).Manifest.ConfigurationSchema.Version;
                 target.ConfigJson = source.ConfigJson;
                 target.Description = source.Description;
                 target.SupportsPreview = source.SupportsPreview;
@@ -360,9 +412,9 @@ public sealed class OwnerPostcommitPageTests {
     }
 
     private static Task ChangeTitleAsync(IRenderedComponent<IComponent> page, PostcommitOwner owner, string value)
-        => page.InvokeAsync(() => page.Find(owner == PostcommitOwner.Resource
-                ? "[data-testid='resource-name-input']" : "[data-testid='testlab-title-input']")
-            .ChangeAsync(new ChangeEventArgs { Value = value }));
+        => page.InvokeAsync(() => owner == PostcommitOwner.Resource
+            ? page.Find("[data-testid='resource-name-input']").InputAsync(new ChangeEventArgs { Value = value })
+            : page.Find("[data-testid='testlab-title-input']").ChangeAsync(new ChangeEventArgs { Value = value }));
 
     private static Task SubmitAsync(IRenderedComponent<IComponent> page) => page.FindComponent<EditForm>().Find("form").SubmitAsync();
     private static Task DeleteAsync(IRenderedComponent<IComponent> page) => page.FindComponent<EditForm>().FindAll("button")
@@ -406,10 +458,10 @@ public sealed class OwnerPostcommitPageTests {
     private static async Task AssertSavedAsync(IServiceProvider services, PostcommitOwner owner, ProjectWriteAdmission admission, Guid id, string title) {
         if (owner == PostcommitOwner.Resource) {
             var service = services.GetRequiredService<ResourcesService>();
-            var saved = await service.GetAsync(id);
-            Assert.Equal(id, saved.Id);
-            Assert.Equal(admission, saved.ExpectedProjectAdmission);
-            Assert.Equal(title, saved.Name);
+            var saved = Assert.IsType<ResourceMetadataReadResult.Found>(await service.ReadAsync(id)).Snapshot;
+            Assert.Equal(id, saved.Expected.ResourceId);
+            Assert.Equal(new ResourceProjectBinding.Bound(admission.ProjectId, admission.LifetimeId), saved.Expected.Project);
+            Assert.Equal(title, saved.Values.Name);
             Assert.Equal(id, Assert.Single(await service.ListAsync(), item => item.ProjectId == admission.ProjectId).Id);
         } else {
             var service = services.GetRequiredService<TestLabService>();
@@ -426,7 +478,9 @@ public sealed class OwnerPostcommitPageTests {
 
     private static async Task RemoveFixtureAggregateAsync(IServiceProvider services, PostcommitOwner owner, Guid id, ProjectWriteAdmission admission) {
         if (owner == PostcommitOwner.Resource) {
-            await services.GetRequiredService<ResourcesService>().DeleteAsync(id, admission);
+            var resources = services.GetRequiredService<ResourcesService>();
+            var found = Assert.IsType<ResourceMetadataReadResult.Found>(await resources.ReadAsync(id));
+            Assert.IsType<ResourceMetadataDeleteOutcome.Accepted>(await resources.DeleteAsync(new(found.Snapshot.Expected)));
             return;
         }
         await using var database = await services.GetRequiredService<IDbContextFactory<TestLabDbContext>>().CreateDbContextAsync();
@@ -435,6 +489,13 @@ public sealed class OwnerPostcommitPageTests {
         database.RemoveRange(await database.Set<TestRunRecord>().Where(item => item.TestPlanId == id).ToListAsync());
         database.Remove(await database.Set<TestPlan>().SingleAsync(item => item.Id == id));
         await database.SaveChangesAsync();
+    }
+
+    private static async Task<ResourceMetadataSnapshot> CreateResourceAsync(IServiceProvider services, ProjectWriteAdmission admission) {
+        var owner = services.GetRequiredService<ResourcesService>();
+        var expected = new ResourceMetadataExpectation.Absent(await owner.ReadContextAsync(), Guid.NewGuid());
+        var values = ResourceMetadataValues.Capture(OwnerPostcommitTestProbe.Resource(services, admission));
+        return Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(await owner.SaveAsync(new(expected, admission, values))).Snapshot;
     }
 
     private sealed class BoundaryGate {

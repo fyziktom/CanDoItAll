@@ -1,0 +1,54 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small" data-testid="agents-definition-comparison">
+    @if (Review.IsStale) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-comparison-stale">
+            <TextBlock Value="New saved changes arrived. This comparison is out of date. Its choices are retained here; cancel and compare again to start a new review. Your editor draft stays unchanged." />
+        </Alert>
+    }
+    <TextBlock Value="Apply changes to your draft, then Save separately. Changed permission groups require your explicit choice." />
+    @foreach (var field in Review.Text) {
+        <MergeFieldView TValue="string" ShowUnchanged="false" Label="@field.Label" Field="field.Value" Format="@(value => value)" Changed="Changed" />
+    }
+    <MergeFieldView TValue="string" ShowUnchanged="false" Label="Instructions" Field="Review.Instructions.Field" Format="@(value => value)" Changed="Changed">
+        <ResultEditor Context="value">
+            <TextArea Value="@value" ValueChanged="SetInstructionsAsync" Rows="8" data-testid="agents-comparison-instructions" />
+        </ResultEditor>
+    </MergeFieldView>
+    @foreach (var field in Review.Toggles) {
+        <MergeFieldView TValue="bool" ShowUnchanged="false" Label="@field.Label" Field="field.Value" Format="@(value => value ? "Enabled" : "Disabled")" Changed="Changed" />
+    }
+    <MergeFieldView TValue="AgentLifecycleStatus" ShowUnchanged="false" Label="Status" Field="Review.Status.Value" Format="@(value => value.ToString())" Changed="Changed" />
+    <MergeFieldView TValue="AgentWorkloadKind" ShowUnchanged="false" Label="Workload" Field="Review.Workload.Value" Format="@(value => value.ToString())" Changed="Changed" />
+    <MergeFieldView TValue="AgentChatHistoryMode" ShowUnchanged="false" Label="Chat history" Field="Review.History.Value" Format="@(value => value.ToString())" Changed="Changed" />
+    <MergeFieldView TValue="double" ShowUnchanged="false" Label="Temperature" Field="Review.Temperature.Value" Format="@(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture))" Changed="Changed" />
+    <MergeFieldView TValue="AgentRuntimeSelection" ShowUnchanged="false" Label="Provider, model and thinking" Field="Review.Runtime" Format="RuntimeLabel" Changed="Changed" />
+    <MergeFieldView TValue="AgentPermissionsPolicy" ShowUnchanged="false" Label="Tool and approval policy" Field="Review.Permissions" Format="PermissionsLabel" Changed="Changed" />
+    <MergeFieldView TValue="IReadOnlyList<AgentAllowedSecretReference>" ShowUnchanged="false" Label="Secret references" Field="Review.Secrets" Format="@(items => string.Join(Environment.NewLine, items.Select(item => $"{item.SecretId:D}: {item.NameSnapshot}; {item.Purpose}")))" Changed="Changed" />
+    <MergeFieldView TValue="AgentProjectStructureAccessSettings" ShowUnchanged="false" Label="Project access" Field="Review.Projects" Format="ProjectLabel" Changed="Changed" />
+    <MergeFieldView TValue="AgentProcessAccessSettings" ShowUnchanged="false" Label="Process access" Field="Review.Processes" Format="@(value => $"Read: {value.CanRead}; write: {value.CanWrite}; all definitions: {value.AllowAllDefinitions}\n{string.Join(", ", value.AllowedDefinitionIds)}")" Changed="Changed" />
+    <MergeFieldView TValue="AgentWorkspaceToolAccessSettings" ShowUnchanged="false" Label="Workspace access" Field="Review.Workspace" Format="WorkspaceLabel" Changed="Changed" />
+    <MergeFieldView TValue="AgentImageGenerationAccessSettings" ShowUnchanged="false" Label="Image access" Field="Review.Images" Format="@(value => $"Generate: {value.CanGenerateImages}; store: {value.CanStoreImagesAsProjectAssets}; provider: {value.PreferredProviderProfileId}; model: {value.DefaultModel}")" Changed="Changed" />
+    <MergeFieldView TValue="AgentVoiceAccessSettings" ShowUnchanged="false" Label="Voice access" Field="Review.Voice" Format="@(value => $"Enabled: {value.CanUseVoiceMode}; voice: {value.PreferredVoiceId}")" Changed="Changed" />
+    <MergeFieldView TValue="AgentMemoryAccessSettings" ShowUnchanged="false" Label="Memory access" Field="Review.Memory" Format="MemoryLabel" Changed="Changed" />
+    <MergeFieldView TValue="IReadOnlyList<Guid>" ShowUnchanged="false" Label="Capability assignments" Field="Review.Capabilities" Format="@(items => string.Join(Environment.NewLine, items.Select(id => CapabilityNames.GetValueOrDefault(id, id.ToString("D")))))" Changed="Changed" />
+    <MergeFieldView TValue="string" ShowUnchanged="false" Label="Preserved configuration" Field="Review.PreservedConfiguration" Format="@(_ => "Stored configuration is retained privately. Values are not displayed here; modeled access is reviewed separately.")" Changed="Changed" />
+    <FormField Text="Combined tags"><TextBlock Value="@string.Join(", ", Review.Tags)" /></FormField>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public AgentDefinitionComparison Review { get; set; } = default!;
+    [Parameter] public IReadOnlyDictionary<Guid, string> ProviderNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public IReadOnlyDictionary<Guid, string> CapabilityNames { get; set; } = new Dictionary<Guid, string>();
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private string RuntimeLabel(AgentRuntimeSelection value) => $"{(value.ProviderId is { } id ? ProviderNames.GetValueOrDefault(id, id.ToString("D")) : "Default provider")}; model: {value.Model}; thinking: {value.ThinkingEffort}";
+    private static string PermissionsLabel(AgentPermissionsPolicy value) => $"Tools: {value.CanUseTools}; ask agents: {value.CanAskOtherAgents}; escalate: {value.CanEscalateToHuman}; observe: {value.CanObserveOtherAgents}; schedule: {value.CanScheduleWork}; require approval: {value.RequiresApprovalForExternalCalls}; automatic approval: {value.AutoApproveExternalCallsByDefault}";
+    private static string ProjectLabel(AgentProjectStructureAccessSettings value) => $"Read: {value.CanRead}; write: {value.CanWrite}; tasks: {value.CanWriteTasks}; structure: {value.CanWriteNonTaskStructure}; create projects: {value.CanCreateProjects}; subprojects: {value.CanCreateSubprojects}; all projects: {value.AllowAllProjects}\n{string.Join(", ", value.AllowedProjectIds)}";
+    private static string WorkspaceLabel(AgentWorkspaceToolAccessSettings value) => $"Profile: {value.Profile}; read: {value.CanReadFiles}; write: {value.CanWriteFiles}; validation: {value.CanRunValidationCommands}; scripts: {value.CanRunLocalScripts}; environment: {value.CanScriptsReadEnvironment}; scaffold: {value.CanScaffoldProjects}; paths: {value.CanManageWorkspacePaths}; artifacts: {value.CanTransformArtifacts}; all storage: {value.AllowAllStorageCatalogs}\nRoots: {string.Join(", ", value.AllowedExternalTargetAliases)}\nStorage: {string.Join(", ", value.AllowedStorageCatalogIds)}\nStored root bindings: {string.Join(", ", value.ExternalTargetRootBindings.Select(binding => $"{binding.RootId} ({binding.HostPlatform})"))}";
+    private static string MemoryLabel(AgentMemoryAccessSettings value) => $"Invocation: {value.InvocationMode}; tools: {value.CanUseMemoryTools}; ingest: {value.CanIngestSources}; required context: {value.RequireContextContributions}; async context: {value.AllowAsyncContextContributions}\nProviders: {string.Join(", ", value.AllowedProviderInstanceIds)}\nCapabilities: {string.Join(", ", value.AllowedCapabilityIds)}\nDenied: {string.Join(", ", value.DeniedCapabilityIds)}\nScopes: {string.Join(", ", value.AllowedSourceScopes)}\nBindings:\n{string.Join(Environment.NewLine, value.ProviderBindings.Select(binding => $"{binding.Alias.Value}: {binding.ProviderInstanceId.Value}; automatic context: {binding.IncludeInAutomaticContext}; {binding.Requirement}"))}\nAssignments:\n{string.Join(Environment.NewLine, value.ProviderAssignments.Select(assignment => $"{assignment.Scope} / {assignment.Key}: {assignment.ProviderInstanceId.Value}"))}";
+    private async Task SetInstructionsAsync(string? value) {
+        Review.Instructions.Field.SetResult(value ?? string.Empty);
+        await Changed.InvokeAsync();
+    }
+}

@@ -1,24 +1,30 @@
-@inject DialogService DialogService
+@implements IDisposable
+@{ var renderedGeneration = generation; }
 
-@if (Conversation is not null)
-{
+@if (Conversation is not null) {
     <DangerActionDialog Eyebrow="Archive conversation"
                         Title="@($"Archive {Conversation.Title}")"
                         Description="Archiving keeps the canonical transcript but makes this conversation read-only."
                         RequiredConfirmation="@Conversation.Title"
                         ConfirmButtonText="Archive"
-                        Confirmed="ConfirmAsync"
-                        Cancelled="CancelAsync"
+                        Confirmed="@(() => CloseAsync(true, renderedGeneration))"
+                        Cancelled="@(() => CloseAsync(false, renderedGeneration))"
                         TestId="floating-simple-chat-archive-confirmation" />
 }
 
 @code {
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    private long generation;
+    private bool disposed;
+
     [Parameter]
     public LlmChatConversationListItem? Conversation { get; set; }
 
-    private Task ConfirmAsync()
-        => DialogService.CloseAsync(true);
+    protected override void OnParametersSet() => generation++;
 
-    private Task CancelAsync()
-        => DialogService.CloseAsync(false);
+    private Task CloseAsync(bool confirmed, long renderedGeneration) => !disposed && generation == renderedGeneration
+        ? DialogReference?.CloseAsync(confirmed) ?? Task.CompletedTask
+        : Task.CompletedTask;
+
+    public void Dispose() => disposed = true;
 }

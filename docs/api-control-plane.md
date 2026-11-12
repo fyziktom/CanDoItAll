@@ -78,6 +78,34 @@ scope or the narrower `api.memory-providers.read`, `api.memory-providers.write`,
 Workflow HITL response submission and operation-status reads require the exact
 `api.workflows.respond` scope; the broad `api` scope does not authorize this boundary.
 
+## Agent decision policy recovery
+
+`GET /api/agents/{agentId}/decision-data-policy` returns the original workspace and
+catalog expectation. Revisions and profile generations are decimal strings. Submit
+that expectation, a new operation ID and a complete policy override envelope to the
+corresponding `PUT`. A conflict needs explicit comparison; an uncertain response must
+not be retried automatically.
+
+`POST /api/agents/{agentId}/decision-data-policy/lookup` accepts that complete original
+submission under current Agent read permission. It returns the historical accepted
+snapshot and time when retained evidence matches. This is a read-only operation; it
+does not invoke PUT or compare against the current policy. A new active generation
+of the same profile/scope may look up an old receipt, but cannot dispatch the old write.
+An absent or expired receipt returns `NotObserved`, not proof of no effect. Conflicting
+intent, changed context and unavailable storage have distinct outcomes. All bodies are
+bounded to 8 KiB; responses disable caching and omit private failure details.
+
+The file owner commits policy and receipt together, retains receipts for 30 days and
+refuses policy writes at 1,024 unexpired receipts per catalog. Ordinary Agent/catalog
+updates and deletion preserve this history. Deploy updated file writers together under
+maintenance exclusion; mixed old/new catalog writers are unsupported.
+
+The native policy dialog retains the original submission in the current browser before
+dispatch. After reopening, Check retained save uses historical lookup without resending.
+Historical acceptance preserves later draft edits and requires an explicit current read
+and reconciliation before another save. An unsent Prepared record can be discarded;
+a dispatched unresolved record remains blocked. See [native recovery proof and limits](../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
+
 ## Shared providers and history
 
 The five [shared-provider operations](shared-providers.md#http-surface) expose a
@@ -94,6 +122,51 @@ Request history metadata, content and management use separate exact authorities:
 ownership, Light/Detailed privacy and retention. Opaque correlation references do not
 grant access.
 
+## Project Structure Live Updates
+
+The Structure canvas opens **Structure updates** when another editor session commits a
+node or relationship change. Own-session changes stay quiet. **Updates** reopens the
+window, **Refresh structure** reads the current graph without document navigation, and
+choosing an item refreshes and selects its surviving changed nodes. Deleted or moved
+nodes are reported explicitly. Notifications preserve open editor drafts; an active
+composer retains its normal modal interaction boundary. A successful refresh removes
+the update rows it covers; updates received during that read remain pending. A failed
+refresh keeps its rows available for retry.
+
+External clients use the same bounded notification feed:
+
+| Command | Behavior |
+| --- | --- |
+| `GET /api/project-structure/projects/{projectId}/changes` | Poll changes belonging to this exact project in the active database profile. Omit `after` for an empty initial page with a current cursor; `take` defaults to 100 and accepts 1–100. |
+| `GET /api/project-structure/projects/{projectId}/changes/stream` | Follow changes with SSE; `Last-Event-ID` or `after` resumes from a previous cursor. |
+
+The JSON response carries `cursor`, `changes`, and `requiresRefresh`. Encode `after` as
+the cursor's `streamId` GUID without hyphens, a colon, and its decimal `sequence`, for
+example `0123456789abcdef0123456789abcdef:42`. Save the returned cursor after processing
+the entire page. SSE uses the same token as its `id`; conflicting header/query cursors
+and malformed or repeated cursors return 400. Unknown projects return 404. Both routes
+use the existing Project Structure API authorization policy and require no write lease.
+
+SSE events are `project.structure.ready`, `project.structure.changed`,
+`project.structure.gap`, and `stream.heartbeat`, all carrying the polling response.
+The initial ready event can contain replayed changes. Idle heartbeats recheck the
+profile every 15 seconds; a profile switch emits a gap and closes the connection.
+Both transports expose node keys, labels, change kinds, editor session or execution identities,
+actor labels, and UTC timestamps. Change kinds are JSON integers: Created=0,
+Updated=1, Deleted=2, RelationshipChanged=3.
+
+Agent node commits use this feed. Project-scoped process lifecycle and step progress
+publish hints for the run node after projection, using the run's current project
+lifetime. The floating chat can refresh its own changes in place when Structure has
+no active editor or write. Other changes appear in Structure updates.
+
+The feed retains the latest 512 committed batches in one Web process. View-state saves
+and projection reads do not publish notifications. It is a refresh feed rather than a
+durable audit history: restart, expired replay, or a future cursor sets
+`requiresRefresh`; refresh the authoritative structure and continue from the new cursor.
+For a hierarchy, monitor each relevant project; the Blazor observer monitors all loaded
+project admissions. Separate Web processes have separate feeds.
+
 ## Current Route Families
 
 The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs); Project Structure is registered from [`Program.cs`](../src/App/CanDoItAll.Web/Program.cs).
@@ -101,9 +174,10 @@ The canonical family registration is in [`ApiEndpointRouteBuilderExtensions.cs`]
 | Base path | Responsibility | Source |
 | --- | --- | --- |
 | `/api/access` | API status and token issue. | [`ApiEndpointRouteBuilderExtensions.cs`](../src/App/CanDoItAll.Web/Api/ApiEndpointRouteBuilderExtensions.cs) |
-| `/api/projects` | Project records, access items, hierarchy, subproject relationships, and durable deletion-cleanup recovery. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
+| `/api/projects` | Project records, [stable external identity](project-external-identity.md), access items, hierarchy, subproject relationships, and durable deletion-cleanup recovery. | [`ProjectsApi.cs`](../src/App/CanDoItAll.Web/Api/ProjectsApi.cs) |
 | `/api/project-structure` | Structure reads and focused mutations, node copy, tasks, process/workflow node operations, assets, imports, leases, deletion-cleanup readback, knowledge, and analytics. | [`ProjectStructureAgentApi.cs`](../src/App/CanDoItAll.Web/ProjectStructureAgentApi.cs) |
 | `/api/agents` | Agent, provider, capability, memory, chat, execution, per-proposal approval, artifact, receipt, checkpoint, log, aggregate usage, metric, and runtime-snapshot operations. `GET /usage` provides bounded Agent/Chat usage with rolling periods; see [its contract and rollout](architecture/agents-overview-usage-window.md#public-api). | [`AgentsApi.cs`](../src/App/CanDoItAll.Web/Api/AgentsApi.cs) |
+| `/api/agents/voice` | Bounded audio transcription and speech synthesis using workspace settings; requires execute authority. See [voice input, errors and cancellation](agent-voice-api.md). | [`AgentVoiceApi.cs`](../src/App/CanDoItAll.Web/Api/AgentVoiceApi.cs) |
 | `/api/agent-recruiting` | Candidate interviews, attempts, human reviews, interview history, and readiness. | [`AgentRecruitingApi.cs`](../src/App/CanDoItAll.Web/Api/AgentRecruitingApi.cs) |
 | `/api/prompt-gallery` | Prompt Gallery search, artifacts, versions, review, and application. | [`PromptGalleryApi.cs`](../src/App/CanDoItAll.Web/Api/PromptGalleryApi.cs) |
 | `/api/workflows` | Workflow settings, templates and draft creation, definitions, versions, runs, external requests, evidence, and analytics. | [`WorkflowsApi.cs`](../src/App/CanDoItAll.Web/Api/WorkflowsApi.cs) |
@@ -216,6 +290,7 @@ The provider API is a thin adapter over provider-neutral Memory application serv
 It does not expose provider-native administration or persistence.
 
 - List, read, and save provider profiles through `/api/memory-providers`.
+- For replacement, copy the `configurationRevision` from the profile read into `expectedRevision` on `PUT /api/memory-providers/{providerId}`. A stale or missing revision on an existing profile returns HTTP 409. Omit the revision when creating a profile.
 - Dispatch context queries to one explicitly selected provider.
 - Read operation status only through the original API caller's ownership scope.
 - Use OpenAPI for the exact methods and request/response contracts.
@@ -225,6 +300,10 @@ remains unpublished work in progress in its standalone repository and can be use
 through the explicitly configured native-remote provider adapter.
 
 See [Memory providers](memory-providers/README.md) for the current boundary.
+
+## Plugin grants and connections
+
+Grant and connection reads return a `concurrencyToken`. Send it as `expectedConcurrencyToken` when replacing a grant with `PUT /api/plugins/{pluginId}/grants` or an existing connection with `POST /api/plugins/{pluginId}/connections`. An absent grant or connection can be created without a token. HTTP 409 means the original state changed. Read and review the current values before submitting another write.
 
 ## HTTP APIs Versus Runtime Tools
 

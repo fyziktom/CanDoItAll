@@ -1,0 +1,3 @@
+.content-mermaid-source { border: 1px solid rgba(148, 163, 184, .28); border-radius: .75rem; overflow: hidden; }
+.content-mermaid-source > summary { cursor: pointer; font-weight: 650; padding: .75rem .9rem; }
+.content-mermaid-source > pre { margin: 0; padding: .9rem; overflow: auto; max-height: min(28dvh, 18rem); }

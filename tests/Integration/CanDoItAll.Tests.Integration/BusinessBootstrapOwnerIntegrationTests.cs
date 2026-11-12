@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CanDoItAll.Composition;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -34,8 +35,17 @@ public sealed class BusinessBootstrapOwnerIntegrationTests {
         var canonicalProfile = canonical.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
         var targetProfile = target.Services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile;
         var original = await SnapshotAsync(canonicalProfile);
+        var targetOriginal = await SnapshotAsync(targetProfile);
         canonical.Services.GetRequiredService<IOptions<ProviderInitializationOptions>>().Value.SeedDefaults = true;
         var bootstrapper = canonical.Services.GetRequiredService<IAppDatabaseBootstrapper>();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => bootstrapper.EnsureProfileReadyAsync(targetProfile));
+        Assert.Equal(targetOriginal, await SnapshotAsync(targetProfile));
+        Assert.Equal(original, await SnapshotAsync(canonicalProfile));
+        Assert.Equal(0, vault.Sets);
+        var targetBinding = await target.Services.GetRequiredService<DatasetActivationService>().ReadActiveBindingAsync(targetProfile.Profile.Id);
+        var attached = await canonical.Services.GetRequiredService<DatasetActivationCoordinator>().AttachAsync(targetProfile);
+        Assert.Equal(targetBinding, attached);
+        Assert.Equal(targetOriginal, await SnapshotAsync(targetProfile));
         await bootstrapper.EnsureProfileReadyAsync(targetProfile);
         var first = await SnapshotAsync(targetProfile);
         await using (var providers = Providers(targetProfile)) {
@@ -110,6 +120,7 @@ public sealed class BusinessBootstrapOwnerIntegrationTests {
         if (selection != DefaultSelection.NewWorkspace) {
             await using var workspace = Workspace(profile);
             workspace.Add(new WorkspaceSettings {
+                IsCurrent = true,
                 WorkspaceName = "Retained workspace", Notes = "Retained notes", DefaultPromptOutputFormat = "JSON",
                 CurrencyCode = "EUR", CurrencyCultureName = "de-DE", UpdatedAtUtc = Epoch,
                 DefaultProviderProfileId = selection switch {

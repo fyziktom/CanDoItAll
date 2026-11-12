@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.FileSystem;
 
@@ -107,27 +108,85 @@ public static class WorkspaceRuntimeProcessTools
         return variables;
     }
 
-    public static string ResolveTailwindCliScriptPath(string tailwindWorkspacePath)
+    public static string ResolveTailwindCliShimPath(string tailwindWorkspacePath)
         => Path.Combine(
             tailwindWorkspacePath,
             "node_modules",
-            "@tailwindcss",
-            "cli",
-            "dist",
-            "index.mjs");
+            ".bin",
+            OperatingSystem.IsWindows() ? "tailwindcss.cmd" : "tailwindcss");
 
-    public static ManagerExecutablePlan BuildNpmInstallPlan()
-        => OperatingSystem.IsWindows()
-            ? new ManagerExecutablePlan(
-                "cmd.exe",
-                ["/d", "/s", "/c", "\"npm.cmd\" install"])
-            : new ManagerExecutablePlan("npm", ["install"]);
+    public static ManagerExecutablePlan BuildNpmCommandPlan(string workingDirectory, IReadOnlyList<string> npmArguments)
+    {
+        var locator = new WorkspaceExecutableLocator();
+        return CreateNpmCommandPlan(
+            locator.ResolveExecutablePath(["node"], workingDirectory),
+            locator.ResolveExecutablePath(["npm"], workingDirectory),
+            npmArguments);
+    }
 
-    public static IReadOnlyList<string> BuildTailwindBuildArgumentList(string inputPath, string outputPath)
-        => ["-i", inputPath, "-o", outputPath];
+    // npm is launched through its JavaScript entry point so no command shell sits between the Manager
+    // and npm; npm itself still runs the package script through its configured script shell.
+    internal static ManagerExecutablePlan CreateNpmCommandPlan(
+        string nodePath,
+        string npmPath,
+        IReadOnlyList<string> npmArguments)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(npmPath);
+        ArgumentNullException.ThrowIfNull(npmArguments);
+        var npmCliPath = TryResolveNpmCliScriptPath(npmPath);
+        if (npmCliPath is not null)
+        {
+            return new ManagerExecutablePlan(nodePath, [npmCliPath, .. npmArguments]);
+        }
 
-    public static IReadOnlyList<string> BuildTailwindWatchArgumentList(string inputPath, string outputPath)
-        => ["-i", inputPath, "-o", outputPath, "--watch=always"];
+        if (OperatingSystem.IsWindows())
+        {
+            throw new InvalidOperationException(
+                $"The npm installation at '{npmPath}' does not expose npm-cli.js, so the Manager cannot run npm without a command shell.");
+        }
+
+        return new ManagerExecutablePlan(npmPath, npmArguments);
+    }
+
+    private static string? TryResolveNpmCliScriptPath(string npmPath)
+    {
+        if (IsJavaScriptFile(npmPath))
+        {
+            return npmPath;
+        }
+
+        var linkTarget = TryResolveFinalLinkTarget(npmPath);
+        if (linkTarget is not null && IsJavaScriptFile(linkTarget) && File.Exists(linkTarget))
+        {
+            return linkTarget;
+        }
+
+        var npmDirectory = Path.GetDirectoryName(Path.GetFullPath(npmPath)) ?? string.Empty;
+        string[] candidates =
+        [
+            Path.Combine(npmDirectory, "node_modules", "npm", "bin", "npm-cli.js"),
+            Path.Combine(npmDirectory, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js")
+        ];
+        return candidates
+            .Select(Path.GetFullPath)
+            .FirstOrDefault(File.Exists);
+    }
+
+    private static string? TryResolveFinalLinkTarget(string path)
+    {
+        try
+        {
+            return File.ResolveLinkTarget(path, returnFinalTarget: true)?.FullName;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsJavaScriptFile(string path)
+        => string.Equals(Path.GetExtension(path), ".js", StringComparison.OrdinalIgnoreCase);
 
     public static IReadOnlyList<string> GetExplicitWatchUrls(ManagerOptions options)
         => options.WatchUrls

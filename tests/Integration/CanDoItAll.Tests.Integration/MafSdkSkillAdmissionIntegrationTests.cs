@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -641,7 +642,7 @@ public sealed class MafSdkSkillAdmissionIntegrationTests {
         internal async Task ReplaceProjectAndGrantAsync() {
             var original = Project!;
             var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(original.ProjectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, original.ProjectId);
             Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Unrelated skill source replacement" })).IsSuccess);
             Project = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId);
             Assert.NotNull(Project);

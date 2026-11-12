@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+using System.Data;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Processes.Application;
 using Microsoft.EntityFrameworkCore;
@@ -18,27 +18,39 @@ public sealed class EfProcessExecutionMutationGuard(
     }
 
     public async Task RequireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default) {
+        await using var context = await transactions.CreateEnlistedAsync(options, static configured => new ProcessPersistenceDbContext(configured), cancellationToken);
+        await RequireDispatchAsync(context, expected, cancellationToken);
+    }
+
+    public async Task<IAsyncDisposable> AcquireDispatchAsync(ProcessExecutionDispatchAuthority expected, CancellationToken cancellationToken = default) {
+        var context = new ProcessPersistenceDbContext(options);
+        try {
+            await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+            await RequireDispatchAsync(context, expected, cancellationToken);
+            return context;
+        } catch (Exception failure) {
+            try {
+                await context.DisposeAsync();
+            } catch (Exception cleanup) {
+                throw new AggregateException("Process dispatch acquisition and transaction release failed.", failure, cleanup);
+            }
+            throw;
+        }
+    }
+
+    private async Task RequireDispatchAsync(ProcessPersistenceDbContext context, ProcessExecutionDispatchAuthority expected,
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(expected);
         if (expected.RootRunId.Value == Guid.Empty) {
             throw new ProcessExecutionAuthorityMismatchException("Process dispatch requires its exact saved root identity.");
         }
-        await using var context = await transactions.CreateEnlistedAsync(options, static configured => new ProcessPersistenceDbContext(configured), cancellationToken);
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Process native mutation fencing requires the PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var evidence = expected.Evidence;
-        var state = await context.RuntimeStates.FromSqlInterpolated($"""
-            SELECT * FROM process_runtime_states WHERE "RunId" = {evidence.RunId.Value} FOR SHARE
-            """).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        if (state is null || state.RootRunId != expected.RootRunId.Value) {
-            throw new ProcessExecutionAuthorityMismatchException("The Process root binding no longer matches the admitted native effect.");
-        }
-        await context.RuntimeStepAssignments.FromSqlInterpolated($"""
-            SELECT * FROM process_runtime_step_assignments
-            WHERE "RunId" = {evidence.RunId.Value} AND "StepInstanceId" = {evidence.StepInstanceId.Value} FOR SHARE
-            """).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+        await ProcessExecutionSourceRowLocks.AcquireAsync(context, expected.RootRunId, evidence, cancellationToken);
         var result = await EfProcessExecutionAuthorityQuery.ReadCoreAsync(context, evidence, clock.GetUtcNow(), cancellationToken);
         if (result.Snapshot is not { ObservedCurrentDispatch: true } current || current.OwnerFingerprint != expected.OwnerFingerprint ||
                 current.ProjectReference != expected.ProjectReference || current.RootRunId != expected.RootRunId ||
@@ -47,9 +59,4 @@ public sealed class EfProcessExecutionMutationGuard(
         }
     }
 
-    private static long RootLockKey(Guid rootRunId) {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^ BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 }

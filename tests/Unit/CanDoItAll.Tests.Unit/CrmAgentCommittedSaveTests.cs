@@ -1,4 +1,6 @@
 using CanDoItAll.Infrastructure.Search;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +42,7 @@ public sealed class CrmAgentCommittedSaveTests {
     }
 
     [Fact]
-    public async Task Known_pre_save_rejection_keeps_the_existing_create_rollback_behavior() {
+    public async Task Known_profile_rejection_reports_the_already_created_party_for_reconciliation() {
         var failure = new FailureState(FailureStage.RejectedBeforeSave);
         var factory = CreateFactory(failure);
         var bridge = new CommittingBridge(factory, failure);
@@ -48,14 +50,15 @@ public sealed class CrmAgentCommittedSaveTests {
         var activity = new Activity(failure);
         var service = CreateService(factory, bridge, search, activity);
 
-        var result = await service.CreateAgentAsync("Rejected Agent");
+        var result = await Assert.ThrowsAsync<AiAgentCreationIncompleteException>(() => service.CreateAgentAsync("Rejected Agent"));
 
-        Assert.True(result.IsFailure);
+        Assert.Equal(bridge.PartyId, result.PartyId);
+        Assert.Contains(result.Errors, error => error.Code == "test.pre-save");
         Assert.Equal(1, bridge.Saves);
-        Assert.Equal(2, search.Deletes);
-        Assert.Contains("AiAgentCreationRolledBack", activity.Actions);
+        Assert.Equal(0, search.Deletes);
+        Assert.DoesNotContain("AiAgentCreationRolledBack", activity.Actions);
         await using var persisted = factory.CreateDbContext();
-        Assert.Empty(await persisted.Set<Party>().ToArrayAsync());
+        Assert.Equal(bridge.PartyId, (await persisted.Set<Party>().SingleAsync()).Id);
         Assert.Empty(await persisted.Set<AiResourceBinding>().ToArrayAsync());
         Assert.Empty(await persisted.Set<AiAgentProfile>().ToArrayAsync());
     }
@@ -68,8 +71,10 @@ public sealed class CrmAgentCommittedSaveTests {
 
     private static AiAgentService CreateService(ContextFactory factory, CommittingBridge bridge, Search search, Activity activity) {
         var clock = new SystemClock();
-        var parties = new PartyDirectoryService(factory, clock, activity, search);
-        return new(factory, clock, activity, search, parties, bridge);
+        var changes = new CrmHrChanges(new EditingChangeFeed(), new(EditingScopeKind.Dataset, Guid.NewGuid()), new EditingOperationContext());
+        var parties = new PartyDirectoryService(factory, clock, activity, search, changes);
+        var stewardship = new AiStewardProfileEditingService(factory, clock, changes, activity, new(factory, search, bridge));
+        return new(factory, parties, bridge, stewardship);
     }
 
     private sealed class FailureState(FailureStage stage) {
@@ -112,13 +117,16 @@ public sealed class CrmAgentCommittedSaveTests {
             }
 
             await using var context = factory.CreateDbContext();
-            context.Add(new AiAgentProfile { PartyId = model.PartyId });
+            var profile = new AiAgentProfile { PartyId = model.PartyId };
+            context.Add(profile);
             context.Add(new AiResourceBinding {
                 PartyId = model.PartyId, TechnicalAgentId = AgentId, BindingStatus = AiResourceBindingStatus.Bound
             });
             await context.SaveChangesAsync(cancellationToken);
             failure.Armed = true;
-            return Result<AiTechnicalAgentSaveResult>.Success(new(AgentId, AiResourceBindingStatus.Bound, "Saved", "/agents"));
+            return Result<AiTechnicalAgentSaveResult>.Success(new(AgentId, AiResourceBindingStatus.Bound, "Saved", "/agents") {
+                CreatedBusinessProfile = new(model.PartyId, PartyType.AiAgent, profile.Id, null, AiValidationStatus.Draft, null, "")
+            });
         }
 
         public Task<AiTechnicalAgentWorkspaceModel> GetWorkspaceAsync(Guid partyId, CancellationToken cancellationToken = default) =>
@@ -146,6 +154,7 @@ public sealed class CrmAgentCommittedSaveTests {
         }
 
         public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<SearchResult>> SearchAsync(string query, int take = 12, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 

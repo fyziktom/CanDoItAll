@@ -271,6 +271,12 @@ public static class ManagerDashboardPage
           <dd id="tailwind-state"></dd>
           <dt>Summary</dt>
           <dd id="tailwind-summary"></dd>
+          <dt>Command</dt>
+          <dd id="tailwind-command"></dd>
+          <dt>Last Build</dt>
+          <dd id="tailwind-last-build"></dd>
+          <dt>Restarts</dt>
+          <dd id="tailwind-restarts"></dd>
           <dt>Workspace</dt>
           <dd id="tailwind-workspace"></dd>
           <dt>Input</dt>
@@ -458,6 +464,11 @@ public static class ManagerDashboardPage
       renderItemList(document.getElementById("watch-urls"), status.watch?.activeUrls || [], "No active URLs yet.");
       setText("tailwind-state", status.tailwind?.stateName || status.tailwind?.state);
       setText("tailwind-summary", status.tailwind?.summary);
+      setText("tailwind-command", status.tailwind?.watchCommand || "Not started");
+      setText("tailwind-last-build", status.tailwind?.lastBuildUtc
+        ? `${status.tailwind.lastBuildUtc} (${status.tailwind.buildCount} since start)`
+        : "No completed build yet");
+      setText("tailwind-restarts", status.tailwind?.restartCount ?? 0);
       setText("tailwind-workspace", status.tailwind?.workspacePath);
       setText("tailwind-input", status.tailwind?.inputFilePath);
       setText("tailwind-output", status.tailwind?.outputFilePath);

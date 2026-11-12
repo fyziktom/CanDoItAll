@@ -1,21 +1,38 @@
 @using System.Collections.Immutable
+@using Microsoft.AspNetCore.Components.Sections
 @namespace CanDoItAll.AgentFramework.UI.Chat
+
+@if (Compact && WindowHeaderSlots is not null) {
+    <SectionContent SectionId="WindowHeaderSlots.Status">
+        <StatusBadge Tone="@PresentationToneResolver.Resolve(Presentation.RunStatus?.Tone ?? PresentationTone.Default)"
+                     Text="@(Presentation.RunStatus?.Text ?? "Ready")"
+                     role="status" data-testid="floating-agent-chat-run-state" />
+    </SectionContent>
+}
 
 <ConversationWorkspacePanel>
     <Header>
-        <ConversationHeader Presentation="@HeaderPresentation"
-                            Actions="@HeaderActions">
+        <ConversationHeader Presentation="@HeaderPresentation" Compact="Compact" ContextContent="@HeaderContext">
+            <Actions>
+                @if (Compact) {
+                    <Button Icon="info" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Click="@(() => detailsOpen = true)" aria-label="Conversation details" title="Conversation details"
+                            data-testid="chat-conversation-details" />
+                }
+                @HeaderActions
+            </Actions>
             <TitleContent>
                 @if (Session is null) {
                     <p class="chat-panel-header__empty-title">Select or create a thread</p>
                 } else {
+                    <div class="chat-thread-title-edit">
                     <Editable TItem="ChatThreadTitleDraft"
                               Item="@titleEditor"
                               ItemChanged="HandleSessionTitleChangedAsync"
                               ParameterName="@nameof(ChatThreadTitleDraft.Title)"
                               Placeholder="Thread title"
-                              EmptyText="Untitled thread"
-                              Class="chat-thread-title-edit" />
+                              EmptyText="Untitled thread" />
+                    </div>
                 }
             </TitleContent>
         </ConversationHeader>
@@ -142,8 +159,8 @@
                               DraftPromptChanged="@(value => EmitAsync(ChatWorkspaceAction.DraftChanged, value))"
                               SendRequested="@(() => EmitAsync(ChatWorkspaceAction.Send))"
                               IsBusy="@IsBusy"
-                              IsSendDisabled="@(IsBusy || HasPendingApprovals)"
-                              ComposerKey="@ComposerKey">
+                              IsSendDisabled="@(Presentation.IsSendBlocked || IsBusy || HasPendingApprovals)"
+                              ComposerKey="@ComposerKey" Compact="Compact">
             <LeadingActions>
                     @ComposerActions
                     @AttachmentPicker
@@ -249,8 +266,24 @@
     </Composer>
 </ConversationWorkspacePanel>
 
+@if (Compact && detailsOpen) {
+    <Dialog IsOpen="true" Title="Conversation details" Size="ModalSize.Compact" DenseChrome="true"
+            OnClose="@(() => detailsOpen = false)" TestId="chat-conversation-details-dialog">
+        <Stack GapScale="LayoutGap.Medium">
+            <ConversationHeader Presentation="@HeaderPresentation">
+                <TitleContent><TextBlock Value="@(Session?.Title ?? "New conversation")" /></TitleContent>
+            </ConversationHeader>
+            @HeaderDetails
+        </Stack>
+    </Dialog>
+}
 
 @code {
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public RenderFragment? HeaderContext { get; set; }
+    [CascadingParameter] public ConversationWindowHeaderSlots? WindowHeaderSlots { get; set; }
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
+    private bool detailsOpen;
     [Parameter, EditorRequired] public ChatWorkspacePresentation Presentation { get; set; } = new();
     [Parameter] public EventCallback<ChatWorkspaceIntent> Intent { get; set; }
     [Parameter] public RenderFragment? HeaderActions { get; set; }
@@ -293,6 +326,9 @@
         var pending = PendingApprovals.Select(item => item.ApprovalId).ToHashSet(StringComparer.Ordinal);
         foreach (var id in approvalChoices.Keys.Where(id => !pending.Contains(id)).ToArray()) {
             approvalChoices.Remove(id);
+        }
+        if (titleSession != Session?.Id) {
+            detailsOpen = false;
         }
         if (titleSession != Session?.Id || acceptedTitle != Session?.Title) {
             titleSession = Session?.Id;

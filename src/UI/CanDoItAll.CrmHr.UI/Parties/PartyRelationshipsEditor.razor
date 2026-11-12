@@ -1,5 +1,7 @@
 @inject IPartyRecordQueryService PartyRecordQueryService
+@implements IDisposable
 
+<fieldset disabled="@Disabled" class="min-w-0 w-full">
 <Stack GapScale="LayoutGap.Medium">
     <Split Gap="LayoutGap.Medium"
            AlignItems="AlignItems.Center"
@@ -11,7 +13,7 @@
         <Button Text="Add relationship"
                 ButtonStyle="ButtonStyle.Light"
                 Size="ButtonSize.Small"
-                Click="AddRelationship"
+                Click="AddRelationshipAsync"
                 Disabled="@(!CurrentPartyId.HasValue)"
                 data-testid="crmhr-relationship-add" />
     </Split>
@@ -22,7 +24,7 @@
             Save the party first, then add relationships to other saved parties.
         </div>
     }
-    else if (Relationships.Count == 0)
+    else if (edits.Count == 0)
     {
         <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
             No relationships defined yet.
@@ -30,7 +32,7 @@
     }
     else
     {
-        @foreach (var row in Relationships.Select((item, index) => (Item: item, Index: index)))
+        @foreach (var row in edits.Select((item, index) => (Item: item, Index: index)))
         {
             var item = row.Item;
             var rowIndex = row.Index;
@@ -39,16 +41,20 @@
                     <div>
                         <label class="cda-field-label">Direction</label>
                         <InputSelect TValue="bool"
-                                     @bind-Value="item.IsOutgoing"
+                                     Value="@item.IsOutgoing"
+                                     ValueChanged="@((bool value) => UpdateDirectionAsync(item, value))"
+                                     ValueExpression="@(() => item.IsOutgoing)"
                                      class="cda-input"
                                      data-testid="@($"crmhr-relationship-direction-{rowIndex}")">
-                            <option value="@true">This party points to related party</option>
-                            <option value="@false">Related party points to this party</option>
+                            <option value="true">This party points to related party</option>
+                            <option value="false">Related party points to this party</option>
                         </InputSelect>
                     </div>
                     <div>
                         <label class="cda-field-label">Relationship</label>
-                        <InputSelect @bind-Value="item.RelationshipKind"
+                        <InputSelect TValue="PartyRelationshipKind" Value="@item.RelationshipKind"
+                                     ValueChanged="@((PartyRelationshipKind value) => UpdateKindAsync(item, value))"
+                                     ValueExpression="@(() => item.RelationshipKind)"
                                      class="cda-input"
                                      data-testid="@($"crmhr-relationship-kind-{rowIndex}")">
                             @foreach (var relationshipKind in Enum.GetValues<PartyRelationshipKind>())
@@ -71,7 +77,7 @@
                                     Icon="search"
                                     ButtonStyle="ButtonStyle.Light"
                                     Size="ButtonSize.Small"
-                                    Click="@(() => OpenRelatedPartyPicker(item))"
+                                    Click="@(() => OpenRelatedPartyPickerAsync(item))"
                                     data-testid="@($"crmhr-relationship-party-{rowIndex}")" />
                         </Split>
                     </div>
@@ -80,18 +86,26 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                     <div>
                         <label class="cda-field-label">Start date</label>
-                        <InputDate @bind-Value="item.StartDateUtc"
+                        <InputDate TValue="DateTimeOffset?" Value="@item.StartDateUtc"
+                                   @oninput="@(() => ReportPendingDateAsync(item, RelationshipField.Start))"
+                                   ValueChanged="@((DateTimeOffset? value) => UpdateStartAsync(item, value))"
+                                   ValueExpression="@(() => item.StartDateUtc)"
                                    class="cda-input"
                                    data-testid="@($"crmhr-relationship-start-{rowIndex}")" />
                     </div>
                     <div>
                         <label class="cda-field-label">End date</label>
-                        <InputDate @bind-Value="item.EndDateUtc"
+                        <InputDate TValue="DateTimeOffset?" Value="@item.EndDateUtc"
+                                   @oninput="@(() => ReportPendingDateAsync(item, RelationshipField.End))"
+                                   ValueChanged="@((DateTimeOffset? value) => UpdateEndAsync(item, value))"
+                                   ValueExpression="@(() => item.EndDateUtc)"
                                    class="cda-input"
                                    data-testid="@($"crmhr-relationship-end-{rowIndex}")" />
                     </div>
                     <label class="cda-inline-option">
-                        <InputCheckbox @bind-Value="item.IsPrimary"
+                        <InputCheckbox Value="@item.IsPrimary"
+                                       ValueChanged="@((bool value) => UpdatePrimaryAsync(item, value))"
+                                       ValueExpression="@(() => item.IsPrimary)"
                                        data-testid="@($"crmhr-relationship-primary-{rowIndex}")" />
                         Primary relationship
                     </label>
@@ -100,7 +114,10 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
                     <div>
                         <label class="cda-field-label">Notes</label>
-                        <InputText @bind-Value="item.Notes"
+                        <NativeValueInput TValue="string" Multiline="true" Value="@item.Notes"
+                                   ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
+                                   ValueExpression="@(() => item.Notes)"
+                                   rows="3"
                                    class="cda-input"
                                    data-testid="@($"crmhr-relationship-notes-{rowIndex}")" />
                     </div>
@@ -108,7 +125,7 @@
                         <Button Text="Remove"
                                 ButtonStyle="ButtonStyle.Danger"
                                 Size="ButtonSize.Small"
-                                Click="@(() => RemoveRelationship(item))"
+                                Click="@(() => RemoveRelationshipAsync(item))"
                                 data-testid="@($"crmhr-relationship-remove-{rowIndex}")" />
                     </div>
                 </Grid>
@@ -116,102 +133,148 @@
         }
     }
 </Stack>
+</fieldset>
 
-<PartyRecordPickerDialog IsOpen="@(relationshipPickerTarget is not null)"
+<PartyRecordPickerDialog IsOpen="@(pickerTarget is not null)"
                          SelectedPartyId="@SelectedRelatedPartyId"
                          ExcludedPartyId="@CurrentPartyId"
-                         SelectionConfirmed="SelectRelatedParty"
-                         OnClose="CloseRelatedPartyPicker"
+                         SelectionConfirmed="SelectRelatedPartyAsync"
+                         OnClose="CloseRelatedPartyPickerAsync"
                          Eyebrow="Party relationship"
                          Title="Choose a related party"
                          Subtitle="Search the full directory by name, code, summary, tags, or party type."
                          DataTestId="crmhr-relationship-picker" />
 
 @code {
-    private PartyRelationshipEditorModel? relationshipPickerTarget;
-    private bool isNewRelationshipPickerTarget;
+    private readonly List<PartyRelationshipEditorModel> edits = [];
+    private IReadOnlyList<PartyRelationshipEditorModel>? configured;
+    private long configuredRevision;
+    private Guid? configuredPartyId;
+    private PartyRelationshipEditorModel? pickerTarget;
+    private bool newPickerTarget;
+    private long pickerGeneration;
+    private bool disposed;
+    [Parameter] public Guid? CurrentPartyId { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<PartyRelationshipEditorModel> Relationships { get; set; } = [];
+    [Parameter] public EventCallback<IReadOnlyList<PartyRelationshipEditorModel>> RelationshipsChanged { get; set; }
+    [Parameter] public long OwnerRevision { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<RelationshipInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PendingInputChanged { get; set; }
+    [CascadingParameter] private EditContext? FormContext { get; set; }
+    private Guid? SelectedRelatedPartyId => pickerTarget?.RelatedPartyId is Guid id && id != Guid.Empty ? id : null;
 
-    [Parameter]
-    public Guid? CurrentPartyId { get; set; }
-
-    [Parameter, EditorRequired]
-    public IList<PartyRelationshipEditorModel> Relationships { get; set; } = default!;
-
-    private Guid? SelectedRelatedPartyId => relationshipPickerTarget?.RelatedPartyId == Guid.Empty
-        ? null
-        : relationshipPickerTarget?.RelatedPartyId;
-
-    private void AddRelationship()
-    {
-        var relationship = new PartyRelationshipEditorModel();
-        Relationships.Add(relationship);
-        relationshipPickerTarget = relationship;
-        isNewRelationshipPickerTarget = true;
-    }
-
-    private void RemoveRelationship(PartyRelationshipEditorModel relationship)
-    {
-        Relationships.Remove(relationship);
-        if (ReferenceEquals(relationshipPickerTarget, relationship))
-        {
-            relationshipPickerTarget = null;
-            isNewRelationshipPickerTarget = false;
-        }
-    }
-
-    private void OpenRelatedPartyPicker(PartyRelationshipEditorModel relationship)
-    {
-        relationshipPickerTarget = relationship;
-        isNewRelationshipPickerTarget = false;
-    }
-
-    private async Task SelectRelatedParty(Guid partyId)
-    {
-        if (relationshipPickerTarget is null)
-        {
+    protected override void OnParametersSet() {
+        if (ReferenceEquals(configured, Relationships) && configuredRevision == OwnerRevision && configuredPartyId == CurrentPartyId) {
             return;
         }
-
-        var selectedParty = await PartyRecordQueryService.GetAsync(
-            partyId,
-            includeArchived: true);
-        if (selectedParty is null)
-        {
-            throw new InvalidOperationException(
-                $"Selected related party '{partyId}' no longer exists.");
+        var changedParty = configuredPartyId != CurrentPartyId;
+        RelationshipValues.Adopt(edits, Relationships);
+        configured = Relationships;
+        configuredRevision = OwnerRevision;
+        configuredPartyId = CurrentPartyId;
+        if (pickerTarget is not null && (changedParty || !edits.Contains(pickerTarget))) {
+            pickerTarget = null;
+            newPickerTarget = false;
+            pickerGeneration++;
         }
-
-        relationshipPickerTarget.RelatedPartyId = partyId;
-        relationshipPickerTarget.RelatedPartyDisplayName = selectedParty.DisplayName;
-        relationshipPickerTarget.RelatedPartyType = selectedParty.PartyType;
-        relationshipPickerTarget = null;
-        isNewRelationshipPickerTarget = false;
     }
-
-    private void CloseRelatedPartyPicker()
-    {
-        if (isNewRelationshipPickerTarget &&
-            relationshipPickerTarget is { RelatedPartyId: var partyId } &&
-            partyId == Guid.Empty)
-        {
-            Relationships.Remove(relationshipPickerTarget);
+    private async Task AddRelationshipAsync() {
+        if (CurrentPartyId is null) {
+            return;
         }
-
-        relationshipPickerTarget = null;
-        isNewRelationshipPickerTarget = false;
+        var row = new PartyRelationshipEditorModel { Id = Guid.NewGuid() };
+        edits.Add(row);
+        pickerTarget = row;
+        newPickerTarget = true;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(true);
+        await PublishAsync();
     }
-
-    private string ResolveRelatedPartyLabel(PartyRelationshipEditorModel relationship)
-    {
-        if (relationship.RelatedPartyId == Guid.Empty)
-        {
-            return "No party selected";
+    private async Task RemoveRelationshipAsync(PartyRelationshipEditorModel row) {
+        edits.Remove(row);
+        if (ReferenceEquals(pickerTarget, row)) {
+            pickerTarget = null;
+            newPickerTarget = false;
+            pickerGeneration++;
+            await PendingInputChanged.InvokeAsync(false);
         }
+        await PublishAsync();
+    }
+    private async Task OpenRelatedPartyPickerAsync(PartyRelationshipEditorModel row) {
+        pickerTarget = row;
+        newPickerTarget = false;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(true);
+    }
+    private async Task SelectRelatedPartyAsync(Guid partyId) {
+        if (pickerTarget is not { } row) {
+            return;
+        }
+        var generation = pickerGeneration;
+        var target = CurrentPartyId;
+        var selected = await PartyRecordQueryService.GetAsync(partyId, includeArchived: true);
+        if (disposed || generation != pickerGeneration || target != CurrentPartyId || !ReferenceEquals(row, pickerTarget)) {
+            return;
+        }
+        if (selected is null) {
+            throw new InvalidOperationException($"Selected related party '{partyId}' no longer exists.");
+        }
+        row.RelatedPartyId = partyId;
+        row.RelatedPartyDisplayName = selected.DisplayName;
+        row.RelatedPartyType = selected.PartyType;
+        pickerTarget = null;
+        newPickerTarget = false;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(false);
+        await PublishInputAsync(row, RelationshipField.Party);
+    }
+    private async Task CloseRelatedPartyPickerAsync() {
+        if (newPickerTarget && pickerTarget is { RelatedPartyId: var id } && id == Guid.Empty) {
+            edits.Remove(pickerTarget);
+            await PublishAsync();
+        }
+        pickerTarget = null;
+        newPickerTarget = false;
+        pickerGeneration++;
+        await PendingInputChanged.InvokeAsync(false);
+    }
+    private Task PublishAsync() => RelationshipsChanged.InvokeAsync(RelationshipValues.Snapshot(edits));
+    private async Task PublishInputAsync(PartyRelationshipEditorModel row, RelationshipField field) {
+        await InputChanged.InvokeAsync(new(row.Id!.Value, field));
+        await PublishAsync();
+    }
+    private Task ReportPendingDateAsync(PartyRelationshipEditorModel row, RelationshipField field) => InputChanged.InvokeAsync(new(row.Id!.Value, field, PendingDate: true));
+    private Task UpdateDirectionAsync(PartyRelationshipEditorModel row, bool value) {
+        row.IsOutgoing = value;
+        return PublishInputAsync(row, RelationshipField.Direction);
+    }
+    private Task UpdateKindAsync(PartyRelationshipEditorModel row, PartyRelationshipKind value) {
+        row.RelationshipKind = value;
+        return PublishInputAsync(row, RelationshipField.Kind);
+    }
+    private Task UpdatePrimaryAsync(PartyRelationshipEditorModel row, bool value) {
+        row.IsPrimary = value;
+        return PublishInputAsync(row, RelationshipField.Primary);
+    }
+    private Task UpdateStartAsync(PartyRelationshipEditorModel row, DateTimeOffset? value) {
+        row.StartDateUtc = value;
+        return PublishInputAsync(row, RelationshipField.Start);
+    }
+    private Task UpdateEndAsync(PartyRelationshipEditorModel row, DateTimeOffset? value) {
+        row.EndDateUtc = value;
+        return PublishInputAsync(row, RelationshipField.End);
+    }
+    private Task UpdateNotesAsync(PartyRelationshipEditorModel row, string? value) {
+        row.Notes = value ?? string.Empty;
 
-        return string.IsNullOrWhiteSpace(relationship.RelatedPartyDisplayName)
-            ? relationship.RelatedPartyId.ToString("D")
-            : relationship.RelatedPartyType.HasValue
-                ? $"{relationship.RelatedPartyDisplayName} ({relationship.RelatedPartyType.Value})"
-                : relationship.RelatedPartyDisplayName;
+        return PublishInputAsync(row, RelationshipField.Notes);
+    }
+    private static string ResolveRelatedPartyLabel(PartyRelationshipEditorModel row) => row.RelatedPartyId == Guid.Empty ? "No party selected" :
+        string.IsNullOrWhiteSpace(row.RelatedPartyDisplayName) ? row.RelatedPartyId.ToString("D") :
+            row.RelatedPartyType is { } type ? $"{row.RelatedPartyDisplayName} ({type})" : row.RelatedPartyDisplayName;
+    public void Dispose() {
+        disposed = true;
+        pickerGeneration++;
     }
 }

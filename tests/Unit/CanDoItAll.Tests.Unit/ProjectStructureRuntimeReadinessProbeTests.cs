@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using System.Net;
 using System.Security.Authentication;
 using CanDoItAll.Modules.Workbench;
@@ -94,6 +95,38 @@ public sealed class ProjectStructureRuntimeReadinessProbeTests
             CancellationToken.None));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Exact_readiness_refuses_replacement_before_or_during_the_HTTP_reply(bool duringReply) {
+        var original = new WorkspaceOwnedProcessIdentity(1234, DateTimeOffset.UnixEpoch, new string('a', 64),
+            new(WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup, 1234, Guid.NewGuid()));
+        var replacement = original with { StartedAtUtc = DateTimeOffset.UnixEpoch.AddSeconds(1) };
+        var launcher = new FakeLauncher { Identity = duringReply ? original : replacement };
+        var handler = new SequenceHandler(_ => {
+            launcher.Identity = replacement;
+            return new(HttpStatusCode.OK);
+        });
+        var probe = new ProjectStructureRuntimeReadinessProbe(new HandlerClientFactory(handler));
+        var result = await probe.WaitUntilServingAsync(launcher, "node-1", original, AppUrl, TimeSpan.FromSeconds(5), CancellationToken.None);
+        Assert.Equal(ProjectStructureRuntimeReadinessStatus.Stopped, result.Status);
+        Assert.Equal(duringReply ? 1 : 0, handler.Calls);
+    }
+
+    [Fact]
+    public async Task Exact_readiness_honors_cancellation_even_when_HTTP_returns_a_success_after_cancellation() {
+        using var cancellation = new CancellationTokenSource();
+        var original = new WorkspaceOwnedProcessIdentity(1234, DateTimeOffset.UnixEpoch, new string('a', 64),
+            new(WorkspaceOwnedProcessBoundaryKind.UnixProcessGroup, 1234, Guid.NewGuid()));
+        var launcher = new FakeLauncher { Identity = original };
+        var probe = new ProjectStructureRuntimeReadinessProbe(new HandlerClientFactory(new SequenceHandler(_ => {
+            cancellation.Cancel();
+            return new(HttpStatusCode.OK);
+        })));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => probe.WaitUntilServingAsync(launcher, "node-1", original,
+            AppUrl, TimeSpan.FromSeconds(5), cancellation.Token));
+    }
+
     private sealed class SequenceHandler(params Func<HttpRequestMessage, HttpResponseMessage>[] responses) : HttpMessageHandler
     {
         public int Calls { get; private set; }
@@ -114,6 +147,8 @@ public sealed class ProjectStructureRuntimeReadinessProbeTests
     private sealed class FakeLauncher : IProjectStructureRuntimeLauncher
     {
         public ProjectStructureRuntimeExitRecord? Exit { get; init; }
+        public WorkspaceOwnedProcessIdentity? Identity { get; set; }
+        public WorkspaceOwnedProcessIdentity? GetIdentity(string nodeId) => Identity;
 
         public bool IsAvailable => true;
 

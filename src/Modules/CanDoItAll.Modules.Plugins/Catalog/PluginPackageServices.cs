@@ -198,74 +198,88 @@ public sealed class PluginPackageService(
                 "plugins.package-invalid"));
         }
 
-        var installResult = await installationStore.InstallAsync(
-            manifest.Plugin,
-            request.Enable,
-            request.Actor,
-            cancellationToken);
-        if (installResult.IsFailure)
-        {
+        var progress = new PluginPackageProgress(manifest.Plugin.Package!.PackageId, manifest.Plugin.Id,
+            PluginPackageStage.Extracted, manifest.RequiresRestart || PluginPackageManifestStore.HasRuntimeAssemblies(manifest));
+        try {
+            var installResult = await installationStore.InstallAsync(
+                manifest.Plugin,
+                request.Enable,
+                request.Actor,
+                cancellationToken);
+            if (installResult.IsFailure)
+            {
+                await logStore.WriteAsync(new PluginLogWriteRequest(
+                    PluginLogStreamKind.Installation,
+                    PluginLogOperationKind.PackageInstall,
+                    PluginLogSeverity.Error,
+                    "Failed",
+                    string.Join(" ", installResult.Errors.Select(error => error.Message)),
+                    PluginLogStore.SerializeDetails(new { sourceKind, actor = request.Actor }),
+                    manifest.Plugin.Id,
+                    manifest.Plugin.Package?.PackageId),
+                    cancellationToken);
+                throw new PluginPackageStageException(progress, new InvalidOperationException("Installation persistence was refused after extraction."));
+            }
+
+            var restartRequired = manifest.RequiresRestart || PluginPackageManifestStore.HasRuntimeAssemblies(manifest);
+            progress = progress with { Stage = PluginPackageStage.Installed };
+            var restartStatus = restartRequired
+                ? await restartService.MarkRestartRequiredAsync(
+                    $"Plugin package '{manifest.Plugin.DisplayName}' was installed and requires application restart before runtime assemblies can be used.",
+                    request.Actor,
+                    cancellationToken)
+                : await restartService.GetStatusAsync(cancellationToken);
+
+            progress = progress with { Stage = PluginPackageStage.RestartRecorded, RestartStatus = restartStatus };
+            logger.LogInformation(
+                "Installed plugin package {PackageId} for plugin {PluginId}. Source={SourceKind}. RestartRequired={RestartRequired}. Actor={Actor}.",
+                manifest.Plugin.Package!.PackageId.Value,
+                manifest.Plugin.Id.Value,
+                sourceKind,
+                restartRequired,
+                NormalizeActor(request.Actor));
+
             await logStore.WriteAsync(new PluginLogWriteRequest(
                 PluginLogStreamKind.Installation,
                 PluginLogOperationKind.PackageInstall,
-                PluginLogSeverity.Error,
-                "Failed",
-                string.Join(" ", installResult.Errors.Select(error => error.Message)),
-                PluginLogStore.SerializeDetails(new { sourceKind, actor = request.Actor }),
-                manifest.Plugin.Id,
-                manifest.Plugin.Package?.PackageId),
-                cancellationToken);
-            return Result<PluginPackageInstallResult>.Failure(installResult.Errors);
-        }
-
-        var restartRequired = manifest.RequiresRestart || PluginPackageManifestStore.HasRuntimeAssemblies(manifest);
-        var restartStatus = restartRequired
-            ? await restartService.MarkRestartRequiredAsync(
-                $"Plugin package '{manifest.Plugin.DisplayName}' was installed and requires application restart before runtime assemblies can be used.",
-                request.Actor,
-                cancellationToken)
-            : await restartService.GetStatusAsync(cancellationToken);
-
-        logger.LogInformation(
-            "Installed plugin package {PackageId} for plugin {PluginId}. Source={SourceKind}. RestartRequired={RestartRequired}. Actor={Actor}.",
-            manifest.Plugin.Package!.PackageId.Value,
-            manifest.Plugin.Id.Value,
-            sourceKind,
-            restartRequired,
-            NormalizeActor(request.Actor));
-
-        await logStore.WriteAsync(new PluginLogWriteRequest(
-            PluginLogStreamKind.Installation,
-            PluginLogOperationKind.PackageInstall,
-            PluginLogSeverity.Information,
-            "Installed",
-            $"Plugin package '{manifest.Plugin.DisplayName}' was installed.",
-            PluginLogStore.SerializeDetails(new { sourceKind, restartRequired, actor = request.Actor }),
-            manifest.Plugin.Id,
-            manifest.Plugin.Package.PackageId),
-            cancellationToken);
-        if (restartRequired)
-        {
-            await logStore.WriteAsync(new PluginLogWriteRequest(
-                PluginLogStreamKind.Installation,
-                PluginLogOperationKind.RestartRequired,
-                PluginLogSeverity.Warning,
-                restartStatus.IsRestartRequested ? "RestartRequested" : "Required",
-                restartStatus.Reason,
-                PluginLogStore.SerializeDetails(new { restartStatus.ProcessId, restartStatus.RequiredAtUtc, actor = request.Actor }),
+                PluginLogSeverity.Information,
+                "Installed",
+                $"Plugin package '{manifest.Plugin.DisplayName}' was installed.",
+                PluginLogStore.SerializeDetails(new { sourceKind, restartRequired, actor = request.Actor }),
                 manifest.Plugin.Id,
                 manifest.Plugin.Package.PackageId),
                 cancellationToken);
-        }
+            if (restartRequired)
+            {
+                await logStore.WriteAsync(new PluginLogWriteRequest(
+                    PluginLogStreamKind.Installation,
+                    PluginLogOperationKind.RestartRequired,
+                    PluginLogSeverity.Warning,
+                    restartStatus.IsRestartRequested ? "RestartRequested" : "Required",
+                    restartStatus.Reason,
+                    PluginLogStore.SerializeDetails(new { restartStatus.ProcessId, restartStatus.RequiredAtUtc, actor = request.Actor }),
+                    manifest.Plugin.Id,
+                    manifest.Plugin.Package.PackageId),
+                    cancellationToken);
+            }
 
-        return Result<PluginPackageInstallResult>.Success(new PluginPackageInstallResult(
-            manifest.Plugin.Package.PackageId,
-            manifest.Plugin.Id,
-            manifest.Plugin.DisplayName,
-            manifest.Plugin.Version,
-            sourceKind,
-            restartRequired,
-            restartStatus));
+            return Result<PluginPackageInstallResult>.Success(new PluginPackageInstallResult(
+                manifest.Plugin.Package.PackageId,
+                manifest.Plugin.Id,
+                manifest.Plugin.DisplayName,
+                manifest.Plugin.Version,
+                sourceKind,
+                restartRequired,
+                restartStatus));
+        } catch (PluginPackageStageException) {
+            throw;
+        } catch (PluginCommittedException<PluginInstallationRecord> exception) {
+            throw new PluginPackageStageException(progress with { Stage = PluginPackageStage.Installed }, exception);
+        } catch (PluginCommittedException<PluginRuntimeRestartStatus> exception) {
+            throw new PluginPackageStageException(progress with { Stage = PluginPackageStage.RestartRecorded, RestartStatus = exception.Value }, exception);
+        } catch (Exception exception) {
+            throw new PluginPackageStageException(progress, exception);
+        }
     }
 
     private static PluginPackageCatalogItem CreateCatalogItem(
@@ -350,6 +364,8 @@ public sealed class PluginPackageManifestStore(
 {
     public const string ManifestFileName = "plugin.package.json";
 
+    internal Action<string> DeletePackageDirectory { get; init; } = path => Directory.Delete(path, recursive: true);
+
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
@@ -413,11 +429,11 @@ public sealed class PluginPackageManifestStore(
 
         if (Directory.Exists(temporaryPackagePath))
         {
-            Directory.Delete(temporaryPackagePath, recursive: true);
+            DeletePackageDirectory(temporaryPackagePath);
         }
 
         Directory.CreateDirectory(temporaryPackagePath);
-
+        var replacementStarted = false;
         try
         {
             await using var stream = File.OpenRead(archivePath);
@@ -457,22 +473,42 @@ public sealed class PluginPackageManifestStore(
 
             if (Directory.Exists(installedPackagePath))
             {
-                Directory.Delete(installedPackagePath, recursive: true);
+                replacementStarted = true;
+                DeletePackageDirectory(installedPackagePath);
             }
 
             Directory.Move(temporaryPackagePath, installedPackagePath);
-            logger.LogInformation(
-                "Extracted plugin package {PackageId} into {InstalledPackagePath}.",
-                packageId,
-                installedPackagePath);
+            try {
+                logger.LogInformation(
+                    "Extracted plugin package {PackageId} into {InstalledPackagePath}.",
+                    packageId,
+                    installedPackagePath);
+            } catch (Exception exception) {
+                throw new PluginPackageStageException(new(manifest.Plugin.Package!.PackageId, manifest.Plugin.Id,
+                    PluginPackageStage.Extracted, manifest.RequiresRestart || HasRuntimeAssemblies(manifest)), exception);
+            }
         }
-        catch
-        {
-            if (Directory.Exists(temporaryPackagePath))
-            {
-                Directory.Delete(temporaryPackagePath, recursive: true);
+        catch (Exception exception) {
+            Exception? cleanupFailure = null;
+            try {
+                if (Directory.Exists(temporaryPackagePath)) {
+                    DeletePackageDirectory(temporaryPackagePath);
+                }
+            } catch (Exception cleanupException) {
+                cleanupFailure = cleanupException;
             }
 
+            if (exception is PluginPackageStageException staged && cleanupFailure is not null) {
+                throw new PluginPackageStageException(staged.Progress, staged.InnerException!, cleanupFailure);
+            }
+            if (replacementStarted && exception is not PluginPackageStageException) {
+                throw new PluginPackageStageException(new(manifest.Plugin.Package!.PackageId, manifest.Plugin.Id,
+                    PluginPackageStage.ReplacementStarted, manifest.RequiresRestart || HasRuntimeAssemblies(manifest)), exception, cleanupFailure);
+            }
+            if (cleanupFailure is not null) {
+                throw new IOException("Package preparation and temporary-directory cleanup failed before replacement.",
+                    new AggregateException(exception, cleanupFailure));
+            }
             throw;
         }
     }
@@ -761,6 +797,8 @@ public sealed class PluginRuntimeRestartService(
     IHostApplicationLifetime applicationLifetime,
     ILogger<PluginRuntimeRestartService> logger)
 {
+    private readonly SemaphoreSlim restartAdmission = new(1, 1);
+
     private const string StateFileName = "plugin-runtime-restart.json";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -789,10 +827,10 @@ public sealed class PluginRuntimeRestartService(
             ProcessId: Environment.ProcessId);
 
         await WriteStatusFileAsync(status, cancellationToken);
-        logger.LogInformation(
+        PluginCommit.Observe(status, () => logger.LogInformation(
             "Plugin runtime restart marked as required. Actor={Actor}. Reason={Reason}.",
             NormalizeActor(actor),
-            status.Reason);
+            status.Reason));
         return status;
     }
 
@@ -800,35 +838,44 @@ public sealed class PluginRuntimeRestartService(
         PluginRuntimeRestartRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        var current = await GetStatusAsync(cancellationToken);
-        if (!current.IsRestartRequired)
-        {
-            return Result<PluginRuntimeRestartStatus>.Failure(Error.Validation(
-                "No plugin runtime restart is currently required.",
-                "plugins.restart-not-required"));
-        }
+        await restartAdmission.WaitAsync(cancellationToken);
+        try {
+            ArgumentNullException.ThrowIfNull(request);
+            var current = await GetStatusAsync(cancellationToken);
+            if (!current.IsRestartRequired)
+            {
+                return Result<PluginRuntimeRestartStatus>.Failure(Error.Validation(
+                    "No plugin runtime restart is currently required.",
+                    "plugins.restart-not-required"));
+            }
 
-        var requested = current with
-        {
-            IsRestartRequested = true,
-            RequestedBy = NormalizeActor(request.Actor),
-            RequestedAtUtc = clock.GetUtcNow(),
-            ProcessId = Environment.ProcessId
-        };
-        await WriteStatusFileAsync(requested, cancellationToken);
+            if (current.IsRestartRequested) {
+                return Result<PluginRuntimeRestartStatus>.Success(current);
+            }
+            var requested = current with
+            {
+                IsRestartRequested = true,
+                RequestedBy = NormalizeActor(request.Actor),
+                RequestedAtUtc = clock.GetUtcNow(),
+                ProcessId = Environment.ProcessId
+            };
+            await WriteStatusFileAsync(requested, cancellationToken);
 
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(750));
-            logger.LogWarning(
-                "Stopping application for plugin runtime restart. Actor={Actor}. Reason={Reason}.",
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(750));
+                applicationLifetime.StopApplication();
+            }, CancellationToken.None);
+
+            PluginCommit.Observe(requested, () => logger.LogWarning(
+                "Application stop scheduled for plugin runtime restart. Actor={Actor}. Reason={Reason}.",
                 requested.RequestedBy,
-                requested.Reason);
-            applicationLifetime.StopApplication();
-        }, CancellationToken.None);
+                requested.Reason));
 
-        return Result<PluginRuntimeRestartStatus>.Success(requested);
+            return Result<PluginRuntimeRestartStatus>.Success(requested);
+        } finally {
+            restartAdmission.Release();
+        }
     }
 
     public Task ClearSatisfiedRestartRequirementAsync(CancellationToken cancellationToken = default)

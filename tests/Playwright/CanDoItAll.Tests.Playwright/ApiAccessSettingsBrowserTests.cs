@@ -18,7 +18,7 @@ public sealed class ApiAccessSettingsBrowserTests {
         await host.StartAsync(adminPassword);
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
-        await using var context = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = 1680, Height = 1050 } });
+        await using var context = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = 1600, Height = 1000 }, Permissions = ["clipboard-read", "clipboard-write"] });
         var page = await context.NewPageAsync();
         await OpenSettingsAsync(page, host);
         await page.GetByTestId("api-token-subject").FillAsync("browser-machine");
@@ -28,14 +28,22 @@ public sealed class ApiAccessSettingsBrowserTests {
         await page.GetByTestId("api-token-create").ClickAsync();
         await page.GetByTestId("api-issued-token").WaitForAsync();
         var machine = await page.GetByTestId("api-issued-token").InputValueAsync();
+        host.ProtectSecrets(machine);
+        await page.GetByTestId("api-token-copy").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("api-token-copy")).ToHaveAttributeAsync("data-copy-state", "copied");
+        Assert.True(await page.EvaluateAsync<string>("navigator.clipboard.readText()") == machine, "The original one-time credential was not copied.");
+        await page.GetByTestId("api-token-dismiss").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("api-issued-token")).ToHaveCountAsync(0);
         await AssertStatusAsync(host.Client, machine, "/api/workflows/templates", HttpStatusCode.OK);
         host.Client.DefaultRequestHeaders.Authorization = new("Bearer", machine);
-        using var workspaceWrite = await host.Client.PutAsJsonAsync("/api/settings/workspace", new {
-            workspaceName = "Original database workspace", defaultProviderProfileId = (Guid?)null,
-            defaultPromptOutputFormat = "Markdown", currencyCode = "USD", currencyCultureName = "en-US", notes = "Database switch proof"
-        });
+        var original = (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!;
+        var replacement = new ReplaceWorkspaceSettingsCommand(original.Expectation,
+            new("Original database workspace", null, "Markdown", "USD", "en-US", "Database switch proof"));
+        using var workspaceWrite = await host.Client.PutAsJsonAsync("/api/settings/workspace", replacement);
         Assert.Equal(HttpStatusCode.OK, workspaceWrite.StatusCode);
-        Assert.Equal("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.WorkspaceName);
+        var accepted = Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await workspaceWrite.Content.ReadFromJsonAsync<WorkspaceSettingsSaveOutcome>());
+        Assert.Equal(replacement.Values, accepted.Snapshot.Values);
+        Assert.Equal("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.WorkspaceName);
         host.Client.DefaultRequestHeaders.Authorization = null;
         await page.GetByTestId("api-users-panel").WaitForAsync();
         await page.GetByTestId("api-user-create").ClickAsync();
@@ -102,13 +110,13 @@ public sealed class ApiAccessSettingsBrowserTests {
         await context.CloseAsync();
         await host.StartAsync(adminPassword, management: false, otherDatabase: true);
         host.Client.DefaultRequestHeaders.Authorization = new("Bearer", machine);
-        Assert.NotEqual("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsModel>("/api/settings/workspace"))!.WorkspaceName);
+        Assert.NotEqual("Original database workspace", (await host.Client.GetFromJsonAsync<WorkspaceSettingsSnapshot>("/api/settings/workspace"))!.Values.WorkspaceName);
         host.Client.DefaultRequestHeaders.Authorization = null;
         await AssertStatusAsync(host.Client, administrator.Token, "/api/access/me", HttpStatusCode.OK);
         await AssertStatusAsync(host.Client, enabled.Token, "/api/llm-chats", HttpStatusCode.OK);
         await AssertStatusAsync(host.Client, reset.Token, "/api/access/me", HttpStatusCode.Unauthorized);
         await AssertStatusAsync(host.Client, administrator.Token, "/api/access/users", HttpStatusCode.NotFound);
-        await using var afterRestart = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = 1680, Height = 1050 } });
+        await using var afterRestart = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = 1600, Height = 1000 } });
         page = await afterRestart.NewPageAsync();
         await OpenSettingsAsync(page, host);
         await Assertions.Expect(page.GetByTestId("api-effective-configuration")).ToContainTextAsync("disabled");
@@ -128,6 +136,10 @@ public sealed class ApiAccessSettingsBrowserTests {
         await page.GetByTestId("api-token-revoke").ClickAsync();
         await page.GetByTestId("api-token-confirm").ClickAsync();
         await page.GetByTestId("api-token-confirmation").WaitForAsync(new() { State = WaitForSelectorState.Detached });
+        await AssertStatusAsync(host.Client, machine, "/api/workflows/templates", HttpStatusCode.Unauthorized);
+        await page.GetByTestId("api-token-delete").ClickAsync();
+        await page.GetByTestId("api-token-confirm").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("api-tokens-page")).ToContainTextAsync("0 token(s)");
         await AssertStatusAsync(host.Client, machine, "/api/workflows/templates", HttpStatusCode.Unauthorized);
         await page.GetByTestId("api-tokens-dialog").Locator("footer").GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         var evidenceRoot = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "api-access");
@@ -166,10 +178,14 @@ public sealed class ApiAccessSettingsBrowserTests {
     private static async Task SaveOnceWithContendedStoreAsync(IPage page, ApiAccessProductionHost host) {
         var accountPath = Path.Combine(host.ControlPlaneRoot, "api-users", "accounts.json");
         await using (var lease = new FileStream(accountPath + ".mutation.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) {
+            var before = await File.ReadAllBytesAsync(accountPath);
+            using var original = System.Text.Json.JsonDocument.Parse(before);
+            Assert.Empty(original.RootElement.GetProperty("users").EnumerateArray());
             await page.GetByTestId("api-user-save").ClickAsync();
             await Assertions.Expect(page.GetByTestId("api-user-save")).ToBeDisabledAsync();
             await page.GetByTestId("api-user-save").DispatchEventAsync("click");
-            Assert.False(File.Exists(accountPath));
+            var whileContended = await File.ReadAllBytesAsync(accountPath);
+            Assert.True(before.AsSpan().SequenceEqual(whileContended), "A contended save must not change the initialized account store.");
         }
         await page.GetByTestId("api-user-dialog").WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await Assertions.Expect(page.GetByTestId("api-users-message")).ToContainTextAsync("saved");

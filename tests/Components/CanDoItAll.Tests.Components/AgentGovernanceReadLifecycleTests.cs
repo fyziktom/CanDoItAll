@@ -511,11 +511,11 @@ public class GovernanceWorkspaceProxy : DispatchProxy {
                 CatalogReads++;
                 return Catalog(token);
             case nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync):
-                var query = (ExecutionRunQuery)args[0]!;
+                var query = Assert.IsType<ExecutionRunQuery>(args?[0]);
                 Queries.Add(query);
                 return List(query, token);
             case nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync):
-                var id = (Guid)args[0]!;
+                var id = Assert.IsType<Guid>(args?[0]);
                 DetailIds.Add(id);
                 return Detail(id, token);
             default:

@@ -19,6 +19,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
     private const string PreviousMigration = "20260910225242_AddWorkflowStructureReceipts";
     private const string CurrentMigration = "20260911000227_MoveWorkItemAssignments";
     private const string OwnerLifetimeMigration = "20260911094704_BindOwnerLifetimesAndRetainedHistory";
+    private const string SeedMigration = "20261016163615_AddProjectDefinitionOperationLifecycle";
     private static readonly DateTimeOffset SavedAt = new(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
     [Fact]
@@ -26,6 +27,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("work-assignment-upgrade");
         var profile = environment.CreatePostgreSqlProfile("original");
         RetainedState expected;
+        Guid retainedDefinitionRevision;
         await using (var services = CreateProvider(profile)) {
             await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
@@ -39,6 +41,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             await AssertCurrentReferencesOnlyAsync(context);
+            retainedDefinitionRevision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context);
         }
 
         for (var restart = 0; restart < 2; restart++) {
@@ -47,7 +50,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await context.Database.MigrateAsync();
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             Assert.False(context.Database.HasPendingModelChanges());
-            Assert.Equal(161, context.Model.GetEntityTypes().Count());
+            await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(context, retainedDefinitionRevision);
             Assert.Equal(context.Database.GetMigrations(), await context.Database.GetAppliedMigrationsAsync());
             await AssertCurrentReferencesOnlyAsync(context);
             await using var work = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
@@ -92,7 +95,9 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         AssertState(expected, await ReadStateAsync(restored, ownerTable: true));
         await AssertCurrentReferencesOnlyAsync(restored);
         Assert.False(restored.Database.HasPendingModelChanges());
-        Assert.Equal(161, restored.Model.GetEntityTypes().Count());
+        var revision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(restored);
+        await restored.Database.MigrateAsync();
+        await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(restored, revision);
         Assert.Equal(restored.Database.GetMigrations(), await restored.Database.GetAppliedMigrationsAsync());
     }
 
@@ -107,11 +112,12 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
             await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
             await SeedAsync(context);
-            await context.Database.MigrateAsync();
+            await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+            Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
+            await HistoricalProjectMigrationAssertions.RevisionAsync(context);
             await AssertCurrentReferencesOnlyAsync(context);
             expected = await ReadStateAsync(context, ownerTable: true);
-            currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
-            Assert.Equal(context.Database.GetMigrations(), currentMigrations);
+            currentMigrations = context.Database.GetMigrations().ToArray();
             await context.GetService<IMigrator>().MigrateAsync(OwnerLifetimeMigration);
             AssertState(expected, await ReadStateAsync(context, ownerTable: true));
             await AssertCurrentReferencesOnlyAsync(context);
@@ -133,6 +139,9 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         AssertState(expected, await ReadStateAsync(readback, ownerTable: true));
         Assert.Equal(currentMigrations, (await readback.Database.GetAppliedMigrationsAsync()).ToArray());
         await AssertCurrentReferencesOnlyAsync(readback);
+        var revision = await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(readback);
+        await readback.Database.MigrateAsync();
+        await HistoricalProjectMigrationAssertions.CurrentMetadataAsync(readback, revision);
     }
 
     [Fact]
@@ -140,14 +149,15 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
         await using var environment = CanDoItAllTestEnvironment.Create("work-assignment-down-conflict");
         await using var services = CreateProvider(environment.CreatePostgreSqlProfile("conflict"));
         await using var context = await services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(SeedMigration);
+        Assert.Equal(SeedMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         var id = Guid.NewGuid();
         context.Add(new ProjectWorkAssignmentRecord { Id = id, ProjectId = Guid.NewGuid(), PartyId = Guid.NewGuid(), Notes = "Work row" });
         context.Add(new ProjectPartyAssignment { Id = id, ProjectId = Guid.NewGuid(), PartyId = Guid.NewGuid(),
             AssignmentKind = ProjectPartyAssignmentKind.TeamMember, Notes = "Distinct participation row" });
         await context.SaveChangesAsync();
         var current = await ReadStateAsync(context, ownerTable: true);
-        var currentMigrations = (await context.Database.GetAppliedMigrationsAsync()).ToArray();
+        var currentMigrations = context.Database.GetMigrations().ToArray();
         await context.GetService<IMigrator>().MigrateAsync(CurrentMigration);
         Assert.Equal(CurrentMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         var expected = await ReadStateAsync(context, ownerTable: true);
@@ -236,11 +246,17 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
 
     private static async Task SeedAsync(AppDbContext context) {
         var project = new Project { Name = "Preserved project", Slug = Guid.NewGuid().ToString("N"), CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
+        await context.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "Projects_Projects" ("Id", "LifetimeId", "LegacyAgentAccessBindingEligible", "Name", "Slug",
+                "Description", "Objective", "Status", "CurrentPhase", "TargetDateUtc", "CreatedAtUtc", "UpdatedAtUtc")
+            VALUES ({project.Id}, {project.LifetimeId}, FALSE, {project.Name}, {project.Slug}, {project.Description},
+                {project.Objective}, {(int)project.Status}, {project.CurrentPhase}, NULL, {SavedAt}, {SavedAt});
+            """);
         var person = new Party { PartyType = PartyType.Person, DisplayName = "Original person", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
         var organization = new Party { PartyType = PartyType.Organization, DisplayName = "Original organization", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
         var affiliation = new PartyOrganizationAffiliation { PersonPartyId = person.Id, OrganizationPartyId = organization.Id,
             AffiliationKind = PartyOrganizationAffiliationKind.Employee, CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt };
-        context.AddRange(project, person, organization, affiliation);
+        context.AddRange(person, organization, affiliation);
         context.Add(new ProjectObjectRecord { ProjectId = project.Id, NodeKey = "legacy-task", ObjectType = ProjectObjectType.WorkItem,
             Title = "Preserved native task", MetadataJson = "{\"unknown\":{\"key\":7}}", CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt });
         ProjectPartyAssignment[] assignments = [
@@ -281,7 +297,8 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
             WHERE "AssignmentKind" <> 'WorkItemAssignee' ORDER BY "Value"
             """).ToArrayAsync();
         var other = await context.Database.SqlQueryRaw<string>("""
-            SELECT 'project:' || to_jsonb(row)::text AS "Value" FROM "Projects_Projects" row
+            SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL) || (to_jsonb(row) - 'ConcurrencyToken'))::text AS "Value"
+                FROM "Projects_Projects" row
             UNION ALL SELECT 'native:' || to_jsonb(row)::text AS "Value" FROM "Workbench_ProjectObjects" row
             UNION ALL SELECT 'party:' || to_jsonb(row)::text AS "Value" FROM "CrmHr_Parties" row
             UNION ALL SELECT 'affiliation:' || to_jsonb(row)::text AS "Value" FROM "CrmHr_PartyOrganizationAffiliations" row
@@ -299,7 +316,7 @@ public sealed class WorkAssignmentMigrationIntegrationTests {
     }
 
     private static async Task AssertCurrentReferencesOnlyAsync(AppDbContext context) {
-        var project = await context.Set<Project>().AsNoTracking().SingleAsync();
+        var project = await context.Set<Project>().Select(project => new { project.Id, project.LifetimeId }).SingleAsync();
         var assignments = await context.Set<ProjectWorkAssignmentRecord>().AsNoTracking().ToArrayAsync();
         Assert.Equal(3, assignments.Length);
         var current = assignments.Where(row => row.ProjectId == project.Id).ToArray();

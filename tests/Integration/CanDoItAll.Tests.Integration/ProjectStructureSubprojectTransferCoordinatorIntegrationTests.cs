@@ -38,7 +38,7 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorIntegrationTest
             sourceProjectId,
             targetProjectId,
             CreateEditor("Linked child"),
-            sourceAnchor.Id);
+            sourceAnchor.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, sourceProjectId));
 
         Assert.Equal(sourceProjectId, result.SourceProjectId);
         Assert.Equal(targetProjectId, result.TargetProjectId);
@@ -75,12 +75,12 @@ public sealed class ProjectStructureSubprojectTransferCoordinatorIntegrationTest
             "Leaf anchor",
             $"project:{sourceProjectId:D}");
 
-        var exception = await Assert.ThrowsAsync<ProjectStructureCompensatedSubprojectTransferException>(() =>
-            coordinator.MoveDescendantsToNewSubprojectAsync(
+        var exception = await Assert.ThrowsAsync<ProjectStructureCompensatedSubprojectTransferException>(async () =>
+            await coordinator.MoveDescendantsToNewSubprojectAsync(
                 sourceProjectId,
                 targetProjectId,
                 CreateEditor("Temporary child"),
-                sourceAnchor.Id));
+                sourceAnchor.Id, mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, sourceProjectId)));
 
         Assert.Equal(targetProjectId, exception.RemovedProjectId);
         var projectsAfter = await projects.ListAsync();

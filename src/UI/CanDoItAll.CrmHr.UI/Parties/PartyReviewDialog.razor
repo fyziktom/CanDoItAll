@@ -1,0 +1,25 @@
+<Dialog IsOpen="@(State.Review is not null)" Title="Review party changes" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-party-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <PartyMergeReviewSurface Review="review" Stale="@State.ReviewIsStale" Changed="Changed" />
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@ReadingReview" Click="RefreshRequested" data-testid="crmhr-party-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(ReadingReview || State.IsSaving || State.Review?.CanApply != true || State.ReviewIsStale || State.IsUnknown)" Click="ApplyRequested" data-testid="crmhr-party-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public PartyEditorReconciliation State { get; set; } = default!;
+    [Parameter] public bool ReadingReview { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback RefreshRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+}

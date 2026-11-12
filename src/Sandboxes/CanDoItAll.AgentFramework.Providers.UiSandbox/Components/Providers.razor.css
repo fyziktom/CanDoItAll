@@ -1,0 +1,11 @@
+.provider-sandbox {
+    height: 100vh;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.provider-sandbox ::deep .cda-list-detail-shell {
+    min-height: 0;
+    flex: 1;
+}

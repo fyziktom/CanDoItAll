@@ -12,6 +12,33 @@ using static CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsive
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentPendingApprovalCancellationUiTests {
+    [Fact]
+    public async Task Confirmed_cancellation_selects_its_own_activity_stream_instead_of_the_previous_approval() {
+        var fixture = Create();
+        using var context = fixture.Context;
+        var effects = (AgentChatEffectOwnershipTests.EffectsProxy)(object)context.Services.GetRequiredService<IAgentChatExecutionOrchestrator>();
+        var cut = Render(context, fixture.Agent, fixture.Session);
+        await cut.WaitForElement("[data-testid='chat-approve-once-button']").ClickAsync(new MouseEventArgs());
+        effects.Approval.SetException(new AgentApprovalCheckpointUnavailableException(AgentApprovalCheckpointFailure.Unavailable));
+        cut.WaitForAssertion(() => Assert.False(CancelButton(cut).Disabled));
+        var previous = cut.FindComponent<ChatWorkspacePanel>().Instance.ActivityStreamId!;
+        Assert.NotNull(previous);
+        var pending = cut.InvokeAsync(() => CancelButton(cut).Click.InvokeAsync());
+        cut.WaitForAssertion(() => AssertCancellationCommand(fixture));
+        var cancelled = Cancelled(fixture.Run, fixture.Session);
+        fixture.Reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(fixture.Agent.Id, fixture.Session, cancelled.Run));
+        fixture.Reads.Detail = (_, _) => Task.FromResult(cancelled);
+        fixture.Completion.SetResult(cancelled);
+        await pending;
+
+        var current = cut.FindComponent<ChatWorkspacePanel>().Instance.ActivityStreamId!;
+        Assert.Equal(AssertCancellationCommand(fixture).StreamId, current);
+        Assert.NotEqual(previous.OperationId, current.OperationId);
+        Assert.Equal(previous.DatabaseProfileId, current.DatabaseProfileId);
+        Assert.Equal(previous.WorkspaceScope, current.WorkspaceScope);
+        Assert.Equal(previous.DatabaseProfileGeneration, current.DatabaseProfileGeneration);
+    }
+
     [Theory]
     [InlineData(AgentApprovalCheckpointFailure.Missing)]
     [InlineData(AgentApprovalCheckpointFailure.Corrupt)]
@@ -44,11 +71,11 @@ public sealed class AgentPendingApprovalCancellationUiTests {
         var cut = Render(context, fixture.Agent, fixture.Session);
         var click = CancelButton(cut).Click;
         var pending = cut.InvokeAsync(() => click.InvokeAsync());
-        cut.WaitForAssertion(() => Assert.Single(fixture.Commands));
+        cut.WaitForAssertion(() => AssertCancellationCommand(fixture));
         Assert.True(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
         Assert.True(CancelButton(cut).Disabled);
         await cut.InvokeAsync(() => click.InvokeAsync());
-        Assert.Single(fixture.Commands);
+        AssertCancellationCommand(fixture);
         var cancelled = Cancelled(fixture.Run, fixture.Session);
         fixture.Reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(fixture.Agent.Id, fixture.Session, cancelled.Run));
         fixture.Reads.Detail = (_, _) => Task.FromResult(cancelled);
@@ -70,10 +97,12 @@ public sealed class AgentPendingApprovalCancellationUiTests {
         var cut = Render(context, fixture.Agent, fixture.Session);
         var click = CancelButton(cut).Click;
         var pending = cut.InvokeAsync(() => click.InvokeAsync());
-        cut.WaitForAssertion(() => Assert.Single(fixture.Commands));
+        cut.WaitForAssertion(() => AssertCancellationCommand(fixture));
         var next = CreateSession(fixture.Agent.Id) with { Title = "Another conversation" };
         if (dispose) {
             await context.DisposeRenderedComponentsAsync();
+            await pending.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.False(fixture.Completion.Task.IsCompleted);
         } else {
             fixture.Reads.Workspace = (_, id, _) => Task.FromResult(CreateWorkspace(fixture.Agent.Id, id == next.Id ? next : fixture.Session));
             await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.PreferredAgentId, fixture.Agent.Id).Add(x => x.PreferredSessionId, next.Id)));
@@ -85,6 +114,11 @@ public sealed class AgentPendingApprovalCancellationUiTests {
             fixture.Completion.SetResult(Cancelled(fixture.Run, fixture.Session));
         }
         await pending;
+        if (failure) {
+            await Assert.ThrowsAsync<IOException>(() => fixture.Completion.Task);
+        } else {
+            Assert.Equal(RunOutcome.Cancelled, (await fixture.Completion.Task).Run.Outcome);
+        }
         Assert.DoesNotContain(context.Services.GetRequiredService<NotificationService>().Messages,
             item => item.Detail.Contains("pending run was cancelled", StringComparison.Ordinal) || item.Detail.Contains("PRIVATE_PROVIDER_DETAIL", StringComparison.Ordinal));
         if (!dispose) {
@@ -99,7 +133,7 @@ public sealed class AgentPendingApprovalCancellationUiTests {
         using var context = fixture.Context;
         var cut = Render(context, fixture.Agent, fixture.Session);
         var pending = cut.InvokeAsync(() => CancelButton(cut).Click.InvokeAsync());
-        cut.WaitForAssertion(() => Assert.Single(fixture.Commands));
+        cut.WaitForAssertion(() => AssertCancellationCommand(fixture));
         fixture.Reads.Workspace = (_, _, _) => throw new IOException("PRIVATE_READ_FAILURE");
         fixture.Completion.SetResult(Cancelled(fixture.Run, fixture.Session));
         await pending;
@@ -114,7 +148,7 @@ public sealed class AgentPendingApprovalCancellationUiTests {
         using var context = fixture.Context;
         var cut = Render(context, fixture.Agent, fixture.Session);
         var pending = cut.InvokeAsync(() => CancelButton(cut).Click.InvokeAsync());
-        cut.WaitForAssertion(() => Assert.Single(fixture.Commands));
+        cut.WaitForAssertion(() => AssertCancellationCommand(fixture));
         fixture.Completion.SetResult(Cancelled(fixture.Run with { Id = Guid.NewGuid() }, fixture.Session));
         await pending;
         var messages = context.Services.GetRequiredService<NotificationService>().Messages;
@@ -135,11 +169,14 @@ public sealed class AgentPendingApprovalCancellationUiTests {
         reads.Detail = (_, _) => Task.FromResult(new ExecutionRunDetail(run, session, [], []));
         var completion = new TaskCompletionSource<ExecutionRunDetail>(TaskCreationOptions.RunContinuationsAsynchronously);
         var commands = new List<Command>();
-        reads.CancelPending = (id, token) => {
-            commands.Add(new(id, token));
-            return completion.Task;
+        var orchestrator = DispatchProxy.Create<IAgentChatExecutionOrchestrator, AgentChatEffectOwnershipTests.EffectsProxy>();
+        var effects = (AgentChatEffectOwnershipTests.EffectsProxy)(object)orchestrator;
+        effects.CancelPending = (agentId, sessionId, runId, token) => {
+            var stream = effects.CreateOperationStream();
+            commands.Add(new(agentId, sessionId, runId, stream, token));
+            return (stream, completion.Task);
         };
-        var context = CreateContext(service, DispatchProxy.Create<IAgentChatExecutionOrchestrator, AgentChatEffectOwnershipTests.EffectsProxy>());
+        var context = CreateContext(service, orchestrator);
         return new(context, reads, agent, session, run, completion, commands);
     }
 
@@ -152,7 +189,16 @@ public sealed class AgentPendingApprovalCancellationUiTests {
     private static ExecutionRunDetail Cancelled(ExecutionRunRecord run, ChatSessionRecord session)
         => new(run with { State = ExecutionState.Failed, Outcome = RunOutcome.Cancelled, PendingApprovals = [], CompletedAtUtc = DateTimeOffset.UtcNow }, session, [], []);
 
-    private sealed record Command(Guid RunId, CancellationToken CancellationToken);
+    private static Command AssertCancellationCommand(Fixture fixture) {
+        var command = Assert.Single(fixture.Commands);
+        Assert.Equal(fixture.Agent.Id, command.AgentId);
+        Assert.Equal(fixture.Session.Id, command.SessionId);
+        Assert.Equal(fixture.Run.Id, command.RunId);
+        return command;
+    }
+
+    private sealed record Command(Guid AgentId, Guid SessionId, Guid RunId,
+        AgentExecutionActivityStreamId StreamId, CancellationToken CancellationToken);
     private sealed record Fixture(BunitContext Context, AgentChatSessionTests.ReadProxy Reads, AgentDefinition Agent,
         ChatSessionRecord Session, ExecutionRunRecord Run, TaskCompletionSource<ExecutionRunDetail> Completion, List<Command> Commands);
 }

@@ -40,6 +40,7 @@ public static class PluginsModuleServiceCollectionExtensions
         services.TryAddScoped<IPluginExecutionEvents, DurablePluginExecutionEvents>();
         services.AddScoped<PluginHostToolRecipeCatalogService>();
         services.AddScoped<PluginSettingsService>();
+        services.AddTransient<Pages.PluginWorkspaceSession>();
         services.AddScoped<PluginCatalogService>();
         services.AddScoped<PluginPackageManifestStore>();
         services.AddScoped<PluginPackageService>();

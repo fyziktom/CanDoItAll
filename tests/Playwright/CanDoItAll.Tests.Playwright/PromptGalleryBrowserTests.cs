@@ -1,3 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using CanDoItAll.Modules.Prompts;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright.Smoke;
@@ -9,8 +17,15 @@ public sealed class PromptGalleryBrowserTests
         () => {
             const rail = document.querySelector('[data-testid="prompt-gallery-filter-rail"]');
             const children = Array.from(rail.children);
-            // Resolved row tracks count the grid rows; child tops differ within one row because items are centered.
-            const rows = getComputedStyle(rail).gridTemplateRows.trim().split(/\s+/).filter(Boolean).length;
+            const rowCenters = [];
+            for (const child of children) {
+                const box = child.getBoundingClientRect();
+                const center = box.top + box.height / 2;
+                if (!rowCenters.some(existing => Math.abs(existing - center) <= 1)) {
+                    rowCenters.push(center);
+                }
+            }
+            const rows = rowCenters.length;
             const railBox = rail.getBoundingClientRect();
             const overflowing = children
                 .filter(child => {
@@ -19,7 +34,7 @@ public sealed class PromptGalleryBrowserTests
                 })
                 .map(child => child.getAttribute('data-testid') ?? child.tagName);
             return {
-                template: getComputedStyle(rail).gridTemplateColumns,
+                layout: `${getComputedStyle(rail).display}, ${rail.clientWidth}px available`,
                 rows,
                 railOverflow: rail.scrollWidth > rail.clientWidth + 1,
                 overflowing
@@ -81,13 +96,13 @@ public sealed class PromptGalleryBrowserTests
         var row = page.GetByTestId("prompt-gallery-grid").GetByText(title, new() { Exact = true });
         await row.WaitForAsync();
         await page.GetByTestId("prompt-gallery-grid").GetByText("v1", new() { Exact = true }).WaitForAsync();
+        Assert.True(Guid.TryParse(await page.GetByTestId("prompt-gallery-edit").GetAttributeAsync("data-item-id"), out var promptId));
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "04-list-refreshed.png") });
 
         await page.GetByTestId("prompt-gallery-edit").First.ClickAsync();
         await editor.WaitForAsync();
         Assert.Equal(title, await page.GetByTestId("prompt-gallery-editor-title").InputValueAsync());
-        var promptId = await page.EvaluateAsync<string>("() => document.querySelector('[data-testid=\"prompt-gallery-editor-versions\"]') ? 'present' : 'missing'");
-        Assert.Equal("present", promptId);
+        await VerifyPersistedPromptAsync(promptId, title, "Summarize the supplied research in five bullets.", true, "finalized-owner-proof.json");
         await page.GetByTestId("prompt-gallery-editor-cancel").ClickAsync();
         await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
 
@@ -139,6 +154,50 @@ public sealed class PromptGalleryBrowserTests
     }
 
     [Fact]
+    public async Task Filters_and_the_editor_are_addressable_and_follow_back_forward_and_reload()
+    {
+        await using var context = await NewContextAsync();
+        var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, message) => pageErrors.Add(message);
+        var title = $"History proof {Guid.NewGuid():N}";
+        await OpenGalleryAsync(page, "/prompt-gallery");
+        var itemId = await CreateDraftAsync(page, title, "Back and Forward close and reopen this editor.");
+
+        await page.GetByTestId("prompt-gallery-status-filter").SelectOptionAsync("Draft");
+        await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/prompt-gallery?status=draft");
+        await page.GetByTestId("prompt-gallery-search").FillAsync(title);
+        var listUrl = ExactUrl($"{fixture.BaseUrl}/prompt-gallery?q={Uri.EscapeDataString(title)}&status=draft");
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
+        await page.GetByTestId("prompt-gallery-grid").GetByText(title, new() { Exact = true }).WaitForAsync();
+        await page.GetByTestId("prompt-gallery-edit").ClickAsync();
+        var editor = page.GetByTestId("prompt-gallery-item-editor");
+        await editor.WaitForAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(ExactUrl($"{fixture.BaseUrl}/prompt-gallery?promptId={itemId:D}&q={Uri.EscapeDataString(title)}&status=draft"));
+
+        // Back closes the editor like its Close button; Forward reopens the same item.
+        await page.GoBackAsync();
+        await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
+        await page.GoForwardAsync();
+        await editor.WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-editor-title")).ToHaveValueAsync(title);
+
+        // A reload restores the editor and the committed filters from the URL alone.
+        await page.ReloadAsync();
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await editor.WaitForAsync();
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-editor-title")).ToHaveValueAsync(title);
+        await Assertions.Expect(page.GetByTestId("prompt-gallery-status-filter")).ToHaveValueAsync("Draft");
+
+        await page.GetByTestId("prompt-gallery-editor-cancel").ClickAsync();
+        await editor.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+        await Assertions.Expect(page).ToHaveURLAsync(listUrl);
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+        Assert.Empty(pageErrors);
+    }
+
+    [Fact]
     public async Task Embedded_chat_picker_inserts_a_compatible_item_and_asks_before_inserting_a_model_restricted_item()
     {
         var artifactsDir = ArtifactsDirectory();
@@ -153,7 +212,7 @@ public sealed class PromptGalleryBrowserTests
         var workflowOnlyTitle = $"Workflow-only prompt {Guid.NewGuid():N}";
 
         await OpenGalleryAsync(page, "/prompt-gallery");
-        await CreateDraftAsync(page, compatibleTitle, compatibleContent);
+        var compatibleId = await CreateDraftAsync(page, compatibleTitle, compatibleContent);
         await CreateDraftAsync(page, restrictedTitle, restrictedContent, async editor =>
         {
             // A supported model no chat agent uses makes the compatibility check raise the provider/model warning.
@@ -196,6 +255,7 @@ public sealed class PromptGalleryBrowserTests
         await picker.GetByTestId("prompt-gallery-select").ClickAsync();
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         await Assertions.Expect(composerInput).ToHaveValueAsync(compatibleContent);
+        await VerifyPersistedPromptAsync(compatibleId, compatibleTitle, compatibleContent, false, "consumer-owner-proof.json");
         Assert.Equal(0, await compatibilityDialog.CountAsync());
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "10-embedded-inserted.png") });
 
@@ -254,18 +314,24 @@ public sealed class PromptGalleryBrowserTests
 
         var desktop = await ProbeRailAsync(page);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "05-rail-1600.png") });
-        Assert.False(desktop.RailOverflow, $"Desktop rail overflows: {desktop.Template}");
+        Assert.False(desktop.RailOverflow, $"Desktop rail overflows: {desktop.Layout}");
         Assert.Empty(desktop.Overflowing);
         Assert.Equal(1, desktop.Rows);
 
-        // Below the xl breakpoint the rail wraps into an auto-fit grid instead of squeezing its controls.
         await page.SetViewportSizeAsync(1100, 900);
-        await page.WaitForTimeoutAsync(300);
         var constrained = await ProbeRailAsync(page);
         await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "06-rail-1100.png") });
-        Assert.False(constrained.RailOverflow, $"Constrained rail overflows: {constrained.Template}");
+        Assert.False(constrained.RailOverflow, $"Constrained rail overflows: {constrained.Layout}");
         Assert.Empty(constrained.Overflowing);
-        Assert.True(constrained.Rows > 1, $"Expected the constrained rail to wrap, template: {constrained.Template}");
+        Assert.True(constrained.Rows > 1, $"Expected the constrained rail to wrap: {constrained.Layout}");
+
+        await page.SetViewportSizeAsync(1600, 1000);
+        await page.GetByTestId("prompt-gallery-filter-bar").EvaluateAsync("bar => bar.style.maxWidth = '52rem'");
+        var contained = await ProbeRailAsync(page);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(artifactsDir, "07-rail-contained-1600.png") });
+        Assert.False(contained.RailOverflow, $"Desktop container overflows: {contained.Layout}");
+        Assert.Empty(contained.Overflowing);
+        Assert.True(contained.Rows > 1, $"Expected the rail to wrap within its desktop container: {contained.Layout}");
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.Empty(pageErrors);
@@ -281,6 +347,10 @@ public sealed class PromptGalleryBrowserTests
     }
 
     // Creates a draft through the real editor and returns the persisted identity read from the refreshed list.
+    // Playwright normalizes a string URL through System.Uri, which unescapes %20, so an exact URL holding an escaped
+    // value is matched as an anchored pattern instead.
+    private static Regex ExactUrl(string url) => new("^" + Regex.Escape(url) + "$");
+
     private static async Task<Guid> CreateDraftAsync(IPage page, string title, string content, Func<ILocator, Task>? configure = null)
     {
         await page.GetByRole(AriaRole.Button, new() { Name = "New item", Exact = true }).ClickAsync();
@@ -341,6 +411,35 @@ public sealed class PromptGalleryBrowserTests
         throw new TimeoutException($"The {description} did not open from the chat panel.");
     }
 
+    private async Task VerifyPersistedPromptAsync(Guid id, string title, string content, bool finalized, string evidenceName) {
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(fixture.OwnedDatabaseProfile,
+            "Prompt.Gallery.Browser.Readback", TestSchemaBootstrapModules.Full,
+            new Dictionary<string, string?> { [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind });
+        await using var scope = provider.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<IPromptGalleryService>();
+        var read = await owner.GetItemAsync(id);
+        Assert.True(read.IsSuccess);
+        var item = Assert.IsType<PromptGalleryItemDetails>(read.Value);
+        Assert.Equal(id, item.Id);
+        Assert.Equal(title, item.Title);
+        Assert.Equal(content, item.DraftContent);
+        Assert.Equal(finalized ? 1 : 0, item.CurrentVersionNumber);
+        Guid? versionId = null;
+        if (finalized) {
+            versionId = Assert.Single(item.Versions).Id;
+            var version = await owner.GetVersionSnapshotAsync(versionId.Value);
+            Assert.True(version.IsSuccess);
+            Assert.Equal(id, version.Value!.PromptArtifactId);
+            Assert.Equal(1, version.Value.VersionNumber);
+            Assert.Equal(content, version.Value.Content);
+        }
+        await File.WriteAllTextAsync(Path.Combine(ArtifactsDirectory(), evidenceName), JsonSerializer.Serialize(new {
+            item.Id, item.CurrentVersionNumber, VersionId = versionId,
+            ContentSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))),
+            Consumer = finalized ? "Gallery reopened final version" : "Agent chat composer accepted exact persisted draft"
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
     private async Task<IBrowserContext> NewContextAsync()
         => await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -362,11 +461,11 @@ public sealed class PromptGalleryBrowserTests
     {
         var probe = await page.EvaluateAsync<System.Text.Json.JsonElement>(RailOverflowProbe);
         return new RailProbe(
-            probe.GetProperty("template").GetString() ?? string.Empty,
+            probe.GetProperty("layout").GetString() ?? string.Empty,
             probe.GetProperty("rows").GetInt32(),
             probe.GetProperty("railOverflow").GetBoolean(),
             probe.GetProperty("overflowing").EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
     }
 
-    private sealed record RailProbe(string Template, int Rows, bool RailOverflow, string[] Overflowing);
+    private sealed record RailProbe(string Layout, int Rows, bool RailOverflow, string[] Overflowing);
 }

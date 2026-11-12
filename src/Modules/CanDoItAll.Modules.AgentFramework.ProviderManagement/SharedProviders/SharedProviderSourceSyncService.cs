@@ -54,13 +54,25 @@ public sealed class SharedProviderSourceSyncService
         return await HandleTestResultAsync(source, fetchResult, cancellationToken);
     }
 
-    public async Task<SharedProviderSourceOperationResult> SynchronizeAsync(
+    public Task<SharedProviderSourceOperationResult> SynchronizeAsync(
         Guid sourceId,
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds,
         CancellationToken cancellationToken = default)
-    {
+        => Task.FromException<SharedProviderSourceOperationResult>(new SharedProviderConcurrencyException(nameof(SharedProviderSource), sourceId));
+
+    public async Task<SharedProviderSourceObservation> ObserveAsync(Guid sourceId, CancellationToken cancellationToken = default) {
+        var source = await sourceService.GetAsync(sourceId, cancellationToken);
+        var selection = await LoadSelectionStateAsync(sourceId, cancellationToken);
+        return new(source.ConcurrencyToken, selection.Versions);
+    }
+
+    public async Task<SharedProviderSourceOperationResult> SynchronizeAsync(Guid sourceId, SharedProviderSourceObservation original,
+        IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
         var normalizedSelection = NormalizeSelection(selectedPublicationIds);
         var source = await sourceService.GetAsync(sourceId, cancellationToken);
+        var currentSelection = await LoadSelectionStateAsync(source.Id, cancellationToken);
+        EnsureOriginal(source, currentSelection, original);
         if (!source.IsEnabled)
         {
             return SharedProviderSourceOperationResult.SourceDisabled(
@@ -78,9 +90,6 @@ public sealed class SharedProviderSourceSyncService
             return SharedProviderSourceOperationResult.Failed(exception.Failure) with { Change = change };
         }
 
-        var currentSelection = await LoadSelectionStateAsync(
-            source.Id,
-            cancellationToken);
         var conditionalEntityTag = CanUseConditionalFetch(source, currentSelection) &&
             currentSelection.PublicationIds.SetEquals(normalizedSelection)
             ? source.LastCatalogETag
@@ -104,17 +113,12 @@ public sealed class SharedProviderSourceSyncService
                 source.Id,
                 cancellationToken);
             var latestSource = await sourceService.GetAsync(source.Id, cancellationToken);
-            if (latestSource.ConcurrencyToken != source.ConcurrencyToken)
-            {
-                throw new SharedProviderConcurrencyException(
-                    nameof(SharedProviderSource),
-                    source.Id);
-            }
+            EnsureOriginal(latestSource, latestSelection, original);
 
             if (CanUseConditionalFetch(latestSource, latestSelection) &&
                 latestSelection.PublicationIds.SetEquals(normalizedSelection))
             {
-                return SharedProviderSourceOperationResult.NotModified(notModified.EntityTag);
+                return SharedProviderSourceOperationResult.NotModified(notModified.EntityTag) with { AcceptedObservation = original };
             }
 
             fetchResult = await catalogClient.FetchAsync(
@@ -127,6 +131,7 @@ public sealed class SharedProviderSourceSyncService
 
         return await HandleSynchronizationResultAsync(
             source,
+            original,
             normalizedSelection,
             fetchResult,
             cancellationToken);
@@ -172,6 +177,7 @@ public sealed class SharedProviderSourceSyncService
 
     private async Task<SharedProviderSourceOperationResult> HandleSynchronizationResultAsync(
         SharedProviderSourceSnapshot source,
+        SharedProviderSourceObservation original,
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds,
         SharedProviderCatalogFetchResult fetchResult,
         CancellationToken cancellationToken)
@@ -189,7 +195,8 @@ public sealed class SharedProviderSourceSyncService
                             succeeded.EntityTag,
                             selectedPublicationIds,
                             SharedProviderSelectionMode.Replace,
-                            source.ConcurrencyToken),
+                            source.ConcurrencyToken,
+                            original),
                         cancellationToken);
                     if (reconciliation.Outcome ==
                         SharedProviderReconciliationOutcome.SourceIdentityMismatch)
@@ -202,7 +209,9 @@ public sealed class SharedProviderSourceSyncService
                         succeeded.Catalog,
                         succeeded.EntityTag,
                         reconciliation.AffectedProviderProfileIds,
-                        reconciliation.RetiredProviderProfileIds) with { Change = reconciliation.Change };
+                        reconciliation.RetiredProviderProfileIds) with {
+                            Change = reconciliation.Change, AcceptedObservation = reconciliation.AcceptedObservation
+                        };
                 }
                 catch (SharedProviderSelectionConflictException)
                 {
@@ -302,20 +311,31 @@ public sealed class SharedProviderSourceSyncService
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var selectedImports = await dbContext.Set<SharedProviderImport>()
+        var imports = await dbContext.Set<SharedProviderImport>()
             .AsNoTracking()
             .Where(import =>
-                import.SourceId == sourceId &&
-                import.SelectionState == SharedProviderSelectionState.Selected)
+                import.SourceId == sourceId)
             .Select(import => new
             {
                 import.RemotePublicationId,
-                import.AvailabilityState
+                import.AvailabilityState,
+                import.SelectionState,
+                import.Id,
+                import.ConcurrencyToken
             })
             .ToArrayAsync(cancellationToken);
+        var selectedImports = imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected).ToArray();
         return new SharedProviderSelectionStateSnapshot(
             selectedImports.Select(import => import.RemotePublicationId).ToHashSet(),
-            selectedImports.All(import => IsAuthoritativeAvailability(import.AvailabilityState)));
+            selectedImports.All(import => IsAuthoritativeAvailability(import.AvailabilityState)),
+            imports.Select(import => KeyValuePair.Create(import.Id, import.ConcurrencyToken)).ToArray());
+    }
+
+    private static void EnsureOriginal(SharedProviderSourceSnapshot source, SharedProviderSelectionStateSnapshot selection,
+        SharedProviderSourceObservation original) {
+        if (!original.Matches(source.ConcurrencyToken, selection.Versions)) {
+            throw new SharedProviderConcurrencyException(nameof(SharedProviderSource), source.Id);
+        }
     }
 
     private static bool CanUseConditionalFetch(
@@ -396,7 +416,8 @@ public sealed class SharedProviderSourceSyncService
 
     private sealed record SharedProviderSelectionStateSnapshot(
         IReadOnlySet<SharedProviderPublicationId> PublicationIds,
-        bool HasOnlyAuthoritativeAvailability);
+        bool HasOnlyAuthoritativeAvailability,
+        IReadOnlyList<KeyValuePair<Guid, Guid>> Versions);
 }
 
 internal static class SharedProviderSourceOperationFailures

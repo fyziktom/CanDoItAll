@@ -44,10 +44,14 @@ public static class AgentChatContextInvocationFactory
         AgentExecutionOperationId initialActivityOperationId,
         DatabaseProfileGeneration currentDatabaseProfileGeneration,
         DateTimeOffset nowUtc,
-        AgentChatExecutionBehavior behavior)
+        AgentChatExecutionBehavior behavior,
+        AgentPlanningOwner? planningOwner = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
         ArgumentNullException.ThrowIfNull(behavior);
+        if (planningOwner is { } owner && !Enum.IsDefined(owner)) {
+            throw new ArgumentOutOfRangeException(nameof(planningOwner));
+        }
         if (initialActivityOperationId.Value == Guid.Empty)
         {
             throw new ArgumentException(
@@ -56,18 +60,18 @@ public static class AgentChatContextInvocationFactory
         }
 
         var normalizedPrompt = prompt.Trim();
-        var transientContext = AgentChatContextContributionComposer.Compose(
-            context,
-            agentId);
-        AgentChatContextAttachmentFreshnessPolicy.EnsureCurrent(
-            context,
-            currentDatabaseProfileGeneration,
-            nowUtc);
+        var transientContext = planningOwner.HasValue
+            ? null
+            : AgentChatContextContributionComposer.Compose(context, agentId);
+        if (!planningOwner.HasValue) {
+            AgentChatContextAttachmentFreshnessPolicy.EnsureCurrent(
+                context, currentDatabaseProfileGeneration, nowUtc);
+        }
         if (context is null)
         {
             return new AgentChatContextInvocation(
                 normalizedPrompt,
-                CreateRunOptions(initialActivityOperationId, behavior));
+                CreateRunOptions(initialActivityOperationId, behavior, planningOwner));
         }
 
         var access = context.FindAccess(agentId);
@@ -80,7 +84,7 @@ public static class AgentChatContextInvocationFactory
                 context.Scope.Id.ToString(),
                 context.Version,
                 context.CapturedAtUtc,
-                ResolveContributorIds(context),
+                planningOwner.HasValue ? [] : ResolveContributorIds(context),
                 access?.Permissions ?? AgentChatContextPermission.Read,
                 context.Scope.CompletionRefreshMode,
                 contextDigest),
@@ -88,10 +92,9 @@ public static class AgentChatContextInvocationFactory
         metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
             metadataJson,
             context.Scope.WorkspaceScope);
-        var externalTargetAccess = ResolveTrustedReadOnlyExternalTargetAccess(
-            context,
-            currentDatabaseProfileGeneration,
-            nowUtc);
+        var externalTargetAccess = planningOwner.HasValue
+            ? ExternalTargetAccessGrant.Empty
+            : ResolveTrustedReadOnlyExternalTargetAccess(context, currentDatabaseProfileGeneration, nowUtc);
         metadataJson = ExecutionInvocationMetadata.ApplyReadOnlyExternalTargetAliases(
             metadataJson,
             externalTargetAccess.Aliases);
@@ -116,7 +119,7 @@ public static class AgentChatContextInvocationFactory
 
         return new AgentChatContextInvocation(
             normalizedPrompt,
-            CreateRunOptions(initialActivityOperationId, behavior) with
+            CreateRunOptions(initialActivityOperationId, behavior, planningOwner) with
             {
                 Context = invocationContext,
                 TransientContext = transientContext
@@ -125,14 +128,16 @@ public static class AgentChatContextInvocationFactory
 
     private static AgentChatRunOptions CreateRunOptions(
         AgentExecutionOperationId initialActivityOperationId,
-        AgentChatExecutionBehavior behavior)
+        AgentChatExecutionBehavior behavior,
+        AgentPlanningOwner? planningOwner)
     {
         return new AgentChatRunOptions(
             initialActivityOperationId,
             behavior.RuntimeToolProvidersEnabled,
             behavior.WorkspaceToolsEnabled)
         {
-            ToolCapabilitiesEnabled = behavior.ToolCapabilitiesEnabled
+            ToolCapabilitiesEnabled = behavior.ToolCapabilitiesEnabled,
+            PlanningOwner = planningOwner
         };
     }
 

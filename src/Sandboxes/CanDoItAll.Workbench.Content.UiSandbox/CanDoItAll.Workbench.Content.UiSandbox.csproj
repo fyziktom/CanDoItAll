@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+    <ContentAssetMode Condition="'$(ContentAssetMode)' == ''">Parity</ContentAssetMode>
+    <OutputPath>bin/$(ContentAssetMode)/$(Configuration)/</OutputPath>
+    <IntermediateOutputPath>obj/$(ContentAssetMode)/$(Configuration)/</IntermediateOutputPath>
+    <DefineConstants Condition="'$(ContentAssetMode)' == 'Fast'">$(DefineConstants);CONTENT_FAST_ASSETS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UI/CanDoItAll.Workbench.Content.UI/CanDoItAll.Workbench.Content.UI.csproj" />
+    <PackageReference Include="CanDoItAll.FileTools.FileInteraction.Spreadsheet" Version="$(CanDoItAllFileToolsPackageVersion)" />
+    <Content Remove="wwwroot/css/content-fast.css" Condition="'$(ContentAssetMode)' != 'Fast'" />
+    <Content Include="../../App/CanDoItAll.Web/wwwroot/css/output.css" Link="wwwroot/css/output.css"
+             ContentRoot="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/'))"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="'$(ContentAssetMode)' == 'Parity'" />
+  </ItemGroup>
+  <Target Name="RequireContentTheme" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(ContentAssetMode)' != 'Parity' and '$(ContentAssetMode)' != 'Fast'"
+           Text="ContentAssetMode must be Parity or Fast." />
+    <Error Condition="'$(ContentAssetMode)' == 'Parity' and !Exists('$(MSBuildProjectDirectory)/../../App/CanDoItAll.Web/wwwroot/css/output.css')"
+           Text="Parity CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run tailwind:build." />
+    <Error Condition="'$(ContentAssetMode)' == 'Fast' and !Exists('$(MSBuildProjectDirectory)/wwwroot/css/content-fast.css')"
+           Text="Fast CSS is missing. From the repository root run npm ci --prefix Tailwind, then npm run content:css:build." />
+  </Target>
+</Project>

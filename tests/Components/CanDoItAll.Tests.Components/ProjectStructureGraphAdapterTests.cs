@@ -8,6 +8,20 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructureGraphAdapterTests
 {
     [Fact]
+    public void Focus_root_identifies_the_active_project_without_reordering_related_projects() {
+        var parent = CreateProjectNode("parent", "Parent", ProjectStructureProjectRole.ParentProject);
+        var child = CreateProjectNode("child", "Child", ProjectStructureProjectRole.Subproject);
+        var active = CreateProjectNode("active", "Active", ProjectStructureProjectRole.ActiveProject) with { ParentId = parent.Id };
+        var surface = new ProjectStructureSurface(Guid.NewGuid(), "Explicit canvas root", [child, parent, active], [], null);
+
+        var canvas = new ProjectStructureGraphAdapter().BuildSurface(surface, new(), new(), new());
+
+        Assert.Equal(active.Id, canvas.RootNodeId);
+        Assert.Equal([child.Id, parent.Id, active.Id], canvas.Nodes.Select(node => node.Id));
+        Assert.All(canvas.Nodes, node => Assert.Equal("root", node.Family));
+    }
+
+    [Fact]
     public void Node_visual_profiles_drive_canvas_palettes()
     {
         var adapter = new ProjectStructureGraphAdapter();

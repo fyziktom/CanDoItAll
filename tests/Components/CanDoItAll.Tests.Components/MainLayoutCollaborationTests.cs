@@ -42,6 +42,20 @@ public sealed class MainLayoutCollaborationTests
             Assert.Contains("shell-nav-badge-collaboration", cut.Markup);
             Assert.Contains(">1<", cut.Markup);
         });
+
+        var opening = (await collaborationService.GetWorkspaceAsync(createResult.Value)).SelectedThread!;
+        var reply = CollaborationService.CreateLocalReplyRequest(createResult.Value, new() { MessageBody = "Read by the local reply" }) with {
+            ReadObservation = CollaborationReadObservation.From(opening)
+        };
+        var replyResult = await collaborationService.AppendMessageAsync(reply);
+        Assert.True(replyResult.IsSuccess);
+        cut.WaitForAssertion(() => Assert.DoesNotContain("shell-nav-badge-collaboration", cut.Markup));
+        var next = await collaborationService.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() { Subject = "Second item", MessageBody = "Unread again" }));
+        Assert.True(next.IsSuccess);
+        cut.WaitForAssertion(() => Assert.Contains("shell-nav-badge-collaboration", cut.Markup));
+        var nextOpening = (await collaborationService.GetWorkspaceAsync(next.Value)).SelectedThread!;
+        Assert.True((await collaborationService.MarkThreadAsReadAsync(CollaborationReadObservation.From(nextOpening))).IsSuccess);
+        cut.WaitForAssertion(() => Assert.DoesNotContain("shell-nav-badge-collaboration", cut.Markup));
     }
 
     private static Task<ComponentTestHarness> CreateHarnessAsync() {

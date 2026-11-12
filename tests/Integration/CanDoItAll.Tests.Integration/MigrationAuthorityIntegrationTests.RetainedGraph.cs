@@ -131,6 +131,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
             ObjectType = ProjectObjectType.File, Title = fileName, Notes = "Original human file notes",
             CreatedAtUtc = SavedAt, UpdatedAtUtc = SavedAt
         };
+        await HistoricalProjectMigrationRows.InsertWorkflowDefinitionAsync(context, WorkflowDefinitionRecord.FromDefinition(definition, 7));
         context.AddRange(storage, workflowNode, fileNode,
             new ProjectNodeBindingRecord {
                 ProjectObjectId = fileNodeId, MediaRelativePath = fileName, MediaOriginalFileName = fileName,
@@ -141,7 +142,6 @@ public sealed partial class MigrationAuthorityIntegrationTests {
                 ProjectId = projectId, SourceNodeKey = workflowNodeKey, TargetNodeKey = fileNodeKey,
                 LinkKind = ProjectObjectLinkKind.DerivedFrom, CreatedAtUtc = SavedAt
             },
-            WorkflowDefinitionRecord.FromDefinition(definition, 7),
             new WorkflowDefinitionHeadRecord { WorkflowId = workflowId, VersionId = workflowVersionId },
             new WorkflowEventRecordEntity {
                 Id = Guid.NewGuid(), RunId = workflowRunId, Kind = WorkflowEventKind.Completed,
@@ -173,9 +173,11 @@ public sealed partial class MigrationAuthorityIntegrationTests {
 
     private static async Task<string[]> ReadRetainedGraphRowsAsync(AppDbContext context, RetainedGraph graph) =>
         await context.Database.SqlQuery<string>($"""
-            SELECT 'project:' || (to_jsonb(row) - ARRAY['LifetimeId','LegacyAgentAccessBindingEligible'])::text AS "Value"
+            SELECT 'project:' || (jsonb_build_object('ExternalNamespace', NULL, 'ExternalKey', NULL)
+                || (to_jsonb(row) - ARRAY['LifetimeId','LegacyAgentAccessBindingEligible','ConcurrencyToken']))::text AS "Value"
                 FROM "Projects_Projects" row WHERE "Id" = {graph.ProjectId}
-            UNION ALL SELECT 'workflow-definition:' || to_jsonb(row)::text
+            UNION ALL SELECT 'workflow-definition:' || (to_jsonb(row) - ARRAY['TemplateKey', 'TemplatePackKey',
+                    'TemplatePackVersion', 'SourceHash', 'ExternalNamespace', 'ExternalKey'])::text
                 FROM "AgentFramework_WorkflowDefinitions" row WHERE "VersionId" = {graph.WorkflowVersionId}
             UNION ALL SELECT 'workflow-head:' || to_jsonb(row)::text
                 FROM "AgentFramework_WorkflowDefinitionHeads" row WHERE "WorkflowId" = {graph.WorkflowId}
@@ -208,6 +210,8 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         var project = await projects.Set<Project>().AsNoTracking().SingleAsync(row => row.Id == graph.ProjectId);
         Assert.NotEqual(Guid.Empty, project.LifetimeId);
         Assert.True(project.LegacyAgentAccessBindingEligible);
+        Assert.Null(project.ExternalNamespace);
+        Assert.Null(project.ExternalKey);
         if (previousLifetime.HasValue) {
             Assert.Equal(previousLifetime.Value, project.LifetimeId);
         }

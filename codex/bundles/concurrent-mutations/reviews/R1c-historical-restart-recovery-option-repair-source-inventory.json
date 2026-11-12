@@ -1,0 +1,25 @@
+{
+  "status": "source-only; unbuilt; unexecuted",
+  "owner": "/root/agent_process_architecture",
+  "predecessorInventorySha256": "660C18CD0004D3BF70A3421AFAF3C7E57A638122671F7BB6D096FB905AED9D1A",
+  "testRows": 2,
+  "source": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartFixture.cs",
+      "predecessorPath": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-restart-recovery-option-predecessors\\AgentHistoricalReceiptRestartFixture.cs.txt",
+      "predecessorSha256": "717A6A7237B04176EF4913F88D4D7B4326635256F81B5B5DDB9DFAA5EB077681",
+      "sha256": "894C498FC91977CB67F6D8D8665786B179505D44F6AD4D0BECA34E59DEFE4B3B"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.HistoricalReceiptSeed.TestHost/README.md",
+      "predecessorPath": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-restart-recovery-option-predecessors\\README.md.txt",
+      "predecessorSha256": "162354BEA52F09AA065CC6695E8E5A80E60DFF457DBC637044BF75800192CDC8",
+      "sha256": "8CE985908F36C827B55F3B720F203D79AF24518E75AABD99A8F42667D777FADC"
+    }
+  ],
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-restart-recovery-option-repair.md",
+    "sha256": "9292030DD7D3A25553AEB350A1774C392EFE9C7791748C1257B0CDD2731EAFA5"
+  },
+  "preserved": "Strict persisted Process state, original run and five receipts; all production behavior unchanged"
+}

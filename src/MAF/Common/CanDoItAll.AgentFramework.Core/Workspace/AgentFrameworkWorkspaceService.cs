@@ -11,6 +11,7 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed partial class AgentFrameworkWorkspaceService :
     IAgentFrameworkWorkspaceService,
     IAgentFrameworkWorkspaceActivityExecutionService,
+    IAgentInheritedPlanningWorkspaceService,
     IDisposable
 {
     private readonly ISandboxWorkspaceStore store;
@@ -18,6 +19,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
     private readonly AgentPackageImportService packageImportService;
     private readonly AgentExternalProvisioningService externalProvisioningService;
+    private readonly AgentDecisionDataPolicyOwner policyOwner;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
     private readonly ILogger<AgentFrameworkWorkspaceService> logger;
     private readonly IAgentExecutionActivityCoordinator activityCoordinator;
@@ -59,7 +61,10 @@ public sealed partial class AgentFrameworkWorkspaceService :
         AgentToolAdmissionJournal? toolAdmissionJournal = null,
         IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
         IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
-        AgentToolPolicyCatalog? toolPolicies = null) {
+        AgentToolPolicyCatalog? toolPolicies = null,
+        IAgentPlanningStepRuntime? planningRuntime = null,
+        IEnumerable<IAgentPlanningParticipant>? planningParticipants = null,
+        IEnumerable<IAgentInheritedPlanningParticipant>? inheritedPlanningParticipants = null) {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(packageService);
         ArgumentNullException.ThrowIfNull(executionRuntime);
@@ -78,11 +83,12 @@ public sealed partial class AgentFrameworkWorkspaceService :
         this.logger = logger;
         this.activityCoordinator = activityCoordinator;
         this.activityWorkspaceIdentity = activityWorkspaceIdentity;
+        policyOwner = new AgentDecisionDataPolicyOwner(store, activityWorkspaceIdentity, executionProfileGenerationSource);
         this.ownedWorkspaceBundle = ownedWorkspaceBundle;
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
-        var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService);
+        var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService, activityWorkspaceIdentity);
         var resolvedProviderRuntimeProfileSource = providerRuntimeProfileSource
             ?? resolvedProviderProfileRegistry as IProviderRuntimeProfileSource
             ?? throw new InvalidOperationException(
@@ -107,7 +113,9 @@ public sealed partial class AgentFrameworkWorkspaceService :
             resolvedProviderProfileService);
         externalProvisioningService = new AgentExternalProvisioningService(
             store,
-            resolvedProviderProfileService);
+            resolvedProviderProfileService,
+            activityWorkspaceIdentity,
+            executionProfileGenerationSource);
         var executionPreparationService =
             new AgentExecutionPreparationService(
                 store,
@@ -148,7 +156,10 @@ public sealed partial class AgentFrameworkWorkspaceService :
             toolAdmissionJournal,
             executionAuthorityResolver,
             receiptReconciliationProviders,
-            toolPolicies);
+            toolPolicies,
+            planningRuntime,
+            planningParticipants,
+            inheritedPlanningParticipants);
 
         executionService.ExecutionUpdated += HandleExecutionUpdated;
     }

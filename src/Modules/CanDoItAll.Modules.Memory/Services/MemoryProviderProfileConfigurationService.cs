@@ -26,6 +26,7 @@ public sealed class MemoryProviderProfileConfigurationService(
     public async Task<MemoryProviderProfileConfigurationSnapshot> SaveAsync(
         MemoryProviderInstanceId providerId,
         MemoryProviderProfileConfiguration configuration,
+        Guid? expectedRevision,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -34,6 +35,9 @@ public sealed class MemoryProviderProfileConfigurationService(
         ValidateTransport(configuration);
 
         var existing = await GetAsync(providerId, cancellationToken).ConfigureAwait(false);
+        if (existing?.Profile.ConfigurationRevision != expectedRevision) {
+            throw new MemoryProviderProfileConflictException();
+        }
         var editor = existing is null
             ? new MemoryProviderProfileEditorModel()
             : editorMapper.FromProfile(MemoryProviderManagementProfile.FromProfile(existing.Profile));
@@ -49,10 +53,10 @@ public sealed class MemoryProviderProfileConfigurationService(
             throw new MemoryProviderProfileConfigurationException(exception.Message, exception);
         }
 
-        await profileStore
-            .UpsertAsync(saved, timeProvider.GetUtcNow(), cancellationToken)
+        var accepted = await profileStore
+            .UpsertAsync(saved with { ConfigurationRevision = expectedRevision }, timeProvider.GetUtcNow(), cancellationToken)
             .ConfigureAwait(false);
-        return ToSnapshot(saved);
+        return ToSnapshot(accepted);
     }
 
     private MemoryProviderProfileConfigurationSnapshot ToSnapshot(MemoryProviderProfile profile)

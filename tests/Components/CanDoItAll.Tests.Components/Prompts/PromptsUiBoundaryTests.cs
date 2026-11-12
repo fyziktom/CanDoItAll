@@ -17,6 +17,7 @@ public sealed class PromptsUiBoundaryTests
         "CanDoItAll.Modules.Prompts.Contracts",
         "CanDoItAll.SharedKernel"
     ];
+    private static readonly string[] EditingAssemblies = ["CanDoItAll.Editing", "CanDoItAll.Editing.UI"];
 
     private static readonly string[] ForbiddenReferenceFragments =
     [
@@ -38,7 +39,8 @@ public sealed class PromptsUiBoundaryTests
 
         Assert.All(references, reference =>
             Assert.True(
-                AllowedReferencePrefixes.Any(prefix => reference.StartsWith(prefix, StringComparison.Ordinal)),
+                AllowedReferencePrefixes.Any(prefix => reference.StartsWith(prefix, StringComparison.Ordinal)) ||
+                EditingAssemblies.Contains(new AssemblyName(reference).Name),
                 $"Unexpected reference from the rendering library: {reference}"));
         Assert.All(references, reference =>
             Assert.DoesNotContain(ForbiddenReferenceFragments, fragment => reference.Contains(fragment, StringComparison.Ordinal)));
@@ -72,8 +74,28 @@ public sealed class PromptsUiBoundaryTests
         Assert.All(publicTypeAssemblies, name =>
             Assert.True(
                 AllowedReferencePrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal)) ||
-                name == assembly.GetName().Name,
+                EditingAssemblies.Contains(name) || name == assembly.GetName().Name,
                 $"Public signature leaks assembly {name}"));
+    }
+
+    [Fact]
+    public void Editing_core_is_framework_independent_and_rendering_closure_has_no_owner_dependencies() {
+        var core = typeof(CanDoItAll.Editing.MergeField<>).Assembly;
+        Assert.All(core.GetReferencedAssemblies(), reference => Assert.StartsWith("System", reference.Name, StringComparison.Ordinal));
+        var pending = new Stack<Assembly>([typeof(PromptGallerySearchSurface).Assembly]);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        while (pending.TryPop(out var assembly)) {
+            if (!visited.Add(assembly.FullName!)) {
+                continue;
+            }
+            foreach (var reference in assembly.GetReferencedAssemblies()) {
+                Assert.DoesNotContain(ForbiddenReferenceFragments, fragment => reference.FullName.Contains(fragment, StringComparison.Ordinal));
+                if (reference.Name!.StartsWith("CanDoItAll.", StringComparison.Ordinal)) {
+                    pending.Push(Assembly.Load(reference));
+                }
+            }
+        }
+        Assert.Contains(visited, name => name.StartsWith("CanDoItAll.Editing.UI,", StringComparison.Ordinal));
     }
 
     private static IEnumerable<Type> Expand(Type type)

@@ -24,11 +24,12 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var id = delete ? await registry.SaveProviderAsync(model) : Guid.Empty;
+        var original = delete ? (await registry.GetProviderEditorAsync(id)).ExpectedConcurrencyToken : null;
         fixture.Observer.Fail = true;
         HttpResponseMessage response;
         try {
             response = delete
-                ? await fixture.Host.Client.DeleteAsync($"/api/agents/providers/{id:D}")
+                ? await fixture.Host.Client.DeleteAsync($"/api/agents/providers/{id:D}?expectedConcurrencyToken={original:D}")
                 : await fixture.Host.Client.PostAsJsonAsync("/api/agents/providers", model);
         } finally {
             fixture.Observer.Fail = false;
@@ -59,14 +60,14 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         var application = ActivatorUtilities.CreateInstance<SharedProviderPublicationApplicationService>(scope.ServiceProvider,
             (IEnumerable<ISharedProviderPublicationCommitObserver>)[observer]);
         var management = ActivatorUtilities.CreateInstance<SharedProviderManagementService>(scope.ServiceProvider, application);
-        if (cancelOwner) {
-            var committed = await Assert.ThrowsAsync<SharedProviderCommittedException>(() =>
-                management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, owner.Token));
-            Assert.Equal([id], committed.Change.AffectedProviderProfileIds);
-            Assert.Equal(SharedProviderCommitState.Committed, committed.Change.CommitState);
-        } else {
-            var result = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, owner.Token);
-            Assert.True(result.Publication!.IsPublished);
+        var original = await management.GetProfileSharingAsync(id);
+        var result = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null,
+            original.ProviderConcurrencyToken!.Value, owner.Token);
+        Assert.True(result.Publication!.IsPublished);
+        Assert.Equal(original.ProviderConcurrencyToken, result.ProviderConcurrencyToken);
+        Assert.Equal([id], result.Change!.AffectedProviderProfileIds);
+        Assert.Equal(SharedProviderCommitState.Committed, result.Change.CommitState);
+        if (!cancelOwner) {
             Assert.NotNull(result.Change!.Warning);
         }
         await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
@@ -78,7 +79,7 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Local_health_diagnostic_persists_the_health_update_and_new_revision(bool healthy) {
+    public async Task Local_health_diagnostic_persists_metadata_without_changing_configuration_revision(bool healthy) {
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var id = await registry.SaveProviderAsync(NewEditor());
@@ -89,7 +90,7 @@ public sealed class ProviderApiOutcomeIntegrationTests(ProviderApiOutcomeFixture
         Assert.Equal(healthy, result.Success);
         Assert.Equal(1, diagnostics.Calls);
         var after = await registry.GetProviderEditorAsync(id);
-        Assert.NotEqual(before.ExpectedConcurrencyToken, after.ExpectedConcurrencyToken);
+        Assert.Equal(before.ExpectedConcurrencyToken, after.ExpectedConcurrencyToken);
         await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         var profile = await db.Set<Entity>().AsNoTracking().SingleAsync(x => x.Id == id);
         Assert.NotNull(profile.LastHealthCheckAtUtc);

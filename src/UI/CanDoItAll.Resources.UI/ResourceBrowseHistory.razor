@@ -1,0 +1,36 @@
+@namespace CanDoItAll.Resources.UI
+
+@if (Workspace.CatalogError is { } catalogError) {
+    <Alert AlertStyle="AlertStyle.Warning">@catalogError</Alert>
+}
+@if (Workspace.CleanupError is { } cleanupError) {
+    <Alert AlertStyle="AlertStyle.Warning">@cleanupError</Alert>
+}
+@if (Workspace.Promotions.Count > 0 || Workspace.Actions.Count > 0) {
+    <details class="resources-browse-receipts" open>
+        <summary>File action history</summary>
+        @foreach (var receipt in Workspace.Promotions.Reverse()) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="resources-promotion-success">
+                <TextBlock TextStyle="TextStyle.Body2" Value="@($"{receipt.Command.Selection.Source.DisplayName} / {receipt.Command.Selection.Item.Name} → {receipt.Command.Name} · {receipt.State}")" />
+                <TextBlock TextStyle="TextStyle.Caption" Value="@receipt.Message" />
+                @if (receipt.Snapshot is { } snapshot) {
+                    <Cluster Gap="LayoutGap.Small">
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Stored: {snapshot.Values.Name} · {snapshot.Values.Sensitivity} · source revision {receipt.ScopeRevision?.ToString() ?? "unavailable"}")" />
+                        <Button Text="Open stored object" Icon="open_in_new" Size="ButtonSize.Small" data-testid="resources-open-stored-object" Click="() => Workspace.OpenResourceAsync(snapshot.Expected.ResourceId)" />
+                    </Cluster>
+                } else if (receipt.State == ResourceEffectState.Unknown) {
+                    <Button Text="Review candidate identity" Disabled="@receipt.IsReviewing" Click="() => Workspace.ReviewPromotionAsync(receipt, receipt.Command.ResourceId)" />
+                }
+            </Alert>
+        }
+        @foreach (var receipt in Workspace.Actions.Reverse()) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="resources-file-action-receipt">
+                @receipt.Selection.Source.DisplayName / @receipt.Selection.Item.Name · @receipt.Action · @receipt.State: @receipt.Message
+            </Alert>
+        }
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired] public IResourceBrowseWorkspace Workspace { get; set; } = default!;
+}

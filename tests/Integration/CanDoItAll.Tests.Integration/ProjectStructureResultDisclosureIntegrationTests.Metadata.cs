@@ -18,6 +18,8 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Metadata selection");
         await using var fixture = await CreateJournalAsync(services, project);
+        await using var lease = await fixture.NewJournal().AcquireRunAsync(fixture.Session, default);
+        using var active = lease.Bind();
         var agent = await SaveMetadataActorAsync(services, fixture.Agent, project, structureWrite, taskWrite);
         var context = Context(fixture, agent, project.ProjectId);
         var provider = MetadataProvider(services);
@@ -34,7 +36,14 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         Assert.Equal(structureWrite, metadata.Any(item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeCreate));
         Assert.Equal(structureWrite, metadata.Any(item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart));
         Assert.DoesNotContain(metadata, item => item.ToolName == ProjectStructureToolPolicy.ProjectPlanSummaryGet);
-        Assert.DoesNotContain(metadata, item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectCreate);
+        foreach (var name in new[] { ProjectStructureToolPolicy.ProjectStructureProjectCreate,
+                ProjectStructureToolPolicy.ProjectStructureSubprojectCreate, ProjectStructureToolPolicy.ProjectStructureProjectUpdate }) {
+            var definition = Assert.Single(metadata, item => item.ToolName == name);
+            Assert.NotNull(definition.PrepareAdmission);
+            Assert.NotNull(definition.RestoreAdmission);
+            Assert.NotNull(definition.AuthorizeAdmissionAsync);
+            Assert.NotNull(definition.AuthorizeResultDisclosureAsync);
+        }
         Assert.DoesNotContain(metadata, item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureProjectLeaseAcquire);
         if (structureWrite) {
             Assert.NotNull(Assert.Single(metadata, item => item.ToolName == ProjectStructureToolPolicy.ProjectStructureNodeProcessStart).PrepareAdmission);
@@ -51,6 +60,8 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Independent attachments");
         await using var fixture = await CreateJournalAsync(services, project);
+        await using var lease = await fixture.NewJournal().AcquireRunAsync(fixture.Session, default);
+        using var active = lease.Bind();
         var reader = await SaveMetadataActorAsync(services, fixture.Agent, project, false, false);
         var readContext = Context(fixture, reader, project.ProjectId);
         var writer = await SaveMetadataActorAsync(services, reader, project, true, false);
@@ -84,6 +95,8 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var services = scope.ServiceProvider;
         var project = await CreateProjectAsync(services, "Cancelled attachment");
         await using var fixture = await CreateJournalAsync(services, project);
+        await using var lease = await fixture.NewJournal().AcquireRunAsync(fixture.Session, default);
+        using var active = lease.Bind();
         var agent = await SaveMetadataActorAsync(services, fixture.Agent, project, false, false);
         var context = Context(fixture, agent, project.ProjectId);
         var provider = MetadataProvider(services);

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sourceOnly": true,
+  "originalSourceSha256": "0193DD95998D16DF1E322A2695ED35084E0418BB445148A5234EFCB612FFAD63",
+  "action": "Diagnostic assertion only; unchanged no-write predicate, watcher, test arrangements and counts",
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalFileObservation.cs",
+      "sha256": "6386FA46CDF68CAD49A8C1784B6CF450B60B4864653789287167506403312DCF",
+      "bytes": 4458
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-observer-before-diagnostics.cs.txt",
+      "sha256": "0193DD95998D16DF1E322A2695ED35084E0418BB445148A5234EFCB612FFAD63",
+      "bytes": 3979
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-observer-diagnostics.md",
+      "sha256": "E69137B86BDE4AC8B61B1C8AE58436E9039F4FBB4C8FF716553A766EF36F2E37",
+      "bytes": 2252
+    }
+  ],
+  "executed": false,
+  "rootCause": "Unresolved: original runner output truncated the one unexpected Changed path"
+}

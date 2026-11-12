@@ -1,8 +1,13 @@
 @namespace CanDoItAll.AgentFramework.UI.History
 @using CanDoItAll.AgentFramework.ProviderHistory
+@implements IDisposable
+@{
+    var renderedContent = Content;
+}
+@if (!disposed) {
 <Dialog IsOpen="true" Title="Linked request content"
         Subtitle="Canonical run, conversation or turn details. Summaries and conversation context are labeled separately from per-request payloads."
-        Size="ModalSize.Wide" DenseChrome="true" OnClose="OnClose" TestId="history-content-dialog">
+        Size="ModalSize.Wide" DenseChrome="true" OnClose="@(() => CloseAsync(renderedContent))" TestId="history-content-dialog">
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
             <StatusBadge Text="@($"Content: {Content.State}")" data-testid="history-content-state" />
@@ -21,13 +26,30 @@
         </Stack>
     </ChildContent>
     <Footer>
-        <Button Text="Close content" ButtonStyle="ButtonStyle.Light" Click="OnClose" data-testid="history-content-close" />
+        <Button Text="Close content" ButtonStyle="ButtonStyle.Light" Click="@(() => CloseAsync(renderedContent))" data-testid="history-content-close" />
     </Footer>
 </Dialog>
+}
 
 @code {
     [Parameter, EditorRequired] public HistoryDetail Content { get; set; } = default!;
     [Parameter] public EventCallback OnClose { get; set; }
+    private bool disposed;
+
+    private async Task CloseAsync(HistoryDetail content) {
+        if (disposed || !ReferenceEquals(Content, content)) {
+            return;
+        }
+        var callback = OnClose;
+        Dispose();
+        await callback.InvokeAsync();
+    }
+
+    public void Dispose() {
+        disposed = true;
+        Content = null!;
+        OnClose = default;
+    }
 
     private IEnumerable<HistoryContentSection> Sections {
         get {

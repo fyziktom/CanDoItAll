@@ -11,6 +11,136 @@ namespace CanDoItAll.Tests.Integration.Runtime;
 public sealed class CollaborationIntegrationTests
 {
     [Fact]
+    public async Task Concurrent_appends_preserve_each_message_and_a_replay_keeps_the_same_identity() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var start = CollaborationService.CreateManualThreadRequest(new() { Subject = "Concurrent thread", MessageBody = "First message" })
+            with { SubmissionId = Guid.NewGuid() };
+        var thread = await owner.CreateThreadAsync(start);
+        Assert.True(thread.IsSuccess);
+        Assert.Equal(thread.Value, (await owner.CreateThreadAsync(start)).Value);
+        var original = CollaborationReadObservation.From((await owner.GetWorkspaceAsync(thread.Value)).SelectedThread!);
+        var first = CollaborationService.CreateLocalReplyRequest(thread.Value, new() { MessageBody = "Reply one" })
+            with { SubmissionId = Guid.NewGuid(), MarkAsUnread = true };
+        var second = first with { SubmissionId = Guid.NewGuid(), MessageBody = "Reply two" };
+
+        Assert.All(await Task.WhenAll(owner.AppendMessageAsync(first), owner.AppendMessageAsync(second)), result => Assert.True(result.IsSuccess));
+        Assert.True((await owner.AppendMessageAsync(first)).IsSuccess);
+        Assert.True((await owner.AppendMessageAsync(first with { MessageBody = "Different intent" })).IsFailure);
+        var state = await owner.GetWorkspaceAsync(thread.Value);
+        Assert.Equal(3, state.SelectedThread!.Messages.Count);
+        Assert.Equal(3, Assert.Single(state.InboxItems).UnreadCount);
+
+        var staleRead = await owner.MarkThreadAsReadAsync(original);
+        Assert.Equal(CollaborationWriteConflict.ReadObservationChanged, Assert.Single(staleRead.Errors).Code);
+        var reply = CollaborationService.CreateLocalReplyRequest(thread.Value, new() { MessageBody = "Reply from the old view" }) with {
+            ReadObservation = original
+        };
+        Assert.True((await owner.AppendMessageAsync(reply)).IsSuccess);
+        var updated = (await owner.GetWorkspaceAsync(thread.Value)).SelectedThread!;
+        Assert.Equal(4, updated.Messages.Count);
+        Assert.Equal(3, updated.UnreadCount);
+        Assert.True((await owner.MarkThreadAsReadAsync(CollaborationReadObservation.From(updated))).IsSuccess);
+        Assert.Equal(0, (await owner.GetShellStateAsync()).UnreadCount);
+    }
+
+    [Fact]
+    public async Task List_pages_filter_in_the_owner_and_exact_detail_survives_outside_the_page() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var windowSize = CollaborationListWindow.Size;
+        var ids = new List<Guid>();
+        for (var index = 0; index < windowSize + 4; index++) {
+            var request = CollaborationService.CreateManualThreadRequest(new() {
+                Subject = $"Thread {index}", MessageBody = "First message",
+                ItemKind = index == 0 ? CollaborationInboxItemKind.Escalation : CollaborationInboxItemKind.Notification
+            }) with { MarkAsUnread = index < 4 };
+            var result = await owner.CreateThreadAsync(request);
+            Assert.True(result.IsSuccess);
+            ids.Add(result.Value);
+        }
+
+        var first = await owner.GetWorkspaceAsync(ids[0]);
+        Assert.Equal(windowSize, first.InboxItems.Count);
+        Assert.Equal(windowSize, first.Threads.Count);
+        Assert.DoesNotContain(first.InboxItems, item => item.ThreadId == ids[0]);
+        Assert.Equal(ids[0], first.SelectedThread!.ThreadId);
+        Assert.Single(first.Escalations);
+        Assert.Equal(windowSize + 4, first.Totals.Inbox);
+        Assert.Equal(4, first.ShellState.UnreadCount);
+
+        var next = await owner.GetWorkspaceAsync(window: new(CollaborationSection.Inbox, false, windowSize));
+        Assert.Equal(4, next.InboxItems.Count);
+        Assert.Empty(next.InboxItems.Select(item => item.ThreadId).Intersect(first.InboxItems.Select(item => item.ThreadId)));
+
+        var unread = await owner.GetWorkspaceAsync(window: new(CollaborationSection.Inbox, true, 0));
+        Assert.True(ids.Take(4).ToHashSet().SetEquals(unread.InboxItems.Select(item => item.ThreadId)));
+        Assert.All(unread.InboxItems, item => Assert.True(item.IsUnread));
+        Assert.Equal(first.Totals, unread.Totals);
+    }
+
+    [Fact]
+    public async Task Throwing_observer_cannot_hide_committed_writes_or_skip_remaining_observers() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var observed = 0;
+        owner.Changed += (_, _) => throw new InvalidOperationException("Observer failed after persistence");
+        owner.Changed += (_, _) => observed++;
+
+        var created = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() {
+            Subject = "Committed despite observer", MessageBody = "First durable message"
+        }));
+        Assert.True(created.IsSuccess);
+        Assert.Equal(1, observed);
+        var opening = (await owner.GetWorkspaceAsync(created.Value)).SelectedThread!;
+        Assert.True((await owner.MarkThreadAsReadAsync(CollaborationReadObservation.From(opening))).IsSuccess);
+        Assert.Equal(2, observed);
+        Assert.True((await owner.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(created.Value, new() {
+            MessageBody = "Second durable message", MessageKind = CollaborationMessageKind.System
+        }))).IsSuccess);
+        Assert.Equal(3, observed);
+        var saved = (await owner.GetWorkspaceAsync(created.Value)).SelectedThread!;
+        Assert.Equal(2, saved.Messages.Count);
+        Assert.False(saved.IsUnread);
+    }
+
+    [Fact]
+    public async Task Actual_validation_and_missing_targets_are_known_rejections_without_writes() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var invalid = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new()));
+        Assert.True(invalid.IsFailure);
+        var missing = await owner.AppendMessageAsync(CollaborationService.CreateLocalReplyRequest(Guid.NewGuid(), new() { MessageBody = "Missing target" }));
+        Assert.True(missing.IsFailure);
+        Assert.True((await owner.MarkThreadAsReadAsync(new(Guid.NewGuid(), 0))).IsFailure);
+        Assert.Empty((await owner.GetWorkspaceAsync()).Threads);
+    }
+
+    [Fact]
+    public async Task Local_reply_clears_unread_while_automation_and_manual_create_raise_it() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var owner = scope.ServiceProvider.GetRequiredService<CollaborationService>();
+        var created = await owner.CreateThreadAsync(CollaborationService.CreateManualThreadRequest(new() {
+            Subject = "Local reply semantics", MessageBody = "Manual first message"
+        }));
+        Assert.True(created.IsSuccess);
+        Assert.Equal(1, (await owner.GetShellStateAsync()).UnreadCount);
+        var opening = (await owner.GetWorkspaceAsync(created.Value)).SelectedThread!;
+        var reply = CollaborationService.CreateLocalReplyRequest(created.Value, new() { MessageBody = "Local reply" }) with {
+            ReadObservation = CollaborationReadObservation.From(opening)
+        };
+        Assert.True((await owner.AppendMessageAsync(reply)).IsSuccess);
+        Assert.Equal(0, (await owner.GetShellStateAsync()).UnreadCount);
+        Assert.True((await owner.RecordAutomationSignalAsync(new("ui-proof", "System", "Automation", "Unread automation", CollaborationInboxItemKind.Escalation))).IsSuccess);
+        Assert.Equal(1, (await owner.GetShellStateAsync()).UnreadCount);
+    }
+
+    [Fact]
     public async Task Runtime_model_retains_complete_schema_mappings_without_foreign_entities() {
         await using var application = await TestApplication.CreateAsync();
         var ownerFactory = application.Services.GetRequiredService<IDbContextFactory<CollaborationDbContext>>();
@@ -133,7 +263,7 @@ public sealed class CollaborationIntegrationTests
         Assert.Equal("Release manager", selectedThread.Participants[0].DisplayName);
         Assert.Equal("A human approval is required before the release run can continue.", selectedThread.Messages[0].Body);
 
-        var markReadResult = await collaborationService.MarkThreadAsReadAsync(selectedThread.ThreadId);
+        var markReadResult = await collaborationService.MarkThreadAsReadAsync(CollaborationReadObservation.From(selectedThread));
 
         Assert.True(markReadResult.IsSuccess, string.Join(" | ", markReadResult.Errors.Select(error => error.Message)));
 

@@ -1,0 +1,4 @@
+body { margin: 0; background: #f3f6fc; }
+.content-scenarios { padding: 1rem; }
+.content-scenarios [data-testid="content-text-receipt"] { overflow-wrap: anywhere; }
+.content-scenario-canvas { position: relative; height: 730px; min-height: 0; overflow: hidden; margin-top: .5rem; border-radius: 1rem; }

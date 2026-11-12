@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -7,6 +8,38 @@ public sealed partial class AgentFrameworkWorkspaceService
     public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
         var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
         return new(activityWorkspaceIdentity, snapshot);
+    }
+
+    public Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(policyOwner.ReadContext(cancellationToken));
+
+    public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default) => policyOwner.ReadAsync(agentId, cancellationToken);
+
+    public Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default) => policyOwner.LookupAsync(command, cancellationToken);
+
+    public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
+        var outcome = await policyOwner.ReplaceAsync(command, cancellationToken);
+        if (outcome.Failure is { } failure) {
+            try {
+                logger.LogWarning("Agent policy operation {OperationId} for Agent {AgentId} in profile {ProfileId} generation {Generation} returned {Outcome} at {FailureStage}; failure types {FailureTypes}; truncated {Truncated}.",
+                    command.OperationId, command.Expectation.AgentId, command.Expectation.Workspace.DatabaseProfileId,
+                    command.Expectation.Workspace.DatabaseProfileGeneration, outcome.GetType().Name,
+                    failure.Stage, string.Join(", ", failure.ExceptionTypes), failure.Truncated);
+            } catch (Exception diagnosticFailure) {
+                var diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.Diagnostics,
+                    diagnosticFailure, failure);
+                return outcome switch {
+                    AgentDecisionDataPolicySaveOutcome.Accepted accepted => new AgentDecisionDataPolicySaveOutcome.Accepted(
+                        accepted.Command, accepted.Snapshot, followupRequired: true, diagnostic),
+                    AgentDecisionDataPolicySaveOutcome.Rejected rejected => new AgentDecisionDataPolicySaveOutcome.Rejected(rejected.Reason, diagnostic),
+                    _ => new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command, diagnostic)
+                };
+            }
+        }
+        return outcome;
     }
 
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(
@@ -21,6 +54,9 @@ public sealed partial class AgentFrameworkWorkspaceService
 
     public Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
         => catalogService.SaveAgentAsync(model, cancellationToken);
+
+    public Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentDefinitionAsync(model, cancellationToken);
 
     public Task GrantAgentProjectStructureAccessAsync(
         Guid agentId,
@@ -56,6 +92,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentAsync(agentId, cancellationToken);
 
+    public Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.DeleteAgentAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+
     public Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default)
         => catalogService.ListAgentTeamsAsync(cancellationToken);
 
@@ -69,6 +108,9 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveAgentTeamAsync(model, cancellationToken);
 
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => catalogService.SaveAgentTeamMetadataAsync(model, cancellationToken);
+
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(
         Guid teamId,
         IReadOnlyList<Guid> agentIds,
@@ -77,6 +119,17 @@ public sealed partial class AgentFrameworkWorkspaceService
 
     public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
         => catalogService.DeleteAgentTeamAsync(teamId, cancellationToken);
+
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.UpdateAgentTeamMembersAsync(teamId, agentIds, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => catalogService.DeleteAgentTeamAsync(teamId, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => catalogService.EnsureAgentTeamMemberAsync(teamId, expectedCreatedAtUtc, agentId, cancellationToken);
 
     public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
         => catalogService.CloneAgentAsync(agentId, cloneName, cancellationToken);
@@ -128,6 +181,9 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
         => catalogService.DeleteProviderAsync(providerId, cancellationToken);
 
+    public Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => catalogService.DeleteProviderAsync(providerId, expectedConcurrencyToken, cancellationToken);
+
     public Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
         => catalogService.TestProviderAsync(providerId, cancellationToken);
 
@@ -156,10 +212,18 @@ public sealed partial class AgentFrameworkWorkspaceService
         CancellationToken cancellationToken = default)
         => catalogService.SaveCapabilityAsync(model, cancellationToken);
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(
+        CapabilityEditorModel model,
+        CancellationToken cancellationToken = default)
+        => catalogService.SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
+    public Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => catalogService.DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
+
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
         => catalogService.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);
 
     public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(

@@ -1,0 +1,70 @@
+@page "/planning-review"
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.UI.Chat
+@using CanDoItAll.SharedKernel
+
+<PageTitle>Planning review sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Medium">
+    <TextBlock TextStyle="TextStyle.H4" Value="Task planning review" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Ready" Click="@(() => Reset(false, false))" data-testid="planning-sample-ready" />
+        <Button Text="100 long tasks" Click="@(() => Reset(true, false))" data-testid="planning-sample-large" />
+        <Button Text="Unconfirmed outcome" Click="@(() => Reset(false, true))" data-testid="planning-sample-unknown" />
+        <Button Text="Data changed" Click="Pause" data-testid="planning-sample-changed" />
+    </Cluster>
+    <AgentChatPlanningSurface State="state" Intent="Handle" />
+    <TextBlock Value="Transcript and draft remain the primary workspace. This scenario performs no provider or database operation." />
+    <TextBlock Value="@notice" data-testid="planning-sample-intent" />
+</Stack>
+
+@code {
+    private static readonly Guid runId = new("ac100000-0000-4000-8000-000000000051");
+    private static readonly Guid sessionId = new("ac100000-0000-4000-8000-000000000052");
+    private static readonly Guid agentId = new("ac100000-0000-4000-8000-000000000053");
+    private static readonly Guid decisionId = new("ac100000-0000-4000-8000-000000000054");
+    private AgentChatActionState state = Initial(false, false);
+    private string notice = "No action submitted.";
+
+    private static AgentChatActionState Initial(bool large, bool uncertain) {
+        var binding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), 1,
+            AgentToolProtocolEnvelope.Create("sample", 1, "{}").Digest);
+        var content = "Original project: saved review target\n\n" + string.Join("\n\n", Enumerable.Range(1, large ? 100 : 2)
+            .Select(index => $"{index}. Review task {index}\nDescription: {new string('a', large ? 1800 : 40)}\nNotes: Preserve original target.\nPriority: 3"));
+        return new(new(1, agentId, sessionId, runId), null, false, false, false, false, false, false, false) {
+            PlanningReview = new(new(runId, 3, 9, decisionId, 1), sessionId, AgentPlanningOwner.ProjectTaskPlan,
+                DecisionDataPolicy.PlanningDefault(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10)),
+                AgentPlanningGenerationState.AwaitingApproval, DateTimeOffset.UnixEpoch.AddSeconds(3), DateTimeOffset.UnixEpoch,
+                TimeSpan.FromSeconds(2), uncertain ? null : TimeSpan.FromSeconds(298), uncertain, 0,
+                uncertain ? [] : [AgentPlanningAction.Approve, AgentPlanningAction.Refresh, AgentPlanningAction.Cancel],
+                uncertain ? null : new(binding, "sample-approval", content)),
+            PlanningActionUnconfirmed = uncertain
+        };
+    }
+
+    private void Reset(bool large, bool uncertain) {
+        state = Initial(large, uncertain) with { Origin = state.Origin with { Generation = state.Origin.Generation + 1 } };
+        notice = "Sample replaced; no original action was dispatched.";
+    }
+
+    private void Pause() {
+        Reset(false, false);
+        state = state with { PlanningReview = state.PlanningReview! with {
+            State = AgentPlanningGenerationState.PausedBasisChanged, Publication = null,
+            AvailableActions = [AgentPlanningAction.Refresh, AgentPlanningAction.Cancel]
+        } };
+    }
+
+    private void Handle(AgentChatActionIntent intent) {
+        if (intent.Origin != state.Origin) {
+            return;
+        }
+        if (intent.Action is AgentChatAction.OpenPlanningReview or AgentChatAction.ClosePlanningReview) {
+            state = state with { PlanningReviewOpen = intent.Action == AgentChatAction.OpenPlanningReview };
+        } else if (intent.Action == AgentChatAction.ReloadPlanningReview) {
+            Reset(false, false);
+        } else if (intent.PlanningRequest is { } request && request.Expected == state.PlanningReview!.Expected) {
+            notice = $"Captured {request.Action} for generation {request.Expected.Generation}; original run {request.Expected.ExecutionRunId:D}.";
+            state = state with { PlanningReviewOpen = false };
+        }
+    }
+}

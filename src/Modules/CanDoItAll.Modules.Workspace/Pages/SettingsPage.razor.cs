@@ -1,217 +1,156 @@
-using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Modules.Security;
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Workspace.ApiAccess;
-using CanDoItAll.Modules.Workspace.Pages.Components;
+using CanDoItAll.Modules.Workspace.ApiAccess.Contracts;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace CanDoItAll.Modules.Workspace.Pages;
 
-public partial class SettingsPage
-{
-    private const string FilesSettingsTabKey = "files";
-    private const string ProviderHistorySettingsTabKey = "provider-history";
+public partial class SettingsPage {
+    private const string AgentProvidersRoute = "/agents?tab=providers";
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.TabKey)] public string? TabQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.SecretKey)] public string? SecretQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.ProfileKey)] public string? ProfileQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.StorageKey)] public string? StorageQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.SearchKey)] public string? SearchQuery { get; set; }
+    [SupplyParameterFromQuery(Name = SettingsUrlCodec.PageKey)] public string? PageQuery { get; set; }
+    [Inject] public IWorkspaceDefaultsOwner DefaultsOwner { get; set; } = default!;
+    [Inject] public IWorkspaceSecretsOwner SecretsOwner { get; set; } = default!;
+    [Inject] public IWorkspaceFilesOwner FilesOwner { get; set; } = default!;
+    [Inject] public IDatabaseSwitchNotificationService ProfileChanges { get; set; } = default!;
+    [Inject] public NavigationManager Navigation { get; set; } = default!;
+    [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
+    private UrlStateBinding<SettingsUrlState> url = default!;
+    private WorkspaceDefaultsController defaults = default!;
+    private WorkspaceSecretsController secrets = default!;
+    private WorkspaceFilesController files = default!;
+    private string apiStatusLabel = "Not loaded";
+    private bool filesInitialized;
+    private bool profileRetired;
+    private bool redirected;
+    private bool disposed;
+    private Task<AuthenticationState>? previousAuthentication;
 
-    [SupplyParameterFromQuery(Name = "tab")]
-    public string? RequestedTab { get; set; }
+    private ApiPageQuery AccountQuery => new(url.State.Search ?? string.Empty, (url.State.Page - 1) * ApiPageQuery.PageSize);
 
-    [Inject]
-    public NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    public IApiTokenService ApiTokenService { get; set; } = default!;
-
-    private WorkspaceSettingsModel settingsModel = new();
-    private SecretEditorModel secretModel = NewSecret();
-    private ApiAccessStatus? apiStatus;
-    private IReadOnlyList<WorkspaceProviderOption> providers = [];
-    private IReadOnlyList<SecretListItem> secrets = [];
-    private string settingsTab = "workspace";
-    private string secretSearch = string.Empty;
-
-    private IReadOnlyList<SecondaryTabItem> SettingsTabs =>
-    [
-        new("workspace", "Workspace"),
-        new("data-sources", "Data Sources"),
-        new("storage", "Storage"),
-        new(FilesSettingsTabKey, "Files"),
-        new(ProviderHistorySettingsTabKey, "Provider history"),
-        new("secrets", "Secrets", secrets.Count.ToString()),
-        new("providers", "Providers", providers.Count.ToString()),
-        new("api-access", "API Access", apiStatus?.AuthorizationEnabled == true ? "JWT" : "Open")
-    ];
-
-    private IReadOnlyList<SecretListItem> FilteredSecrets => secrets
-        .Where(secret =>
-            string.IsNullOrWhiteSpace(secretSearch) ||
-            secret.Name.Contains(secretSearch, StringComparison.OrdinalIgnoreCase) ||
-            secret.Scope.Contains(secretSearch, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(secret => secret.Name)
-        .ToList();
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadAsync();
+    protected override void OnInitialized() {
+        url = new(Navigation, SettingsUrlCodec.Instance, null, typeof(SettingsPage));
+        defaults = new(DefaultsOwner);
+        secrets = new(SecretsOwner);
+        secrets.SelectionChanged += SecretSelectionChanged;
+        files = new(FilesOwner);
+        previousAuthentication = AuthenticationState;
+        ProfileChanges.Changed += ProfileChanged;
     }
 
-    protected override void OnParametersSet()
-    {
-        ApplyRequestedTab();
+    protected override Task OnInitializedAsync() {
+        var initial = url.Apply(canonicalize: RendererInfo.IsInteractive).Current;
+        return initial.Tab == WorkspaceSection.Providers
+            ? ApplyAsync(initial)
+            : Task.WhenAll(defaults.RefreshAsync(), secrets.RefreshAsync(), ApplyAsync(initial));
     }
 
-    private async Task LoadAsync()
-    {
-        settingsModel = await WorkspaceService.GetSettingsAsync();
-        providers = await ProviderCatalog.ListAsync();
-        secrets = await WorkspaceService.ListSecretsAsync();
-        apiStatus = ApiTokenService.GetStatus();
-        ApplyRequestedTab();
-    }
-
-    private async Task SaveSettingsAsync()
-    {
-        try
-        {
-            await WorkspaceService.SaveSettingsAsync(settingsModel);
-            providers = await ProviderCatalog.ListAsync();
-            NotificationService.Success("Workspace defaults saved", "Workspace defaults saved.");
+    protected override async Task OnParametersSetAsync() {
+        if (!ReferenceEquals(previousAuthentication, AuthenticationState)) {
+            RetireDatabaseState();
+            previousAuthentication = AuthenticationState;
         }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Workspace defaults save failed", exception.Message);
-        }
-    }
-
-    private async Task SaveSecretAsync()
-    {
-        try
-        {
-            var result = await SecretService.SaveAsync(secretModel);
-            if (!result.IsSuccess)
-            {
-                NotificationService.Warning("Secret was not saved", string.Join(" ", result.Errors.Select(error => error.Message)));
-                return;
-            }
-
-            secrets = await WorkspaceService.ListSecretsAsync();
-            await ResetSecretAsync();
-            NotificationService.Success("Secret saved", "Secret saved.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Secret save failed", exception.Message);
-        }
-    }
-
-    private async Task EditSecretAsync(Guid id)
-    {
-        var model = await SecretService.GetAsync(id);
-        if (model is not null)
-        {
-            secretModel = model;
-        }
-    }
-
-    private async Task DeleteSecretAsync()
-    {
-        if (!secretModel.Id.HasValue)
-        {
+        if (redirected) {
             return;
         }
-
-        try
-        {
-            await SecretService.DeleteAsync(secretModel.Id.Value);
-            secrets = await WorkspaceService.ListSecretsAsync();
-            await ResetSecretAsync();
-            NotificationService.Success("Secret deleted", "Secret deleted.");
-        }
-        catch (Exception exception)
-        {
-            NotificationService.Error("Secret delete failed", exception.Message);
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (change.IsChanged) {
+            await ApplyAsync(change.Current);
         }
     }
 
-    private Task ResetSecretAsync()
-    {
-        secretModel = NewSecret();
-        return Task.CompletedTask;
-    }
-
-    private Task HandleSettingsTabChanged(string key)
-    {
-        if (string.Equals(key, "providers", StringComparison.Ordinal))
-        {
-            Navigation.NavigateTo("/agents?tab=providers", replace: true);
+    private Task ApplyAsync(SettingsUrlState current) {
+        if (current.Tab == WorkspaceSection.Providers) {
+            redirected = true;
+            Navigation.NavigateTo(AgentProvidersRoute, replace: true);
             return Task.CompletedTask;
         }
+        return Task.WhenAll(ActivateFilesAsync(current.Tab), ApplySecretAsync(current));
+    }
 
-        settingsTab = key;
-        Navigation.NavigateTo(BuildSettingsRoute(key), replace: true);
+    private Task SelectSectionAsync(WorkspaceSection selected) {
+        if (selected == WorkspaceSection.Providers) {
+            Navigation.NavigateTo(AgentProvidersRoute);
+            return Task.CompletedTask;
+        }
+        var secretId = selected == WorkspaceSection.Secrets ? secrets.SelectedSecretId : null;
+        url.Navigate(new SettingsUrlState(selected, SecretId: secretId), UrlHistoryMode.Push);
+        return ApplyAsync(url.State);
+    }
+
+    private Task ApplySecretAsync(SettingsUrlState current) {
+        if (current.Tab != WorkspaceSection.Secrets || !RendererInfo.IsInteractive || current.SecretId == secrets.SelectedSecretId) {
+            return Task.CompletedTask;
+        }
+        if (current.SecretId is { } id) {
+            return secrets.SelectAsync(id);
+        }
+        secrets.New();
         return Task.CompletedTask;
     }
 
+    private void SecretSelectionChanged(WorkspaceSecretSelection selection) => _ = InvokeAsync(() => PublishRoute(WorkspaceSection.Secrets,
+        url.State with { SecretId = selection.SecretId },
+        selection.Cause == WorkspaceSelectionCause.Operator ? UrlHistoryMode.Push : UrlHistoryMode.Replace));
 
-    private void ApplyRequestedTab()
-    {
-        if (string.Equals(RequestedTab, "providers", StringComparison.Ordinal))
-        {
-            settingsTab = "workspace";
-            Navigation.NavigateTo("/agents?tab=providers", replace: true);
+    private void ProfileSelectionChanged(SettingsRouteChange<Guid?> change)
+        => PublishRoute(WorkspaceSection.DataSources, url.State with { ProfileId = change.Value }, change.Mode);
+
+    private void StorageSelectionChanged(SettingsRouteChange<Guid?> change)
+        => PublishRoute(WorkspaceSection.Storage, url.State with { StorageId = change.Value }, change.Mode);
+
+    private void AccountQueryChanged(SettingsRouteChange<ApiPageQuery> change)
+        => PublishRoute(WorkspaceSection.ApiAccess, url.State with { Search = change.Value.Search, Page = change.Value.Offset / ApiPageQuery.PageSize + 1 }, change.Mode);
+
+    private void PublishRoute(WorkspaceSection owner, SettingsUrlState next, UrlHistoryMode mode) {
+        if (disposed || redirected || url.State.Tab != owner) {
             return;
         }
+        url.Navigate(next, mode);
+    }
 
-        if (IsValidSettingsTab(RequestedTab))
-        {
-            settingsTab = RequestedTab!;
+    private Task ActivateFilesAsync(WorkspaceSection tab) {
+        if (tab != WorkspaceSection.Files || filesInitialized) {
+            return Task.CompletedTask;
+        }
+        filesInitialized = true;
+        return files.RefreshAsync();
+    }
+
+    private void ApiStatusChanged(ApiAccessStatus? status) => apiStatusLabel = status is null ? "Unavailable" : status.AuthorizationEnabled ? "JWT" : "Open";
+
+    private void ProfileChanged(object? sender, DatabaseProfileChangedNotification notification) {
+        if (!disposed) {
+            _ = InvokeAsync(() => {
+                if (!disposed) {
+                    RetireDatabaseState();
+                    StateHasChanged();
+                }
+            });
+        }
+    }
+
+    private void RetireDatabaseState() {
+        defaults.Dispose();
+        secrets.Dispose();
+        profileRetired = true;
+    }
+
+    public void Dispose() {
+        if (disposed) {
             return;
         }
-
-        if (!IsValidSettingsTab(settingsTab))
-        {
-            settingsTab = "workspace";
-        }
+        disposed = true;
+        ProfileChanges.Changed -= ProfileChanged;
+        secrets.SelectionChanged -= SecretSelectionChanged;
+        defaults.Dispose();
+        secrets.Dispose();
+        files.Dispose();
     }
-
-    private static bool IsValidSettingsTab(string? key)
-    {
-        return key is "workspace" or "data-sources" or "storage" or FilesSettingsTabKey or ProviderHistorySettingsTabKey or "secrets" or "providers" or "api-access";
-    }
-
-    private static string BuildSettingsRoute(string key)
-    {
-        return string.Equals(key, "workspace", StringComparison.Ordinal)
-            ? "/settings"
-            : $"/settings?tab={Uri.EscapeDataString(key)}";
-    }
-
-    private void ResetSecretSearch()
-    {
-        secretSearch = string.Empty;
-    }
-
-    private static string FormatTimestamp(DateTimeOffset timestamp)
-    {
-        return timestamp.LocalDateTime.ToString("g");
-    }
-
-    private string FormatApiAudience()
-    {
-        if (apiStatus is null)
-        {
-            return "API status is not loaded.";
-        }
-
-        return apiStatus.AuthorizationEnabled
-            ? $"Issuer: {apiStatus.Issuer} / Audience: {apiStatus.Audience}"
-            : "Bearer tokens are not required.";
-    }
-
-
-    private static SecretEditorModel NewSecret() => new()
-    {
-        Kind = SecretKind.ApiKey,
-        Scope = "workspace"
-    };
-
-
 }

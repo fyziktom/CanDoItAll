@@ -1,5 +1,6 @@
 using System.Text;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.CrmHr.Pages;
 
 namespace CanDoItAll.Modules.CrmHr;
 
@@ -207,7 +208,8 @@ SelectedAccount: None
         CrmAgentChatAccountContext account,
         CrmAgentChatOpportunityContext? opportunity,
         AgentChatContextAccessState accessState = AgentChatContextAccessState.Ready,
-        CrmAgentChatInteractionContext? interaction = null)
+        CrmAgentChatInteractionContext? interaction = null,
+        CrmSection? section = null)
     {
         ArgumentNullException.ThrowIfNull(account);
         ValidateAccessState(accessState);
@@ -226,7 +228,8 @@ SelectedAccount: None
             surfacePosition: CrmHrAgentChatSurfaceBuilder.BuildCrmPosition(
                 account,
                 opportunity,
-                interaction),
+                interaction,
+                section),
             completionRefreshMode: AgentChatContextCompletionRefreshMode.OnSuccessfulRun);
     }
 

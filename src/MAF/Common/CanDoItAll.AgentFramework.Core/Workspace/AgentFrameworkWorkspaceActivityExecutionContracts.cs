@@ -22,6 +22,10 @@ public interface IAgentFrameworkWorkspaceActivityExecutionService
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
 
+    Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support saved planning actions.");
+
     Task<ExecutionRunDetail> CancelPendingExecutionApprovalsWithinOperationAsync(
         IAgentExecutionActivityOperationLease operation, Guid executionRunId, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not support pending-approval cancellation.");

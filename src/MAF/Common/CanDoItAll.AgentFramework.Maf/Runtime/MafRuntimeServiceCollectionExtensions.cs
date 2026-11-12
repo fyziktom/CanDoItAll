@@ -24,6 +24,7 @@ public static class MafRuntimeServiceCollectionExtensions
         services.TryAddSingleton<IMafRuntimeCompositionMetrics, NoOpMafRuntimeCompositionMetrics>();
         services.TryAddTransient<IMafApprovalContinuationDriver, MafApprovalContinuationDriver>();
         services.TryAddSingleton<IMafRuntimeSessionPersistenceDriver, MafRuntimeSessionPersistenceDriver>();
+        services.TryAddScoped<IAgentPlanningStepRuntime, MafPlanningStepRuntime>();
 
         return services;
     }

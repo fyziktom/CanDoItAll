@@ -1,0 +1,648 @@
+{
+  "candidate": "c4-process-owner-outcome-verified",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-readonly-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T19:40:23.9765822+00:00",
+      "State": "Completed",
+      "RunnerPid": 20828,
+      "ChildPid": 61276,
+      "ChildStartedUtc": "2026-10-20T19:40:24.0098661Z",
+      "ExitCode": 0,
+      "Seconds": 96.2784545,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 180717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-readonly",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T19:43:03.2268561+00:00",
+      "State": "Completed",
+      "RunnerPid": 14188,
+      "ChildPid": 45492,
+      "ChildStartedUtc": "2026-10-20T19:43:03.2394062Z",
+      "ExitCode": 0,
+      "Seconds": 0.0875763,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 188,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-readonly-registered-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-20T19:42:00.3700327+00:00",
+      "State": "Completed",
+      "RunnerPid": 20828,
+      "ChildPid": 25416,
+      "ChildStartedUtc": "2026-10-20T19:42:00.3761250Z",
+      "ExitCode": 0,
+      "Seconds": 2.0632535,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1153,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-readonly",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T19:42:55.7421232+00:00",
+      "State": "Completed",
+      "RunnerPid": 14188,
+      "ChildPid": 32052,
+      "ChildStartedUtc": "2026-10-20T19:42:55.7469548Z",
+      "ExitCode": 0,
+      "Seconds": 7.4618383,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-registered-outcome",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes",
+        "--logger",
+        "trx;LogFileName=registered-outcome.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-owner-outcome-verified"
+      ],
+      "StartedUtc": "2026-10-20T19:44:07.1931423+00:00",
+      "State": "Completed",
+      "RunnerPid": 16440,
+      "ChildPid": 57212,
+      "ChildStartedUtc": "2026-10-20T19:44:07.2108184Z",
+      "ExitCode": 1,
+      "Seconds": 163.4137497,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 10793,
+      "StderrRetainedBytes": 1128,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "freeze-readonly",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-owner-outcome-verified/Freeze-Browser.py",
+        "freeze"
+      ],
+      "StartedUtc": "2026-10-20T19:43:11.3417268+00:00",
+      "State": "Completed",
+      "RunnerPid": 55040,
+      "ChildPid": 60308,
+      "ChildStartedUtc": "2026-10-20T19:43:11.3711932Z",
+      "ExitCode": 0,
+      "Seconds": 31.3872473,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 233,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-owner-outcome-verified\\Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T19:43:55.6908852+00:00",
+      "State": "Completed",
+      "RunnerPid": 25792,
+      "ChildPid": 4956,
+      "ChildStartedUtc": "2026-10-20T19:43:55.7070996Z",
+      "ExitCode": 0,
+      "Seconds": 175.0729291,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-readonly",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-owner-outcome-verified\\portability-scan-readonly.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T19:42:55.2841499+00:00",
+      "State": "Completed",
+      "RunnerPid": 14188,
+      "ChildPid": 26716,
+      "ChildStartedUtc": "2026-10-20T19:42:55.2885221Z",
+      "ExitCode": 0,
+      "Seconds": 0.4356829,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-readonly",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-process-owner-outcome-verified\\portability-scan-readonly.json"
+      ],
+      "StartedUtc": "2026-10-20T19:40:23.9763528+00:00",
+      "State": "Completed",
+      "RunnerPid": 14188,
+      "ChildPid": 48264,
+      "ChildStartedUtc": "2026-10-20T19:40:24.0088677Z",
+      "ExitCode": 0,
+      "Seconds": 151.2315579,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 478,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "verify-readonly",
+      "Arguments": [
+        ".artifacts/concurrent-mutations/validation/c4-process-owner-outcome-verified/Freeze-Browser.py",
+        "verify"
+      ],
+      "StartedUtc": "2026-10-20T19:47:12.6789662+00:00",
+      "State": "Completed",
+      "RunnerPid": 55004,
+      "ChildPid": 54512,
+      "ChildStartedUtc": "2026-10-20T19:47:12.7115067Z",
+      "ExitCode": 0,
+      "Seconds": 31.1244465,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 40,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "24ea08f2-175a-4f4f-be9b-d214baccb09e",
+      "testId": "9923ca75-94b3-fee4-bf81-e502479b229b",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: AssignmentRepair)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:50.1650796",
+      "startTime": "2026-10-20T15:44:09.2732331-04:00",
+      "endTime": "2026-10-20T15:44:59.4581134-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "24ea08f2-175a-4f4f-be9b-d214baccb09e",
+      "trx": "registered-outcome.trx",
+      "errors": [
+        "\n          Assert.Equal() Failure: Values differ\r\nExpected: 2\r\nActual:   3\n             at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 91\r\n--- End of stack trace from previous location ---\n        "
+      ]
+    },
+    {
+      "executionId": "fe2a756a-3b5b-4e6e-a1fd-cbd8483c900a",
+      "testId": "32835e46-542b-7754-e27c-3a8e789b3172",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: ProfileGeneration)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:28.0841937",
+      "startTime": "2026-10-20T15:45:26.8924114-04:00",
+      "endTime": "2026-10-20T15:45:54.9742258-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fe2a756a-3b5b-4e6e-a1fd-cbd8483c900a",
+      "trx": "registered-outcome.trx",
+      "errors": [
+        "\n          Assert.Equal() Failure: Values differ\r\nExpected: 2\r\nActual:   3\n             at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 91\r\n--- End of stack trace from previous location ---\n        "
+      ]
+    },
+    {
+      "executionId": "6fc3a1b8-7630-45a4-8391-e1455ab8ee1a",
+      "testId": "01a3f89f-6766-23fe-ccaf-fe94c2fc65d7",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: None)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:27.8072788",
+      "startTime": "2026-10-20T15:45:54.9766022-04:00",
+      "endTime": "2026-10-20T15:46:22.7823546-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6fc3a1b8-7630-45a4-8391-e1455ab8ee1a",
+      "trx": "registered-outcome.trx",
+      "errors": [
+        "\n          Assert.Equal() Failure: Values differ\r\nExpected: 2\r\nActual:   3\n             at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 91\r\n--- End of stack trace from previous location ---\n        "
+      ]
+    },
+    {
+      "executionId": "f3101745-0f77-4651-b77a-d06510b09087",
+      "testId": "a2bd2d62-2bfa-7609-7e4d-7a23f4886def",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: ExecutorRevoked)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:27.5814003",
+      "startTime": "2026-10-20T15:46:22.7842833-04:00",
+      "endTime": "2026-10-20T15:46:50.3644917-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f3101745-0f77-4651-b77a-d06510b09087",
+      "trx": "registered-outcome.trx",
+      "errors": [
+        "\n          Assert.Equal() Failure: Values differ\r\nExpected: 2\r\nActual:   3\n             at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 91\r\n--- End of stack trace from previous location ---\n        "
+      ]
+    },
+    {
+      "executionId": "179854a4-fac4-4184-ad74-366a6a9aa66b",
+      "testId": "08e7a95d-741f-24f6-bc96-4f189b95df7b",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: LauncherRevoked)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:27.4285664",
+      "startTime": "2026-10-20T15:44:59.4905731-04:00",
+      "endTime": "2026-10-20T15:45:26.8885701-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "179854a4-fac4-4184-ad74-366a6a9aa66b",
+      "trx": "registered-outcome.trx",
+      "errors": [
+        "\n          Assert.Equal() Failure: Values differ\r\nExpected: 2\r\nActual:   3\n             at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(AfterPublication change) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProjectTaskPlanProcessOutcomeReaderTests.cs:line 91\r\n--- End of stack trace from previous location ---\n        "
+      ]
+    }
+  ],
+  "outcomes": {
+    "Failed": 5
+  },
+  "evidence": {
+    "architecture-repair-review.json": {
+      "productionUnchanged": true,
+      "priorReview": {
+        "status": "Pass",
+        "beforeSnapshot": "snap-20261020190459-6f5b6f80",
+        "afterSnapshot": "snap-20261020192532-6f5b6f80",
+        "summary": {
+          "projectCount": 4,
+          "typeCount": 1894,
+          "memberCount": 16743,
+          "serviceRegistrationCount": 110,
+          "entityCount": 32,
+          "findingCount": 609,
+          "openQuestionCount": 16,
+          "diagnosticCount": 205
+        },
+        "addedFindings": [],
+        "projectEdges": [
+          {
+            "edgeId": "dep-projectreference-proj-candoitall-modules-workbench-bed32bcd2043",
+            "kind": "ProjectReference",
+            "fromId": "proj-candoitall-modules-workbench",
+            "toId": "proj-candoitall-processes-application",
+            "weight": 1
+          },
+          {
+            "edgeId": "dep-projectreference-proj-candoitall-processes-applicat-fce782ac5116",
+            "kind": "ProjectReference",
+            "fromId": "proj-candoitall-processes-application",
+            "toId": "proj-candoitall-processes-runtime",
+            "weight": 1
+          },
+          {
+            "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-9acbe0d8d422",
+            "kind": "ProjectReference",
+            "fromId": "proj-candoitall-processes-persistence",
+            "toId": "proj-candoitall-processes-application",
+            "weight": 1
+          },
+          {
+            "edgeId": "dep-projectreference-proj-candoitall-processes-persiste-73d917e4f5f7",
+            "kind": "ProjectReference",
+            "fromId": "proj-candoitall-processes-persistence",
+            "toId": "proj-candoitall-processes-runtime",
+            "weight": 1
+          }
+        ],
+        "cycles": [
+          {
+            "level": "Module",
+            "nodeIds": [
+              "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+              "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+              "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+              "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+              "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+              "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+              "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+              "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+              "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+            ]
+          },
+          {
+            "level": "Type",
+            "nodeIds": [
+              "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+              "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+            ]
+          }
+        ],
+        "diagnosticCountUnchanged": true,
+        "projectEdgesAndExistingCyclesUnchanged": true,
+        "moduleComposition": "Unchanged from snap-20261020190700-26f0828c; its proof is retained in the predecessor.",
+        "repair": "One liveness predicate changed; no new type, member, reference or runtime partial."
+      },
+      "scope": "Only test assertions changed; no production architectural delta."
+    },
+    "repair-boundary.json": {
+      "prerequisiteProofSha256": "4517D7179169F6F62B78E7DA26AB8D340A01AB758C4EC48FBE26097D0430BB74",
+      "changes": [
+        {
+          "path": "codex/bundles/concurrent-mutations/validation/2026-10-20-process-owner-outcome.md",
+          "before": [
+            "codex/bundles/concurrent-mutations/validation/2026-10-20-process-owner-outcome.md",
+            true,
+            "CD21EDC9C1B700BC8BC671D045ACA1EC78FE087F8A42BF1A459CFA9379939BF3"
+          ],
+          "after": [
+            "codex/bundles/concurrent-mutations/validation/2026-10-20-process-owner-outcome.md",
+            true,
+            "CDC3B03665C2F379C01725987BFFD0EC0C6436BCCEB29B6ECB97AACA544C4EC3"
+          ]
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanProcessOutcomeReaderTests.cs",
+          "before": [
+            "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanProcessOutcomeReaderTests.cs",
+            true,
+            "ACE89D5E42628CECC56FD34F582604546326E51F50152BEDBFC05CF2DC435075"
+          ],
+          "after": [
+            "tests/Integration/CanDoItAll.Tests.Integration/ProjectTaskPlanProcessOutcomeReaderTests.cs",
+            true,
+            "FE5786A2C9BCC644BD360A417D3D60200C48769CB3245E86DE411DE44B6DE0AD"
+          ]
+        }
+      ],
+      "runtimeChanges": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+          "before": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+            "exists": true,
+            "bytes": 20549632,
+            "sha256": "BDE6AB734583AF96F4C119ACD369478E65C36CFD082AC39DD745AD112F708604"
+          },
+          "after": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.dll",
+            "exists": true,
+            "bytes": 20551168,
+            "sha256": "53220E7A12BA38CD2259FDF1B93F5ADDA5E84749FBD0EF3340563BEE954D3E29"
+          }
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+          "before": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+            "exists": true,
+            "bytes": 3040740,
+            "sha256": "3719A1B972325B6F6A82F0680752750209C7E00AA35F5B959723367D917EDDD6"
+          },
+          "after": {
+            "path": "tests/Integration/CanDoItAll.Tests.Integration/bin/Release/net10.0/CanDoItAll.Tests.Integration.pdb",
+            "exists": true,
+            "bytes": 3040880,
+            "sha256": "7880D0918F8DBDC421D831099D34AB155E01BE9290D143799B557FC3F8176CDF"
+          }
+        }
+      ],
+      "otherSourceAndRuntimeInputsUnchanged": true,
+      "repeatedOwnerCases": 5,
+      "retainedUnaffectedPassingCases": 124,
+      "boundary": "Only the exact five-case SQL assertion changes. Production and every other source/runtime input are unchanged except the validation record. The prior 39 owner cases and 85 independent codec/provider cases retain their reviewed proof boundaries."
+    },
+    "discovery-readonly-review.json": {
+      "expectedTotal": 5,
+      "actualTotal": 5.0,
+      "lanes": [
+        {
+          "expectedDiscovery": 5,
+          "id": "registered-outcome",
+          "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+          "actualDiscovery": 5,
+          "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes",
+          "testNames": [
+            "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: None)",
+            "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: LauncherRevoked)",
+            "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: ExecutorRevoked)",
+            "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: ProfileGeneration)",
+            "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessOutcomeReaderTests.Registered_accounting_retains_actual_work_and_receipt_after_access_or_assignment_changes(change: AssignmentRepair)"
+          ]
+        }
+      ]
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9718,
+      "runtimeFiles": 3896,
+      "sourceSha256": "60ECE0A7D661F544CA1D4C11D7B2B22CAABED09A938ED2BA3527F67D6138E135",
+      "runtimeSha256": "AF1D1017AF6FCFF70F32369FDB7FEAD5D191FA599DC06E9C333D32BA63E0926E"
+    },
+    "final-resource-reconciliation.json": {
+      "ownedValidationDirectory": "Retained for the immediately following typed runtime-result integration; shared command and observation helpers are still required.",
+      "historicalCleanupDenials": "Unchanged; no denied resource was retried.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\xgjsvdhc.kj4",
+          "family": "shared-temp-directory-entries",
+          "lastObservedUtc": "2026-10-20T15:46:46.8907165-04:00"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\p2d4i1ca.iww",
+          "family": "shared-temp-directory-entries",
+          "lastObservedUtc": "2026-10-20T15:46:46.8674256-04:00"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\f81082cb-4705-4dff-a3ab-c4dbcc33ef65.tmp",
+          "family": "anonymous-and-package-temp-files",
+          "lastObservedUtc": "2026-10-20T15:46:46.1311639-04:00"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_57212_20261020_154407_419.log",
+          "family": "anonymous-and-package-temp-files",
+          "lastObservedUtc": "2026-10-20T15:46:46.1354828-04:00"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\a5050c0d-62c5-4ae7-b36a-72e954853047.tmp",
+          "family": "anonymous-and-package-temp-files",
+          "lastObservedUtc": "2026-10-20T15:46:46.131087-04:00"
+        }
+      ],
+      "remainingObservedProcesses": [],
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T19:47:12.9183602+00:00"
+    },
+    "observation-coverage.json": {
+      "commands": [
+        {
+          "endedUtc": "2026-10-20T15:46:50.6068920-04:00",
+          "covered": true,
+          "startedUtc": "2026-10-20T15:44:07.1931423-04:00",
+          "command": "execute-registered-outcome"
+        }
+      ],
+      "observerStartedUtc": "2026-10-20T15:43:56.3579286-04:00",
+      "observerEndedUtc": "2026-10-20T15:46:50.7243841-04:00",
+      "allCovered": true
+    },
+    "observer-start-confirmation.json": {
+      "confirmedUtc": "2026-10-20T19:44:06.8856330+00:00",
+      "observerPid": 4956,
+      "observerStartedUtc": "2026-10-20T19:43:55.7070996Z"
+    },
+    "portability": {
+      "result": "RESULT: PASS (15651 reviewed executable-source findings unchanged)",
+      "baselineWritten": false
+    },
+    "prerequisite": {
+      "proof": "c4-process-owner-outcome-repaired.json",
+      "sha256": "4517D7179169F6F62B78E7DA26AB8D340A01AB758C4EC48FBE26097D0430BB74",
+      "originalResults": {
+        "Passed": 39,
+        "Failed": 5
+      },
+      "unaffectedPassingCases": 124,
+      "review": "Five registered SQL assertions repeated. Production remains unchanged. Prior 39 corrected owner cases and 85 independent codec/provider cases retain their reviewed proof boundaries.",
+      "initialProof": {
+        "name": "c4-process-owner-outcome.json",
+        "sha256": "9ADDEEBA95741C4F334FB7465D94F55C045FEFA5015084D64A402E4AC1819E9B"
+      }
+    }
+  }
+}

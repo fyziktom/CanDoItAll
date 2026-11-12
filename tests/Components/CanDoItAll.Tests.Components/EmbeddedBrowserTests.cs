@@ -7,6 +7,15 @@ namespace CanDoItAll.Tests.Components.Shell;
 public sealed class EmbeddedBrowserTests
 {
     [Fact]
+    public void Original_public_assembly_forwards_the_actual_neutral_renderer() {
+        var forwarded = Type.GetType("CanDoItAll.AppComponents.EmbeddedBrowser, CanDoItAll.AppComponents", throwOnError: true);
+        Assert.Same(typeof(EmbeddedBrowser), forwarded);
+        Assert.Equal("CanDoItAll.AppComponents.EmbeddedBrowser", forwarded!.Assembly.GetName().Name);
+        Assert.DoesNotContain(forwarded.Assembly.GetReferencedAssemblies(), reference =>
+            reference.Name!.StartsWith("CanDoItAll.Modules.", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Embeddable_source_renders_a_restricted_full_height_frame()
     {
         using var context = new BunitContext();

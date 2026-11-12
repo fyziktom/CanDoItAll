@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages;
@@ -26,11 +27,15 @@ public sealed class SettingsPageDataSourcesTests
                 builder.CloseComponent();
             }));
         navigation.NavigateTo("http://localhost/settings?tab=providers");
+        var entries = Assert.IsType<BunitNavigationManager>(navigation).History.Count;
 
         router.WaitForAssertion(() => Assert.EndsWith(
                 "/agents?tab=providers",
                 navigation.Uri,
                 StringComparison.Ordinal));
+        var history = Assert.IsType<BunitNavigationManager>(navigation).History;
+        Assert.Equal(entries, history.Count);
+        Assert.True(history.First().Options.ReplaceHistoryEntry);
     }
 
     [Fact]

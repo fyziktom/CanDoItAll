@@ -1,0 +1,47 @@
+@using CanDoItAll.Editing.UI
+@using System.Collections.Immutable
+
+<Stack GapScale="LayoutGap.Small" data-testid="llm-chat-definition-comparison">
+    <TextBlock Value="Compare your draft with the original and current saved definition. Applying changes only your draft; Save is separate." />
+    <MergeFieldView Label="Name" Field="Comparison.Name" Format="Text" Changed="Changed" ShowUnchanged="false" TestId="llm-chat-definition-review-name" />
+    <MergeFieldView Label="Summary" Field="Comparison.Summary" Format="Text" Changed="Changed" ShowUnchanged="false" TestId="llm-chat-definition-review-summary" />
+    <MergeFieldView Label="Avatar" Field="Comparison.Avatar" Format="Avatar" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="System prompt" Field="Comparison.Prompt" Format="Text" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="Provider, model, effort and parameters" Field="Comparison.Runtime" Format="Runtime" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="Temperature" Field="Comparison.Temperature" Format="Text" Changed="Changed" ShowUnchanged="false" TestId="llm-chat-definition-review-temperature" />
+    <MergeFieldView Label="Timeout (seconds)" Field="Comparison.Timeout" Format="Text" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="Output contract" Field="Comparison.Output" Format="Output" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="Tags" Field="Comparison.Tags" Format="Tags" Changed="Changed" ShowUnchanged="false" />
+    <MergeFieldView Label="Unfinished tag" Field="Comparison.PendingTag" Format="Text" Changed="Changed" ShowUnchanged="false" TestId="llm-chat-definition-review-pending-tag" />
+    @if (RequiresAcknowledgement) {
+        <FormField Text="I reviewed current state and will start a new conditional save. The previous outcome remains unconfirmed.">
+            <CheckBox TValue="bool" Value="@acknowledged" ValueChanged="Acknowledge" data-testid="llm-chat-definition-review-acknowledge" />
+        </FormField>
+    }
+    <Button Text="Apply to my draft" Click="@(() => Apply.InvokeAsync(acknowledged))" Disabled="@(!Comparison.IsResolved || RequiresAcknowledgement && !acknowledged)" data-testid="llm-chat-definition-review-apply" />
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public DefinitionEditorComparison Comparison { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback<bool> Apply { get; set; }
+    [Parameter] public bool RequiresAcknowledgement { get; set; }
+    [Parameter] public ImmutableArray<DefinitionEditorProvider> Providers { get; set; } = [];
+    private DefinitionEditorComparison? observed;
+    private bool acknowledged;
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(observed, Comparison)) {
+            observed = Comparison;
+            acknowledged = false;
+        }
+    }
+    private void Acknowledge(bool value) => acknowledged = value;
+    private static string Text(string value) => value;
+    private static string Avatar(string value) => string.IsNullOrEmpty(value) ? "Default avatar" : value.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ? "Custom avatar" : value;
+    private string Runtime(DefinitionRuntimeChoice value) {
+        var provider = Providers.FirstOrDefault(item => item.Option.Key.Value == value.ProviderId?.ToString("D"))?.Option;
+        return $"Provider: {provider?.Name ?? "Unavailable provider"}\nModel: {provider?.GetModelDisplayName(value.Model) ?? value.Model}\nEffort: {value.Effort}\nParameters: {value.Parameters}";
+    }
+    private static string Output(DefinitionOutputChoice value) => $"Format: {value.Format}\nSchema name: {value.Name}\nDescription: {value.Description}\nSchema: {value.Schema}";
+    private static string Tags(ImmutableArray<string> value) => string.Join(", ", value);
+}

@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
@@ -23,7 +24,7 @@ public sealed class ConnectorPluginIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projects, "Webhook connector projection");
-        var saveResult = await resources.SaveAsync(new ResourceEditorModel
+        var saveResult = await resources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resources, new ResourceEditorModel
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
@@ -36,18 +37,18 @@ public sealed class ConnectorPluginIntegrationTests
                          """,
             ValidationStatus = ResourceValidationStatus.Valid,
             Sensitivity = ResourceSensitivity.Normal
-        });
+        }));
 
-        Assert.True(saveResult.IsSuccess);
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(saveResult);
 
-        var editor = await resources.GetAsync(saveResult.Value);
+        var editor = resources.CreateEditor(accepted.Snapshot);
         Assert.Equal(WebhookResourceConnectorPlugin.PluginKey, editor.ConnectorPluginKey);
         Assert.Equal("1.0", editor.ConfigSchemaVersion);
         Assert.Contains("endpointUrl", editor.ConfigJson, StringComparison.Ordinal);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var resource = await dbContext.Set<ProjectResource>()
-            .SingleAsync(item => item.Id == saveResult.Value);
+            .SingleAsync(item => item.Id == accepted.Snapshot.Expected.ResourceId);
         Assert.Equal(WebhookResourceConnectorPlugin.PluginKey, resource.ConnectorPluginKey);
         Assert.Equal("1.0", resource.ConfigSchemaVersion);
         Assert.Equal("https://example.com/hooks/orders", resource.LocationOrIdentifier);
@@ -67,7 +68,7 @@ public sealed class ConnectorPluginIntegrationTests
         var resources = scope.ServiceProvider.GetRequiredService<ResourcesService>();
 
         var projectId = await CreateProjectAsync(projects, "Webhook connector validation");
-        var saveResult = await resources.SaveAsync(new ResourceEditorModel
+        var saveResult = await resources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resources, new ResourceEditorModel
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
@@ -79,11 +80,11 @@ public sealed class ConnectorPluginIntegrationTests
                 method = "POST"
             }),
             ValidationStatus = ResourceValidationStatus.Invalid
-        });
+        }));
 
-        Assert.False(saveResult.IsSuccess);
-        Assert.NotEmpty(saveResult.Errors);
-        Assert.Contains("endpointUrl", saveResult.Errors[0].Message, StringComparison.OrdinalIgnoreCase);
+        var rejected = Assert.IsType<ResourceMetadataSaveOutcome.Rejected>(saveResult);
+        Assert.Equal(ResourceMetadataRejectionReason.InvalidValues, rejected.Reason);
+        Assert.Contains("endpointUrl", rejected.Message!, StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)

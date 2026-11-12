@@ -21,6 +21,7 @@ public static class PartyOrganizationAffiliationLimits
 public sealed class PartyOrganizationAffiliationEditorModel
 {
     public Guid? Id { get; set; }
+    public bool IsNew { get; set; }
     public Guid PersonPartyId { get; set; }
     public Guid OrganizationPartyId { get; set; }
     public PartyOrganizationAffiliationKind AffiliationKind { get; set; }
@@ -77,11 +78,13 @@ public interface IPartyOrganizationAffiliationService : IPartyOrganizationAffili
         Guid personPartyId,
         IReadOnlyCollection<PartyOrganizationAffiliationEditorModel> affiliations,
         string actor,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Action<IReadOnlyList<PartyOrganizationAffiliationListItemModel>>? onCommitted = null);
 
     Task<Result<PartyOrganizationAffiliationListItemModel>> UpsertAsync(
         PartyOrganizationAffiliationEditorModel affiliation,
         string actor,
         DateTimeOffset? expectedUpdatedAtUtc = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Action<PartyOrganizationAffiliationListItemModel>? onCommitted = null);
 }

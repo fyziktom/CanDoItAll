@@ -1,0 +1,1243 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Source frozen; independent full backend and native review PASS; unbuilt and unexecuted",
+  "sourceFiles": 12,
+  "productionFiles": 8,
+  "testFiles": 4,
+  "newFacts": 10,
+  "files": [
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectsApi.cs",
+      "sha256": "113EEE23985C6A7E3FB9B0D72F52D3D05D4DE591159C6C4AFBC74C42AE5DA3AF",
+      "bytes": 29401,
+      "operation": "replace",
+      "managedPredecessorSha256": "73E455B5C62992AFDDDD57DB1EF14970DD701D3B088DCCC2D67E4ED5136DC3C2",
+      "mainPredecessorSha256": "73E455B5C62992AFDDDD57DB1EF14970DD701D3B088DCCC2D67E4ED5136DC3C2",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/App/CanDoItAll.Web/Api/ProjectsApi.cs",
+      "previousReviewedSha256": "6273EDDD6D9636356D13B4988700A9E8861E04AA5D3EEFAB9DCECBE835A2AC2D"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs",
+      "sha256": "586A74B96FBA3980B150F3F24BFF3D3A39C7AD3B851C3FD2853D164F1C80C3C0",
+      "bytes": 7422,
+      "operation": "replace",
+      "managedPredecessorSha256": "76C674A152C08BB3D82B72BA9B708C314DEA04F4E7C690C6A0C402DB19D1D864",
+      "mainPredecessorSha256": "76C674A152C08BB3D82B72BA9B708C314DEA04F4E7C690C6A0C402DB19D1D864",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs",
+      "sha256": "30A338A9C574A21216D090F4A609D19671CCFD29F5730792EC89D966EDE5748A",
+      "bytes": 11321,
+      "operation": "replace",
+      "managedPredecessorSha256": "8701132C911D01222783128216C5548DE88F583A0DE78C59194645FD1508E23D",
+      "mainPredecessorSha256": "8701132C911D01222783128216C5548DE88F583A0DE78C59194645FD1508E23D",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectDeletion.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDeletionTransactionEntry.cs",
+      "sha256": "01401B70D6FBCFE4ECB6629A0967AA5AA6196DE6EDBC2FE8C942F09726BD95B8",
+      "bytes": 8134,
+      "operation": "add",
+      "managedPredecessorSha256": null,
+      "mainPredecessorSha256": null,
+      "predecessorSource": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs",
+      "sha256": "DBEC7C8F5CF61669A45467B097C827B43986F9FD94CF0BA3A7874A78089B0CBD",
+      "bytes": 64042,
+      "operation": "replace",
+      "managedPredecessorSha256": "F22358393AEB90C03AC3EAD810F388DE8930E5AD4145A5D701C8EF06C52BB132",
+      "mainPredecessorSha256": "F22358393AEB90C03AC3EAD810F388DE8930E5AD4145A5D701C8EF06C52BB132",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectModels.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectMutationAuthority.cs",
+      "sha256": "228148F1566AC71D1E96268E47BB0AF0A5E844FF4F79A951813E3022E768E36D",
+      "bytes": 14366,
+      "operation": "replace",
+      "managedPredecessorSha256": "7E7CC14FED428739A48D7845E0A98B0064B8FF05D4D0F2C824B04B29625025F4",
+      "mainPredecessorSha256": "7E7CC14FED428739A48D7845E0A98B0064B8FF05D4D0F2C824B04B29625025F4",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Projects/ProjectMutationAuthority.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectCreationPartialCompletion.cs",
+      "sha256": "CDEC8E5B557D01E5C16018B766A76508A1B43175D43818C6086B69308CFBC412",
+      "bytes": 1697,
+      "operation": "replace",
+      "managedPredecessorSha256": "8BD4845F1C5D4C60D6386EA54F1BA5B9410AA181559DBD5351FD0B259976DCBD",
+      "mainPredecessorSha256": "8BD4845F1C5D4C60D6386EA54F1BA5B9410AA181559DBD5351FD0B259976DCBD",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectCreationPartialCompletion.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs",
+      "sha256": "406C9BD1708F110515677DAFD3DBE3AC6F5FB8DD9B16B2162A68CEDEA7E3A738",
+      "bytes": 15943,
+      "operation": "replace",
+      "managedPredecessorSha256": "44B54175005CBC0BEC770E0E377BEBBCDBB20CD282EDC8AC5D309BBCCDF10287",
+      "mainPredecessorSha256": "44B54175005CBC0BEC770E0E377BEBBCDBB20CD282EDC8AC5D309BBCCDF10287",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureSubprojectTransferCoordinator.cs"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs",
+      "sha256": "156CD010137D3A2E13B5F4073072B179B4783B27BB7C8A66BD6D84AAD05464B2",
+      "bytes": 30243,
+      "operation": "add",
+      "managedPredecessorSha256": null,
+      "mainPredecessorSha256": null,
+      "predecessorSource": null,
+      "previousReviewedSha256": "20C70E8C291B7B6640E302C34559472236DE706DCB0001CB24D0622DE0953C10"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsApiDeletionIntegrationTests.cs",
+      "sha256": "C45C8586AF0E360A15ABC8AF1A9CD338D0DEA38A251DDE7E732E0CFAAAAC2FF7",
+      "bytes": 10677,
+      "operation": "replace",
+      "managedPredecessorSha256": "8B32EAA323EB114A7F05583594A4A18336E87DBCD05A32D66FB99743796062A7",
+      "mainPredecessorSha256": "8B32EAA323EB114A7F05583594A4A18336E87DBCD05A32D66FB99743796062A7",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-before.cs.txt"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+      "sha256": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895",
+      "bytes": 26203,
+      "operation": "replace",
+      "managedPredecessorSha256": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3",
+      "mainPredecessorSha256": "71D0BE01FCE6D409940C2EFBF68229151FA0A9FE1984E132A2FB6B0FA1FA64B1",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectStructureSubprojectTransferCoordinatorTests.cs",
+      "sha256": "407103AB5C7BEFE236016B5770DB6E97DA0BDA9E41DBEE28BF00C9D6D066EBFC",
+      "bytes": 18285,
+      "operation": "replace",
+      "managedPredecessorSha256": "9A236CB5B1CB4F785ABED2755B4D1CD3EC9F7BAEC884594E0FC7830C90BCEE5B",
+      "mainPredecessorSha256": "9A236CB5B1CB4F785ABED2755B4D1CD3EC9F7BAEC884594E0FC7830C90BCEE5B",
+      "predecessorSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-compensation-before.cs.txt"
+    }
+  ],
+  "documents": [
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-deletion-handoff-source.md",
+      "sha256": "9D67B938AB3FA51B9140D224FB9E6AF0B1455DC48B9D31CB0330EB4BCF6DCB7E",
+      "bytes": 8286
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-cleanup-ownership-amendment.md",
+      "sha256": "6429082EBE8F4AD2BA6D14E5412812008B424CFE468514651A548484A5417CB0",
+      "bytes": 1572
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-release.md",
+      "sha256": "0CD74C8CBA8210D4DE3E8E4636F71F0625CCF868F854FE93EE79A16A7B9B78F5",
+      "bytes": 1533
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors.json",
+      "sha256": "86A5B525F058E0C810C2744A7D53B1277A8E1A858EF6A8CEB51AA07B42DCF6A2",
+      "bytes": 3842
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-compensation-predecessor.json",
+      "sha256": "FBD46B2F2DCF4F04ABFD1AC46D4A3A16C43D5FDDB8EB7F17C6C50DE08DBD2DBE",
+      "bytes": 615
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-predecessor.json",
+      "sha256": "FF69D149D0DC5973146CB68356838A22BB634B0782099831B411BAE3E5E4E197",
+      "bytes": 599
+    },
+    {
+      "path": "docs/architecture/concurrent-mutations/09-project-deletion-completion.md",
+      "sha256": "C0E72CD883FE030A806BF4D8DFBC37C6D9586E32E535A697846E73AB4C1B4C1E",
+      "bytes": 3566
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-deletion-handoff-source-amendment.md",
+      "sha256": "3456743CB646269240736546BED7780E154CCEE1268DF3EC94A969DFF6508FBC",
+      "bytes": 2448
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-compliance-predecessors.json",
+      "sha256": "DE6853E83E3A2540E80AAEA718CC230E80FC14F9ED758A079FC498A96E8DFC95",
+      "bytes": 1103
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-before-compliance.cs.txt",
+      "sha256": "6273EDDD6D9636356D13B4988700A9E8861E04AA5D3EEFAB9DCECBE835A2AC2D",
+      "bytes": 30592
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-owner-before-terminal-finally.cs.txt",
+      "sha256": "20C70E8C291B7B6640E302C34559472236DE706DCB0001CB24D0622DE0953C10",
+      "bytes": 28404
+    }
+  ],
+  "prerequisite": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-import-nowait-terminal-drain-inventory.json",
+    "sha256": "182F478450EF345E49B4DD64103E71EDC1E2B4362454573E15EBF9D25E3C1AF1",
+    "bytes": 3218
+  },
+  "nativeSubset": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-retry-native-source-inventory.json",
+    "sha256": "F8750903880340B81474100CFA2A8FD08BDE25EC01BA3534F84B0A311DF16BB7",
+    "bytes": 6475
+  },
+  "nativeNewFacts": 3,
+  "resourceLayer": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+    "mainBase": "71D0BE01FCE6D409940C2EFBF68229151FA0A9FE1984E132A2FB6B0FA1FA64B1",
+    "resourceBase": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3",
+    "resourceBaseSource": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-predecessors/tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+    "successor": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895",
+    "requirement": "Resource reviewed source union before this layer, or joint source staging before compile. Frozen exclusive Resource locks unchanged."
+  },
+  "sourceCounts": {
+    "backendPrimary": 49,
+    "sharedScopeRegressions": 58,
+    "native": 11,
+    "stage1": 14,
+    "combined": 132,
+    "combinedAddedFacts": 14,
+    "dynamicRows": 0,
+    "skippedRows": 0,
+    "executionEvidence": false
+  },
+  "lanes": [
+    {
+      "id": "deletion-owner",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.",
+      "expectedDiscovery": 30,
+      "expectedRuntime": 30,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.cs",
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.Residuals.cs",
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Historical_node_deletion_payload_reports_delete_owned_files_disposition",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Exact_project_cleanup_retry_rejects_a_whitespace_participant_with_a_typed_400",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Node_deletion_preserves_shared_media_until_the_final_binding_then_deletes_the_bytes_once",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Retain_managed_files_deletes_a_node_even_when_its_creation_workspace_was_retargeted",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Batch_deletion_detaches_a_user_link_from_a_non_hideable_projected_node",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Project_deletion_removes_project_workbench_search_routing_and_physical_media",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Node_deletion_failure_is_typed_and_exact_recovery_resumes_the_durable_mutation",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Project_deletion_failure_commits_database_and_crm_cleanup_then_exact_retry_finishes_media_cleanup",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Exact_project_cleanup_retry_keeps_the_parent_recovery_pending_when_a_dependency_is_missing",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Processing_recovery_exposes_lease_availability_and_only_stale_claim_is_reclaimed",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Immutable_media_warning_is_replayed_by_exact_retry_and_reloaded_from_terminal_history",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Concurrent_exact_project_cleanup_callers_observe_one_terminal_mutation",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Project_deletion_waits_for_the_participant_binding_gate_before_planning_or_deleting_bytes",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.PostgreSql_advisory_scope_blocks_owned_keys_allows_independent_keys_and_releases_on_commit",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.PostgreSql_reverse_multi_key_requests_complete_without_deadlock",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Direct_participant_completion_retains_residual_rows_and_original_pending_or_terminal_evidence",
+          "rows": 4
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Original_pending_cleanup_cannot_inherit_recreated_project_rows_or_change_its_receipt",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Deletion_handoff_keeps_one_backend_and_only_transaction_exclusion_after_return",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Deletion_snapshot_reads_the_competing_owner_commit_after_its_observed_project_wait",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Deletion_waits_for_lifecycle_before_taking_any_project_session_key",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Deletion_refuses_a_changed_activation_between_prelude_and_owner_snapshot",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Deletion_handoff_refuses_table_or_row_lifecycle_contention_without_waiting_under_session_keys",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Cancelled_partial_session_acquisition_releases_earlier_keys_before_context_disposal",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Lost_session_acquisition_or_unlock_acknowledgement_cannot_leave_a_reusable_locked_backend",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Actual_begin_and_prelude_end_faults_release_the_owned_session_without_entering_business_work",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Source_and_current_owner_checks_remain_after_exclusion_and_immediately_before_commit",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDeletionIntegrationTests.Real_deletion_commit_and_lost_acknowledgement_remain_distinct_when_owner_disposal_also_fails",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "resource-search-deletion",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.",
+      "expectedDiscovery": 10,
+      "expectedRuntime": 10,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.Retained_reference_bindings_survive_restart_without_becoming_the_recreated_projects_admission",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.Delayed_owner_save_and_search_keep_the_captured_lifetime_across_restart",
+          "rows": 4
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.Promotion_rejects_a_retired_selection_and_does_not_reuse_its_retained_resource_for_a_new_lifetime",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.Unbound_orphans_stay_readable_without_automatic_admission_and_global_plans_remain_writable",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.Project_owner_selection_keeps_profile_identity_and_stale_owner_ids_cannot_be_recreated_by_edit",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.A_changed_editor_cannot_redirect_an_inflight_save_away_from_its_captured_admission",
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "id": "deletion-http",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectsApiDeletionIntegrationTests.",
+      "expectedDiscovery": 2,
+      "expectedRuntime": 2,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectsApiDeletionIntegrationTests.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsApiDeletionIntegrationTests.Save_with_an_original_read_of_a_deleted_project_returns_typed_not_found",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsApiDeletionIntegrationTests.Delete_returns_conflict_and_exact_recovery_retry_completes_cleanup",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "compensating-deletion",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.",
+      "expectedDiscovery": 7,
+      "expectedRuntime": 7,
+      "sources": [
+        "tests/Unit/CanDoItAll.Tests.Unit/ProjectStructureSubprojectTransferCoordinatorTests.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Move_nodes_creates_linked_child_before_transfer_and_returns_exact_transfer_evidence",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Empty_transfer_deletes_created_child_and_preserves_the_typed_failure",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Mismatched_transfer_target_deletes_created_child_and_reports_both_target_ids",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Partial_commit_bypasses_empty_child_compensation_and_is_rethrown_unchanged",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Compensation_failure_aggregates_transfer_failure_before_cleanup_failure",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Lost_creation_acknowledgement_retains_target_and_never_requests_compensation_without_the_owner_receipt",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Unit.Projects.ProjectStructureSubprojectTransferCoordinatorTests.Refused_creation_compensation_preserves_original_failure_and_later_native_content",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "definition-scope-regression",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.",
+      "expectedDiscovery": 23,
+      "expectedRuntime": 23,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.cs",
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.Recovery.cs",
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.AdmissionRecovery.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Stored_result_cannot_advertise_a_replay_horizon_different_from_its_issued_epoch",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Concurrent_duplicate_requests_commit_one_effect_and_return_the_exact_receipt",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Original_retry_after_a_later_edit_returns_historical_acknowledgement_without_replacing_current_state",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Reusing_an_accepted_address_for_changed_intent_rejects_without_another_effect",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Full_and_scalar_no_op_receipts_preserve_children_and_do_not_retoken_the_root_during_receipt_flush",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Required_search_failure_rolls_back_root_children_and_receipt",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Current_read_revocation_hides_receipt_detail_and_cannot_reexecute_the_accepted_command",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Invalid_operation_context_cannot_create_any_owner_or_receipt",
+          "rows": 5
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Actual_commit_followed_by_lost_acknowledgement_is_recovered_after_provider_restart",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Actual_commit_with_lost_acknowledgement_and_revoked_disclosure_remains_unconfirmed",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Duplicate_recovery_with_two_connection_pool_releases_owner_before_fresh_receipt_lookup",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Initial_receipt_lookup_failure_cannot_reject_an_already_accepted_operation_without_current_recovery_evidence",
+          "rows": 3
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectDefinitionOperationTests.Duplicate_that_missed_acceptance_before_epoch_closure_recovers_exact_receipt_under_current_read_permission",
+          "rows": 3
+        }
+      ]
+    },
+    {
+      "id": "process-project-source-regression",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_writer_rechecks_the_original_claim_after_real_owner_flush|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_writer_rejects_current_source_revocation_before_any_owner_change|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_and_hierarchy_need_saved_permissions_while_legacy_original_project_save_remains_supported|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_grant_revocation_denies_that_effect_without_removing_authorized_original_project_edits|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Registered_governed_Project_creation_uses_original_source_permissions_not_executor_configuration|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Governed_move_to_reserved_child_keeps_both_native_targets_and_compensation_bound_to_the_original_claim|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Retained_created_target_cannot_be_rebound_to_a_recreated_ID_or_an_unrelated_existing_project|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_compensation_refuses_an_expired_original_claim_and_retains_consumed_evidence|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_owner_keeps_source_catalog_and_exact_shared_transaction_until_commit|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_waiter_rejects_claim_state_committed_while_waiting_for_the_real_root_lock|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_commit_acknowledgement_loss_preserves_exact_error_and_consumed_creation_without_inventing_receipt|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_creation_rejects_changed_reservation_requester_or_parent_lifetime)",
+      "expectedDiscovery": 21,
+      "expectedRuntime": 21,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.ProjectWriters.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_writer_rechecks_the_original_claim_after_real_owner_flush",
+          "rows": 4
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_writer_rejects_current_source_revocation_before_any_owner_change",
+          "rows": 4
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_and_hierarchy_need_saved_permissions_while_legacy_original_project_save_remains_supported",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_grant_revocation_denies_that_effect_without_removing_authorized_original_project_edits",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Registered_governed_Project_creation_uses_original_source_permissions_not_executor_configuration",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Governed_move_to_reserved_child_keeps_both_native_targets_and_compensation_bound_to_the_original_claim",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Retained_created_target_cannot_be_rebound_to_a_recreated_ID_or_an_unrelated_existing_project",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_creation_compensation_refuses_an_expired_original_claim_and_retains_consumed_evidence",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_owner_keeps_source_catalog_and_exact_shared_transaction_until_commit",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_waiter_rejects_claim_state_committed_while_waiting_for_the_real_root_lock",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_commit_acknowledgement_loss_preserves_exact_error_and_consumed_creation_without_inventing_receipt",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Process_Project_creation_rejects_changed_reservation_requester_or_parent_lifetime",
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "id": "creation-compensation-regression",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Creation_compensation_retains_later_authoritative_foreign_owner_state|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Creation_compensation_queries_share_the_supplied_uncommitted_owner_transaction|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Ordinary_project_deletion_keeps_consumed_reservation_history|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Public_project_deletion_rejects_the_original_lifetime_after_recreation|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Create_with_admission_returns_the_original_commit_when_a_postcommit_callback_recreates_the_id)",
+      "expectedDiscovery": 7,
+      "expectedRuntime": 7,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.Compensation.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Creation_compensation_retains_later_authoritative_foreign_owner_state",
+          "rows": 3
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Creation_compensation_queries_share_the_supplied_uncommitted_owner_transaction",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Ordinary_project_deletion_keeps_consumed_reservation_history",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Public_project_deletion_rejects_the_original_lifetime_after_recreation",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Create_with_admission_returns_the_original_commit_when_a_postcommit_callback_recreates_the_id",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "crm-compensation-regression",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Opportunity_compensation_restores_only_its_exact_original_effect|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Opportunity_unknown_commit_ack_retains_the_actual_committed_conversion_and_assignments)",
+      "expectedDiscovery": 7,
+      "expectedRuntime": 7,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.OpportunityCompensation.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Opportunity_compensation_restores_only_its_exact_original_effect",
+          "rows": 6
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Opportunity_unknown_commit_ack_retains_the_actual_committed_conversion_and_assignments",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "native-deletion-state",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Projects.ProjectDeletionCleanupStateTests",
+      "expectedDiscovery": 2,
+      "expectedRuntime": 2,
+      "sources": [],
+      "nativeInventory": "F8750903880340B81474100CFA2A8FD08BDE25EC01BA3534F84B0A311DF16BB7"
+    },
+    {
+      "id": "native-deletion-renderer",
+      "project": "tests/Components/CanDoItAll.Projects.UI.Tests/CanDoItAll.Projects.UI.Tests.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ProjectsUi.ProjectDeletionStatusSurfaceTests",
+      "expectedDiscovery": 8,
+      "expectedRuntime": 8,
+      "sources": [],
+      "nativeInventory": "F8750903880340B81474100CFA2A8FD08BDE25EC01BA3534F84B0A311DF16BB7"
+    },
+    {
+      "id": "native-deletion-host",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "FullyQualifiedName=CanDoItAll.Tests.Components.ProjectStructure.ProjectsPageTests.Partial_project_deletion_closes_stale_editor_and_exposes_explicit_cleanup_retry",
+      "expectedDiscovery": 1,
+      "expectedRuntime": 1,
+      "sources": [],
+      "nativeInventory": "F8750903880340B81474100CFA2A8FD08BDE25EC01BA3534F84B0A311DF16BB7"
+    },
+    {
+      "id": "import-nowait",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.",
+      "expectedDiscovery": 8,
+      "expectedRuntime": 8,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/DatabaseTransferLifecycleTests.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.Target_snapshot_observes_project_and_receipt_committed_while_lifecycle_lock_waits",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.Captured_activation_mismatch_rejects_before_target_participants",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.Lifecycle_contention_refuses_boundedly_and_releases_the_import_session_gate",
+          "rows": 2
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.Import_refusal_breaks_the_three_owner_lifecycle_project_binding_wait_chain",
+          "rows": 1
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.DatabaseTransferLifecycleTests.Empty_epoch_metadata_allows_target_inspection_but_receipts_survive_and_block_replacement",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "id": "import-commit-knowledge",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests.Package_import_compensates_only_before_commit_and_retains_bound_files_after_commit_uncertainty|FullyQualifiedName=CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests.Row_import_preserves_acknowledged_counts_and_never_claims_an_unconfirmed_commit)",
+      "expectedDiscovery": 6,
+      "expectedRuntime": 6,
+      "sources": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferHistoryPersistenceTests.ImportCommit.cs"
+      ],
+      "methods": [
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests.Package_import_compensates_only_before_commit_and_retains_bound_files_after_commit_uncertainty",
+          "rows": 4
+        },
+        {
+          "name": "CanDoItAll.Tests.Integration.ProjectTransferHistoryPersistenceTests.Row_import_preserves_acknowledged_counts_and_never_claims_an_unconfirmed_commit",
+          "rows": 2
+        }
+      ]
+    }
+  ],
+  "selectionEvidence": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.cs",
+      "sha256": "D2AA38BC9B5E59DB4E0B08803DCCCC2902F9EC069DB83FDDBF2C548B94F7B49E",
+      "bytes": 68012,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 15,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Historical_node_deletion_payload_reports_delete_owned_files_disposition",
+          "rows": 1
+        },
+        {
+          "name": "Exact_project_cleanup_retry_rejects_a_whitespace_participant_with_a_typed_400",
+          "rows": 1
+        },
+        {
+          "name": "Node_deletion_preserves_shared_media_until_the_final_binding_then_deletes_the_bytes_once",
+          "rows": 1
+        },
+        {
+          "name": "Retain_managed_files_deletes_a_node_even_when_its_creation_workspace_was_retargeted",
+          "rows": 1
+        },
+        {
+          "name": "Batch_deletion_detaches_a_user_link_from_a_non_hideable_projected_node",
+          "rows": 1
+        },
+        {
+          "name": "Project_deletion_removes_project_workbench_search_routing_and_physical_media",
+          "rows": 1
+        },
+        {
+          "name": "Node_deletion_failure_is_typed_and_exact_recovery_resumes_the_durable_mutation",
+          "rows": 1
+        },
+        {
+          "name": "Project_deletion_failure_commits_database_and_crm_cleanup_then_exact_retry_finishes_media_cleanup",
+          "rows": 1
+        },
+        {
+          "name": "Exact_project_cleanup_retry_keeps_the_parent_recovery_pending_when_a_dependency_is_missing",
+          "rows": 1
+        },
+        {
+          "name": "Processing_recovery_exposes_lease_availability_and_only_stale_claim_is_reclaimed",
+          "rows": 1
+        },
+        {
+          "name": "Immutable_media_warning_is_replayed_by_exact_retry_and_reloaded_from_terminal_history",
+          "rows": 1
+        },
+        {
+          "name": "Concurrent_exact_project_cleanup_callers_observe_one_terminal_mutation",
+          "rows": 1
+        },
+        {
+          "name": "Project_deletion_waits_for_the_participant_binding_gate_before_planning_or_deleting_bytes",
+          "rows": 1
+        },
+        {
+          "name": "PostgreSql_advisory_scope_blocks_owned_keys_allows_independent_keys_and_releases_on_commit",
+          "rows": 1
+        },
+        {
+          "name": "PostgreSql_reverse_multi_key_requests_complete_without_deadlock",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.Residuals.cs",
+      "sha256": "2852DAB34425CABF39A551508C08CE313B7EB5CA110052C6EC772B4C781C67CA",
+      "bytes": 10486,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 1,
+      "theories": 1,
+      "inlineRows": 4,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Direct_participant_completion_retains_residual_rows_and_original_pending_or_terminal_evidence",
+          "rows": 4
+        },
+        {
+          "name": "Original_pending_cleanup_cannot_inherit_recreated_project_rows_or_change_its_receipt",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs",
+      "sha256": "156CD010137D3A2E13B5F4073072B179B4783B27BB7C8A66BD6D84AAD05464B2",
+      "bytes": 30243,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 10,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Deletion_handoff_keeps_one_backend_and_only_transaction_exclusion_after_return",
+          "rows": 1
+        },
+        {
+          "name": "Deletion_snapshot_reads_the_competing_owner_commit_after_its_observed_project_wait",
+          "rows": 1
+        },
+        {
+          "name": "Deletion_waits_for_lifecycle_before_taking_any_project_session_key",
+          "rows": 1
+        },
+        {
+          "name": "Deletion_refuses_a_changed_activation_between_prelude_and_owner_snapshot",
+          "rows": 1
+        },
+        {
+          "name": "Deletion_handoff_refuses_table_or_row_lifecycle_contention_without_waiting_under_session_keys",
+          "rows": 1
+        },
+        {
+          "name": "Cancelled_partial_session_acquisition_releases_earlier_keys_before_context_disposal",
+          "rows": 1
+        },
+        {
+          "name": "Lost_session_acquisition_or_unlock_acknowledgement_cannot_leave_a_reusable_locked_backend",
+          "rows": 1
+        },
+        {
+          "name": "Actual_begin_and_prelude_end_faults_release_the_owned_session_without_entering_business_work",
+          "rows": 1
+        },
+        {
+          "name": "Source_and_current_owner_checks_remain_after_exclusion_and_immediately_before_commit",
+          "rows": 1
+        },
+        {
+          "name": "Real_deletion_commit_and_lost_acknowledgement_remain_distinct_when_owner_disposal_also_fails",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+      "sha256": "ACA18813C05CA1E9A50A08396302F682783A698AA9CF05CBA81DC3139796C895",
+      "bytes": 26203,
+      "namespace": "CanDoItAll.Tests.Integration",
+      "facts": 4,
+      "theories": 2,
+      "inlineRows": 6,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Retained_reference_bindings_survive_restart_without_becoming_the_recreated_projects_admission",
+          "rows": 1
+        },
+        {
+          "name": "Delayed_owner_save_and_search_keep_the_captured_lifetime_across_restart",
+          "rows": 4
+        },
+        {
+          "name": "Promotion_rejects_a_retired_selection_and_does_not_reuse_its_retained_resource_for_a_new_lifetime",
+          "rows": 1
+        },
+        {
+          "name": "Unbound_orphans_stay_readable_without_automatic_admission_and_global_plans_remain_writable",
+          "rows": 1
+        },
+        {
+          "name": "Project_owner_selection_keeps_profile_identity_and_stale_owner_ids_cannot_be_recreated_by_edit",
+          "rows": 1
+        },
+        {
+          "name": "A_changed_editor_cannot_redirect_an_inflight_save_away_from_its_captured_admission",
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsApiDeletionIntegrationTests.cs",
+      "sha256": "C45C8586AF0E360A15ABC8AF1A9CD338D0DEA38A251DDE7E732E0CFAAAAC2FF7",
+      "bytes": 10677,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 2,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Save_with_an_original_read_of_a_deleted_project_returns_typed_not_found",
+          "rows": 1
+        },
+        {
+          "name": "Delete_returns_conflict_and_exact_recovery_retry_completes_cleanup",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectStructureSubprojectTransferCoordinatorTests.cs",
+      "sha256": "407103AB5C7BEFE236016B5770DB6E97DA0BDA9E41DBEE28BF00C9D6D066EBFC",
+      "bytes": 18285,
+      "namespace": "CanDoItAll.Tests.Unit.Projects",
+      "facts": 7,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Move_nodes_creates_linked_child_before_transfer_and_returns_exact_transfer_evidence",
+          "rows": 1
+        },
+        {
+          "name": "Empty_transfer_deletes_created_child_and_preserves_the_typed_failure",
+          "rows": 1
+        },
+        {
+          "name": "Mismatched_transfer_target_deletes_created_child_and_reports_both_target_ids",
+          "rows": 1
+        },
+        {
+          "name": "Partial_commit_bypasses_empty_child_compensation_and_is_rethrown_unchanged",
+          "rows": 1
+        },
+        {
+          "name": "Compensation_failure_aggregates_transfer_failure_before_cleanup_failure",
+          "rows": 1
+        },
+        {
+          "name": "Lost_creation_acknowledgement_retains_target_and_never_requests_compensation_without_the_owner_receipt",
+          "rows": 1
+        },
+        {
+          "name": "Refused_creation_compensation_preserves_original_failure_and_later_native_content",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.cs",
+      "sha256": "0CB5DF9E98A2F4D0D97C271F45258951A3777176FBF52549E6BC0F8A4A28E28B",
+      "bytes": 25343,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 5,
+      "theories": 3,
+      "inlineRows": 9,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Stored_result_cannot_advertise_a_replay_horizon_different_from_its_issued_epoch",
+          "rows": 1
+        },
+        {
+          "name": "Concurrent_duplicate_requests_commit_one_effect_and_return_the_exact_receipt",
+          "rows": 2
+        },
+        {
+          "name": "Original_retry_after_a_later_edit_returns_historical_acknowledgement_without_replacing_current_state",
+          "rows": 1
+        },
+        {
+          "name": "Reusing_an_accepted_address_for_changed_intent_rejects_without_another_effect",
+          "rows": 1
+        },
+        {
+          "name": "Full_and_scalar_no_op_receipts_preserve_children_and_do_not_retoken_the_root_during_receipt_flush",
+          "rows": 1
+        },
+        {
+          "name": "Required_search_failure_rolls_back_root_children_and_receipt",
+          "rows": 2
+        },
+        {
+          "name": "Current_read_revocation_hides_receipt_detail_and_cannot_reexecute_the_accepted_command",
+          "rows": 1
+        },
+        {
+          "name": "Invalid_operation_context_cannot_create_any_owner_or_receipt",
+          "rows": 5
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.Recovery.cs",
+      "sha256": "2E505E839B1C1731C5E5A2C631CF25ECC88B5233088393A5D020AB902745BF7D",
+      "bytes": 13672,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 3,
+      "theories": 0,
+      "inlineRows": 0,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Actual_commit_followed_by_lost_acknowledgement_is_recovered_after_provider_restart",
+          "rows": 1
+        },
+        {
+          "name": "Actual_commit_with_lost_acknowledgement_and_revoked_disclosure_remains_unconfirmed",
+          "rows": 1
+        },
+        {
+          "name": "Duplicate_recovery_with_two_connection_pool_releases_owner_before_fresh_receipt_lookup",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDefinitionOperationTests.AdmissionRecovery.cs",
+      "sha256": "C1210504E212B2E5442EF0C0B5617EBF957B048119D461B475F53CD64D7B8CDA",
+      "bytes": 10765,
+      "namespace": "CanDoItAll.Tests.Integration.ProjectStructure",
+      "facts": 0,
+      "theories": 2,
+      "inlineRows": 6,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Initial_receipt_lookup_failure_cannot_reject_an_already_accepted_operation_without_current_recovery_evidence",
+          "rows": 3
+        },
+        {
+          "name": "Duplicate_that_missed_acceptance_before_epoch_closure_recovers_exact_receipt_under_current_read_permission",
+          "rows": 3
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.ProjectWriters.cs",
+      "sha256": "F024B6FA12280E5B3490B5A3C41D368F598DFFEFA4D627EAA1CDC977ABFB7037",
+      "bytes": 37605,
+      "namespace": "CanDoItAll.Tests.Integration.Processes",
+      "facts": 7,
+      "theories": 5,
+      "inlineRows": 14,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Process_Project_writer_rechecks_the_original_claim_after_real_owner_flush",
+          "rows": 4
+        },
+        {
+          "name": "Process_Project_writer_rejects_current_source_revocation_before_any_owner_change",
+          "rows": 4
+        },
+        {
+          "name": "Process_creation_and_hierarchy_need_saved_permissions_while_legacy_original_project_save_remains_supported",
+          "rows": 1
+        },
+        {
+          "name": "Process_creation_grant_revocation_denies_that_effect_without_removing_authorized_original_project_edits",
+          "rows": 2
+        },
+        {
+          "name": "Registered_governed_Project_creation_uses_original_source_permissions_not_executor_configuration",
+          "rows": 2
+        },
+        {
+          "name": "Governed_move_to_reserved_child_keeps_both_native_targets_and_compensation_bound_to_the_original_claim",
+          "rows": 1
+        },
+        {
+          "name": "Retained_created_target_cannot_be_rebound_to_a_recreated_ID_or_an_unrelated_existing_project",
+          "rows": 1
+        },
+        {
+          "name": "Process_creation_compensation_refuses_an_expired_original_claim_and_retains_consumed_evidence",
+          "rows": 1
+        },
+        {
+          "name": "Process_Project_owner_keeps_source_catalog_and_exact_shared_transaction_until_commit",
+          "rows": 1
+        },
+        {
+          "name": "Process_Project_waiter_rejects_claim_state_committed_while_waiting_for_the_real_root_lock",
+          "rows": 1
+        },
+        {
+          "name": "Process_Project_commit_acknowledgement_loss_preserves_exact_error_and_consumed_creation_without_inventing_receipt",
+          "rows": 1
+        },
+        {
+          "name": "Process_Project_creation_rejects_changed_reservation_requester_or_parent_lifetime",
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.Compensation.cs",
+      "sha256": "5F2310B0D79DA6633011DB1BDD9991EF478251C46FB0F964EC06FD537CE88C0D",
+      "bytes": 11251,
+      "namespace": "CanDoItAll.Tests.Integration.Processes",
+      "facts": 4,
+      "theories": 1,
+      "inlineRows": 3,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Creation_compensation_retains_later_authoritative_foreign_owner_state",
+          "rows": 3
+        },
+        {
+          "name": "Creation_compensation_queries_share_the_supplied_uncommitted_owner_transaction",
+          "rows": 1
+        },
+        {
+          "name": "Ordinary_project_deletion_keeps_consumed_reservation_history",
+          "rows": 1
+        },
+        {
+          "name": "Public_project_deletion_rejects_the_original_lifetime_after_recreation",
+          "rows": 1
+        },
+        {
+          "name": "Create_with_admission_returns_the_original_commit_when_a_postcommit_callback_recreates_the_id",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.OpportunityCompensation.cs",
+      "sha256": "CBFEB7EB7C25B14D5BDCD645578E42DD3A5D2954602B3004780F79A86B78F481",
+      "bytes": 14161,
+      "namespace": "CanDoItAll.Tests.Integration.Processes",
+      "facts": 1,
+      "theories": 1,
+      "inlineRows": 6,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Opportunity_compensation_restores_only_its_exact_original_effect",
+          "rows": 6
+        },
+        {
+          "name": "Opportunity_unknown_commit_ack_retains_the_actual_committed_conversion_and_assignments",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatabaseTransferLifecycleTests.cs",
+      "sha256": "47D7A0A7885518BC874F19F978746A61A420612A40A87B419C141D9E5E93762E",
+      "bytes": 21074,
+      "namespace": "CanDoItAll.Tests.Integration",
+      "facts": 2,
+      "theories": 3,
+      "inlineRows": 6,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Target_snapshot_observes_project_and_receipt_committed_while_lifecycle_lock_waits",
+          "rows": 2
+        },
+        {
+          "name": "Captured_activation_mismatch_rejects_before_target_participants",
+          "rows": 2
+        },
+        {
+          "name": "Lifecycle_contention_refuses_boundedly_and_releases_the_import_session_gate",
+          "rows": 2
+        },
+        {
+          "name": "Import_refusal_breaks_the_three_owner_lifecycle_project_binding_wait_chain",
+          "rows": 1
+        },
+        {
+          "name": "Empty_epoch_metadata_allows_target_inspection_but_receipts_survive_and_block_replacement",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectTransferHistoryPersistenceTests.ImportCommit.cs",
+      "sha256": "35A1082AFC5B1DB5277D5FB07DCC1DB1F28C5EA3E491ED7FC7BF7FFD43FEFF17",
+      "bytes": 14398,
+      "namespace": "CanDoItAll.Tests.Integration",
+      "facts": 0,
+      "theories": 2,
+      "inlineRows": 6,
+      "dynamicOrSkip": false,
+      "methods": [
+        {
+          "name": "Package_import_compensates_only_before_commit_and_retains_bound_files_after_commit_uncertainty",
+          "rows": 4
+        },
+        {
+          "name": "Row_import_preserves_acknowledged_counts_and_never_claims_an_unconfirmed_commit",
+          "rows": 2
+        }
+      ]
+    }
+  ],
+  "peerReview": {
+    "cleanupAgent": "/root/agent_process_architecture",
+    "helperHash": "01401B70D6FBCFE4ECB6629A0967AA5AA6196DE6EDBC2FE8C942F09726BD95B8",
+    "scopeHash": "228148F1566AC71D1E96268E47BB0AF0A5E844FF4F79A951813E3022E768E36D",
+    "result": "No remaining source blocker in terminal cleanup ownership; actual fault/physical session proof remains open.",
+    "native": "Independent persistence peer PASS at F8750903880340B81474100CFA2A8FD08BDE25EC01BA3534F84B0A311DF16BB7",
+    "fullBackend": {
+      "agent": "/root/agent_process_architecture",
+      "result": "PASS: all12 source inputs reviewed, including final two successors and maintained guide; no remaining source blocker. Physical session/quarantine execution remains unproved.",
+      "sourceHashes": [
+        {
+          "path": "src/App/CanDoItAll.Web/Api/ProjectsApi.cs",
+          "sha256": "113EEE23985C6A7E3FB9B0D72F52D3D05D4DE591159C6C4AFBC74C42AE5DA3AF"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs",
+          "sha256": "156CD010137D3A2E13B5F4073072B179B4783B27BB7C8A66BD6D84AAD05464B2"
+        },
+        {
+          "path": "docs/architecture/concurrent-mutations/09-project-deletion-completion.md",
+          "sha256": "C0E72CD883FE030A806BF4D8DFBC37C6D9586E32E535A697846E73AB4C1B4C1E"
+        }
+      ],
+      "runtimeClaim": false
+    }
+  },
+  "remainingGates": [
+    "Root complete source review",
+    "Standard Release builds",
+    "Exact discovery and runtime",
+    "Generated OpenAPI/client compatibility review; no SPA cutover claim",
+    "Full portability/static and renderer row enforcement",
+    "Stage3 release only after stage2 runtime",
+    "Resource capacity/migration/retained compatibility/native/browser"
+  ],
+  "deletions": [],
+  "buildsExecuted": false,
+  "testsExecuted": false,
+  "databaseAccessPerformed": false,
+  "scansExecuted": false,
+  "predecessorInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-source-inventory.json",
+    "sha256": "EFE97FFCE69A7ADAF79E0BF26B68075532046DCE01ECD414E645FFA299DE8F7D",
+    "bytes": 56681
+  },
+  "amendment": {
+    "reason": "Parent requested XML-comment compliance, terminal test cleanup, and actual backend quarantine assertions without new test rows.",
+    "api": "Only remove/trim XML guidance. Typed response/model/runtime text is unchanged; operator/retry rules now live in maintained Markdown.",
+    "tests": "Nested finally drains three waiting helpers even if holder disposal fails; fixture creation disposes both owned resources and retains failures. Actual TransactionStarted PID is observed absent from independent autocommit SQL before owner disposal in quarantine-required fault paths; healthy confirmed-unlock path does not require backend exit.",
+    "preservedSources": [
+      {
+        "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-before-compliance.cs.txt",
+        "sha256": "6273EDDD6D9636356D13B4988700A9E8861E04AA5D3EEFAB9DCECBE835A2AC2D",
+        "bytes": 30592
+      },
+      {
+        "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-owner-before-terminal-finally.cs.txt",
+        "sha256": "20C70E8C291B7B6640E302C34559472236DE706DCB0001CB24D0622DE0953C10",
+        "bytes": 28404
+      }
+    ],
+    "countsUnchanged": true
+  }
+}
+

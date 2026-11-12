@@ -86,7 +86,8 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
     private static async Task WriteResponseAsync(
         HttpContext context,
         ResponsesRequest request,
-        TestControlState control)
+        TestControlState control,
+        ResponseScriptState script)
     {
         var controlSnapshot = control.Get();
         if (await TestFailureResponder.TryWriteAsync(
@@ -112,16 +113,24 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
             return;
         }
 
+        ResponsesResponse response;
+        try {
+            response = script.Respond(request) ?? CreateResponse(request);
+        } catch (Exception exception) when (exception is InvalidOperationException or JsonException or FormatException) {
+            await WriteValidationErrorAsync(context, "The bounded script could not accept the native request or tool result.");
+            return;
+        }
+
         if (request.Stream)
         {
             await WriteResponsesStreamAsync(
                 context,
-                request,
+                response,
                 streamMode);
             return;
         }
 
-        await WriteJsonAsync(context, CreateResponse(request));
+        await WriteJsonAsync(context, response);
     }
 
     private static async Task WriteImageGenerationAsync(
@@ -398,11 +407,10 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
 
     private static async Task WriteResponsesStreamAsync(
         HttpContext context,
-        ResponsesRequest request,
+        ResponsesResponse completed,
         FixtureStreamMode streamMode)
     {
         PrepareStream(context);
-        var completed = CreateResponse(request);
         var content = completed.Output[0].Content?.FirstOrDefault()?.Text ?? string.Empty;
         var splitIndex = Math.Max(1, content.Length / 2);
         var created = new ResponseCreatedEvent(
@@ -416,6 +424,18 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                 completed.Model,
                 [],
                 null));
+        if (completed.Output.Any(item => item.Type == "function_call")) {
+            var toolEvents = new List<(string? EventName, object Payload)> { (created.Type, created) };
+            var sequence = 1;
+            for (var index = 0; index < completed.Output.Count; index++) {
+                foreach (var eventName in new[] { "response.output_item.added", "response.output_item.done" }) {
+                    toolEvents.Add((eventName, new ResponseOutputItemEvent(eventName, sequence++, index, completed.Output[index])));
+                }
+            }
+            toolEvents.Add(("response.completed", new ResponseCompletedEvent("response.completed", sequence, completed)));
+            await WriteSseSequenceAsync(context, toolEvents, streamMode);
+            return;
+        }
         var events = new (string? EventName, object Payload)[]
         {
             (created.Type, created),
@@ -436,8 +456,8 @@ internal static class OpenAiFixtureEndpointRouteBuilderExtensions
                     0,
                     content.Length == 0 ? string.Empty : content[splitIndex..])),
             (
-                "response.completed",
-                new ResponseCompletedEvent("response.completed", 3, completed))
+                completed.Status == "incomplete" ? "response.incomplete" : "response.completed",
+                new ResponseCompletedEvent(completed.Status == "incomplete" ? "response.incomplete" : "response.completed", 3, completed))
         };
         await WriteSseSequenceAsync(context, events, streamMode);
     }

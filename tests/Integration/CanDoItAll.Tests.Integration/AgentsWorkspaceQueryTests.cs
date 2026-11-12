@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentsWorkspaceQueryTests {
     [Fact]
     public async Task Real_registration_reads_overview_and_bound_resources() {

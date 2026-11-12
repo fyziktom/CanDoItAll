@@ -163,7 +163,7 @@ public sealed class GovernanceAdmissionSerializationTests {
             Assert.True(governance.WritableExternalTargetAliases.SetEquals(WritableAliases));
             Assert.True(governance.ReadOnlyExternalTargetAliases.SetEquals(ReadOnlyAliases));
             Assert.True(governance.AllowedManagedArtifactReadRefs.SetEquals(ManagedRefs));
-            Assert.True(governance.AllowedOperations.Contains("A.OPERATION"));
+            Assert.Contains("A.OPERATION", governance.AllowedOperations);
         }
 
         private static string[] Ordered(string[] values, bool reverse) => reverse ? values.Reverse().ToArray() : [.. values];

@@ -1,3 +1,4 @@
+using CanDoItAll.Application.UI.Dashboard;
 namespace CanDoItAll.Web.Dashboard;
 
 public sealed class DashboardSnapshotService(DashboardSnapshotCache cache)

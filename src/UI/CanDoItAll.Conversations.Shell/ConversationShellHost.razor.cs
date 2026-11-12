@@ -15,6 +15,7 @@ public partial class ConversationShellHost
     ];
 
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationToken lifetimeToken;
     private readonly Dictionary<ConversationShellWindowKey, OverlayWindowState> windowStates = [];
     private IReadOnlyList<IConversationShellContributor> contributors = [];
     private ConversationShellState state = new(
@@ -26,7 +27,11 @@ public partial class ConversationShellHost
     private string searchText = string.Empty;
     private bool attached;
     private bool isInitializing;
+    private bool isRefreshing;
+    private string refreshFailure = string.Empty;
     private int disposed;
+
+    internal Task Initialization { get; private set; } = Task.CompletedTask;
 
     private int SelectedLifecycleIndex
         => state.Lifecycle == ConversationCatalogLifecycle.Active ? 1 : 0;
@@ -71,23 +76,29 @@ public partial class ConversationShellHost
             .Select(message => message!)
             .ToArray();
 
-    private ConversationShellWindowDescriptor? FocusedWindow
-    {
-        get
-        {
-            if (state.FocusedWindow is not { } focused)
-            {
-                return null;
-            }
+    private IEnumerable<ConversationShellWindowDescriptor> RenderedWindows => ContributorSnapshots
+        .SelectMany(source => source.Snapshot.Windows)
+        .Where(window => window.KeepContentMounted || window.Key == state.FocusedWindow);
 
-            return ContributorSnapshots
-                .SelectMany(snapshot => snapshot.Snapshot.Windows)
-                .FirstOrDefault(window => window.Key == focused);
+    private IReadOnlyList<(string SourceId, ConversationParticipantKind Kind, ConversationShellContributorSnapshot Snapshot)> ContributorSnapshots
+        => contributors.Select(item => (item.SourceId, item.Kind, item.Snapshot())).ToArray();
+
+    private async Task RefreshAsync(Func<CancellationToken, Task> refresh) {
+        if (isRefreshing || Volatile.Read(ref disposed) != 0) {
+            return;
+        }
+        isRefreshing = true;
+        refreshFailure = string.Empty;
+        try {
+            await refresh(lifetimeToken);
+        } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+        } catch (Exception exception) {
+            refreshFailure = "The conversation catalog could not be refreshed. Its previous information is retained.";
+            Logger.LogWarning("Conversation catalog refresh failed with {FailureType}.", exception.GetType().Name);
+        } finally {
+            isRefreshing = false;
         }
     }
-
-    private IReadOnlyList<(ConversationParticipantKind Kind, ConversationShellContributorSnapshot Snapshot)> ContributorSnapshots
-        => contributors.Select(item => (item.Kind, item.Snapshot())).ToArray();
 
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
@@ -109,38 +120,36 @@ public partial class ConversationShellHost
 
         attached = true;
         state = Coordinator.Snapshot();
-        _ = InitializeContributorsAsync();
+        lifetimeToken = lifetime.Token;
+        Initialization = InitializeContributorsAsync();
         return Task.CompletedTask;
     }
 
-    private async Task InitializeContributorsAsync()
-    {
+    private async Task InitializeContributorsAsync() {
         isInitializing = true;
-        await InvokeAsync(StateHasChanged);
-        foreach (var contributor in contributors)
-        {
-            try
-            {
-                await contributor.InitializeAsync(lifetime.Token);
-            }
-            catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
-            {
+        await RenderIfAliveAsync();
+        foreach (var contributor in contributors) {
+            if (Volatile.Read(ref disposed) != 0 || lifetimeToken.IsCancellationRequested) {
                 return;
             }
-            catch (Exception exception)
-            {
-                Logger.LogError(
-                    exception,
-                    "Unable to initialize conversation shell contributor. SourceId={SourceId} FailureType={FailureType}.",
-                    contributor.SourceId,
-                    exception.GetType().Name);
+            try {
+                await contributor.InitializeAsync(lifetimeToken);
+            } catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested) {
+                return;
+            } catch (Exception exception) {
+                if (Volatile.Read(ref disposed) == 0) {
+                    Logger.LogError(
+                        exception,
+                        "Unable to initialize conversation shell contributor. SourceId={SourceId} FailureType={FailureType}.",
+                        contributor.SourceId,
+                        exception.GetType().Name);
+                }
             }
         }
 
-        isInitializing = false;
-        if (Volatile.Read(ref disposed) == 0)
-        {
-            await InvokeAsync(StateHasChanged);
+        if (Volatile.Read(ref disposed) == 0) {
+            isInitializing = false;
+            await RenderIfAliveAsync();
         }
     }
 
@@ -189,7 +198,7 @@ public partial class ConversationShellHost
         }
 
         windowState = OverlayWindowState.Normalize(windowState);
-        windowState.IsVisible = true;
+        windowState.IsVisible = state.FocusedWindow == window.Key;
         windowStates[window.Key] = windowState;
         return windowState;
     }
@@ -208,7 +217,7 @@ public partial class ConversationShellHost
         }
 
         var contributor = ResolveContributor(window.Key.SourceId);
-        await contributor.HandleWindowCloseAsync(window.Key.WindowId, lifetime.Token);
+        await contributor.HandleWindowCloseAsync(window.Key.WindowId, lifetimeToken);
     }
 
     private async Task HandleParticipantDoubleClickedAsync(ConversationPresentationKey key)
@@ -222,19 +231,19 @@ public partial class ConversationShellHost
 
         await ResolveContributor(participant.SourceId).HandleParticipantActionAsync(
             new(key, action.Key),
-            lifetime.Token);
+            lifetimeToken);
     }
 
     private Task HandleParticipantActionAsync(ParticipantActionRequest request)
     {
         var participant = ResolveParticipant(request.ParticipantKey);
-        return ResolveContributor(participant.SourceId).HandleParticipantActionAsync(request, lifetime.Token);
+        return ResolveContributor(participant.SourceId).HandleParticipantActionAsync(request, lifetimeToken);
     }
 
     private Task HandleActiveActionAsync(ConversationActionRequest request)
     {
         var activeItem = ResolveActiveItem(request.ItemKey);
-        return ResolveContributor(activeItem.SourceId).HandleActiveActionAsync(request, lifetime.Token);
+        return ResolveContributor(activeItem.SourceId).HandleActiveActionAsync(request, lifetimeToken);
     }
 
     private ConversationShellParticipant ResolveParticipant(ConversationPresentationKey key)
@@ -266,24 +275,36 @@ public partial class ConversationShellHost
            value.Contains(searchText, StringComparison.OrdinalIgnoreCase);
 
     private void HandleShellChanged(object? sender, EventArgs eventArgs)
-    {
-        if (Volatile.Read(ref disposed) != 0)
-        {
-            return;
-        }
-
-        _ = InvokeAsync(() =>
-        {
-            state = Coordinator.Snapshot();
-            StateHasChanged();
-        });
-    }
+        => _ = RenderIfAliveAsync(refreshState: true);
 
     private void HandleContributorChanged(object? sender, EventArgs eventArgs)
-    {
-        if (Volatile.Read(ref disposed) == 0)
-        {
-            _ = InvokeAsync(StateHasChanged);
+        => _ = RenderIfAliveAsync();
+
+    private async Task RenderIfAliveAsync(bool refreshState = false) {
+        if (Volatile.Read(ref disposed) != 0) {
+            return;
+        }
+        try {
+            await InvokeAsync(() => {
+                if (Volatile.Read(ref disposed) != 0) {
+                    return;
+                }
+                if (refreshState) {
+                    var next = Coordinator.Snapshot();
+                    if (next.FocusGeneration != state.FocusGeneration && next.FocusedWindow is { } focused &&
+                        windowStates.TryGetValue(focused, out var current)) {
+                        var restored = OverlayWindowState.Normalize(current);
+                        restored.IsMinimized = false;
+                        windowStates[focused] = restored;
+                    }
+                    state = next;
+                }
+                StateHasChanged();
+            });
+        } catch (Exception exception) {
+            if (Volatile.Read(ref disposed) == 0) {
+                Logger.LogError(exception, "Unable to update conversation shell. FailureType={FailureType}.", exception.GetType().Name);
+            }
         }
     }
 
@@ -315,6 +336,16 @@ public partial class ConversationShellHost
         }
 
         await lifetime.CancelAsync();
-        lifetime.Dispose();
+        _ = ReleaseLifetimeAsync();
+    }
+
+    private async Task ReleaseLifetimeAsync() {
+        try {
+            await Initialization;
+        } catch (Exception exception) {
+            Logger.LogError(exception, "Conversation shell initialization failed during shutdown. FailureType={FailureType}.", exception.GetType().Name);
+        } finally {
+            lifetime.Dispose();
+        }
     }
 }

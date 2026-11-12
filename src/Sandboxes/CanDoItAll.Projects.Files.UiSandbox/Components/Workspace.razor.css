@@ -1,0 +1,14 @@
+.files-sandbox {
+    height: 100dvh;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.files-sandbox ::deep .files-sandbox__layout {
+    height: 100%;
+}
+
+.files-sandbox ::deep .files-sandbox__pane {
+    flex: 1;
+    min-height: 0;
+}

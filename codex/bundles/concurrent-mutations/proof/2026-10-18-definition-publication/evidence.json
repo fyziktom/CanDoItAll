@@ -1,0 +1,15 @@
+{
+  "passed": 24,
+  "discovered": 24,
+  "evidenceRoot": ".artifacts/concurrent-mutations/validation/p03-definition-publication-validation",
+  "failed": 0,
+  "sourceRuntime": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceFiles": 9083,
+    "runtimeFiles": 4182,
+    "sourceSha256": "24C9955377332E082FD71CDE534170F02D6E9AE0E2818F49B9E8626A029A72D2",
+    "runtimeSha256": "A5518D2A5BB62FD9AF512143D8C7142986ABFF292C16C120657E62FA597EE103"
+  },
+  "scope": "11 claim and provenance cases plus 13 actual tool/MAF/Process/replay cases",
+  "executed": 24
+}

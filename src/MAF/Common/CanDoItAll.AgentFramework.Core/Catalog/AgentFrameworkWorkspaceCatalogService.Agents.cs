@@ -32,30 +32,25 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     }
 
     public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
-    {
+        => (await SaveAgentDefinitionAsync(model, cancellationToken)).Id;
+
+    public async Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(model);
+        model = AgentEditorModelSnapshot.Copy(model);
         var now = DateTimeOffset.UtcNow;
         var id = model.Id ?? Guid.NewGuid();
+        var expected = model.ExpectedUpdatedAtUtc;
+        if (id == Guid.Empty) {
+            throw new ArgumentException("An agent identity cannot be empty.", nameof(model));
+        }
         var selectedProvider = model.ProviderProfileId is { } providerProfileId
             ? await providerRegistry.GetProviderAsync(providerProfileId, cancellationToken)
             : null;
-        await UpdateCatalogAsync(catalog =>
+        return await UpdateCatalogAsync(catalog =>
         {
             var existingAgent = catalog.Agents.FirstOrDefault(item => item.Id == id);
-            if (model.ExpectedUpdatedAtUtc.HasValue && existingAgent is null)
-            {
-                throw new AgentCatalogConcurrencyException(
-                    id,
-                    model.ExpectedUpdatedAtUtc.Value,
-                    actualUpdatedAtUtc: null);
-            }
-
-            if (model.ExpectedUpdatedAtUtc is DateTimeOffset expectedUpdatedAtUtc &&
-                existingAgent?.UpdatedAtUtc != expectedUpdatedAtUtc)
-            {
-                throw new AgentCatalogConcurrencyException(
-                    id,
-                    expectedUpdatedAtUtc,
-                    existingAgent?.UpdatedAtUtc);
+            if (existingAgent is not null && expected is null || expected is not null && existingAgent?.UpdatedAtUtc != expected) {
+                throw new AgentCatalogConcurrencyException(id, expected, existingAgent?.UpdatedAtUtc);
             }
 
             var validationCatalog = selectedProvider is null
@@ -89,8 +84,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
-        }, cancellationToken);
-        return id;
+        }, catalog => catalog.Agents.Single(agent => agent.Id == id), cancellationToken);
     }
 
     public Task GrantAgentProjectStructureAccessAsync(
@@ -170,8 +164,13 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         }, cancellationToken);
     }
 
-    public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
-    {
+    public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+        => DeleteAgentCoreAsync(agentId, null, cancellationToken);
+
+    public Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => DeleteAgentCoreAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+
+    private async Task DeleteAgentCoreAsync(Guid agentId, DateTimeOffset? expectedUpdatedAtUtc, CancellationToken cancellationToken) {
         if (agentId == Guid.Empty)
         {
             throw new ArgumentException("An agent identifier is required.", nameof(agentId));
@@ -192,7 +191,10 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 $"Managed seed agent '{agent.Name}' cannot be deleted.");
         }
 
-        await store.DeleteAgentWorkspaceDataAsync(agentId, cancellationToken);
+        if (expectedUpdatedAtUtc is null || agent.UpdatedAtUtc != expectedUpdatedAtUtc) {
+            throw new AgentCatalogConcurrencyException(agentId, expectedUpdatedAtUtc, agent.UpdatedAtUtc);
+        }
+        await store.DeleteAgentWorkspaceDataAsync(agentId, expectedUpdatedAtUtc.Value, cancellationToken);
     }
 
     public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
@@ -200,7 +202,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var now = DateTimeOffset.UtcNow;
         var cloneId = Guid.NewGuid();
         var cloneTemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(cloneName, cloneName);
-        await UpdateCatalogAsync(catalog =>
+        return await UpdateCatalogAsync(catalog =>
         {
             var source = catalog.Agents.FirstOrDefault(item => item.Id == agentId)
                 ?? throw new InvalidOperationException("Source agent was not found.");
@@ -224,9 +226,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
-        }, cancellationToken);
-
-        return cloneId;
+        }, _ => cloneId, cancellationToken);
     }
 
     public async Task<Guid> ConvertToTemplateAsync(
@@ -236,7 +236,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     {
         var now = DateTimeOffset.UtcNow;
         var templateId = Guid.NewGuid();
-        await UpdateCatalogAsync(catalog =>
+        return await UpdateCatalogAsync(catalog =>
         {
             var source = catalog.Agents.FirstOrDefault(item => item.Id == agentId)
                 ?? throw new InvalidOperationException("Agent was not found.");
@@ -261,9 +261,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
-        }, cancellationToken);
-
-        return templateId;
+        }, _ => templateId, cancellationToken);
     }
 
     public async Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)

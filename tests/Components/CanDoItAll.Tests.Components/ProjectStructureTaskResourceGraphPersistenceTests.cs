@@ -37,11 +37,13 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
         Assert.False(string.IsNullOrWhiteSpace(attachment.LinkTargetNodeId));
         await SetAuthoritativePricingAsync(workbenchService, projectId, task.Id, resource);
 
+        var unlinkOrigin = await workbenchService.GetStructureAsync(projectId);
         var unlinked = await relationService.UnlinkObjectsAsync(
             projectId,
             task.Id,
             attachment.LinkTargetNodeId!,
-            ProjectObjectLinkKind.Uses);
+            ProjectObjectLinkKind.Uses, expectedLink: Assert.Single(unlinkOrigin.Links,
+                link => link.SourceId == task.Id && link.TargetId == attachment.LinkTargetNodeId && link.Kind == ProjectObjectLinkKind.Uses));
 
         Assert.True(unlinked);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -92,11 +94,13 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
             task.Id,
             authoritativeResource);
 
+        var unlinkOrigin = await workbenchService.GetStructureAsync(projectId);
         var unlinked = await relationService.UnlinkObjectsAsync(
             projectId,
             task.Id,
             detachedAttachment.LinkTargetNodeId!,
-            ProjectObjectLinkKind.Uses);
+            ProjectObjectLinkKind.Uses, expectedLink: Assert.Single(unlinkOrigin.Links,
+                link => link.SourceId == task.Id && link.TargetId == detachedAttachment.LinkTargetNodeId && link.Kind == ProjectObjectLinkKind.Uses));
 
         Assert.True(unlinked);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -145,7 +149,7 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
             var moved = await relationService.ReparentSubtreesAsync(
                 projectId,
                 [attachment.CreatedNodeId!],
-                projectRootNodeId);
+                projectRootNodeId, mutationOwner: await ReadOwnerAsync(workbenchService, projectId));
             Assert.Single(moved);
         }
         else
@@ -153,7 +157,7 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
             var moved = await relationService.ReparentObjectAsync(
                 projectId,
                 attachment.CreatedNodeId!,
-                projectRootNodeId);
+                projectRootNodeId, mutationOwner: await ReadOwnerAsync(workbenchService, projectId));
             Assert.NotNull(moved);
         }
 
@@ -192,7 +196,7 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
 
         var deletedCount = await mutationService.DeleteObjectAsync(
             projectId,
-            attachment.CreatedNodeId!);
+            attachment.CreatedNodeId!, mutationOwner: await ReadOwnerAsync(workbenchService, projectId));
 
         Assert.True(deletedCount > 0);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -226,7 +230,7 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
 
         var hiddenCount = await mutationService.DeleteObjectAsync(
             projectId,
-            attachment.LinkTargetNodeId!);
+            attachment.LinkTargetNodeId!, mutationOwner: await ReadOwnerAsync(workbenchService, projectId));
 
         Assert.True(hiddenCount > 0);
         var surface = await workbenchService.GetStructureAsync(projectId);
@@ -276,6 +280,9 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
             ProjectTaskExecutionSnapshot.NotStarted);
         var start = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        var unlinkOrigin = await workbenchService.GetStructureAsync(projectId);
+        var expectedLink = Assert.Single(unlinkOrigin.Links,
+            link => link.SourceId == task.Id && link.TargetId == attachment.LinkTargetNodeId && link.Kind == ProjectObjectLinkKind.Uses);
         var commitTask = CaptureFailureAfterAsync(
             start.Task,
             async () => await pricingCommitService.CommitAsync(plan));
@@ -285,7 +292,7 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
                 projectId,
                 task.Id,
                 attachment.LinkTargetNodeId!,
-                ProjectObjectLinkKind.Uses));
+                ProjectObjectLinkKind.Uses, expectedLink: expectedLink));
 
         start.SetResult();
         var failures = (await Task.WhenAll(commitTask, unlinkTask))
@@ -307,6 +314,14 @@ public sealed class ProjectStructureTaskResourceGraphPersistenceTests
         {
             AssertAuthoritativePricingCleared(metadata);
         }
+    }
+
+    private static async Task<ProjectStructureAgentContext> ReadOwnerAsync(ProjectWorkbenchService workbench, Guid projectId) {
+        var origin = await workbench.GetStructureAsync(projectId);
+        return CreateAgent(projectId) with {
+            ExpectedProjectAdmission = origin.ExpectedProjectAdmission,
+            ExpectedGraph = ProjectStructureGraphStateGuard.Capture(origin)
+        };
     }
 
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService)

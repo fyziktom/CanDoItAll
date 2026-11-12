@@ -1,0 +1,48 @@
+.capability-authoring {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: min(48rem, calc(100vh - 12rem));
+    min-height: 32rem;
+    overflow: hidden;
+}
+
+.capability-authoring ::deep .capability-authoring__tabs,
+.capability-authoring ::deep .rz-steps {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.capability-authoring ::deep [role="tabpanel"] {
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.capability-authoring ::deep .capability-authoring__small-textarea,
+.capability-authoring ::deep .capability-authoring__textarea {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.capability-authoring ::deep .capability-authoring__large-textarea {
+    min-height: 14rem;
+    resize: vertical;
+}
+
+.capability-authoring ::deep .capability-authoring__inline-option {
+    min-height: 2.75rem;
+}
+
+.capability-authoring ::deep .capability-authoring__mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow-wrap: anywhere;
+}
+
+.capability-authoring ::deep .validation-errors {
+    color: var(--cda-danger, #b91c1c);
+    margin: 0;
+    flex: 0 0 auto;
+    max-height: 7rem;
+    overflow: auto;
+}

@@ -1,0 +1,39 @@
+{
+  "status": "Source frozen, unbuilt and unexecuted",
+  "owner": "agent_process_architecture",
+  "retainedRun": {
+    "path": "C:/repositories/CanDoItAll/.artifacts/concurrent-mutations/validation/r1c-historical-candidate-validation/historical-integration.result.json",
+    "sha256": "2609002607839E693CB95D7F6E545B678946881CCB64C6DAA9F9BFFCBCFCC93C",
+    "executed": 133,
+    "passed": 121,
+    "failed": 12
+  },
+  "addedFacts": 0,
+  "directlyAffectedExistingFacts": [
+    "Historical_Process_four_receipts_select_actual_original_source_and_use_three_or_two_catalog_decodes",
+    "Historical_HTTP_pages_real_original_receipts_through_deferred_DI_and_enforces_current_read_policy"
+  ],
+  "helperOwningSelectionRows": 6,
+  "owningSelectionComposition": "4 composed PostgreSQL Facts + 2 routed HTTP Facts; four interactive callers unchanged",
+  "separateParentRepairExcluded": "ProcessCatalogAuthorityPersistenceTests.HistoricalBasis.cs expired-claim fixture",
+  "ownershipRecord": {
+    "path": ".artifacts/concurrent-mutations/candidates/historical-process-authority-repair-ownership.json",
+    "sha256": "2F15B1DC431AA2283B5072AF16FA0AB16F9EDD6B4CE296524C5D3B0985EFE196"
+  },
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.HistoricalBasisFixture.cs",
+      "sha256": "55BA5078CE373E77F2ED45021F7E456F80F52200E547621B3555AB0CE57F1FFA",
+      "managedPredecessorSha256": "690773C8B2C0F4BB92B01957B65EA2561DA79E94871ECA1DE709151218F7AA0D",
+      "mainPredecessorSha256": "690773C8B2C0F4BB92B01957B65EA2561DA79E94871ECA1DE709151218F7AA0D",
+      "savedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-process-authority-repair-predecessor\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessCatalogAuthorityPersistenceTests.HistoricalBasisFixture.cs"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-process-authority-repair-source.md",
+      "sha256": "47F156A8D7384E844F5A283126F93437C3BDDF9E1835474A8B85AC31E0822FA0",
+      "managedPredecessorSha256": null,
+      "mainPredecessorSha256": null,
+      "savedPredecessorImage": null
+    }
+  ]
+}

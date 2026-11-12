@@ -52,7 +52,8 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
             .OrderBy(link => link, StringComparer.Ordinal)
             .ToList();
 
-        var result = await workbench.RecomposeSubtreeAsync(projectId, branchRoot.Id);
+        var result = await workbench.RecomposeSubtreeAsync(projectId, branchRoot.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.NotNull(result);
         Assert.Equal(12, result!.DescendantCount);
@@ -240,7 +241,8 @@ public sealed class ProjectWorkbenchSubtreeRecompositionIntegrationTests
             dependencyImpact.Id
         };
 
-        var result = await workbench.RecomposeSubtreeAsync(projectId, projectRootId);
+        var result = await workbench.RecomposeSubtreeAsync(projectId, projectRootId,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.NotNull(result);
         Assert.Equal(createdNodeIds.Length, result!.DescendantCount);

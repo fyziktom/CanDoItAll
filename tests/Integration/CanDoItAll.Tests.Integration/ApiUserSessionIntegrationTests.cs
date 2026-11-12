@@ -184,8 +184,9 @@ public sealed class ApiUserSessionIntegrationTests {
             string.Join(',', endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods))).Distinct().Count());
     }
 
-    internal static Task<ApiTestHost> CreateHostAsync(string password, bool management = true, Action<IServiceCollection>? configureServices = null) => ApiTestHost.CreateAsync(true, configureServices,
-        useInMemoryDatabase: true, apiConfiguration: new Dictionary<string, string?> {
+    internal static Task<ApiTestHost> CreateHostAsync(string password, bool management = true, Action<IServiceCollection>? configureServices = null,
+        bool useInMemoryDatabase = true) => ApiTestHost.CreateAsync(true, configureServices,
+        useInMemoryDatabase: useInMemoryDatabase, apiConfiguration: new Dictionary<string, string?> {
             ["Api:UserAuthentication:Enabled"] = "true",
             ["Api:UserAuthentication:AllowLoopbackHttp"] = "true",
             ["Api:AccessManagement:Enabled"] = management.ToString(),

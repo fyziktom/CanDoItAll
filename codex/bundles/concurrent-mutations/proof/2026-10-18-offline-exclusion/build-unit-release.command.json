@@ -1,0 +1,29 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "build-unit-release",
+  "Arguments": [
+    "build",
+    "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "--configuration",
+    "Release",
+    "-p:UseLocalCanDoItAllLibraries=true",
+    "/m:1",
+    "--no-restore"
+  ],
+  "StartedUtc": "2026-10-18T21:38:25.4824409+00:00",
+  "State": "Completed",
+  "RunnerPid": 27228,
+  "ChildPid": 36988,
+  "ChildStartedUtc": "2026-10-18T21:38:25.5107515Z",
+  "ExitCode": 0,
+  "Seconds": 63.066301,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 158052,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

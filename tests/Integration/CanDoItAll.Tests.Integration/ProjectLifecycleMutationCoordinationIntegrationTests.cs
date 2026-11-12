@@ -67,9 +67,8 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
         var childProjectId = await CreateProjectAsync(projects, "Hierarchy child");
 
         await using var hierarchyScope = application.Services.CreateAsyncScope();
-        var hierarchyProjects = hierarchyScope.ServiceProvider
-            .GetRequiredService<ProjectsService>();
-        Task<CanDoItAll.SharedKernel.Result> attachTask;
+        var original = await ProjectLifecycleTestCommands.CaptureLinkAsync(hierarchyScope.ServiceProvider, parentProjectId, childProjectId);
+        Task<ProjectLifecycleOutcome> attachTask;
         await using (var deletionContext = await dbContextFactory.CreateDbContextAsync())
         await using (var deletionScope = await SerializableMutationScope.BeginAsync(
                          deletionContext,
@@ -80,9 +79,7 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
                 .SingleAsync(project => project.Id == childProjectId));
             await deletionContext.SaveChangesAsync();
 
-            attachTask = hierarchyProjects.AddSubprojectAsync(
-                parentProjectId,
-                childProjectId);
+            attachTask = ProjectLifecycleTestCommands.SubmitAsync(hierarchyScope.ServiceProvider, original);
             await AssertRemainsBlockedAsync(
                 attachTask,
                 TimeSpan.FromMilliseconds(300));
@@ -90,12 +87,9 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
         }
 
         var result = await attachTask.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.False(result.IsSuccess);
-        Assert.Contains(
-            result.Errors,
-            error => error.Message.Contains(
-                "subproject could not be found",
-                StringComparison.OrdinalIgnoreCase));
+        var refused = Assert.IsType<ProjectLifecycleOutcome.Refused>(result);
+        Assert.Equal(ProjectLifecycleRefusal.TransactionConflict, refused.Reason);
+        Assert.Same(original, refused.Original);
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
         Assert.False(await verificationContext.Set<ProjectHierarchyLink>()
             .AnyAsync(link =>
@@ -115,25 +109,23 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
         var projectB = await CreateProjectAsync(projects, "Cycle B");
         var projectC = await CreateProjectAsync(projects, "Cycle C");
         var projectD = await CreateProjectAsync(projects, "Cycle D");
-        Assert.True((await projects.AddSubprojectAsync(projectB, projectC)).IsSuccess);
-        Assert.True((await projects.AddSubprojectAsync(projectD, projectA)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(setupScope.ServiceProvider, projectB, projectC));
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(setupScope.ServiceProvider, projectD, projectA));
 
         await using var firstScope = application.Services.CreateAsyncScope();
         await using var secondScope = application.Services.CreateAsyncScope();
-        Task<CanDoItAll.SharedKernel.Result> firstEdge;
-        Task<CanDoItAll.SharedKernel.Result> secondEdge;
+        var firstOriginal = await ProjectLifecycleTestCommands.CaptureLinkAsync(firstScope.ServiceProvider, projectA, projectB);
+        var secondOriginal = await ProjectLifecycleTestCommands.CaptureLinkAsync(secondScope.ServiceProvider, projectC, projectD);
+        Task<ProjectLifecycleOutcome> firstEdge;
+        Task<ProjectLifecycleOutcome> secondEdge;
         await using (var lockContext = await dbContextFactory.CreateDbContextAsync())
         await using (var hierarchyScope = await SerializableMutationScope.BeginAsync(
                          lockContext,
                          ProjectMutationScopeKeys.Hierarchy,
                          CancellationToken.None))
         {
-            firstEdge = firstScope.ServiceProvider
-                .GetRequiredService<ProjectsService>()
-                .AddSubprojectAsync(projectA, projectB);
-            secondEdge = secondScope.ServiceProvider
-                .GetRequiredService<ProjectsService>()
-                .AddSubprojectAsync(projectC, projectD);
+            firstEdge = ProjectLifecycleTestCommands.SubmitAsync(firstScope.ServiceProvider, firstOriginal);
+            secondEdge = ProjectLifecycleTestCommands.SubmitAsync(secondScope.ServiceProvider, secondOriginal);
             await AssertAllRemainBlockedAsync(
                 [firstEdge, secondEdge],
                 TimeSpan.FromMilliseconds(300));
@@ -142,11 +134,8 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
 
         var results = await Task.WhenAll(firstEdge, secondEdge)
             .WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Single(results, result => result.IsSuccess);
-        var rejected = Assert.Single(results, result => !result.IsSuccess);
-        Assert.Contains(
-            rejected.Errors,
-            error => error.Message.Contains("cycle", StringComparison.OrdinalIgnoreCase));
+        Assert.Single(results.OfType<ProjectLifecycleOutcome.Accepted>());
+        Assert.Equal(ProjectLifecycleRefusal.Cycle, Assert.Single(results.OfType<ProjectLifecycleOutcome.Refused>()).Reason);
 
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
         var links = await verificationContext.Set<ProjectHierarchyLink>()
@@ -182,11 +171,11 @@ public sealed class ProjectLifecycleMutationCoordinationIntegrationTests
         var parentProjectId = await CreateProjectAsync(projects, "Activity parent");
         var childProjectId = await CreateProjectAsync(projects, "Activity child");
 
-        var result = await projects.AddSubprojectAsync(
+        var result = await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider,
             parentProjectId,
             childProjectId);
 
-        Assert.True(result.IsSuccess);
+        Assert.IsType<ProjectLifecycleOutcome.Accepted>(result);
         Assert.True(scope.ServiceProvider
             .GetRequiredService<ThrowingActivityStream>()
             .InvocationCount >= 3);

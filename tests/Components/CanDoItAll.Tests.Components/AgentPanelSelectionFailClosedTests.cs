@@ -162,6 +162,7 @@ public sealed class AgentPanelSelectionFailClosedTests
             DispatchProxy.Create<IAgentChatAttachmentStagingService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
+        context.Services.AddSingleton(DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
         context.Services.AddSingleton<IPromptGalleryService>(
@@ -174,11 +175,12 @@ public sealed class AgentPanelSelectionFailClosedTests
         IAgentChatLauncher? launcher = null)
     {
         var context = CreateBaseTestContext(workspace.Service);
-        context.Services.AddAgentFrameworkUi();
+        context.Services.AddAgentConfigurationFixture();
         context.Services.AddSingleton(
             DispatchProxy.Create<IAgentCapabilitySetupFlowService, UnexpectedCallProxy>());
         context.Services.AddSingleton(
             launcher ?? DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
     }
 
@@ -188,6 +190,7 @@ public sealed class AgentPanelSelectionFailClosedTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentChatSubmissionRetention>();
         context.Services.AddStubProviderRuntimeAdministration();
         context.Services.AddSingleton(workspace);
         return context;

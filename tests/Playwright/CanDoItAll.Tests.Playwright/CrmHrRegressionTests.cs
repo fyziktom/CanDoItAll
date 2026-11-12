@@ -102,7 +102,8 @@ public sealed class CrmHrRegressionTests
             await page.GetByTestId("resource-owner-select").SelectOptionAsync(seed.OwnerId.ToString());
             await page.GetByTestId("resource-maintainer-select").SelectOptionAsync(seed.MaintainerId.ToString());
             await page.GetByTestId("resource-save-button").ClickAsync();
-            var saved = page.GetByText("Resource saved.", new() { Exact = true });
+            var saved = page.GetByTestId("resource-mutation-receipt").Filter(new() { HasText = resourceName })
+                .GetByText("Resource saved.", new() { Exact = true });
             await saved
                 .Or(page.GetByText("Resource was not saved", new() { Exact = true }))
                 .Or(page.GetByText("Resource save failed", new() { Exact = true }))
@@ -245,6 +246,7 @@ public sealed class CrmHrRegressionTests
         var accountProfileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "B13 regression account proof.",
             ConstraintNotes = "No blockers.",
@@ -295,9 +297,9 @@ public sealed class CrmHrRegressionTests
         var searchIndexService = scope.ServiceProvider.GetRequiredService<ISearchIndexService>();
 
         var savedResourceSummary = Assert.Single(await resourcesService.ListAsync(), item => item.Name == resourceName);
-        var savedResource = await resourcesService.GetAsync(savedResourceSummary.Id);
-        Assert.Equal(seed.OwnerId, savedResource.OwnerPartyId);
-        Assert.Equal(seed.MaintainerId, savedResource.MaintainerPartyId);
+        var savedResource = Assert.IsType<ResourceMetadataReadResult.Found>(await resourcesService.ReadAsync(savedResourceSummary.Id));
+        Assert.Equal(seed.OwnerId, savedResource.Snapshot.Values.OwnerPartyId);
+        Assert.Equal(seed.MaintainerId, savedResource.Snapshot.Values.MaintainerPartyId);
 
         var savedPlanSummary = Assert.Single(await testLabService.ListAsync(), item => item.Title == testPlanTitle);
         var savedPlan = await testLabService.GetAsync(savedPlanSummary.Id);

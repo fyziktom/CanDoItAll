@@ -5,6 +5,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
@@ -13,6 +14,60 @@ public sealed class AgentExternalProvisioningApiIntegrationTests
 {
     private const string ExternalNamespace = "partner-system";
     private const string ExternalKey = "review-agent";
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Actual_agent_or_policy_edits_reject_stale_writes_and_require_an_explicit_current_read(bool policyEdit) {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var originalEditor = CreateEditor();
+        using var createResponse = await PutAsync(host.Client, ExternalNamespace, ExternalKey, originalEditor, "create");
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = Deserialize<AgentExternalProvisioningReceipt>(await createResponse.Content.ReadAsStringAsync());
+        await using (var scope = host.App.Services.CreateAsyncScope()) {
+            var factory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+            var owner = factory.GetWorkspaceService(factory.GetOrganizationScope());
+            if (policyEdit) {
+                var snapshot = await owner.ReadAgentDecisionDataPolicyAsync(created.AgentId);
+                Assert.IsType<AgentDecisionDataPolicySaveOutcome.Accepted>(await owner.ReplaceAgentDecisionDataPolicyAsync(
+                    new(Guid.NewGuid(), snapshot.Expectation, new(ReadBasisMode.StepSnapshot))));
+            } else {
+                var editor = await owner.GetAgentEditorAsync(created.AgentId);
+                editor.Summary = "Ordinary actor changed this Agent.";
+                await owner.SaveAgentAsync(editor);
+            }
+        }
+        var before = await LoadCatalogAsync(host);
+        using var staleUpdate = await PutAsync(host.Client, ExternalNamespace, ExternalKey, originalEditor, "stale-update", created.ConfigurationVersion);
+        using var staleArchive = await DeleteAsync(host.Client, ExternalNamespace, ExternalKey, "stale-archive", created.ConfigurationVersion);
+        Assert.Equal(HttpStatusCode.PreconditionFailed, staleUpdate.StatusCode);
+        Assert.Equal(HttpStatusCode.PreconditionFailed, staleArchive.StatusCode);
+        var refused = await LoadCatalogAsync(host);
+        Assert.Equal(before.CatalogDataRevision, refused.CatalogDataRevision);
+        Assert.Equal(JsonSerializer.Serialize(before, JsonOptions), JsonSerializer.Serialize(refused, JsonOptions));
+
+        using var get = await host.Client.GetAsync($"/api/agents/by-external-key/{ExternalNamespace}/{ExternalKey}");
+        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+        Assert.True(get.Headers.CacheControl?.NoStore);
+        var current = Deserialize<AgentExternalProvisioningResource>(await get.Content.ReadAsStringAsync());
+        Assert.NotEqual(created.ConfigurationVersion, current.ConfigurationVersion);
+        Assert.Equal(Assert.Single(before.Agents, agent => agent.Id == created.AgentId).UpdatedAtUtc, current.UpdatedAtUtc);
+        using var replayResponse = await PutAsync(host.Client, ExternalNamespace, ExternalKey, originalEditor, "create");
+        var replay = Deserialize<AgentExternalProvisioningReceipt>(await replayResponse.Content.ReadAsStringAsync());
+        Assert.Equal(JsonSerializer.Serialize(created with { Replayed = true }, JsonOptions), JsonSerializer.Serialize(replay, JsonOptions));
+
+        var replacement = CreateEditor();
+        replacement.Summary = "Explicit replacement after reviewing the current version.";
+        using var accepted = await PutAsync(host.Client, ExternalNamespace, ExternalKey, replacement, "explicit-current", current.ConfigurationVersion);
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        var receipt = Deserialize<AgentExternalProvisioningReceipt>(await accepted.Content.ReadAsStringAsync());
+        var persisted = Assert.Single((await LoadCatalogAsync(host)).Agents, agent => agent.Id == created.AgentId);
+        Assert.Equal(replacement.Summary, persisted.Summary);
+        Assert.NotEqual(current.ConfigurationVersion, receipt.ConfigurationVersion);
+        if (policyEdit) {
+            Assert.Equal(new DecisionDataPolicyOverride(ReadBasisMode.StepSnapshot), AgentDecisionDataPolicyMetadata.Read(persisted.ConfigurationJson));
+        }
+    }
 
     [Fact]
     public async Task ProvisioningApi_ParallelReplayConflictGetAndArchive_PreserveOneStableBinding()
@@ -29,15 +84,32 @@ public sealed class AgentExternalProvisioningApiIntegrationTests
         var firstBody = await firstResponse.Content.ReadAsStringAsync();
         var secondBody = await secondResponse.Content.ReadAsStringAsync();
 
-        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
-        var receipts = new[]
-        {
-            Deserialize<AgentExternalProvisioningReceipt>(firstBody),
-            Deserialize<AgentExternalProvisioningReceipt>(secondBody)
-        };
+        var receipts = new List<AgentExternalProvisioningReceipt>();
+        foreach (var (response, body) in new[] { (firstResponse, firstBody), (secondResponse, secondBody) }) {
+            if (response.StatusCode == HttpStatusCode.Conflict) {
+                Assert.Contains("agents.external-key-publication-conflict", body, StringComparison.Ordinal);
+                continue;
+            }
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            receipts.Add(Deserialize<AgentExternalProvisioningReceipt>(body));
+        }
         var created = Assert.Single(receipts, receipt => !receipt.Replayed);
-        var replayed = Assert.Single(receipts, receipt => receipt.Replayed);
+        var originalCatalog = await LoadCatalogAsync(host);
+        var originalOperation = Assert.Single(originalCatalog.AgentExternalProvisioningOperations,
+            operation => operation.IdempotencyKey == idempotencyKey);
+        Assert.Equal(JsonSerializer.Serialize(created, JsonOptions), JsonSerializer.Serialize(originalOperation.Receipt, JsonOptions));
+        Assert.Single(originalCatalog.AgentExternalBindings,
+            binding => binding.Namespace == ExternalNamespace && binding.Key == ExternalKey && binding.AgentId == created.AgentId);
+        Assert.Single(originalCatalog.Agents, agent => agent.Id == created.AgentId);
+
+        using var replayResponse = await PutAsync(host.Client, "Partner-System", "Review-Agent", editor, idempotencyKey);
+        Assert.Equal(HttpStatusCode.Created, replayResponse.StatusCode);
+        var replayed = Deserialize<AgentExternalProvisioningReceipt>(await replayResponse.Content.ReadAsStringAsync());
+        Assert.True(replayed.Replayed);
+        Assert.All(receipts.Where(receipt => receipt.Replayed), receipt => {
+            Assert.Equal(replayed.AgentId, receipt.AgentId);
+            Assert.Equal(replayed.ConfigurationVersion, receipt.ConfigurationVersion);
+        });
         Assert.True(created.Created);
         Assert.Equal(ExternalNamespace, created.Namespace);
         Assert.Equal(ExternalKey, created.Key);

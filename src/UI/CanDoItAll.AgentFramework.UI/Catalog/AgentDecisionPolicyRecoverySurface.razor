@@ -1,0 +1,42 @@
+<Dialog IsOpen="true" Title="Retained policy saves" Size="ModalSize.Medium" DenseChrome="true"
+        CloseOnBackdrop="false" TestId="agent-policy-recovery-dialog" OnClose="Closed">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Small">
+            <TextBlock Value="Choose a retained save to check its original result. Saves remain available here after an Agent is deleted. This list belongs to this browser and workspace." />
+            @if (Error is not null) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="agent-policy-recovery-error">@Error</Alert>
+            } else if (!Busy && Rows.Count == 0) {
+                <TextBlock Value="There are no retained policy saves in this workspace." data-testid="agent-policy-recovery-empty" />
+            }
+            @foreach (var row in Rows) {
+                <SelectionListItem @key="row.AgentId" Title="@($"Agent {row.AgentId:D}")"
+                                   Meta="@($"Operation {row.OperationId:D}")" Summary="@Describe(row.Stage)"
+                                   Dense="true" Disabled="Busy" OnSelect="@(() => Selected.InvokeAsync(row))"
+                                   DataTestId="@($"agent-policy-recovery-{row.AgentId:N}")" />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Reload list" ButtonStyle="ButtonStyle.Secondary" Disabled="Busy" IsBusy="Busy"
+                    Click="Reload" data-testid="agent-policy-recovery-reload" />
+            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="Closed" data-testid="agent-policy-recovery-close" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AgentDecisionPolicyPendingSummary> Rows { get; set; } = [];
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback Reload { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback<AgentDecisionPolicyPendingSummary> Selected { get; set; }
+    private static string Describe(AgentDecisionPolicyPendingStage stage) => stage switch {
+        AgentDecisionPolicyPendingStage.Prepared => "Prepared; not sent",
+        AgentDecisionPolicyPendingStage.Dispatching => "Awaiting confirmation",
+        AgentDecisionPolicyPendingStage.Accepted => "Accepted result retained",
+        AgentDecisionPolicyPendingStage.Rejected => "Rejected result retained",
+        _ => throw new ArgumentOutOfRangeException(nameof(stage))
+    };
+}

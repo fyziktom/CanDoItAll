@@ -19,6 +19,15 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService(
         CancellationToken cancellationToken = default)
         => store.UpdateCatalogAsync(update, cancellationToken);
 
+    private async Task<T> UpdateCatalogAsync<T>(Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
+        Func<SandboxWorkspaceCatalog, T> accept, CancellationToken cancellationToken) {
+        try {
+            return accept(await store.UpdateCatalogAsync(update, cancellationToken));
+        } catch (SandboxWorkspaceCatalogCommittedException exception) {
+            throw new AgentCatalogCommittedException<T>(accept(exception.Accepted), exception);
+        }
+    }
+
     public Task<IReadOnlyList<AgentMemoryRecord>> ListMemoryAsync(
         Guid agentId,
         CancellationToken cancellationToken = default) =>

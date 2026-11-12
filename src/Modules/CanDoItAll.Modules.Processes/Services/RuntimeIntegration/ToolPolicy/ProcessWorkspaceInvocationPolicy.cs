@@ -91,37 +91,10 @@ internal static class ProcessWorkspaceInvocationPolicy {
             return null;
         }
 
-        if (string.Equals(context.ToolName, "browser_snapshot", StringComparison.OrdinalIgnoreCase)) {
-            if (!context.RedactedArguments.TryGetValue("depth", out var depthValue) ||
-                !int.TryParse(depthValue, out var depth) ||
-                depth > 4) {
-                return ToolInvocationPolicyDecision.Deny(
-                    signature,
-                    "Governed process browser snapshots must set depth to 4 or less. Retry once with depth=2 and do not repeat this blocked call.");
-            }
-
-            if (context.RedactedArguments.TryGetValue("boxes", out var boxesValue) &&
-                bool.TryParse(boxesValue, out var boxes) &&
-                boxes &&
-                depth > 2) {
-                return ToolInvocationPolicyDecision.Deny(
-                    signature,
-                    "Governed process browser snapshots with element boxes must set depth to 2 or less because deeper boxed snapshots can produce oversized tool output. Retry once with depth=2 or boxes=false and do not repeat this blocked call.");
-            }
-
-            return null;
-        }
-
-        if (string.Equals(context.ToolName, "browser_take_screenshot", StringComparison.OrdinalIgnoreCase) &&
-            context.RedactedArguments.TryGetValue("fullPage", out var fullPageValue) &&
-            bool.TryParse(fullPageValue, out var fullPage) &&
-            fullPage) {
-            return ToolInvocationPolicyDecision.Deny(
-                signature,
-                "Governed process browser screenshots must be viewport-bounded. Retry once with fullPage=false or omit fullPage, and do not repeat this blocked call.");
-        }
-
-        return null;
+        var rejected = ProcessBrowserToolConstraints.For(context.ToolName)
+            .FirstOrDefault(constraint => !constraint.Accepts(context.RedactedArguments));
+        return rejected is null ? null : ToolInvocationPolicyDecision.Deny(signature,
+            ProcessBrowserToolConstraints.Rejection(rejected));
     }
 
     private static ToolInvocationPolicyDecision? EvaluateGovernedProcessProductMutationBoundary(

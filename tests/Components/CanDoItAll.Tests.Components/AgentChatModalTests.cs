@@ -9,6 +9,59 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatModalTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Held_favorite_result_cannot_replace_a_successor_picker_or_publish_after_disposal(bool dispose) {
+        using var context = CreateContext();
+        var first = CreateAgent("Same label", "Original");
+        var pending = new TaskCompletionSource<AgentDefinition>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cut = context.Render<AgentSwitchDialog>(p => p.Add(c => c.Agents, new[] { first })
+            .Add(c => c.FavoriteToggled, _ => pending.Task));
+        var toggle = cut.Find("[data-testid='agent-favorite-toggle']").ClickAsync();
+        if (dispose) {
+            cut.Dispose();
+        } else {
+            cut.Render(p => p.Add(c => c.Agents, new[] { first with { Name = "Successor picker" } }));
+        }
+        pending.SetResult(first with { Name = "OLD RESULT MUST NOT REPLACE" });
+        await toggle;
+        Assert.Empty(context.Services.GetRequiredService<NotificationService>().Messages);
+        if (!dispose) {
+            Assert.Contains("Successor picker", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("OLD RESULT MUST NOT REPLACE", cut.Markup, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Selection_closes_the_opening_dialog_and_preserves_an_unrelated_top_dialog(bool history) {
+        using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var dialogs = context.Services.GetRequiredService<DialogService>();
+        var agent = CreateAgent("Same visible label", "Owned fixture");
+        var session = CreateSession(agent.Id, "Original thread", DateTimeOffset.UnixEpoch);
+        var first = history
+            ? dialogs.OpenAsync<AgentThreadHistoryDialog>("First", new Dictionary<string, object?> {
+                [nameof(AgentThreadHistoryDialog.Agent)] = agent,
+                [nameof(AgentThreadHistoryDialog.Sessions)] = new[] { session }
+            })
+            : dialogs.OpenAsync<AgentSwitchDialog>("First", new Dictionary<string, object?> {
+                [nameof(AgentSwitchDialog.Agents)] = new[] { agent }
+            });
+        var second = dialogs.OpenAsync<AgentSwitchDialog>("Unrelated", new Dictionary<string, object?> {
+            [nameof(AgentSwitchDialog.Agents)] = Array.Empty<AgentDefinition>()
+        });
+        host.WaitForAssertion(() => Assert.Equal(2, dialogs.Dialogs.Count));
+        await host.Find(history ? "[data-testid='agent-thread-history-row']" : "[data-testid='agent-switch-card']").ClickAsync();
+        Assert.True(first.IsCompleted, "The opening dialog must receive its own result.");
+        Assert.False(second.IsCompleted, "An unrelated top dialog must remain open.");
+        Assert.Equal(history ? session.Id : agent.Id, await first);
+        await host.InvokeAsync(() => dialogs.Dialogs.Single().CloseAsync());
+        await second;
+    }
+
     [Fact]
     public async Task Agent_switch_dialog_returns_clicked_agent_and_keeps_cards_compact()
     {

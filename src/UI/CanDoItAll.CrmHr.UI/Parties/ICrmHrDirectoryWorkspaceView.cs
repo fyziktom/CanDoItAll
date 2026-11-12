@@ -25,12 +25,15 @@ public interface ICrmHrDirectoryWorkspaceView : ICrmHrWorkspaceView
     IReadOnlyList<PartyDuplicateCandidateModel> DuplicateCandidates { get; }
     PartyProjectAssignmentPage ProjectAssignmentsPage { get; }
     PartyDuplicateCandidateModel? MergeCandidate { get; }
+    PartyMergePresentation Merge { get; }
     bool IsEditorDialogOpen { get; }
     bool IsMergeDialogOpen { get; }
     bool IsImportExportDialogOpen { get; }
     bool IsRelationshipsLoading { get; }
     bool IsProjectAssignmentsLoading { get; }
     long DirectoryBrowserVersion { get; }
+    // The catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<PartyRecordScope>? CatalogQuery { get; }
     int SelectedEditorTabIndex { get; }
     string RelationshipsLoadError { get; }
     string ProjectAssignmentsLoadError { get; }
@@ -38,6 +41,8 @@ public interface ICrmHrDirectoryWorkspaceView : ICrmHrWorkspaceView
     PartyOrganizationAffiliationListItemModel? CurrentPrimaryAffiliation { get; }
     string OtherCurrentAffiliationsTooltip { get; }
     Task SelectPartyAsync(Guid partyId);
+    // A committed catalog change: a debounced search, tags, scope, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<PartyRecordScope> change);
     Task CreateNewAsync();
     Task CloseEditorDialogAsync();
     Task SaveAsync();
@@ -45,6 +50,7 @@ public interface ICrmHrDirectoryWorkspaceView : ICrmHrWorkspaceView
     Task<Result<PartyCsvImportPreviewModel>> PreviewPartyImportAsync(string csvContent);
     Task<Result<int>> ApplyPartyImportAsync(IReadOnlyList<PartyCsvImportPreviewRowModel> rows);
     Task HandleImportAppliedAsync();
+    void HandleImportStatusChanged(PartyImportStatus status);
     void OpenImportExportDialog();
     Task CloseImportExportDialogAsync();
     Task HandleEditorTabChangedAsync(int index);
@@ -57,10 +63,13 @@ public interface ICrmHrDirectoryWorkspaceView : ICrmHrWorkspaceView
     // A row action names the row the operator saw, never a position that later edits can shift.
     void RemoveAdditionalRole(PartyRoleAssignmentEditorModel role);
     void RemoveConfidentialNote(PartyConfidentialNoteEditorModel note);
-    void OpenMergeDialog(PartyDuplicateCandidateModel candidate);
+    Task OpenMergeDialogAsync(PartyDuplicateCandidateModel candidate);
+    Task RefreshMergePreviewAsync();
+    void HandleMergeNoteStatusChanged(PartyMergeNoteStatus status);
     Task HandleMergeCloseAsync();
     Task HandleMergeConfirmAsync(string reason);
     Task HandleAffiliationsChangedAsync(IReadOnlyList<PartyOrganizationAffiliationEditorModel> affiliations);
+    Task HandleRelationshipsChangedAsync(IReadOnlyList<PartyRelationshipEditorModel> relationships);
     string ProjectAssignmentsPageText { get; }
     bool CanMoveProjectAssignmentsPrevious { get; }
     bool CanMoveProjectAssignmentsNext { get; }

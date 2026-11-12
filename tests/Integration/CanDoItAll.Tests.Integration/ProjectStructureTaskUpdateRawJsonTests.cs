@@ -96,8 +96,8 @@ public sealed class ProjectStructureTaskUpdateRawJsonTests(ProjectStructureTaskU
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var stored = await ReadTaskAsync(task.ProjectId, task.TaskId);
-        Assert.Equal(DateTimeOffset.Parse(proposedStart), DateTimeOffset.Parse(stored.StartUtc));
-        Assert.Equal(DateTimeOffset.Parse(proposedEnd), DateTimeOffset.Parse(stored.EndUtc));
+        Assert.Equal(DateTimeOffset.Parse(proposedStart), DateTimeOffset.Parse(Assert.IsType<string>(stored.StartUtc)));
+        Assert.Equal(DateTimeOffset.Parse(proposedEnd), DateTimeOffset.Parse(Assert.IsType<string>(stored.EndUtc)));
         Assert.Equal(task.Title, stored.Title);
     }
 
@@ -404,6 +404,110 @@ public sealed class ProjectStructureTaskUpdateRawJsonTests(ProjectStructureTaskU
             ["resourceId"] = personId
         };
 
+    [Fact]
+    public async Task Imported_task_can_receive_its_first_schedule_and_rejects_a_stale_second_initialization() {
+        var task = await CreateImportedTaskAsync();
+        Assert.Null(task.StartUtc);
+        Assert.Null(task.EndUtc);
+        var body = UnchangedUpdate(task);
+        body["initialSchedule"] = InitialSchedule(task);
+        using var response = await PutTaskAsync(task, body);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        var stored = await ReadTaskAsync(task.ProjectId, task.TaskId);
+        Assert.Equal(DateTimeOffset.Parse("2027-02-05T09:00:00Z"), DateTimeOffset.Parse(Assert.IsType<string>(stored.StartUtc)));
+        Assert.Equal(DateTimeOffset.Parse("2027-02-05T10:00:00Z"), DateTimeOffset.Parse(Assert.IsType<string>(stored.EndUtc)));
+        var stale = UnchangedUpdate(stored);
+        stale["initialSchedule"] = body["initialSchedule"]!.DeepClone();
+        stale["proposedTitle"] = "Must not be stored";
+        using var rejected = await PutTaskAsync(stored, stale);
+        Assert.Equal(HttpStatusCode.Conflict, rejected.StatusCode);
+        Assert.Equal("StaleTask", await ReadErrorCodeAsync(rejected));
+        Assert.Equal(stored.Title, (await ReadTaskAsync(task.ProjectId, task.TaskId)).Title);
+    }
+
+    [Theory]
+    [InlineData("both-modes")]
+    [InlineData("inverted")]
+    [InlineData("missing-snapshot")]
+    public async Task Invalid_initial_schedule_does_not_mutate_the_imported_task(string scenario) {
+        var task = await CreateImportedTaskAsync();
+        var body = UnchangedUpdate(task);
+        var initial = InitialSchedule(task);
+        body["initialSchedule"] = initial;
+        body["proposedTitle"] = "Must not be stored";
+        switch (scenario) {
+            case "both-modes":
+                body["scheduleChange"] = Reschedule(task with { StartUtc = "2027-02-05T09:00:00Z", EndUtc = "2027-02-05T10:00:00Z" },
+                    3, "2027-02-06T09:00:00Z", "2027-02-06T10:00:00Z");
+                break;
+            case "inverted":
+                initial["proposedEndUtc"] = "2027-02-04T10:00:00Z";
+                break;
+            case "missing-snapshot":
+                initial.Remove("currentDurationSeconds");
+                break;
+        }
+        using var rejected = await PutTaskAsync(task, body);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        var unchanged = await ReadTaskAsync(task.ProjectId, task.TaskId);
+        Assert.Null(unchanged.StartUtc);
+        Assert.Null(unchanged.EndUtc);
+        Assert.Equal(task.Title, unchanged.Title);
+    }
+
+    private static JsonObject InitialSchedule(TaskState task) => new() {
+        ["currentStartUtc"] = task.StartUtc,
+        ["currentEndUtc"] = task.EndUtc,
+        ["currentDurationSeconds"] = task.DurationSeconds,
+        ["proposedStartUtc"] = "2027-02-05T09:00:00Z",
+        ["proposedEndUtc"] = "2027-02-05T10:00:00Z"
+    };
+
+    [Fact]
+    public async Task Initial_schedule_respects_persisted_dependencies_without_partial_title_updates() {
+        var task = await CreateImportedTaskAsync();
+        using var predecessorResponse = await SendJsonAsync(HttpMethod.Post, $"/api/project-structure/projects/{task.ProjectId}/tasks", new JsonObject {
+            ["title"] = "Synthetic prerequisite",
+            ["startUtc"] = "2027-02-06T09:00:00Z",
+            ["endUtc"] = "2027-02-06T10:00:00Z",
+            ["expectedProjectAdmission"] = task.Admission.DeepClone()
+        });
+        Assert.True(predecessorResponse.IsSuccessStatusCode, await predecessorResponse.Content.ReadAsStringAsync());
+        var predecessorId = (await ReadObjectAsync(predecessorResponse))["taskNodeId"]!.GetValue<string>();
+        using var link = await SendJsonAsync(HttpMethod.Post, $"/api/project-structure/projects/{task.ProjectId}/links", new JsonObject {
+            ["sourceNodeId"] = task.TaskId,
+            ["targetNodeId"] = predecessorId,
+            ["kind"] = 1
+        });
+        Assert.True(link.IsSuccessStatusCode, await link.Content.ReadAsStringAsync());
+        var body = UnchangedUpdate(await ReadTaskAsync(task.ProjectId, task.TaskId));
+        body["initialSchedule"] = InitialSchedule(task);
+        body["proposedTitle"] = "Must not be stored";
+        using var rejected = await PutTaskAsync(task, body);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Equal("InvalidSchedule", await ReadErrorCodeAsync(rejected));
+        var unchanged = await ReadTaskAsync(task.ProjectId, task.TaskId);
+        Assert.Null(unchanged.StartUtc);
+        Assert.Null(unchanged.EndUtc);
+        Assert.Equal(task.Title, unchanged.Title);
+    }
+
+    private async Task<TaskState> CreateImportedTaskAsync() {
+        var projectId = await CreateProjectAsync("Initial schedule from JSON outline");
+        using var response = await SendJsonAsync(HttpMethod.Post, "/api/project-structure/imports", new JsonObject {
+            ["projectId"] = projectId,
+            ["parentNodeKey"] = $"project:{projectId}",
+            ["sourceKind"] = 3,
+            ["title"] = "Synthetic stay template",
+            ["sourceText"] = "[{\"title\":\"Pre-arrival\",\"children\":[{\"title\":\"Confirm pickup\"}]}]"
+        });
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        var structure = await ReadStructureAsync(projectId);
+        var task = Assert.Single(structure["nodes"]!.AsArray().OfType<JsonObject>(), node =>
+            node["objectType"]!.GetValue<string>() == "WorkItem" && node["objectSubtype"]!.GetValue<string>() == "task");
+        return await ReadTaskAsync(projectId, task["id"]!.GetValue<string>());
+    }
+
     private async Task<TaskState> CreateProjectWithTaskAsync(string title)
     {
         var projectId = await CreateProjectAsync(title);
@@ -485,11 +589,12 @@ public sealed class ProjectStructureTaskUpdateRawJsonTests(ProjectStructureTaskU
             taskId,
             node["title"]!.GetValue<string>(),
             node["progressPercent"]!.GetValue<int>(),
-            node["startUtc"]!.GetValue<string>(),
-            node["endUtc"]!.GetValue<string>(),
+            node["startUtc"]?.GetValue<string>(),
+            node["endUtc"]?.GetValue<string>(),
             workItem,
             workItem["directAssignmentRevision"]?.GetValue<long>() ?? 0,
-            structure["expectedProjectAdmission"]!.AsObject());
+            structure["expectedProjectAdmission"]!.AsObject(),
+            node["durationSeconds"]?.GetValue<int>());
     }
 
     private Task<HttpResponseMessage> PutTaskAsync(TaskState task, JsonObject body, string? routeTaskId = null)
@@ -534,11 +639,12 @@ public sealed class ProjectStructureTaskUpdateRawJsonTests(ProjectStructureTaskU
         string TaskId,
         string Title,
         int ProgressPercent,
-        string StartUtc,
-        string EndUtc,
+        string? StartUtc,
+        string? EndUtc,
         JsonObject WorkItem,
         long DirectAssignmentRevision,
-        JsonObject Admission);
+        JsonObject Admission,
+        int? DurationSeconds);
 
     public sealed class HostFixture : IAsyncLifetime
     {

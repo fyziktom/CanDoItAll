@@ -1,0 +1,280 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.BaseLib
+@using Microsoft.Extensions.Logging
+@implements IAsyncDisposable
+@inject ILogger<ProjectStructureTaskResourceCostEstimator> Logger
+
+@if (SelectedResource is not null)
+{
+    <SurfaceCard Soft="true"
+                 data-testid="@DataTestId">
+        <Stack GapScale="LayoutGap.XSmall"
+               AlignItems="AlignItems.Stretch">
+            <Cluster Gap="LayoutGap.Small"
+                     AlignItems="AlignItems.Center"
+                     JustifyContent="JustifyContent.SpaceBetween"
+                     Wrap="FlexWrap.Wrap">
+                <Stack GapScale="LayoutGap.XSmall">
+                    <TextBlock TextStyle="TextStyle.Subtitle2"
+                               Value="Resource price estimate" />
+                    <TextBlock TextStyle="TextStyle.Note"
+                               Value="@(!InputIsValid ? "Correct the estimate inputs before requesting a price preview." : AllowsAuthoritativeRepricing
+                                   ? "This is a preview. Save reloads the authoritative rate or execution history before committing the task cost."
+                                   : "This task is not explicitly not started, so its historical cost snapshot is preserved.")" />
+                </Stack>
+                <TooltipTarget Text="Reload the latest resource rate or run history, recalculate for the current effort, and replace the expected task cost."
+                               Position="TooltipPosition.Left"
+                               Duration="@((TimeSpan?)null)"
+                               TestId="@($"{DataTestId}-refresh-tooltip")">
+                    <Button @key="inputGeneration"
+                            Icon="refresh"
+                            Size="ButtonSize.Small"
+                            ButtonStyle="ButtonStyle.Info"
+                            Variant="Variant.Outlined"
+                            Disabled="@(isLoading || QuoteResolver is null || !AllowsAuthoritativeRepricing)"
+                            aria-label="Reload and recalculate resource price"
+                            data-testid="@($"{DataTestId}-refresh")"
+                            Click="RefreshAsync" />
+                </TooltipTarget>
+            </Cluster>
+
+            @if (isLoading)
+            {
+                <TextBlock TextStyle="TextStyle.Note"
+                           Value="Calculating the selected resource price…"
+                           data-testid="@($"{DataTestId}-loading")" />
+            }
+            else if (!string.IsNullOrWhiteSpace(statusSummary))
+            {
+                <Alert AlertStyle="@statusStyle"
+                       data-testid="@($"{DataTestId}-status")">
+                    @statusSummary
+                </Alert>
+            }
+        </Stack>
+    </SurfaceCard>
+}
+
+@code {
+    private readonly Dictionary<QuoteCacheKey, ProjectStructureTaskResourceCostQuote> quoteCache = [];
+    private CancellationTokenSource? quoteCancellation;
+    private QuoteRequestIdentity? activeRequestIdentity;
+    private long requestGeneration;
+    private long inputGeneration;
+    private bool disposed;
+    private bool isLoading;
+    private string statusSummary = string.Empty;
+    private AlertStyle statusStyle = AlertStyle.Info;
+
+    [Parameter, EditorRequired]
+    public Guid ProjectId { get; set; }
+
+    [Parameter]
+    public ProjectTaskQuoteContext Context { get; set; } = new(Guid.Empty, Guid.Empty, Guid.NewGuid());
+
+    [Parameter]
+    public ProjectStructureTaskResourceSelection? SelectedResource { get; set; }
+
+    [Parameter, EditorRequired]
+    public ProjectTaskEstimate Estimate { get; set; } = ProjectTaskEstimate.Empty();
+
+    [Parameter]
+    public Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? QuoteResolver { get; set; }
+
+    [Parameter]
+    public EventCallback<ProjectTaskEstimate> EstimateChanged { get; set; }
+
+    [Parameter]
+    public ProjectTaskExecutionState ExecutionState { get; set; } =
+        ProjectTaskExecutionState.NotStarted;
+
+    [Parameter]
+    public long InputRevision { get; set; }
+
+    [Parameter]
+    public bool InputIsValid { get; set; } = true;
+
+    [Parameter]
+    public string DataTestId { get; set; } = "project-structure-task-resource-cost";
+
+    private bool AllowsAuthoritativeRepricing =>
+        InputIsValid && ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(ExecutionState);
+
+    protected override void OnParametersSet() {
+        QuoteRequestIdentity? nextRequestIdentity = SelectedResource is null
+            ? null
+            : CreateIdentity(SelectedResource, Estimate);
+        SetIdentity(nextRequestIdentity);
+        ShowExecutionRestriction();
+    }
+
+    public Task EstimateSelectedAsync(
+        ProjectStructureTaskResourceSelection resource,
+        ProjectTaskEstimate estimate) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+
+        SetIdentity(CreateIdentity(resource, estimate));
+        if (!AllowsAuthoritativeRepricing) {
+            ShowExecutionRestriction();
+            return Task.CompletedTask;
+        }
+        return ResolveQuoteAsync(resource, estimate, forceRefresh: false);
+    }
+
+    private Task RefreshAsync() {
+        return disposed || SelectedResource is null || !AllowsAuthoritativeRepricing
+            ? Task.CompletedTask
+            : ResolveQuoteAsync(SelectedResource, Estimate, forceRefresh: true);
+    }
+
+    private async Task ResolveQuoteAsync(
+        ProjectStructureTaskResourceSelection resource,
+        ProjectTaskEstimate estimate,
+        bool forceRefresh) {
+        var identity = CreateIdentity(resource, estimate);
+        SetIdentity(identity);
+        RetireRequest();
+        var generation = requestGeneration;
+        var resolver = identity.Resolver;
+        if (resolver is null) {
+            statusStyle = AlertStyle.Warning;
+            statusSummary = "Authoritative resource pricing is unavailable. A selected resource cannot be saved with an invented or stale price.";
+            return;
+        }
+
+        var cacheKey = CreateCacheKey(resource, estimate);
+        if (!forceRefresh && quoteCache.TryGetValue(cacheKey, out var cachedQuote)) {
+            await ApplyQuoteAsync(identity, generation, cachedQuote);
+            return;
+        }
+
+        using var requestCancellation = new CancellationTokenSource();
+        quoteCancellation = requestCancellation;
+        isLoading = true;
+        statusSummary = string.Empty;
+        try {
+            var quote = await resolver(
+                new ProjectStructureTaskResourceCostRequest(identity.ProjectId, resource, estimate),
+                requestCancellation.Token);
+            if (!IsCurrent(identity, generation)) {
+                return;
+            }
+
+            quoteCache[cacheKey] = quote;
+            await ApplyQuoteAsync(identity, generation, quote);
+        } catch (OperationCanceledException) when (requestCancellation.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (IsCurrent(identity, generation)) {
+                Logger.LogWarning(
+                    "Task resource price recalculation failed for project {ProjectId}, resource kind {ResourceKind}, resource {ResourceId}; failure type {FailureType}.",
+                    identity.ProjectId,
+                    resource.Kind,
+                    resource.ResourceId,
+                    exception.GetType().Name);
+                statusStyle = AlertStyle.Warning;
+                statusSummary = "The authoritative price could not be loaded. Saving cannot replace it with an invented or stale amount.";
+            }
+        } finally {
+            if (generation == requestGeneration && ReferenceEquals(quoteCancellation, requestCancellation)) {
+                quoteCancellation = null;
+                isLoading = false;
+            }
+        }
+    }
+
+    private async Task ApplyQuoteAsync(
+        QuoteRequestIdentity requestIdentity,
+        long generation,
+        ProjectStructureTaskResourceCostQuote quote) {
+        if (!IsCurrent(requestIdentity, generation)) {
+            return;
+        }
+
+        statusStyle = quote.IsAvailable ? AlertStyle.Info : AlertStyle.Warning;
+        statusSummary = $"{quote.Source}: {quote.Summary}";
+        var updatedEstimate = requestIdentity.Estimate with {
+            ExpectedCostAmount = quote.IsAvailable ? quote.Amount : null,
+            ExpectedCostCurrencyCode = quote.IsAvailable ? quote.CurrencyCode : string.Empty
+        };
+        activeRequestIdentity = requestIdentity with { Estimate = updatedEstimate };
+        await requestIdentity.Callback.InvokeAsync(updatedEstimate);
+    }
+
+    private QuoteRequestIdentity CreateIdentity(ProjectStructureTaskResourceSelection resource, ProjectTaskEstimate estimate)
+        => new(ProjectId, Context, resource, estimate, ExecutionState, InputRevision, InputIsValid, QuoteResolver, EstimateChanged);
+
+    private bool IsCurrent(QuoteRequestIdentity identity, long generation)
+        => !disposed && generation == requestGeneration && activeRequestIdentity == identity && AllowsAuthoritativeRepricing;
+
+    private void SetIdentity(QuoteRequestIdentity? identity) {
+        if (activeRequestIdentity == identity) {
+            return;
+        }
+        if (activeRequestIdentity?.ProjectId != identity?.ProjectId ||
+            activeRequestIdentity?.Context != identity?.Context ||
+            activeRequestIdentity?.ExecutionState != identity?.ExecutionState ||
+            activeRequestIdentity?.InputIsValid != identity?.InputIsValid ||
+            activeRequestIdentity?.Resolver != identity?.Resolver) {
+            quoteCache.Clear();
+        }
+        activeRequestIdentity = identity;
+        inputGeneration++;
+        RetireRequest();
+        statusSummary = string.Empty;
+    }
+
+    private void ShowExecutionRestriction() {
+        if (activeRequestIdentity is null || AllowsAuthoritativeRepricing) {
+            return;
+        }
+        statusStyle = AlertStyle.Info;
+        statusSummary = !InputIsValid
+            ? "Correct the invalid effort or cost input before requesting another price preview."
+            : ExecutionState == ProjectTaskExecutionState.Unknown
+            ? "Automatic pricing is disabled until this legacy task is explicitly confirmed as not started."
+            : "Automatic pricing is disabled because this task has execution history.";
+    }
+
+    private void RetireRequest() {
+        var retired = quoteCancellation;
+        quoteCancellation = null;
+        requestGeneration++;
+        isLoading = false;
+        retired?.Cancel();
+    }
+
+    private static QuoteCacheKey CreateCacheKey(
+        ProjectStructureTaskResourceSelection resource,
+        ProjectTaskEstimate estimate)
+        => new(
+            resource,
+            resource.Kind is ProjectStructureTaskResourceKind.Person or ProjectStructureTaskResourceKind.Agent
+                ? estimate.ExpectedEffortHours
+                : null);
+
+    public ValueTask DisposeAsync() {
+        disposed = true;
+        activeRequestIdentity = null;
+        quoteCache.Clear();
+        statusSummary = string.Empty;
+        RetireRequest();
+        return ValueTask.CompletedTask;
+    }
+
+    private readonly record struct QuoteCacheKey(
+        ProjectStructureTaskResourceSelection Resource,
+        decimal? ExpectedEffortHours);
+
+    private readonly record struct QuoteRequestIdentity(
+        Guid ProjectId,
+        ProjectTaskQuoteContext Context,
+        ProjectStructureTaskResourceSelection Resource,
+        ProjectTaskEstimate Estimate,
+        ProjectTaskExecutionState ExecutionState,
+        long InputRevision,
+        bool InputIsValid,
+        Func<ProjectStructureTaskResourceCostRequest, CancellationToken, Task<ProjectStructureTaskResourceCostQuote>>? Resolver,
+        EventCallback<ProjectTaskEstimate> Callback);
+}

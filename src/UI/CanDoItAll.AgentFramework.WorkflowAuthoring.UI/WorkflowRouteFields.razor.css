@@ -1,0 +1,27 @@
+.workflow-canvas-field {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+    min-width: 0;
+}
+
+.workflow-canvas-field span {
+    color: var(--cda-color-text-muted, #64748b);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.workflow-canvas-check-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+    color: var(--cda-color-text-muted, #64748b);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.workflow-canvas-check-field input {
+    width: 1rem;
+    height: 1rem;
+}

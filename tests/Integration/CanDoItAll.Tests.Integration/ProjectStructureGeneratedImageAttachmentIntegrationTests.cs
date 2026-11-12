@@ -19,7 +19,7 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
 [Trait("Category", "FileSystemPortability")]
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
+public sealed partial class ProjectStructureGeneratedImageAttachmentIntegrationTests
 {
     private static readonly byte[] GeneratedPngBytes =
         Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
@@ -650,6 +650,7 @@ public sealed class ProjectStructureGeneratedImageAttachmentIntegrationTests
         });
         Assert.True(secret.IsSuccess);
         var editor = ProviderProfileEditorModel.FromDefinition(provider);
+        editor.ExpectedConcurrencyToken = Guid.Empty;
         if (purpose == ProviderProfilePurpose.Chat) {
             editor.ModelPrices = [Assert.Single(ProviderPricingDefaults.CreateDefaultEditorModels(provider.Kind, provider.DefaultModel),
                 price => price.Model == provider.DefaultModel)];

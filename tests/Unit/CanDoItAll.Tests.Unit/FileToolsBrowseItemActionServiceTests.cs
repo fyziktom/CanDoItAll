@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace CanDoItAll.Tests.Unit.Storage;
 
-public sealed class FileToolsBrowseItemActionServiceTests
+public sealed partial class FileToolsBrowseItemActionServiceTests
 {
     [Fact]
     public async Task LaunchAsync_safe_system_associated_file_reaches_the_desktop_launcher()
@@ -315,8 +315,10 @@ public sealed class FileToolsBrowseItemActionServiceTests
 
         public ActionFixture(
             string fileName,
-            LocalOpenRejection rejection = LocalOpenRejection.None)
+            LocalOpenRejection rejection = LocalOpenRejection.None,
+            Action<string>? recordOwnedRoot = null)
         {
+            recordOwnedRoot?.Invoke(rootPath);
             Scope = CreateScope();
             string workspaceRoot = ResolvePath("workspace");
             string storageRoot = rejection == LocalOpenRejection.UntrustedStorageRoot
@@ -395,6 +397,7 @@ public sealed class FileToolsBrowseItemActionServiceTests
         public FileBrowserItemKey ItemKey { get; }
 
         public string TargetPath { get; }
+        public string OwnedRootPath => rootPath;
 
         public string CreateFile(params string[] segments)
             => CreateFileAt(rootPath, segments);
@@ -426,7 +429,8 @@ public sealed class FileToolsBrowseItemActionServiceTests
     {
         public ValueTask<FileToolsBrowseSession> CreateAsync(
             FileToolsSemanticScope scope,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             StorageFileBrowserProvider provider = CreateProvider(scope);
@@ -705,6 +709,7 @@ public sealed class FileToolsBrowseItemActionServiceTests
 
     private sealed class StaticFileApplicationPreferenceService : IFileApplicationPreferenceService
     {
+        public Action? AfterResolve { get; set; }
         public FileApplicationPreference? Preference { get; set; }
 
         public Exception? ResolveFailure { get; set; }
@@ -741,6 +746,7 @@ public sealed class FileToolsBrowseItemActionServiceTests
 
         public FileApplicationPreference? ResolveForFile(string fileName)
         {
+            AfterResolve?.Invoke();
             if (ResolveFailure is not null)
             {
                 throw ResolveFailure;

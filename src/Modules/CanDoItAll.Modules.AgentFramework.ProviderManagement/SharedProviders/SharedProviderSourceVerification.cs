@@ -35,58 +35,32 @@ public sealed record SharedProviderSourceVerificationResult(
     ProviderVerificationDisposition Disposition,
     Guid SourceId,
     IReadOnlyList<SharedProviderSourceManagementSnapshot> Sources,
-    SharedProviderChange? Change = null);
+    SharedProviderChange? Change = null) {
+    public bool CurrentStateMatchesIntent { get; init; }
+}
 
 public static class SharedProviderSourceVerification {
     public static SharedProviderSourceVerificationResult Evaluate(
         SharedProviderSourceMutationAttempt attempt, IReadOnlyList<SharedProviderSourceManagementSnapshot> sources) {
         var current = sources.SingleOrDefault(item => item.Source.Id == attempt.SourceId);
-        var before = attempt.Before;
-        var disposition = ProviderVerificationDisposition.StillUnconfirmed;
-        if (attempt.Kind == SharedProviderSourceMutationKind.Create) {
-            disposition = current is null ? ProviderVerificationDisposition.DefinitelyNotCommitted
-                : attempt.Request is { } request && Matches(current.Source, request)
-                    ? ProviderVerificationDisposition.Committed : ProviderVerificationDisposition.StillUnconfirmed;
-        } else if (attempt.Kind == SharedProviderSourceMutationKind.Delete && current is null) {
-            disposition = ProviderVerificationDisposition.Committed;
-        } else if (current is not null && before is not null) {
-            if (current.Source.ConcurrencyToken == before.Source.ConcurrencyToken) {
-                disposition = ProviderVerificationDisposition.DefinitelyNotCommitted;
-            } else {
-                var postcondition = attempt.Kind switch {
-                    SharedProviderSourceMutationKind.Update => attempt.Request is { } request && Matches(current.Source, request),
-                    SharedProviderSourceMutationKind.Enablement => current.Source.IsEnabled == attempt.IntendedEnabled,
-                    SharedProviderSourceMutationKind.Test => current.Source.LastSyncAtUtc > before.Source.LastSyncAtUtc.GetValueOrDefault()
-                        && current.Source.Status != SharedProviderSourceStatus.NeverSynchronized,
-                    SharedProviderSourceMutationKind.Synchronize => current.Source.LastSyncAtUtc > before.Source.LastSyncAtUtc.GetValueOrDefault()
-                        && current.Source.Status != SharedProviderSourceStatus.NeverSynchronized
-                        && attempt.Selection.SetEquals(current.Imports.Where(import =>
-                            import.SelectionState == SharedProviderSelectionState.Selected).Select(import => import.RemotePublicationId)),
-                    _ => false
-                };
-                if (postcondition) {
-                    disposition = ProviderVerificationDisposition.Committed;
-                }
-            }
-        }
-        SharedProviderChange? change = null;
-        if (disposition == ProviderVerificationDisposition.Committed) {
-            var affected = (before?.Imports ?? []).Select(import => import.ProviderProfileId)
-                .Concat((current?.Imports ?? []).Select(import => import.ProviderProfileId));
-            var retired = (current?.Imports ?? []).Where(import => import.SelectionState == SharedProviderSelectionState.Retired)
-                .Select(import => import.ProviderProfileId);
-            var kind = attempt.Kind switch {
-                SharedProviderSourceMutationKind.Create or SharedProviderSourceMutationKind.Update => SharedProviderChangeKind.SourceConfiguration,
-                SharedProviderSourceMutationKind.Enablement => SharedProviderChangeKind.SourceEnablement,
-                SharedProviderSourceMutationKind.Delete => SharedProviderChangeKind.SourceDeleted,
-                SharedProviderSourceMutationKind.Test => SharedProviderChangeKind.SourceAvailability,
-                _ => SharedProviderChangeKind.Reconciliation
-            };
-            change = new(kind, affected, retired,
-                remoteOwnedFieldsChanged: attempt.Kind == SharedProviderSourceMutationKind.Synchronize,
-                catalogMembershipMayHaveChanged: attempt.Kind is SharedProviderSourceMutationKind.Synchronize or SharedProviderSourceMutationKind.Delete);
-        }
-        return new(disposition, attempt.SourceId, sources, change);
+        var satisfies = attempt.Kind switch {
+            SharedProviderSourceMutationKind.Create or SharedProviderSourceMutationKind.Update =>
+                current is not null && attempt.Request is { } request && Matches(current.Source, request),
+            SharedProviderSourceMutationKind.Enablement => current is not null && current.Source.IsEnabled == attempt.IntendedEnabled,
+            SharedProviderSourceMutationKind.Delete => current is null,
+            SharedProviderSourceMutationKind.Test => current is not null && attempt.Before is { } before &&
+                current.Source.LastSyncAtUtc > before.Source.LastSyncAtUtc.GetValueOrDefault() &&
+                current.Source.Status != SharedProviderSourceStatus.NeverSynchronized,
+            SharedProviderSourceMutationKind.Synchronize => current is not null && attempt.Before is { } original &&
+                current.Source.LastSyncAtUtc > original.Source.LastSyncAtUtc.GetValueOrDefault() &&
+                current.Source.Status != SharedProviderSourceStatus.NeverSynchronized &&
+                attempt.Selection.SetEquals(current.Imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
+                    .Select(import => import.RemotePublicationId)),
+            _ => false
+        };
+        return new(ProviderVerificationDisposition.StillUnconfirmed, attempt.SourceId, sources) {
+            CurrentStateMatchesIntent = satisfies
+        };
     }
 
     public static bool Matches(SharedProviderSourceSnapshot source, SharedProviderSourceEditorRequest request) =>

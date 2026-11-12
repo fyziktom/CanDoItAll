@@ -126,6 +126,8 @@ internal sealed class LocalOperatorAuthenticationStateProvider(
                         ApiAccessScopeNames.ReadLlmChats,
                         ApiAccessScopeNames.ManageLlmChats,
                         ApiAccessScopeNames.ExecuteLlmChats,
+                        ApiAccessScopeNames.ReadProcesses,
+                        ApiAccessScopeNames.ExecuteProcesses,
                         ApiAccessScopeNames.ReadProviderHistory,
                         ApiAccessScopeNames.ReadProviderHistoryContent,
                         ApiAccessScopeNames.ManageProviderHistory))

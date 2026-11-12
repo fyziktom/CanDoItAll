@@ -1,0 +1,587 @@
+{
+  "schemaVersion": 1,
+  "status": "RejectedAmplificationPredecessor_SourceOnly_Unbuilt_Unexecuted_DoNotIntegrate",
+  "capturedUtc": "2026-10-17T02:18:24.9883204+00:00",
+  "reason": "60 interactive / 136 Process-Agent full catalog decodes for four receipts; scoped RuntimeSnapshot pin. Invocation basis/per-call binding amendment separately authorized, not present here.",
+  "sourceFacts": 14,
+  "proofFiles": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptReviewContractTests.cs",
+      "expectedFacts": 2
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs",
+      "expectedFacts": 2
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptDeferredOwnerTests.cs",
+      "expectedFacts": 2
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+      "expectedFacts": 6
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.HistoricalReview.cs",
+      "expectedFacts": 2
+    }
+  ],
+  "renderingTransfer": "Use only R1c-historical-native-rendering-entries.json; never replace whole managed register.",
+  "excluded": "Parked JsonStore optimization; frozen store-cost harness; unrelated C3/Send-affordance/root checkpoint inputs.",
+  "inputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-historical-catalog-basis.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "1686656DB4F57381E49B113E9BF26A5831496800B9C0F0FA307F03B9D833125E",
+      "bytes": 11500
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-historical-cold-read-graph.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "26A26D468A7963D34DE50F218D28B63A1CD9181590BF99A003BADC0FAEB91501",
+      "bytes": 20514
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-R1c-historical-receipt-review.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "15E8D69706D01FD1792F120F49119E9E1886C6CABC2F44430804B7F65FB7179B",
+      "bytes": 22292
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-native-rendering-entries.json",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "15A674C3B640520A2046819C3CDE91CD1AD4552E2A53FE1C850F339194768350",
+      "bytes": 6730
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-process-cold-source.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "CF55D01F5E908D86A19B115FD62B6D62927161E8CFF8E6A807648DD00218F01B",
+      "bytes": 4362
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-authority-unit-source.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "C71D9E5F6AEDB8DCE02160B08A83F79817390CC3B9BB5A39447423ACB746C5BE",
+      "bytes": 3203
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-cold-amplified-source.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "76DBF3B2B3D8020F2977445E7B83DB8786FAD8C072A3D895F57BF410A0653932",
+      "bytes": 4876
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-native-source.md",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "709192A504AC659F41D90FA30B0F6A59276F127F7B44F9C2F38648FA5BD0F8BF",
+      "bytes": 6541
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "state": "Modified",
+      "mainBaseSha256": "3FBF7996388665A2A998B3EE84C3267CFCBD0DDF7D35577024C92258A47F3274",
+      "sha256": "E1DE6DF044833A1FDD35586AD0FA901B16DFFA7C70C496CD82E89428B9EFB9C6",
+      "bytes": 40577
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentHistoricalReceiptOpenApiContract.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "E9A06A3FEBA79F457BC8D4C6C993FA8490ED3CC3DBD2EF398E30E68C44F43F7E",
+      "bytes": 2317
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentHistoricalReceiptsApi.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "821D7CB77A880AAA70F09615978602B67F736CE7E2155B402DBD6EAB5E1CE916",
+      "bytes": 4030
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+      "state": "Modified",
+      "mainBaseSha256": "379DDAD200B306B9043ECAEE2538951362074AEFBB4C489D4A9F31667D5E824A",
+      "sha256": "05B35F56B0E15137C624CA8122DB34A6642BA9EB27B0AEF478D0794E7BF5FDFB",
+      "bytes": 192228
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ApiServiceCollectionExtensions.cs",
+      "state": "Modified",
+      "mainBaseSha256": "493C4F5CDD7CBE534452EC713DD075A61BAC12A63976AEEE3A4205278909B23F",
+      "sha256": "3FF65FEEA06AF7CF842B11D0A88E63EA7199BB92138236A8A20D114BD08E6B93",
+      "bytes": 17834
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "state": "Modified",
+      "mainBaseSha256": "0F80F90F613F78DB87C6E21D10BF181BB2DE475C35C7E7BBC0529FA304E365E3",
+      "sha256": "BFAED2A57F86A87E48F5689620F0AC509612292526E007EE69871081782C6E6F",
+      "bytes": 7458
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationRecordCodec.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "16F02B26776ACDE1FDDC2F8476CC46D2FE8ECD778156135E34D1FBF3C47001E2",
+      "bytes": 1298
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "state": "Modified",
+      "mainBaseSha256": "276DD57AFBF9B23243F63349AB46D5C54691F79E0FAEF12F11C2EDB06FBAD71B",
+      "sha256": "9B7C5C82DE0EFB251EF8DA3556446D9310E0FBA8594FDE37DF5B8B8FB60356D2",
+      "bytes": 13310
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "state": "Modified",
+      "mainBaseSha256": "2D356C8111D07813B5219A8F53B607117067EDFCDDF8535E9B96B5F3B03BBF0A",
+      "sha256": "30E930DF57502BAE324E8E57F12CF0DAA25050932D64AE1C24AB5A42E50184EB",
+      "bytes": 27518
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+      "state": "Modified",
+      "mainBaseSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+      "sha256": "B3AF5C8ADBA6D9DCD7F68B569377CCB28DB1F8217D7655EF1A74F33DDA1140A3",
+      "bytes": 13526
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "state": "Modified",
+      "mainBaseSha256": "31B971EA75BE52A957B1EDF5A8AD8628510EFCF5607703B10838970B7C54FAA0",
+      "sha256": "43C63C902D501AFE0F848561847890461BD48CCA3BC6D2823ADB7F7A52725C6D",
+      "bytes": 14905
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentHistoricalReceiptReadPolicy.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "9289176EB138CF84225054BC063570C88669667F79F411F896DB9AC8F3F2546C",
+      "bytes": 671
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentTurnContextCaptureService.cs",
+      "state": "Modified",
+      "mainBaseSha256": "20B4A7FE7EAC0189655B736820E8EF2747C93574C39C772418248A66B44BCE27",
+      "sha256": "A6B9E516BED540CBB3C0D4E541E7081F88BA4DDD91D03CE0C06BA27A20773C6C",
+      "bytes": 16742
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/AgentHistoricalReceiptReviewService.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "0A7B8A11B95E368A2067C1293C3F791B174232001051ED01983D4725F42B8CF6",
+      "bytes": 310
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/AgentHistoricalWorkspaceRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "D424FACBA151E61BC51FE9607A269E4789634F593D18640AB8A57DCF3BA5C985",
+      "bytes": 1157
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs",
+      "state": "Modified",
+      "mainBaseSha256": "D2860FAEFC73602D3F9C072F0E9A7C1C81215358F6BA235E002EC999BB4C312B",
+      "sha256": "A5A89866842BFD5CFFF02D127856F822811499143A051E0693E314E16B5C3B26",
+      "bytes": 29404
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs",
+      "state": "IdenticalToMain_NoTransfer",
+      "mainBaseSha256": "F9B5967199CB2E4D028724386FFD07722B92201D85BB63152B8D1FB2CE01CE64",
+      "sha256": "F9B5967199CB2E4D028724386FFD07722B92201D85BB63152B8D1FB2CE01CE64",
+      "bytes": 166180
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.HistoricalRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "8565405A09C9A67C3093A2EDA81076E4A4848C2E5AC62016909A9F0D42CC264C",
+      "bytes": 15389
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolBackgroundSourcePolicy.cs",
+      "state": "Modified",
+      "mainBaseSha256": "4262E420645EEBE2CD988F15A3B4578F8FBFE0A68311FCB13529294201854FB0",
+      "sha256": "9256E5A533736147E265CF6F7BADE8AA010E5CC702761A1997A0B7411F3BBEBD",
+      "bytes": 1175
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolHistoricalBackgroundRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "6981363DB149C13C7480EF7919714E7A7670686CE864A73BCEED1AC4AE9715D1",
+      "bytes": 389
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolHistoricalReceiptRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "9C2DC7FFCAD851950FDDD1A5C1B839E1D8D81E1C97E1725FA1AA699EF5CFB38A",
+      "bytes": 6522
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/AgentFrameworkWorkspaceService.ExecutionFacade.cs",
+      "state": "IdenticalToMain_NoTransfer",
+      "mainBaseSha256": "393755564799C971262025A636CF9D5A664DC16142D6F5A463F50E40AFF12B5C",
+      "sha256": "393755564799C971262025A636CF9D5A664DC16142D6F5A463F50E40AFF12B5C",
+      "bytes": 18384
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Workspace/FloatingAgentChatContracts.cs",
+      "state": "Modified",
+      "mainBaseSha256": "249075E001F7C0EB00C9F593C3FA2497F0D0B108BBD31784CECF72F7E1CE2563",
+      "sha256": "4EA5F10E49DB264F8AF4B2601A5A75E162B0EBED533C1A7D390BB90C1B5A8CFC",
+      "bytes": 4806
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentHistoricalReceiptReviewModels.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "6A8438F85D684F0ADEFE1D09AD3064275BA6A0CE65419630E70EF025C37822DF",
+      "bytes": 14301
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentHistoricalReceiptRevisionJsonConverter.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "EC104CC6022A6716604C86665D5C30F9721DD14EED8CBC4CBDF9E4C06E3E2CBB",
+      "bytes": 1644
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "00B49F77F49E370527D8EAFFA8985A9D1B3D93572B2EA6A634C34C3BD26DD1C6",
+      "bytes": 12653
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.Chat.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "EA11A6F5B032DD3E506FECD64E7B585D220A145AA8387C6908242A31D87F738E",
+      "bytes": 5533
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentCatalogLeaseSource.cs",
+      "state": "IdenticalToMain_NoTransfer",
+      "mainBaseSha256": "36AE3348643F25A217767959EE50CAA90DC546EAEF3D9FB34BC8F6162CB160D7",
+      "sha256": "36AE3348643F25A217767959EE50CAA90DC546EAEF3D9FB34BC8F6162CB160D7",
+      "bytes": 1734
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentHistoricalReadStore.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "6B5E62F50B62DE85D667C9EB0CF39B3A5C777ADD5CDE3775A0D307DC93DDDA73",
+      "bytes": 2891
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.HistoricalReview.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "C3712177CFC58A8CE04C6518D7CBCB46FFBD432A83D46BF98B0DE31604BAFD0C",
+      "bytes": 4605
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "state": "Modified",
+      "mainBaseSha256": "CFC114756E448AC2061C77BE9CB03665B778EE85E31026E4F044B375CD83D511",
+      "sha256": "C5A83F07AA80759B33396ED5D954DB18BCA4C07BCE88D62E4983D0F2C45B6ADA",
+      "bytes": 88580
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatSession.cs",
+      "state": "Modified",
+      "mainBaseSha256": "7AE249A098D8347E76B42D52F8A382C4D86FA016A7DB99958DC03A805CBA5759",
+      "sha256": "AFD9FF7A1E5E6665E244F6488353C232AFBF36E4FF76E7592B723D2FE252BA66",
+      "bytes": 13899
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentExecutionAuthorityComposition.cs",
+      "state": "Modified",
+      "mainBaseSha256": "AF4ED277DF2CF542EF3DB5E100084B5F06242715B8926197275DC9E1BBA1D2A9",
+      "sha256": "3059BB659D97BD39F0DFFCE01AE53897862AD337CAAD4018DA85705817A9914B",
+      "bytes": 12713
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+      "state": "Modified",
+      "mainBaseSha256": "61BE779699D2D852C2B3E2FB1F0FED5637B91F9950949A2EF0C4A0E117440F60",
+      "sha256": "4B48349DDEF43DC7BD7CE7827D874A7D6627F42707F961D0AFB18FC33BF5E2EF",
+      "bytes": 36284
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentHistoricalReceiptReviewService.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "2ABB0C7F8DC4A2004B36FA812079E096AE964B344AC6241DFCCAFA69B8EFFB70",
+      "bytes": 2252
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatExecutionOrchestrator.cs",
+      "state": "Modified",
+      "mainBaseSha256": "A590368C30C7531B96F85373DE669BDF67131AC1E2F2E03E41317257EBFD313F",
+      "sha256": "605BC72B36933979A0651C4C422CC9E5F968BCAC338C79863F79EC5278909D43",
+      "bytes": 18539
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CanonicalAgentHistoricalReceiptReadObserver.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "F33F0DC87B204ABFF548709BB4B2EBDB2510C14E72C113D5380748BA83A9FC5E",
+      "bytes": 5935
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "state": "Modified",
+      "mainBaseSha256": "34875D94F7F2C20B26CE6E709E5364D18640F74F9F4AED3A4B239B07D1CB9FD6",
+      "sha256": "AC773ED3AC2441ECDD1F0C2741C4D3D2724A7342485934F3AC8E238708CD13DF",
+      "bytes": 56489
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+      "state": "Modified",
+      "mainBaseSha256": "57B9D13D4550F564FD37C38FEFA663764125D5E809CD9FE1B9C311FD774F9951",
+      "sha256": "D9B6311F160E2188660A348479A5C74B23D3A7E004FB4E816A61AB91FEAD7E7B",
+      "bytes": 26525
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessHistoricalReceiptSourcePolicy.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "E5FE86DE2D319BD3A89099C5FD035D9B392799B344555F8ED98557C1922F66C2",
+      "bytes": 2472
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessOriginalReceiptAuthorityReader.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "2B86B98619DEC910D363747D383F8131EE910243A883851FCC87D847384F124A",
+      "bytes": 1010
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessToolBackgroundSourcePolicy.cs",
+      "state": "NewlineOnly_NoTransfer",
+      "mainBaseSha256": "EBA3CC835B03D542DB12E5012890EF0DC3399C861FCA7897578C5C93A90525C3",
+      "sha256": "708214E95EDED6D0C220267F5D2E5588FF9A68DBAFB4F121C1058593F4CA2173",
+      "bytes": 3661
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionReceiptReader.cs",
+      "state": "Modified",
+      "mainBaseSha256": "02568B5FF10D1498F0E9FAA7741C332082E3A70E6301D4958AD93213A83D4F30",
+      "sha256": "7591B3F3CBA7BF84BED09F23AB5758D8E168A37AC371FDF1787BB5D027062A76",
+      "bytes": 11971
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectDefinitionHistoricalReceiptRecovery.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "99DBE69D92E756216FFCE5E2112B0CEBD5ADD6276E2AA45672DDAE6695782C1D",
+      "bytes": 7190
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectDefinitionToolReceiptRecovery.cs",
+      "state": "Modified",
+      "mainBaseSha256": "838562D7064DD5D954B049DD9EAF4A57B95145D60774657345A8E910EEB72412",
+      "sha256": "3C4C1185B66B66660CF1D26B22112446708ED23CB43F0538B53BB91FB78BE7DA",
+      "bytes": 5782
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectDefinitionGovernedReceiptAccess.cs",
+      "state": "Modified",
+      "mainBaseSha256": "DBF2AE2B61DD7D5D33941C195F5009C4AE081F8E359AD8BD75B692C6B9580DBC",
+      "sha256": "3A166916A795C8B2391237D895A231C844CBC431D6A2E890EFA5B6AB86EFC088",
+      "bytes": 7761
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessExecutionMutationService.cs",
+      "state": "NewlineOnly_NoTransfer",
+      "mainBaseSha256": "8946318B68897E4AEFADD9D6B276A09EB8D05DA21141219C767D552B1D9063FE",
+      "sha256": "8C1C4C660E8104EF22ED08DF413C7F4F9514A125413AF42F1BB63D271709C11F",
+      "bytes": 10606
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessHistoricalReadAuthority.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "837878DBF7049EF831321CF502D592BB47F189749112F30BE33A98B0916F1E7C",
+      "bytes": 8072
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
+      "state": "Modified",
+      "mainBaseSha256": "E0246ABE0238841E750FAF15E91F9D5089F226A421BA3DC4D05E8F0367CA128B",
+      "sha256": "FFDE0FFC170969F7E2A2372A057E1DE561F5540E630F00DB6C1518BB57852061",
+      "bytes": 17424
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.Observation.cs",
+      "state": "NewlineOnly_NoTransfer",
+      "mainBaseSha256": "8E8D48A64AFA7FE1FA9912C33B9C65ABAC7B19AC6693AF7BAA26E274B4181F47",
+      "sha256": "47B012829E133F111DA20ED3052C59EAE5D425081D2AF2FA1769026810E318A7",
+      "bytes": 6273
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessReadAuthorityPolicy.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "66CD46473C5D4B04FC744EC20436B2335142836483FCF70D495BF93C6D52C084",
+      "bytes": 3902
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExecutionAuthorityProvider.cs",
+      "state": "Modified",
+      "mainBaseSha256": "7AD13D9B232FB2B9449B15093E51795220996A8ECC0B5D5A9F7B5C8371258D64",
+      "sha256": "FC4D5083CA0184AE57F429BE651FCEBB08481B3B1B52AB9FA7B9B77E87B6A1D7",
+      "bytes": 1338
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+      "state": "Modified",
+      "mainBaseSha256": "5732A4A6518FEB83FA58F483F71F5086531A6C4A234856A9532600B26C0D3443",
+      "sha256": "51C85F83CD3BA029B598D73612D33DBD81644B366E13D546BFB0CB014B63A60C",
+      "bytes": 18322
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessExecutionDispatchAuthority.cs",
+      "state": "NewlineOnly_NoTransfer",
+      "mainBaseSha256": "D14EB3DD5AE6B3DCAAF06E63A4D53B16B96C0F781C5A7E553317E8115C1DFFF6",
+      "sha256": "74A5904B493AA3ED52FB7CC9E08D16FF100C1FCAB6D55A9DFF163E4DACBA41A1",
+      "bytes": 2095
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessHistoricalReceiptRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "B9F3AF2E26DE2B724694E84E4AFB208879622893FDF5E3D87C1071506080032B",
+      "bytes": 1241
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/HistoricalReceiptSpecimen.razor",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "2F0CA262699339A35BFF0667D1F7C57B8457A33530EC460DA687213896B3326B",
+      "bytes": 4224
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatActionState.cs",
+      "state": "Modified",
+      "mainBaseSha256": "67D6FA70E3384397F6613105EFFE94BB480D03A9B4C323874D70EC0E9C321A0E",
+      "sha256": "6220A8306596BC80BF81DCAA1C04874D8E6E84EA38096F0A4F5FFCD2B015CF63",
+      "bytes": 1171
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptState.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "35C58E206E18693D24D41E8C7200AD07046A02F486C8FD34566E38ACD48A6216",
+      "bytes": 2892
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatHistoricalReceiptSurface.razor",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "CDB3561851558F3865C32F877E8720484A526FF2D3083F0D4EE880EF75A58DC8",
+      "bytes": 2708
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatRecoverySurface.razor",
+      "state": "Modified",
+      "mainBaseSha256": "7BFC2ABA9747D3E170DE2623F69B7EC29D8F713800F6A08B04ED6386FFA70BA8",
+      "sha256": "BB8E26901DA9CF7E39050C5801BAE7B7CD2557F40EF578BE9ADC4EC2B9D09A5D",
+      "bytes": 3305
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.HistoricalReview.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "87BFEC56E20AB195676094B4D0B215C98219913ABC404FF27909642F943CB3E2",
+      "bytes": 17299
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "AFD9AC837531F7385324C585086B19977CAB540E05E12905E709684E0759C43E",
+      "bytes": 21401
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalFileObservation.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "0193DD95998D16DF1E322A2695ED35084E0418BB445148A5234EFCB612FFAD63",
+      "bytes": 3979
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptDeferredOwnerTests.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "E99CCDDB88193FA06258AA9D49461124522E27217D68E1136DB657F138DD8091",
+      "bytes": 4915
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptReviewContractTests.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "85C05554CC60CFC1C209241428A94BE63F54B1D0F33C5A8EC5B765647FDEAF3F",
+      "bytes": 15147
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs",
+      "state": "New",
+      "mainBaseSha256": null,
+      "sha256": "4F58D6441C67DBE1C96C3BB1C41FCAED82B1AE9C2010FB18BCF9C64ED135B4CC",
+      "bytes": 17400
+    }
+  ],
+  "supersededAuthoredOnlyPaths": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.HistoricalChatRead.cs",
+      "status": "Superseded authored-only path absent in both checkouts; no deletion to transfer"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.HistoricalRead.cs",
+      "status": "Superseded authored-only path absent in both checkouts; no deletion to transfer"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentHistoricalReceiptReviewBoundary.cs",
+      "status": "Superseded authored-only path absent in both checkouts; no deletion to transfer"
+    }
+  ],
+  "provenance": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-cold-graph-inventory.json",
+      "sha256": "F667FADCA2AD1D1260E9A0B4ED82437807C7D2893C763B1AA2920D9E941CECBB"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-integration-predecessors.json",
+      "sha256": "1340E0E08651382DBFD95479F6641DAB35DC6BD78FCCDD1B08DE942AD1135754"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-native-source-inventory.json",
+      "sha256": "D5A62D5ECBA2EFB07BDF5918113062B2CBD7AD44B41F5B0FA283043704062DC0"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-process-cold-source-inventory.json",
+      "sha256": "EDA390613619F8661BD403C78D9BAFF17B1A8A8B3EF5F81472EF811D9C284E50"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-authority-unit-source-inventory.json",
+      "sha256": "93D95F1FDE4720D926245529C9C9504BF5DA9BF937B0A6B936B249012330F5CE"
+    }
+  ]
+}

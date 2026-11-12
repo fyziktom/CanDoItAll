@@ -32,13 +32,16 @@ public sealed class HistoryDatabaseTransferHandler(IEnumerable<IHistoryTransferP
     }
 
     public Task<DatabaseTransferItemResult> TransferAsync(DatabaseTransferOperation context, CancellationToken cancellationToken = default)
-        => operations.RunTransferAsync(context, (transfer, token) => TransferCoreAsync(context, transfer, token), cancellationToken: cancellationToken);
+        => operations.RunTransferAsync(context, new([
+            .. HistoryTransferTargetPlan.EntityTypes, .. orderedParticipants.SelectMany(participant => participant.TargetEntityTypes)
+        ], [HistoryPartitionStore.InitializationLockKey]),
+            (transfer, token) => TransferCoreAsync(context, transfer, token), cancellationToken: cancellationToken);
 
     private async Task<DatabaseTransferItemResult> TransferCoreAsync(DatabaseTransferOperation context,
         DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {
         await using var source = await sessions.CreateSourceAsync<ProviderHistoryDbContext>(transfer, static options => new ProviderHistoryDbContext(options), cancellationToken);
         await using var target = await sessions.CreateTargetAsync<ProviderHistoryDbContext>(transfer, static options => new ProviderHistoryDbContext(options), cancellationToken);
-        await target.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(724091824013)", cancellationToken);
+        await target.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({HistoryPartitionStore.InitializationLockKey})", cancellationToken);
         if (!await source.Set<HistoryStorageIdentity>().AnyAsync(cancellationToken) ||
             !await IsEmptyTargetAsync(target, cancellationToken) ||
             !context.ReplaceExisting && await target.Set<HistoryStorageIdentity>().AnyAsync(cancellationToken)) {

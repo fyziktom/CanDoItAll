@@ -3,10 +3,29 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
+    [Fact]
+    public async Task Committed_refresh_rejects_a_different_profile_scope_or_generation_before_projection_writes() {
+        var fixture = new Fixture();
+        AgentExecutionActivityWorkspaceIdentity[] others = [
+            new(Guid.NewGuid(), fixture.Identity.WorkspaceScope, fixture.Identity.DatabaseProfileGeneration),
+            new(fixture.Identity.DatabaseProfileId, WorkspaceScopeDescriptor.Organization("other"), fixture.Identity.DatabaseProfileGeneration),
+            new(fixture.Identity.DatabaseProfileId, fixture.Identity.WorkspaceScope, new(1))
+        ];
+        foreach (var other in others) {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Bridge.SynchronizeDirectoryProjectionAsync(other));
+        }
+        Assert.Empty(fixture.Projection.Writes);
+        await fixture.Bridge.SynchronizeDirectoryProjectionAsync(fixture.Identity);
+        Assert.Single(fixture.Projection.Writes);
+    }
+
     [Fact]
     public async Task Synchronization_uses_one_owner_snapshot_with_its_profile_scope_and_revision() {
         var fixture = new Fixture();
@@ -27,28 +46,21 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
     }
 
     [Fact]
-    public async Task Existing_technical_identity_and_lifecycle_survive_crm_provider_choices() {
+    public async Task Existing_technical_identity_cannot_be_replaced_through_CRM_provider_choices() {
         var fixture = new Fixture();
-
         var result = await fixture.Bridge.SaveAsync(new() {
             PartyId = fixture.PartyId, ProviderProfileId = fixture.ProviderId, DefaultModel = "new-model",
             ExecutionMode = AiExecutionMode.Remote, Notes = "New local business notes"
         });
-
-        Assert.True(result.IsSuccess);
-        var saved = Assert.IsType<AgentEditorModel>(fixture.Workspace.Saved);
-        Assert.Equal("Technical name", saved.Name);
-        Assert.Equal("Technical summary", saved.Summary);
-        Assert.Equal("Owned instructions", saved.Instructions);
-        Assert.Equal(AgentLifecycleStatus.Suspended, saved.Status);
-        Assert.Equal(fixture.ProviderId, saved.ProviderProfileId);
-        Assert.Equal("new-model", saved.Model);
-        Assert.Equal(fixture.Agent.UpdatedAtUtc, saved.ExpectedUpdatedAtUtc);
+        Assert.True(result.IsFailure);
+        Assert.Null(fixture.Workspace.Saved);
+        Assert.Equal(0, fixture.Workspace.SaveCalls);
+        Assert.Empty(fixture.Projection.Writes);
     }
 
     [Fact]
     public async Task Projection_failure_preserves_committed_agent_and_party_identity() {
-        var fixture = new Fixture();
+        var fixture = new Fixture(creating: true);
         fixture.Projection.Failure = new IOException("CRM projection unavailable.");
 
         var failure = await Assert.ThrowsAsync<AgentDirectoryProjectionSynchronizationException>(() => fixture.Bridge.SaveAsync(new() {
@@ -63,7 +75,7 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
 
     [Fact]
     public async Task Known_precommit_validation_failure_returns_failure_without_projection_write() {
-        var fixture = new Fixture();
+        var fixture = new Fixture(creating: true);
         fixture.Workspace.SaveFailure = new AgentEditorValidationException("Invalid provider configuration.");
 
         var result = await fixture.Bridge.SaveAsync(new() { PartyId = fixture.PartyId, ProviderProfileId = fixture.ProviderId });
@@ -92,7 +104,7 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
         public WorkspaceProxy Workspace { get; }
         public IAiTechnicalAgentBridge Bridge { get; }
 
-        public Fixture() {
+        public Fixture(bool creating = false) {
             var now = new DateTimeOffset(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
             Agent = new(Guid.NewGuid(), "Technical name", "Technical role", "Technical summary", "Owned instructions",
                 AgentLifecycleStatus.Suspended, ProviderId, "chosen-model", AgentWorkloadKind.General, AgentChatHistoryMode.FrameworkManaged,
@@ -110,7 +122,20 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
                     AiResourceBindingStatus.Bound, "Bound", AiExecutionMode.Remote, "Runtime provider", "chosen-model", "", [], [], route)));
             var type = typeof(AgentFrameworkModuleServiceCollectionExtensions).Assembly.GetType(
                 "CanDoItAll.Modules.AgentFramework.AgentFrameworkAiTechnicalAgentBridge", throwOnError: true)!;
-            Bridge = Assert.IsAssignableFrom<IAiTechnicalAgentBridge>(Activator.CreateInstance(type, Projection, new WorkspaceFactory(workspace, Identity.WorkspaceScope)));
+            var options = new DbContextOptionsBuilder<CrmHrDbContext>().UseInMemoryDatabase($"bridge-creation-{Guid.NewGuid():N}").Options;
+            var contexts = new Contexts(options);
+            using (var context = contexts.CreateDbContext()) {
+                context.Add(new Party { Id = PartyId, PartyType = PartyType.AiAgent, DisplayName = "Human CRM name" });
+                context.SaveChanges();
+            }
+            var changes = new CrmHrChanges(new EditingChangeFeed(), new(EditingScopeKind.Dataset, Identity.DatabaseProfileId), new EditingOperationContext());
+            if (creating) {
+                Workspace.Agents = [];
+                Workspace.CreatedId = Agent.Id;
+                Projection.Unbind();
+            }
+            Bridge = Assert.IsAssignableFrom<IAiTechnicalAgentBridge>(Activator.CreateInstance(type, Projection,
+                new WorkspaceFactory(workspace, Identity.WorkspaceScope), new AiAgentCreationGuard(contexts, changes)));
         }
     }
 
@@ -120,6 +145,7 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
         public IReadOnlyList<ProviderProfile> Providers { get; set; } = [];
         public int SnapshotReads { get; private set; }
         public int SaveCalls { get; private set; }
+        public Guid CreatedId { get; set; }
         public AgentEditorModel? Saved { get; private set; }
         public Exception? SaveFailure { get; set; }
 
@@ -132,20 +158,22 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
             }
 
             if (method.Name == nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync)) {
-                return Task.FromResult(AgentEditorModel.FromDefinition(Assert.Single(Agents)));
+                return Task.FromResult(Agents.Count == 0 ? new AgentEditorModel() : AgentEditorModel.FromDefinition(Assert.Single(Agents)));
             }
 
             if (method.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync)) {
                 SaveCalls++;
                 Saved = Assert.IsType<AgentEditorModel>(args![0]);
-                return SaveFailure is null ? Task.FromResult(Assert.Single(Agents).Id) : Task.FromException<Guid>(SaveFailure);
+                return SaveFailure is null ? Task.FromResult(Agents.Count == 0 ? CreatedId : Assert.Single(Agents).Id) : Task.FromException<Guid>(SaveFailure);
             }
 
             throw new NotSupportedException($"Unexpected catalog call '{method.Name}'.");
         }
     }
 
-    private sealed class ProjectionPort(AiTechnicalProjectionResource resource) : IAiTechnicalAgentProjectionStore {
+    private sealed class ProjectionPort(AiTechnicalProjectionResource initial) : IAiTechnicalAgentProjectionStore {
+        private AiTechnicalProjectionResource resource = initial;
+        public void Unbind() => resource = resource with { Directory = resource.Directory with { TechnicalAgentId = null, BindingStatus = AiResourceBindingStatus.Unbound, HasTechnicalProfile = false } };
         public List<AiTechnicalCatalogProjection> Writes { get; } = [];
         public Exception? Failure { get; set; }
         public Task<AiTechnicalProjectionApplyResult> ApplyAsync(AiTechnicalCatalogProjection projection, CancellationToken cancellationToken = default) {
@@ -158,6 +186,10 @@ public sealed class AgentFrameworkTechnicalProjectionAdapterTests {
             => Task.FromResult<IReadOnlyDictionary<Guid, AiTechnicalProjectionResource>>(new Dictionary<Guid, AiTechnicalProjectionResource> { [resource.PartyId] = resource });
         public Task<int> CountBoundAsync(CancellationToken cancellationToken = default) => Task.FromResult(1);
         public Task<AiTechnicalCatalogRepairFacts> ReadCatalogRepairFactsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    private sealed class Contexts(DbContextOptions<CrmHrDbContext> options) : IDbContextFactory<CrmHrDbContext> {
+        public CrmHrDbContext CreateDbContext() => new(options);
     }
 
     private sealed class WorkspaceFactory(IAgentFrameworkWorkspaceService workspace, WorkspaceScopeDescriptor scope) : ICanDoItAllAgentWorkspaceFactory {

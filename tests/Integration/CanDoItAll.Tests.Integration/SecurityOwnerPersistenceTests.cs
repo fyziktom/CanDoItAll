@@ -21,7 +21,7 @@ public sealed class SecurityOwnerPersistenceTests {
     private const string ConnectionId = "primary";
 
     [Fact]
-    public async Task Owner_model_matches_complete_schema_without_inventing_concurrency_tokens() {
+    public async Task Owner_model_matches_complete_schema_and_uses_the_secret_metadata_revision() {
         await using var application = await TestApplication.CreateAsync();
         var factory = application.Services.GetRequiredService<IDbContextFactory<SecurityDbContext>>();
         var schemaFactory = application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
@@ -37,9 +37,34 @@ public sealed class SecurityOwnerPersistenceTests {
             Assert.Equal(complete.ToDebugString(MetadataDebugStringOptions.LongDefault),
                 entity.ToDebugString(MetadataDebugStringOptions.LongDefault));
             Assert.False(typeof(IHasConcurrencyToken).IsAssignableFrom(entity.ClrType));
-            Assert.DoesNotContain(entity.GetProperties(), property => property.IsConcurrencyToken);
+            var tokens = entity.GetProperties().Where(property => property.IsConcurrencyToken).Select(property => property.Name);
+            string[] expectedTokens = entity.ClrType == typeof(SecretRecord) ? [nameof(SecretRecord.UpdatedAtUtc)] : [];
+            Assert.Equal(expectedTokens, tokens);
         }
         Assert.Throws<InvalidOperationException>(() => owner.Set<Project>().ToQueryString());
+    }
+
+    [Fact]
+    public async Task A_stale_secret_editor_cannot_rotate_or_delete_a_newer_secret() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<SecretService>();
+        var saved = await service.SaveEditorAsync(new() { Name = "Original name", SecretValue = "fixture-value" });
+        Assert.True(saved.IsSuccess);
+        var first = Assert.IsType<SecretEditorModel>(await service.GetEditorAsync(saved.Value));
+        var second = Assert.IsType<SecretEditorModel>(await service.GetEditorAsync(saved.Value));
+        Assert.Empty(first.SecretValue);
+        Assert.Empty(second.SecretValue);
+
+        first.Name = "Metadata only";
+        Assert.True((await service.SaveEditorAsync(first)).IsSuccess);
+        second.SecretValue = "stale-value";
+        await Assert.ThrowsAsync<SecretMetadataConflictException>(() => service.SaveEditorAsync(second));
+        await Assert.ThrowsAsync<SecretMetadataConflictException>(() => service.DeleteReviewedAsync(new(saved.Value, second.ExpectedUpdatedAtUtc)));
+
+        var current = Assert.IsType<SecretEditorModel>(await service.GetAsync(saved.Value));
+        Assert.Equal("Metadata only", current.Name);
+        Assert.Equal("fixture-value", current.SecretValue);
     }
 
     [Fact]

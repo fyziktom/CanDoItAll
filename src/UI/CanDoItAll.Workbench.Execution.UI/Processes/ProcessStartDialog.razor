@@ -1,0 +1,97 @@
+@namespace CanDoItAll.Workbench.Execution.UI.Processes
+@{
+    var startDialog = View;
+    var actions = Actions;
+}
+<CanvasOverlayDialog AriaLabel="@startDialog.Title" Kicker="Process start"
+    Title="@startDialog.Title" Summary="@startDialog.Copy" DataTestId="project-structure-process-start-dialog"
+    Close="@(() => actions.Close())">
+    <Actions>
+        @if (startDialog.CanPrepareAnother) {
+            <Button Text="Prepare another launch" Variant="Variant.Text" Disabled="@startDialog.IsBusy"
+                Click="@(() => actions.PrepareAnother())" data-testid="project-structure-process-start-new-intent" />
+        }
+        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
+        <Button Text="@startDialog.SubmitLabel" ButtonStyle="ButtonStyle.Warning" IsBusy="@startDialog.IsBusy"
+            Disabled="@startDialog.IsBusy" data-testid="project-structure-process-start-continue" Click="@(() => actions.Submit())" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                <PanelCard>
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Execution target" />
+                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@startDialog.TargetNodeTitle" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Target node id: {startDialog.TargetNodeId}")"
+                                   Class="cw-panel-copy" />
+                        @if (!string.IsNullOrWhiteSpace(startDialog.ParentNodeId)) {
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@($"Resolved parent node id: {startDialog.ParentNodeId}")"
+                                       Class="cw-panel-copy" />
+                        }
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Selected process node id: {startDialog.NodeId}")"
+                                   Class="cw-panel-copy" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@($"Project id: {startDialog.ProjectId:D}")"
+                                   Class="cw-panel-copy" />
+                    </Stack>
+                </PanelCard>
+
+                @if (!string.IsNullOrWhiteSpace(startDialog.PreviousLaunchNotice)) {
+                    <PanelCard Class="project-structure-inline-feedback"
+                               data-tone="info"
+                               data-testid="project-structure-process-start-previous-launch">
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@startDialog.PreviousLaunchNotice"
+                                   Class="cw-panel-copy" />
+                    </PanelCard>
+                }
+
+                @if (startDialog.Estimate is not null) {
+                    var estimate = startDialog.Estimate;
+                    <PanelCard data-testid="project-structure-process-estimate-summary">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Preflight estimate" />
+                                <Pill Tone="PillTone.Info"
+                                      Text="@estimate.ConfidenceLabel" />
+                                <Pill Tone="PillTone.Neutral"
+                                      Text="@estimate.SourceLabel" />
+                            </div>
+                            <Grid Columns="1"
+                                  ColumnsMd="3"
+                                  GapScale="LayoutGap.Small">
+                                <MetricCard Label="Estimated price"
+                                            Value="@FormatUsd(estimate.EstimatedCostUsd)" />
+                                <MetricCard Label="Elapsed time"
+                                            Value="@($"{estimate.EstimatedElapsedMinutes:N0} min")" />
+                                <MetricCard Label="Touch time"
+                                            Value="@($"{estimate.EstimatedTouchMinutes:N0} min")" />
+                            </Grid>
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@estimate.Summary"
+                                       Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
+
+            <PanelCard>
+                <TextBlock TextStyle="TextStyle.Eyebrow" Value="What happens next" />
+                <TextBlock TextStyle="TextStyle.Note" Value="The app will create or reuse a launch plan, then open staffing review. Approval, provisioning, and execution only happen after the role assignments are reviewed and the final Start action is confirmed." />
+            </PanelCard>
+            @if (!string.IsNullOrWhiteSpace(startDialog.Error)) {
+                <Alert AlertStyle="AlertStyle.Warning">@startDialog.Error</Alert>
+            }
+        </Stack>
+    </Body>
+</CanvasOverlayDialog>
+@code {
+    [Parameter, EditorRequired]
+    public ProcessStartView View { get; set; } = default!;
+    [Parameter, EditorRequired]
+    public ProcessStartActions Actions { get; set; } = default!;
+    private static string FormatUsd(decimal amount)
+        => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
+}

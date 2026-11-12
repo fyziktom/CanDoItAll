@@ -1,0 +1,32 @@
+{
+  "remainingObservedProcesses": [],
+  "outcome": "Two corrected NOWAIT assertions passed; recovery inspection behavior unchanged.",
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\9f55e776-cf16-4905-9754-e33812262f96.tmp",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\1zwaze5a.zsj",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_58104_20261018_181025_578.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\35mg3yml.2iq",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\7ca75bfa-b051-4c5c-be2c-e1272f132e0f.tmp",
+      "family": "anonymous-and-package-temp-files"
+    }
+  ],
+  "databaseNameDelta": [],
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "recordedUtc": "2026-10-18T22:11:09.0772715+00:00"
+}

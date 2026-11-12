@@ -1,0 +1,36 @@
+{
+  "mafVersion": "1.22.0.0",
+  "state": {
+    "conversationId": "fixture-provider-conversation",
+    "stateBag": {
+      "_pendingApprovalRequests": [
+        {
+          "toolCall": {
+            "$type": "functionCall",
+            "name": "write_artifact",
+            "arguments": {
+              "path": "approved.txt"
+            },
+            "informationalOnly": false,
+            "callId": "fixture-call"
+          },
+          "requiresConfirmation": true,
+          "requestId": "ficc_fixture-call"
+        }
+      ],
+      "InMemoryChatHistoryProvider": {
+        "messages": []
+      }
+    }
+  },
+  "approvals": [
+    {
+      "requestId": "ficc_fixture-call",
+      "callId": "fixture-call",
+      "name": "write_artifact",
+      "arguments": {
+        "path": "approved.txt"
+      }
+    }
+  ]
+}

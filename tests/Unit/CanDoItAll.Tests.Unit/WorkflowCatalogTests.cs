@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -7,6 +9,194 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class WorkflowCatalogTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delete_refuses_empty_or_stale_original_and_removes_only_an_acknowledged_head(bool stale) {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id));
+        var original = await catalog.SaveDefinitionAsync(request);
+        var winner = await catalog.SaveDefinitionAsync(request with { Id = original.Id, ExpectedVersionId = original.VersionId, Name = "Peer winner" });
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() => catalog.DeleteDefinitionAsync(
+            new(original.Id, stale ? original.VersionId : default)));
+        Assert.Equal(JsonSerializer.Serialize(winner), JsonSerializer.Serialize((await catalog.GetDefinitionAsync(original.Id))!.Definition));
+        Assert.NotNull(await catalog.GetDefinitionAsync(original.Id, original.VersionId));
+        await catalog.DeleteDefinitionAsync(new(original.Id, winner.VersionId));
+        Assert.Null(await catalog.GetDefinitionAsync(original.Id));
+        Assert.Null(await catalog.GetDefinitionAsync(original.Id, original.VersionId));
+        Assert.Empty(await catalog.ListDefinitionsAsync());
+    }
+
+    [Theory]
+    [InlineData(ImportOriginal.Missing)]
+    [InlineData(ImportOriginal.Stale)]
+    [InlineData(ImportOriginal.Current)]
+    public async Task Import_preserves_the_winner_unless_its_original_version_is_supplied(ImportOriginal observation) {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id));
+        var original = await catalog.SaveDefinitionAsync(request);
+        var envelope = await catalog.ExportDefinitionAsync(original.Id);
+        Assert.NotNull(envelope);
+        var winner = await catalog.SaveDefinitionAsync(request with { Id = original.Id, ExpectedVersionId = original.VersionId, Name = "Peer winner" });
+        var import = new WorkflowDefinitionImportRequest(envelope, "Reviewed import", null, true) {
+            ExpectedVersionId = observation switch {
+                ImportOriginal.Missing => null,
+                ImportOriginal.Stale => original.VersionId,
+                ImportOriginal.Current => winner.VersionId,
+                _ => throw new ArgumentOutOfRangeException(nameof(observation))
+            }
+        };
+        if (observation != ImportOriginal.Current) {
+            await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() => catalog.ImportDefinitionAsync(import));
+            Assert.Equal(JsonSerializer.Serialize(winner), JsonSerializer.Serialize((await catalog.GetDefinitionAsync(original.Id))!.Definition));
+            return;
+        }
+        var accepted = await catalog.ImportDefinitionAsync(import);
+        Assert.Equal(original.Id, accepted.Id);
+        Assert.NotEqual(winner.VersionId, accepted.VersionId);
+        Assert.Equal("Reviewed import", accepted.Name);
+        Assert.Equal(JsonSerializer.Serialize(original.Graph), JsonSerializer.Serialize(accepted.Graph));
+        Assert.Equal(JsonSerializer.Serialize(accepted), JsonSerializer.Serialize((await catalog.GetDefinitionAsync(original.Id))!.Definition));
+    }
+
+    [Fact]
+    public async Task Import_cannot_use_an_original_version_for_a_new_identity() {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var original = await catalog.SaveDefinitionAsync(CreateSaveRequest(CreateDefinitionGraph(component.Id)));
+        var envelope = await catalog.ExportDefinitionAsync(original.Id);
+        Assert.NotNull(envelope);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => catalog.ImportDefinitionAsync(
+            new(envelope, null, null, false) { ExpectedVersionId = original.VersionId }));
+        Assert.Equal(original.VersionId, Assert.Single(await catalog.ListDefinitionsAsync()).VersionId);
+    }
+
+    [Fact]
+    public async Task A_deleted_original_cannot_delete_a_recreated_workflow_identity() {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id));
+        var original = await catalog.SaveDefinitionAsync(request);
+        await catalog.DeleteDefinitionAsync(new(original.Id, original.VersionId));
+        var recreated = await catalog.SaveDefinitionAsync(request with { Id = original.Id, Name = "Recreated head" });
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() => catalog.DeleteDefinitionAsync(new(original.Id, original.VersionId)));
+        Assert.Equal(JsonSerializer.Serialize(recreated), JsonSerializer.Serialize((await catalog.GetDefinitionAsync(original.Id))!.Definition));
+    }
+
+    public enum ImportOriginal { Missing, Stale, Current }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Existing_definition_save_and_status_require_the_original_version(bool statusOnly, bool peerCommitted) {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id), "Original definition");
+        var original = await catalog.SaveDefinitionAsync(request);
+        var winner = peerCommitted
+            ? await catalog.SaveDefinitionAsync(request with { Id = original.Id, ExpectedVersionId = original.VersionId, Name = "Peer winner" })
+            : original;
+
+        Task<WorkflowDefinition> Submit() => statusOnly
+            ? catalog.ChangeDefinitionStatusAsync(new(original.Id, null, WorkflowLifecycleStatus.Suspended))
+            : catalog.SaveDefinitionAsync(request with { Id = original.Id, ExpectedVersionId = null, Name = "Held replacement" });
+
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(Submit);
+        var current = await catalog.GetDefinitionAsync(original.Id);
+        Assert.NotNull(current);
+        Assert.Equal(JsonSerializer.Serialize(winner), JsonSerializer.Serialize(current.Definition));
+    }
+
+    [Fact]
+    public async Task Chosen_definition_id_is_create_only_without_an_original_version() {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var chosenId = WorkflowId.New();
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id), "Chosen original", chosenId);
+        var original = await catalog.SaveDefinitionAsync(request);
+
+        Assert.Equal(chosenId, original.Id);
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() =>
+            catalog.SaveDefinitionAsync(request with { Name = "Colliding creator" }));
+        Assert.Equal(original.VersionId, (await catalog.GetDefinitionAsync(chosenId))!.Definition.VersionId);
+    }
+
+    [Fact]
+    public async Task An_original_version_cannot_create_a_missing_definition() {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var missingId = WorkflowId.New();
+
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(CreateDefinitionGraph(component.Id), "Missing original", missingId, WorkflowVersionId.New())));
+        Assert.Null(await catalog.GetDefinitionAsync(missingId));
+        Assert.Empty(await catalog.ListDefinitionsAsync());
+    }
+
+    [Fact]
+    public async Task Concurrent_chosen_id_creators_append_exactly_one_version_after_validation() {
+        using var validator = new ConcurrentDefinitionValidator();
+        var store = new InMemoryWorkflowCatalogStore();
+        var catalog = new InMemoryWorkflowCatalogService(store, validator);
+        var reader = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        validator.Synchronize = true;
+        var chosenId = WorkflowId.New();
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id), id: chosenId);
+
+        async Task<(WorkflowDefinition? Saved, Exception? Error)> SubmitAsync(string name) {
+            try {
+                return (await catalog.SaveDefinitionAsync(request with { Name = name }), null);
+            } catch (Exception error) {
+                return (null, error);
+            }
+        }
+
+        var results = await Task.WhenAll(
+            Task.Run(() => SubmitAsync("First creator")),
+            Task.Run(() => SubmitAsync("Second creator")));
+        var winner = Assert.Single(results, result => result.Saved is not null).Saved!;
+        Assert.IsType<WorkflowDefinitionConcurrencyException>(Assert.Single(results, result => result.Error is not null).Error);
+        Assert.Equal(winner.VersionId, (await reader.GetDefinitionAsync(chosenId))!.Definition.VersionId);
+        var persisted = new List<WorkflowDefinitionDetail>();
+        foreach (var version in validator.Versions) {
+            var detail = await reader.GetDefinitionAsync(chosenId, version);
+            if (detail is not null) {
+                persisted.Add(detail);
+            }
+        }
+        Assert.Equal(winner.VersionId, Assert.Single(persisted).Definition.VersionId);
+    }
+
+    [Fact]
+    public async Task Deletion_during_validation_cannot_resurrect_the_held_replacement() {
+        using var validator = new HeldDefinitionValidator();
+        var catalog = new InMemoryWorkflowCatalogService(new InMemoryWorkflowCatalogStore(), validator);
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var request = CreateSaveRequest(CreateDefinitionGraph(component.Id));
+        var original = await catalog.SaveDefinitionAsync(request);
+        validator.Hold = true;
+        var pending = Task.Run(() => catalog.SaveDefinitionAsync(request with {
+            Id = original.Id,
+            ExpectedVersionId = original.VersionId,
+            Name = "Held replacement"
+        }));
+        try {
+            await validator.Entered.WaitAsync(TimeSpan.FromSeconds(15));
+            await catalog.DeleteDefinitionAsync(new(original.Id, original.VersionId));
+        } finally {
+            validator.Continue();
+        }
+
+        await Assert.ThrowsAsync<WorkflowDefinitionConcurrencyException>(() => pending);
+        Assert.Null(await catalog.GetDefinitionAsync(original.Id));
+        Assert.Empty(await catalog.ListDefinitionsAsync());
+    }
+
     [Theory]
     [InlineData(-1, 25)]
     [InlineData(0, 0)]
@@ -341,7 +531,11 @@ public sealed class WorkflowCatalogTests
             ProviderTransportKind.Responses,
             ProviderProfilePurpose.Chat,
             "gpt-5.4",
-            ["gpt-5.4-mini"]);
+            ["gpt-5.4-mini"]) with {
+            CredentialBinding = new(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid()),
+            ModelCatalog = [new("gpt-5.4", "Exact default / custom"), new("gpt-5.4-mini", "Exact second / custom")]
+        };
         var imageProvider = CreateProvider(
             "OpenAI image",
             ProviderKind.OpenAi,
@@ -359,6 +553,8 @@ public sealed class WorkflowCatalogTests
         Assert.Contains("gpt-5.4", option.ModelOptions);
         Assert.Contains("gpt-5.4-mini", option.ModelOptions);
         Assert.True(option.SupportsStructuredOutput);
+        Assert.True(option.IsSourceManaged);
+        Assert.Equal(chatProvider.ModelCatalog, option.ModelCatalog);
     }
 
     [Fact]
@@ -743,6 +939,46 @@ public sealed class WorkflowCatalogTests
             LastCheckedAtUtc: null,
             SuggestedModels: suggestedModels,
             Purpose: purpose);
+    }
+
+    private sealed class ConcurrentDefinitionValidator : IWorkflowDefinitionValidator, IDisposable {
+        private readonly Barrier barrier = new(2);
+        private readonly WorkflowDefinitionValidator inner = new();
+        public ConcurrentBag<WorkflowVersionId> Versions { get; } = new();
+        public bool Synchronize { get; set; }
+
+        public WorkflowValidationResult Validate(WorkflowDefinition definition, IReadOnlyList<LlmCallComponent> components) {
+            if (Synchronize) {
+                Versions.Add(definition.VersionId);
+                if (!barrier.SignalAndWait(TimeSpan.FromSeconds(15))) {
+                    throw new TimeoutException("Concurrent creators did not reach validation together.");
+                }
+            }
+            return inner.Validate(definition, components);
+        }
+
+        public void Dispose() => barrier.Dispose();
+    }
+
+    private sealed class HeldDefinitionValidator : IWorkflowDefinitionValidator, IDisposable {
+        private readonly TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly ManualResetEventSlim release = new(false);
+        private readonly WorkflowDefinitionValidator inner = new();
+        public bool Hold { get; set; }
+        public Task Entered => entered.Task;
+
+        public WorkflowValidationResult Validate(WorkflowDefinition definition, IReadOnlyList<LlmCallComponent> components) {
+            if (Hold) {
+                entered.TrySetResult();
+                if (!release.Wait(TimeSpan.FromSeconds(15))) {
+                    throw new TimeoutException("Held definition validation was not released.");
+                }
+            }
+            return inner.Validate(definition, components);
+        }
+
+        public void Continue() => release.Set();
+        public void Dispose() => release.Dispose();
     }
 
     private sealed class TestProviderProfileRegistry(IReadOnlyList<ProviderProfile> providers) :

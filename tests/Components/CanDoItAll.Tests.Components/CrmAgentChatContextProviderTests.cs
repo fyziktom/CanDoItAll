@@ -1,14 +1,38 @@
 using Bunit;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.CrmHr.Components;
+using CanDoItAll.Modules.CrmHr.Pages;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.CrmHr;
 
 public sealed class CrmAgentChatContextProviderTests
 {
+    [Fact]
+    public void Section_change_updates_return_location_without_replacing_selected_account() {
+        using var context = new BunitContext();
+        var registry = new AgentChatContextRegistry(TimeProvider.System);
+        context.Services.AddSingleton<IAgentChatContextRegistry>(registry);
+        context.Services.AddSingleton<IAgentChatExecutionNotificationHub>(new RecordingNotificationHub());
+        var account = CreateAccount();
+        var cut = context.Render<CrmAgentChatContextProvider>(parameters => parameters
+            .Add(component => component.Account, account)
+            .Add(component => component.Section, CrmSection.Overview));
+        var originalScope = registry.Capture()!.Scope.Id;
+
+        cut.Render(parameters => parameters.Add(component => component.Section, CrmSection.Financials));
+
+        var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+        var location = Assert.IsType<AgentChatReturnLocation>(AgentChatReturnLocation.FromContext(snapshot));
+        var restored = CrmUrlCodec.Instance.Read(location.Route);
+        Assert.Equal(originalScope, snapshot.Scope.Id);
+        Assert.Equal(account.AccountId, restored.AccountId);
+        Assert.Equal(CrmSection.Financials, restored.Section);
+    }
+
     [Fact]
     public void Provider_replaces_stale_module_context_and_transitions_between_workspace_and_selection()
     {

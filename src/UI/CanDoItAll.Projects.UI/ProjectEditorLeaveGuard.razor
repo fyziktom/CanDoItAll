@@ -1,0 +1,98 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+
+@if (IsOpen && ObserveNavigation) {
+    <NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="@(Draft.HasLocalChanges || HasNativeOperation)" />
+}
+<Dialog IsOpen="@(decision is not null)" Title="Leave this Project editor?" Size="ModalSize.Compact"
+        CloseOnBackdrop="false" OnClose="@(() => Complete(false))" TestId="project-dirty-close">
+    <ChildContent>
+        <TextBlock Value="Continue editing or discard this local draft and leave. Unsaved input and comparison choices will be lost." />
+        @if (HasNativeOperation) {
+            <TextBlock Value="The original operation remains in retained recovery. Leaving does not cancel, retry or resolve it." />
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="project-dirty-continue" />
+            <Button Text="Discard local draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="project-dirty-discard" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private TaskCompletionSource<bool>? decision;
+    private ProjectEditorDraft? opening;
+    private Approval? approved;
+    private bool disposed;
+    [Parameter, EditorRequired] public ProjectEditorDraft Draft { get; set; } = default!;
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool ObserveNavigation { get; set; }
+    [Parameter] public Func<string, bool>? IsSameEditorRoute { get; set; }
+    private bool HasNativeOperation => Draft.Mutation is ProjectEditorMutationState.Saving or ProjectEditorMutationState.Seeding or
+        ProjectEditorMutationState.SaveOutcomeUnknown or ProjectEditorMutationState.SaveReconciliationFailed or
+        ProjectEditorMutationState.SeedOutcomeUnknown or ProjectEditorMutationState.Deleting or
+        ProjectEditorMutationState.DeleteOutcomeUnknown or ProjectEditorMutationState.PendingRecovery;
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(opening, Draft) || !IsOpen) {
+            opening = Draft;
+            approved = null;
+            Complete(false);
+        }
+        if (ObserveNavigation && IsSameEditorRoute is null) {
+            throw new InvalidOperationException("The native Project host must supply its current editor route policy.");
+        }
+    }
+
+    public async Task<bool> RequestLeaveAsync() {
+        if (disposed || !IsOpen || decision is not null) {
+            return false;
+        }
+        if (approved?.Matches(Draft) == true || !Draft.HasLocalChanges && !HasNativeOperation) {
+            return true;
+        }
+        var captured = new Approval(Draft, Draft.Capture(), Draft.Original, Draft.Definition.Review,
+            Draft.Definition.Review?.InputRevision ?? 0, Draft.Mutation);
+        var request = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        decision = request;
+        StateHasChanged();
+        if (!await request.Task || disposed || !IsOpen || !captured.Matches(Draft)) {
+            return false;
+        }
+        approved = captured;
+        return true;
+    }
+
+    private void Complete(bool leave) {
+        var current = decision;
+        decision = null;
+        current?.TrySetResult(leave);
+    }
+
+    private async Task BeforeNavigationAsync(LocationChangingContext context) {
+        if (IsSameEditorRoute!(context.TargetLocation)) {
+            return;
+        }
+        var leave = await RequestLeaveAsync();
+        approved = null;
+        if (!leave || context.CancellationToken.IsCancellationRequested) {
+            context.PreventNavigation();
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        Complete(false);
+    }
+
+    private sealed record Approval(ProjectEditorDraft Draft, ProjectEditorSubmission Input, ProjectDefinitionSnapshot? Original,
+        ProjectDefinitionReview? Review, long ReviewRevision, ProjectEditorMutationState Mutation) {
+        public bool Matches(ProjectEditorDraft current) => ReferenceEquals(current, Draft) && current.EditRevision == Input.EditRevision &&
+            ReferenceEquals(current.Original, Original) && current.Mutation == Mutation &&
+            ReferenceEquals(current.Definition.Review, Review) && (Review?.InputRevision ?? 0) == ReviewRevision &&
+            ProjectEditorValues.Same(current.Model, Input);
+    }
+}

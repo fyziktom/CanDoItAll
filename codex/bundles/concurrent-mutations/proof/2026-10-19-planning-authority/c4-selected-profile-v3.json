@@ -1,0 +1,4300 @@
+{
+  "candidate": "c4-selected-profile-v3",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "collect-sampled-profile",
+      "Arguments": [
+        "collect",
+        "--process-id",
+        "44228",
+        "--profile",
+        "dotnet-common,dotnet-sampled-thread-time",
+        "--duration",
+        "00:00:00:14",
+        "--output",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3/selected-cost.nettrace",
+        "--format",
+        "Speedscope"
+      ],
+      "StartedUtc": "2026-10-19T02:58:23.9458282+00:00",
+      "State": "Completed",
+      "RunnerPid": 32720,
+      "ChildPid": 44572,
+      "ChildStartedUtc": "2026-10-19T02:58:23.9647212Z",
+      "ExitCode": 0,
+      "Seconds": 16.7043112,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1008,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-selected-publication-cost",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName=CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+        "--logger",
+        "trx;LogFileName=selected-publication-cost.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-selected-profile-v3"
+      ],
+      "StartedUtc": "2026-10-19T02:58:13.7859724+00:00",
+      "State": "Completed",
+      "RunnerPid": 57964,
+      "ChildPid": 38800,
+      "ChildStartedUtc": "2026-10-19T02:58:13.8211045Z",
+      "ExitCode": 1,
+      "Seconds": 27.4597208,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2056,
+      "StderrRetainedBytes": 218,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-chat-browser-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T02:57:54.7059033+00:00",
+      "State": "Completed",
+      "RunnerPid": 50576,
+      "ChildPid": 22076,
+      "ChildStartedUtc": "2026-10-19T02:57:54.7232096Z",
+      "ExitCode": 0,
+      "Seconds": 46.7414196,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "3e743f85-c270-44b5-80ab-975d90a3bb10",
+      "testId": "35af77f5-55bc-712e-4e0b-77846d6d92b8",
+      "testName": "CanDoItAll.Tests.Integration.AgentPlanningPublicationCostTests.Small_selected_authority_keeps_unrelated_writers_responsive_during_actual_SQL_wait",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:25.3939366",
+      "startTime": "2026-10-18T22:58:15.6797890-04:00",
+      "endTime": "2026-10-18T22:58:41.0872627-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3e743f85-c270-44b5-80ab-975d90a3bb10",
+      "trx": "selected-publication-cost.trx",
+      "error": "\n          \nThe publication guard failed the declared one-second unrelated-writer reference; complete timing and cleanup evidence was retained.\n\n          \n   at CanDoItAll.Tests.Integration.AgentPlanningPublicationCostFixture.RunAsync(AgentPlanningPublicationGuard guard) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\AgentPlanningPublicationCostFixture.cs:line 94\r\n--- End of stack trace from previous location ---\n\n        "
+    }
+  ],
+  "evidence": {
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9162,
+      "runtimeFiles": 6436,
+      "sourceSha256": "9EA0600AEFD6745A73DF8FD8B6410CDA23FA846741B5A3FFF479CEC60E202B16",
+      "runtimeSha256": "FE5D41D9C46F29DC93CE3071E275C3413BAE6B281AB724CE60843CD21087405B"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [],
+      "outcome": "Bounded diagnostic profile stopped before test-host exit. Instrumented timing failure retained without capacity claim.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\2h15han5.exp",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_38800_20261018_225814_004.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\09569522-5ce4-473b-bf2d-e90801a9bb61.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\vln1rtd4.jva",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "recordedUtc": "2026-10-19T02:59:00.8818167+00:00",
+      "remainingObservedProcesses": []
+    },
+    "production-bridge.json": {
+      "previousCandidate": "c4-case-probe-validation",
+      "sourceAndRuntimeBuildInputsUnchanged": true,
+      "changedProofOnly": [],
+      "scope": "Diagnostic replay; build, discovery and static results belong to preceding candidate; not rerun"
+    },
+    "profile-host-identity.json": {
+      "testIntent": {
+        "Owner": "AgentPlanningPublicationCostTests",
+        "Guard": "SelectedAgent",
+        "RowRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6",
+        "ProcessId": 44228,
+        "RecordedAtUtc": "2026-10-18T22:58:15.6868409-04:00",
+        "CooperativeRowSeconds": 600,
+        "Profile": "small-file/one-task/one-forced-SQL-wait",
+        "MaximumPostgresLeases": 1,
+        "MaximumFileWorkspaces": 2
+      },
+      "processes": [
+        {
+          "ProcessId": 44228,
+          "ParentProcessId": 57812,
+          "Name": "testhost.exe",
+          "CreationDate": "2026-10-18T22:58:14.514165-04:00"
+        },
+        {
+          "ProcessId": 57812,
+          "ParentProcessId": 38800,
+          "Name": "dotnet.exe",
+          "CreationDate": "2026-10-18T22:58:14.345335-04:00"
+        },
+        {
+          "ProcessId": 38800,
+          "ParentProcessId": 57964,
+          "Name": "dotnet.exe",
+          "CreationDate": "2026-10-18T22:58:13.821104-04:00"
+        },
+        {
+          "ProcessId": 57964,
+          "ParentProcessId": 27808,
+          "Name": "pwsh.exe",
+          "CreationDate": "2026-10-18T22:58:12.952756-04:00"
+        }
+      ],
+      "recordedUtc": "2026-10-19T02:58:17.2442740+00:00",
+      "kind": "Sampled thread time, not measured CPU or timing qualification"
+    },
+    "trace-session.json": {
+      "SessionStartUtc": "2026-10-19T02:58:24.0580000Z",
+      "SessionEndUtc": "2026-10-19T02:58:38.3587273Z",
+      "EventsLost": 0
+    },
+    "profile-review.json": {
+      "profile": "dotnet-common,dotnet-sampled-thread-time",
+      "toolVersion": "10.0.750501",
+      "session": {
+        "SessionStartUtc": "2026-10-19T02:58:24.0580000Z",
+        "SessionEndUtc": "2026-10-19T02:58:38.3587273Z",
+        "EventsLost": 0
+      },
+      "windowStartMilliseconds": 11022.814,
+      "windowEndMilliseconds": 12578.0339,
+      "windowMeaning": "first cohort activity through unrelated writer completion; includes concurrent threads, nested samples are not additive; no CPU/disk attribution",
+      "methods": [
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.PhysicalFileSystemPathPolicy.EnsureNoLinkTraversal(class System.String,class System.String,bool)",
+          "inclusiveSampledThreadMilliseconds": 2298.22,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.PhysicalFileSystemPathPolicy.TryGetAttributes(class System.String,value class System.IO.FileAttributes&)",
+          "inclusiveSampledThreadMilliseconds": 2288.82,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter+<WriteStreamAsync>d__18.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1890.46,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore+<WriteEncodedJsonAtomicallyAsync>d__36.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1517.22,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore+<ReadJsonAsync>d__22`1[System.__Canon].MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1435.72,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore+<ReadJsonAsync>d__18`1[System.__Canon].MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1430.05,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore+<WriteJsonAtomicallyAsync>d__29`1[System.__Canon].MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1387.59,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore.WriteEncodedJsonAtomicallyAsync(class System.String,value class System.ReadOnlyMemory`1<unsigned int8>,value class System.Threading.CancellationToken)",
+          "inclusiveSampledThreadMilliseconds": 1346.81,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter.WriteBytesAsync(class System.String,class System.String,value class System.ReadOnlyMemory`1<unsigned int8>,class CanDoItAll.Infrastructure.DurableFileWriteOptions,value class System.Threading.CancellationToken,class System.Func`2<value class System.Threading.CancellationToken,value class System.Threading.Tasks.ValueTask>)",
+          "inclusiveSampledThreadMilliseconds": 1346.81,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter.WriteStreamAsync(class System.String,class System.String,class System.Func`3<class System.IO.Stream,value class System.Threading.CancellationToken,class System.Threading.Tasks.Task>,class CanDoItAll.Infrastructure.DurableFileWriteOptions,value class System.Threading.CancellationToken,class System.Func`2<value class System.Threading.CancellationToken,value class System.Threading.Tasks.ValueTask>)",
+          "inclusiveSampledThreadMilliseconds": 1346.81,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter+<AcquireCoordinationCoreAsync>d__23.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 1293.3,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore.WriteJsonAtomicallyAsync(class System.String,!!0,value class System.Threading.CancellationToken)",
+          "inclusiveSampledThreadMilliseconds": 1201.34,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.PhysicalFileSystemPathPolicy.EnsureSafePath(class System.String,bool)",
+          "inclusiveSampledThreadMilliseconds": 1071.95,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter.AcquireCoordinationCoreAsync(class System.String,class System.String,value class System.TimeSpan,bool,bool,value class System.Threading.CancellationToken)",
+          "inclusiveSampledThreadMilliseconds": 1043.4,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter.EnsureDirectoryTree(class System.String,class System.String,bool)",
+          "inclusiveSampledThreadMilliseconds": 1004.58,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.PhysicalFileSystemPathPolicy.RevalidateMutationTarget(class System.String)",
+          "inclusiveSampledThreadMilliseconds": 716.74,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceExecutionSliceStore+<PersistExistingRunPayloadAsync>d__38`1[System.__Canon].MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 676.84,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.PhysicalFileSystemPathPolicyFactory.Create(class System.String)",
+          "inclusiveSampledThreadMilliseconds": 561.83,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceMutationWitness+<ObserveAsync>d__14.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 530.15,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceStore+<CommitExistingRunDetailJournalAsync>d__93.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 509.38,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceMutationWitness+<RequireUnchangedAsync>d__11.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 506.77,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspacePublicationScope+<AcquireAsync>d__14.MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 501.25,
+          "exclusiveSampledThreadMilliseconds": 0.0
+        },
+        {
+          "method": "CanDoItAll.Infrastructure!CanDoItAll.Infrastructure.DurableFileWriter.AcquireCoordinationAsync(class System.String,class System.String,value class System.TimeSpan,bool,value class System.Threading.CancellationToken)",
+          "inclusiveSampledThreadMilliseconds": 426.82,
+          "exclusiveSampledThreadMilliseconds": 0
+        },
+        {
+          "method": "CanDoItAll.AgentFramework.Persistence!CanDoItAll.AgentFramework.Persistence.FileSandboxWorkspaceJsonStore+<WriteJsonIfChangedAsync>d__28`1[System.__Canon].MoveNext()",
+          "inclusiveSampledThreadMilliseconds": 404.62,
+          "exclusiveSampledThreadMilliseconds": 0
+        }
+      ],
+      "traceSha256": "59C0300E91A32FBA65CF659C8514654829734E1CBE5D1B5B941125B912859326",
+      "converterWarning": false,
+      "reportReadSucceeded": true
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\001-allocation-intent.json",
+        "data": {
+          "Phase": "allocation-intent",
+          "ObservedAtUtc": "2026-10-19T02:58:15.7144819+00:00",
+          "Evidence": {
+            "DatabasePrefix": "cditall_514514d8402240c5b6a8_",
+            "MaximumDatabases": 1,
+            "EnvironmentParent": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6",
+            "FileWorkspacePrefix": "tool-admission"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\002-environment.json",
+        "data": {
+          "Phase": "environment",
+          "ObservedAtUtc": "2026-10-19T02:58:15.7205551+00:00",
+          "Evidence": {
+            "RootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\coarse-sql\\0d615e07e6c84ec08e36a846bb357da4"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\003-database.json",
+        "data": {
+          "Phase": "database",
+          "ObservedAtUtc": "2026-10-19T02:58:15.9982918+00:00",
+          "Evidence": {
+            "DatabaseName": "cditall_514514d8402240c5b6a8_2d4609a525af4e9487c7a189f64923e0",
+            "ProfileRootPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\coarse-sql\\0d615e07e6c84ec08e36a846bb357da4\\profiles\\514514d8402240c5b6a8"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\004-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:58:30.9403588+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\tool-admission\\2b237e0d5f694c91813367edb3d5b3b5\\profiles\\primary\\workspace",
+            "Scope": "4ec91f8a0f616f141db42023232bf450",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "C674BE42331388CB0E827F54854B53F7FF3D30CE258AE7481BC845D807D7F7F1",
+            "CatalogSha256": "9B7B17B3BCFECBCA575FFE225D5C5199698860CE9D28F9E59ED97F55546DAAB1"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\005-workspace.json",
+        "data": {
+          "Phase": "workspace",
+          "ObservedAtUtc": "2026-10-19T02:58:34.8947176+00:00",
+          "Evidence": {
+            "WorkspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\tool-admission\\c95a5817a0c44a07ae073ef96f554381\\profiles\\primary\\workspace",
+            "Scope": "4ec91f8a0f616f141db42023232bf450",
+            "RunBytes": 3669,
+            "CatalogBytes": 816071,
+            "RunSha256": "01E8821560F2904962DE5E29793CDEE4A86D9CC8AC61BA5230C0216CC7A5F81E",
+            "CatalogSha256": "59A0201C56E45DDB74CEC23769C5C3A8503A389FADC98CB9E33FC6C1BE49843E"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\006-cohort.json",
+        "data": {
+          "Phase": "cohort",
+          "ObservedAtUtc": "2026-10-19T02:58:40.4290634+00:00",
+          "Evidence": {
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 135044,
+              "PublisherPid": 135117,
+              "ActualBlockingObservedAtMilliseconds": 409.009,
+              "HolderReleasedAtMilliseconds": 5402.4204,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2684982570056,
+                "Acquired": 2684984917220,
+                "Released": 2685036157048,
+                "AcquireMilliseconds": 234.7164,
+                "HeldMilliseconds": 5123.9828
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 239856120,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 1.5571,
+                "EndedAtMilliseconds": 5398.8465,
+                "ElapsedMilliseconds": 5397.2894,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 411.2417,
+                "EndedAtMilliseconds": 900.2891,
+                "ElapsedMilliseconds": 489.0474,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 432.0926,
+                "EndedAtMilliseconds": 1540.3808,
+                "ElapsedMilliseconds": 1108.2882,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 449.2592,
+                "EndedAtMilliseconds": 1085.7939,
+                "ElapsedMilliseconds": 636.5346999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 469.2234,
+                "EndedAtMilliseconds": 978.2597,
+                "ElapsedMilliseconds": 509.0362999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 493.1188,
+                "EndedAtMilliseconds": 1555.2199,
+                "ElapsedMilliseconds": 1062.1011,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 509.2779,
+                "EndedAtMilliseconds": 1222.7767,
+                "ElapsedMilliseconds": 713.4987999999998,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              }
+            ],
+            "Trace": {
+              "Samples": [
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.0808147Z",
+                  "Milliseconds": 8.3332
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.0957405Z",
+                  "Milliseconds": 8.1106
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.0957892Z",
+                  "Milliseconds": 1.2102
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.0970688Z",
+                  "Milliseconds": 6.7435
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1805065Z",
+                  "Milliseconds": 3.4779
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1805179Z",
+                  "Milliseconds": 1.6667
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1821952Z",
+                  "Milliseconds": 1.7022
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1841089Z",
+                  "Milliseconds": 3.6808
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1841116Z",
+                  "Milliseconds": 1.8475
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1859668Z",
+                  "Milliseconds": 1.7347
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.188308Z",
+                  "Milliseconds": 2.4753
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1883168Z",
+                  "Milliseconds": 2.1809
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1906455Z",
+                  "Milliseconds": 0.1196
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1915789Z",
+                  "Milliseconds": 1.67
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1915869Z",
+                  "Milliseconds": 1.5154
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.1932078Z",
+                  "Milliseconds": 0.028
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2176101Z",
+                  "Milliseconds": 0.837
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2189891Z",
+                  "Milliseconds": 0.6082
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2277593Z",
+                  "Milliseconds": 0.736
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.229007Z",
+                  "Milliseconds": 0.7546
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2298013Z",
+                  "Milliseconds": 32.7533
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2625698Z",
+                  "Milliseconds": 9.9211
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2625758Z",
+                  "Milliseconds": 9.9001
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2823143Z",
+                  "Milliseconds": 0.5883
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2834324Z",
+                  "Milliseconds": 0.6487
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2841388Z",
+                  "Milliseconds": 1.7499
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2841444Z",
+                  "Milliseconds": 1.5779
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2858583Z",
+                  "Milliseconds": 0.0072
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2859216Z",
+                  "Milliseconds": 1.536
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.285924Z",
+                  "Milliseconds": 1.4073
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2874345Z",
+                  "Milliseconds": 0.0043
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2876011Z",
+                  "Milliseconds": 6.2261
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2876039Z",
+                  "Milliseconds": 1.3435
+                },
+                {
+                  "Operation": "publisher",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.2889631Z",
+                  "Milliseconds": 4.8097
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.438058Z",
+                  "Milliseconds": 9.9095
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.run.load",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4548049Z",
+                  "Milliseconds": 3.9728
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4548187Z",
+                  "Milliseconds": 1.6357
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4548223Z",
+                  "Milliseconds": 1.3368
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.456303Z",
+                  "Milliseconds": 0.133
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4564755Z",
+                  "Milliseconds": 1.7069
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4564785Z",
+                  "Milliseconds": 1.5558
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4581447Z",
+                  "Milliseconds": 0.0249
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.run.save",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4590377Z",
+                  "Milliseconds": 465.0214
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4590529Z",
+                  "Milliseconds": 0.0008
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "tool.journal.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4609465Z",
+                  "Milliseconds": 482.8338
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.461413Z",
+                  "Milliseconds": 466.5689
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4824239Z",
+                  "Milliseconds": 39.6687
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4861535Z",
+                  "Milliseconds": 0.6897
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4877093Z",
+                  "Milliseconds": 0.6696
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.4964379Z",
+                  "Milliseconds": 11.8126
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5025516Z",
+                  "Milliseconds": 0.8671
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5040812Z",
+                  "Milliseconds": 0.6551
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5048223Z",
+                  "Milliseconds": 28.8623
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.run.load",
+                  "StartedAtUtc": "2026-10-19T02:58:35.516103Z",
+                  "Milliseconds": 5.253
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.516114Z",
+                  "Milliseconds": 1.85
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5161173Z",
+                  "Milliseconds": 1.5732
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5178279Z",
+                  "Milliseconds": 0.1202
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5179812Z",
+                  "Milliseconds": 2.6245
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5179834Z",
+                  "Milliseconds": 2.3856
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "tool.journal.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.520121Z",
+                  "Milliseconds": 273.7063
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5201378Z",
+                  "Milliseconds": 258.3131
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5205526Z",
+                  "Milliseconds": 0.0301
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.run.save",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5213942Z",
+                  "Milliseconds": 481.4756
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5214076Z",
+                  "Milliseconds": 0.0008
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5324937Z",
+                  "Milliseconds": 1.8417
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5325094Z",
+                  "Milliseconds": 1.6559
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5336961Z",
+                  "Milliseconds": 199.9637
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5337013Z",
+                  "Milliseconds": 199.9492
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5341869Z",
+                  "Milliseconds": 0.1332
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5344737Z",
+                  "Milliseconds": 8.8239
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.534484Z",
+                  "Milliseconds": 1.9259
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5364327Z",
+                  "Milliseconds": 6.8306
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5374287Z",
+                  "Milliseconds": 40.1355
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5585683Z",
+                  "Milliseconds": 1.0605
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5602388Z",
+                  "Milliseconds": 0.4937
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5709199Z",
+                  "Milliseconds": 0.6689
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5724493Z",
+                  "Milliseconds": 0.7591
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5732469Z",
+                  "Milliseconds": 31.8714
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5873314Z",
+                  "Milliseconds": 1.4932
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5873401Z",
+                  "Milliseconds": 1.3501
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5887115Z",
+                  "Milliseconds": 0.0995
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5888957Z",
+                  "Milliseconds": 10.4783
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5888988Z",
+                  "Milliseconds": 2.2947
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.5912105Z",
+                  "Milliseconds": 8.1256
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6051325Z",
+                  "Milliseconds": 200.9096
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6051384Z",
+                  "Milliseconds": 200.8932
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6833244Z",
+                  "Milliseconds": 4.02
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6833301Z",
+                  "Milliseconds": 1.8776
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.685222Z",
+                  "Milliseconds": 2.1164
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6873828Z",
+                  "Milliseconds": 3.5139
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6873855Z",
+                  "Milliseconds": 1.7363
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.6891298Z",
+                  "Milliseconds": 1.7611
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7130316Z",
+                  "Milliseconds": 3.4579
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7252671Z",
+                  "Milliseconds": 2.8511
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7264586Z",
+                  "Milliseconds": 3.4887
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7264625Z",
+                  "Milliseconds": 1.4351
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7279062Z",
+                  "Milliseconds": 2.0339
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7281757Z",
+                  "Milliseconds": 13.1728
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7299858Z",
+                  "Milliseconds": 3.7155
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7299881Z",
+                  "Milliseconds": 1.9671
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7320602Z",
+                  "Milliseconds": 1.636
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7413629Z",
+                  "Milliseconds": 205.2178
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7413684Z",
+                  "Milliseconds": 205.1967
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7465705Z",
+                  "Milliseconds": 0.7344
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7480775Z",
+                  "Milliseconds": 0.5763
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.run.prepare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7486825Z",
+                  "Milliseconds": 7.6264
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.748896Z",
+                  "Milliseconds": 0.0024
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7489207Z",
+                  "Milliseconds": 3.0795
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7489251Z",
+                  "Milliseconds": 2.8663
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7518159Z",
+                  "Milliseconds": 0.1627
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.753312Z",
+                  "Milliseconds": 1.4685
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7549164Z",
+                  "Milliseconds": 1.3539
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7549237Z",
+                  "Milliseconds": 1.2034
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7561432Z",
+                  "Milliseconds": 0.1177
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7563231Z",
+                  "Milliseconds": 1.4199
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7563279Z",
+                  "Milliseconds": 1.1164
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7574628Z",
+                  "Milliseconds": 0.2593
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7578162Z",
+                  "Milliseconds": 1.5885
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7578194Z",
+                  "Milliseconds": 1.4593
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7592958Z",
+                  "Milliseconds": 0.0903
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594386Z",
+                  "Milliseconds": 0.0076
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594471Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594482Z",
+                  "Milliseconds": 0.0001
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594513Z",
+                  "Milliseconds": 0.013
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594518Z",
+                  "Milliseconds": 0.0104
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594627Z",
+                  "Milliseconds": 0.0012
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594939Z",
+                  "Milliseconds": 0.0282
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7594946Z",
+                  "Milliseconds": 0.0204
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7595158Z",
+                  "Milliseconds": 0.0059
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7595293Z",
+                  "Milliseconds": 0.0033
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7595298Z",
+                  "Milliseconds": 0.0014
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7595317Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7596385Z",
+                  "Milliseconds": 0.1539
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.759797Z",
+                  "Milliseconds": 31.9162
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7604794Z",
+                  "Milliseconds": 3.7993
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7731042Z",
+                  "Milliseconds": 3.3149
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7764592Z",
+                  "Milliseconds": 18.5817
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7889761Z",
+                  "Milliseconds": 2.4643
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7889867Z",
+                  "Milliseconds": 1.9234
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7910384Z",
+                  "Milliseconds": 0.3815
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7914593Z",
+                  "Milliseconds": 1.9125
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791463Z",
+                  "Milliseconds": 1.7829
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.run.commit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7917284Z",
+                  "Milliseconds": 132.2463
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7917674Z",
+                  "Milliseconds": 0.0083
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791777Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791778Z",
+                  "Milliseconds": 0.0003
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7917814Z",
+                  "Milliseconds": 0.0159
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791782Z",
+                  "Milliseconds": 0.0125
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7917952Z",
+                  "Milliseconds": 0.0018
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7918344Z",
+                  "Milliseconds": 0.0351
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791835Z",
+                  "Milliseconds": 0.0268
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7918625Z",
+                  "Milliseconds": 0.0066
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7918803Z",
+                  "Milliseconds": 0.0057
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7918808Z",
+                  "Milliseconds": 0.0039
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.791885Z",
+                  "Milliseconds": 0.0008
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7918995Z",
+                  "Milliseconds": 1.9269
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7919004Z",
+                  "Milliseconds": 1.8131
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7933386Z",
+                  "Milliseconds": 0.0209
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7937302Z",
+                  "Milliseconds": 0.0806
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7938355Z",
+                  "Milliseconds": 0.0105
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7938378Z",
+                  "Milliseconds": 0.0061
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7938448Z",
+                  "Milliseconds": 0.0008
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7938616Z",
+                  "Milliseconds": 2.5852
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7938635Z",
+                  "Milliseconds": 2.4669
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "tool.journal.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7940636Z",
+                  "Milliseconds": 0.1052
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7950481Z",
+                  "Milliseconds": 312.0483
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7950627Z",
+                  "Milliseconds": 312.016
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7959885Z",
+                  "Milliseconds": 227.4439
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7964304Z",
+                  "Milliseconds": 0.0028
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.79645Z",
+                  "Milliseconds": 0.0005
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7964512Z",
+                  "Milliseconds": 0.0154
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7964519Z",
+                  "Milliseconds": 0.0121
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7964646Z",
+                  "Milliseconds": 0.0016
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7964686Z",
+                  "Milliseconds": 0.0012
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.7982122Z",
+                  "Milliseconds": 2.1478
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8013698Z",
+                  "Milliseconds": 1.7661
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.run.snapshot.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8031434Z",
+                  "Milliseconds": 0.1252
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8032046Z",
+                  "Milliseconds": 3.0013
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8032081Z",
+                  "Milliseconds": 2.8344
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8032991Z",
+                  "Milliseconds": 0.0027
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.803306Z",
+                  "Milliseconds": 0.0806
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8033904Z",
+                  "Milliseconds": 74.412
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8060611Z",
+                  "Milliseconds": 0.1219
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8061097Z",
+                  "Milliseconds": 2.6045
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8061124Z",
+                  "Milliseconds": 2.3963
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062144Z",
+                  "Milliseconds": 0.0236
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062177Z",
+                  "Milliseconds": 0.0125
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062325Z",
+                  "Milliseconds": 0.0038
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062397Z",
+                  "Milliseconds": 0.0126
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062409Z",
+                  "Milliseconds": 0.003
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062457Z",
+                  "Milliseconds": 0.0031
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062552Z",
+                  "Milliseconds": 0.0057
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8062634Z",
+                  "Milliseconds": 58.6868
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8085383Z",
+                  "Milliseconds": 0.1625
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8086154Z",
+                  "Milliseconds": 0.0117
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8086307Z",
+                  "Milliseconds": 55.6843
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087189Z",
+                  "Milliseconds": 0.0368
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087241Z",
+                  "Milliseconds": 0.0247
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087497Z",
+                  "Milliseconds": 0.0054
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087564Z",
+                  "Milliseconds": 0.0099
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087568Z",
+                  "Milliseconds": 0.0046
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087618Z",
+                  "Milliseconds": 0.0043
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8087676Z",
+                  "Milliseconds": 0.006
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8089716Z",
+                  "Milliseconds": 67.0861
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8184403Z",
+                  "Milliseconds": 0.8285
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8201852Z",
+                  "Milliseconds": 0.987
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.run.prepare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8212073Z",
+                  "Milliseconds": 8.5566
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8212999Z",
+                  "Milliseconds": 0.0017
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8213205Z",
+                  "Milliseconds": 2.4802
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8213227Z",
+                  "Milliseconds": 2.3441
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8236926Z",
+                  "Milliseconds": 0.0932
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8255718Z",
+                  "Milliseconds": 1.6217
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8275935Z",
+                  "Milliseconds": 2.1321
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.827606Z",
+                  "Milliseconds": 1.971
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8296023Z",
+                  "Milliseconds": 0.1116
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8297825Z",
+                  "Milliseconds": 1.7878
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8297854Z",
+                  "Milliseconds": 1.58
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8313855Z",
+                  "Milliseconds": 0.1724
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.831653Z",
+                  "Milliseconds": 1.992
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.831656Z",
+                  "Milliseconds": 1.8688
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8335532Z",
+                  "Milliseconds": 0.0803
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337076Z",
+                  "Milliseconds": 0.0083
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337177Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337188Z",
+                  "Milliseconds": 0.0003
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337226Z",
+                  "Milliseconds": 0.0319
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337233Z",
+                  "Milliseconds": 0.0188
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337493Z",
+                  "Milliseconds": 0.0046
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337898Z",
+                  "Milliseconds": 0.028
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8337908Z",
+                  "Milliseconds": 0.0214
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.833813Z",
+                  "Milliseconds": 0.0045
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8338297Z",
+                  "Milliseconds": 0.0043
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8338302Z",
+                  "Milliseconds": 0.0024
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.833833Z",
+                  "Milliseconds": 0.0007
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8340118Z",
+                  "Milliseconds": 0.1619
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8341789Z",
+                  "Milliseconds": 47.6109
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8488668Z",
+                  "Milliseconds": 0.0894
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8488743Z",
+                  "Milliseconds": 0.0588
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8489406Z",
+                  "Milliseconds": 0.0146
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8489802Z",
+                  "Milliseconds": 3.8637
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8489816Z",
+                  "Milliseconds": 3.645
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8526546Z",
+                  "Milliseconds": 0.1722
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.85285Z",
+                  "Milliseconds": 0.0638
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8528531Z",
+                  "Milliseconds": 0.0442
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8528985Z",
+                  "Milliseconds": 0.0143
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8529146Z",
+                  "Milliseconds": 0.0269
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.852915Z",
+                  "Milliseconds": 0.0128
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8529287Z",
+                  "Milliseconds": 0.0126
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8529564Z",
+                  "Milliseconds": 0.0158
+                },
+                {
+                  "Operation": "same-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8529733Z",
+                  "Milliseconds": 49.3278
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.run.commit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818078Z",
+                  "Milliseconds": 120.9664
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818481Z",
+                  "Milliseconds": 0.0066
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818561Z",
+                  "Milliseconds": 0.0018
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818583Z",
+                  "Milliseconds": 0.0003
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818619Z",
+                  "Milliseconds": 0.0179
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818625Z",
+                  "Milliseconds": 0.0148
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8818779Z",
+                  "Milliseconds": 0.0014
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819142Z",
+                  "Milliseconds": 0.032
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819149Z",
+                  "Milliseconds": 0.0228
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819385Z",
+                  "Milliseconds": 0.0073
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.881955Z",
+                  "Milliseconds": 0.0051
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819556Z",
+                  "Milliseconds": 0.0031
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819592Z",
+                  "Milliseconds": 0.0007
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819787Z",
+                  "Milliseconds": 1.8054
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8819798Z",
+                  "Milliseconds": 1.5861
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8835898Z",
+                  "Milliseconds": 0.1568
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8837935Z",
+                  "Milliseconds": 0.0195
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8837996Z",
+                  "Milliseconds": 0.0112
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8838115Z",
+                  "Milliseconds": 0.0009
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8838326Z",
+                  "Milliseconds": 2.0026
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8838341Z",
+                  "Milliseconds": 1.732
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8857812Z",
+                  "Milliseconds": 0.0041
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8858403Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8858416Z",
+                  "Milliseconds": 0.0185
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8858423Z",
+                  "Milliseconds": 0.0151
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8858579Z",
+                  "Milliseconds": 0.0016
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8858619Z",
+                  "Milliseconds": 0.0013
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8875684Z",
+                  "Milliseconds": 2.0018
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8903344Z",
+                  "Milliseconds": 1.6421
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.run.snapshot.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8919864Z",
+                  "Milliseconds": 0.0939
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8920489Z",
+                  "Milliseconds": 1.7977
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8920519Z",
+                  "Milliseconds": 1.6706
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8921106Z",
+                  "Milliseconds": 0.005
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.892118Z",
+                  "Milliseconds": 0.0655
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8921854Z",
+                  "Milliseconds": 68.7618
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8937418Z",
+                  "Milliseconds": 0.0869
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8937866Z",
+                  "Milliseconds": 2.8992
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.893789Z",
+                  "Milliseconds": 2.6202
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938515Z",
+                  "Milliseconds": 0.0138
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938538Z",
+                  "Milliseconds": 0.0088
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938633Z",
+                  "Milliseconds": 0.0014
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938658Z",
+                  "Milliseconds": 0.0027
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938661Z",
+                  "Milliseconds": 0.0009
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938674Z",
+                  "Milliseconds": 0.0009
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938701Z",
+                  "Milliseconds": 0.0034
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8938755Z",
+                  "Milliseconds": 61.4744
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8964477Z",
+                  "Milliseconds": 0.1818
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8965262Z",
+                  "Milliseconds": 0.0182
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8965486Z",
+                  "Milliseconds": 54.2092
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8966992Z",
+                  "Milliseconds": 0.0412
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967024Z",
+                  "Milliseconds": 0.0298
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967334Z",
+                  "Milliseconds": 0.0063
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967412Z",
+                  "Milliseconds": 0.0104
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967417Z",
+                  "Milliseconds": 0.0042
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967465Z",
+                  "Milliseconds": 0.0047
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967529Z",
+                  "Milliseconds": 0.0056
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.8967593Z",
+                  "Milliseconds": 56.0511
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9353157Z",
+                  "Milliseconds": 0.0841
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.935324Z",
+                  "Milliseconds": 0.0538
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9353856Z",
+                  "Milliseconds": 0.0132
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9354141Z",
+                  "Milliseconds": 3.6472
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9354153Z",
+                  "Milliseconds": 3.4378
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9387484Z",
+                  "Milliseconds": 2.652
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9387598Z",
+                  "Milliseconds": 2.2746
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9388787Z",
+                  "Milliseconds": 0.1623
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9390666Z",
+                  "Milliseconds": 0.0647
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9390709Z",
+                  "Milliseconds": 0.0439
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391163Z",
+                  "Milliseconds": 0.0141
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391322Z",
+                  "Milliseconds": 0.0261
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391327Z",
+                  "Milliseconds": 0.0117
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391449Z",
+                  "Milliseconds": 0.0131
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391697Z",
+                  "Milliseconds": 0.0167
+                },
+                {
+                  "Operation": "independent-checkpoint",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9391875Z",
+                  "Milliseconds": 46.1197
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9411583Z",
+                  "Milliseconds": 0.2245
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9414221Z",
+                  "Milliseconds": 2.3209
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9414256Z",
+                  "Milliseconds": 2.1719
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9437037Z",
+                  "Milliseconds": 0.026
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "tool.journal.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9437871Z",
+                  "Milliseconds": 0.1164
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:35.9439987Z",
+                  "Milliseconds": 178.9917
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:35.956403Z",
+                  "Milliseconds": 5.6888
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0062242Z",
+                  "Milliseconds": 3.757
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0062308Z",
+                  "Milliseconds": 2.0111
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0082587Z",
+                  "Milliseconds": 1.7158
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0100227Z",
+                  "Milliseconds": 3.0056
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0100257Z",
+                  "Milliseconds": 1.4686
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.011501Z",
+                  "Milliseconds": 1.4181
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0130454Z",
+                  "Milliseconds": 3.2283
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0130514Z",
+                  "Milliseconds": 1.4701
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0145265Z",
+                  "Milliseconds": 1.6339
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.016303Z",
+                  "Milliseconds": 1.4295
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0177426Z",
+                  "Milliseconds": 58.9848
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.run.load",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0320344Z",
+                  "Milliseconds": 4.629
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0320501Z",
+                  "Milliseconds": 2.0517
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0320545Z",
+                  "Milliseconds": 1.8659
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0340683Z",
+                  "Milliseconds": 0.0115
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0341229Z",
+                  "Milliseconds": 2.1588
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0341252Z",
+                  "Milliseconds": 1.9139
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0362552Z",
+                  "Milliseconds": 0.0037
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "tool.journal.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0379454Z",
+                  "Milliseconds": 0.0054
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.run.save",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0604163Z",
+                  "Milliseconds": 519.4117
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.060528Z",
+                  "Milliseconds": 0.0033
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0768055Z",
+                  "Milliseconds": 1.6606
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0768136Z",
+                  "Milliseconds": 1.3988
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0782409Z",
+                  "Milliseconds": 0.2052
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0784896Z",
+                  "Milliseconds": 0.0124
+                },
+                {
+                  "Operation": "same-grant",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0785036Z",
+                  "Milliseconds": 31.8988
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0878701Z",
+                  "Milliseconds": 0.8798
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.0895389Z",
+                  "Milliseconds": 0.7201
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1008608Z",
+                  "Milliseconds": 0.8981
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1024105Z",
+                  "Milliseconds": 0.8923
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1033497Z",
+                  "Milliseconds": 29.201
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1139662Z",
+                  "Milliseconds": 4.1709
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.run.load",
+                  "StartedAtUtc": "2026-10-19T02:58:36.130986Z",
+                  "Milliseconds": 3.6429
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1310013Z",
+                  "Milliseconds": 1.736
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1310053Z",
+                  "Milliseconds": 1.5643
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1325631Z",
+                  "Milliseconds": 115.9765
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1325675Z",
+                  "Milliseconds": 115.9651
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1327072Z",
+                  "Milliseconds": 0.0091
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1327532Z",
+                  "Milliseconds": 1.5598
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1327553Z",
+                  "Milliseconds": 1.463
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.134295Z",
+                  "Milliseconds": 0.0023
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "tool.journal.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1346436Z",
+                  "Milliseconds": 0.0024
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.run.save",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1351669Z",
+                  "Milliseconds": 429.4566
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1351931Z",
+                  "Milliseconds": 0.0011
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1618395Z",
+                  "Milliseconds": 3.7898
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1618463Z",
+                  "Milliseconds": 2.0897
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1639479Z",
+                  "Milliseconds": 1.6761
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1652653Z",
+                  "Milliseconds": 0.7561
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1656689Z",
+                  "Milliseconds": 3.7076
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.165672Z",
+                  "Milliseconds": 2.0716
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1666047Z",
+                  "Milliseconds": 1.076
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.167753Z",
+                  "Milliseconds": 1.6172
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1693932Z",
+                  "Milliseconds": 3.0276
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1693962Z",
+                  "Milliseconds": 1.4949
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1708993Z",
+                  "Milliseconds": 1.4483
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1724406Z",
+                  "Milliseconds": 1.3041
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1737533Z",
+                  "Milliseconds": 38.4837
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1776216Z",
+                  "Milliseconds": 0.7567
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1790089Z",
+                  "Milliseconds": 0.6678
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.keys.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:36.1797169Z",
+                  "Milliseconds": 30.7669
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.workspace.reacquire",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2105038Z",
+                  "Milliseconds": 12.4123
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.coordination.wait",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2105109Z",
+                  "Milliseconds": 12.3943
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.212307Z",
+                  "Milliseconds": 2.1851
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.212314Z",
+                  "Milliseconds": 2.0419
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2143824Z",
+                  "Milliseconds": 0.0894
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2145155Z",
+                  "Milliseconds": 0.012
+                },
+                {
+                  "Operation": "independent-grant",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2145292Z",
+                  "Milliseconds": 32.8663
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2335556Z",
+                  "Milliseconds": 0.8809
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2351119Z",
+                  "Milliseconds": 0.5732
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.run.prepare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2357123Z",
+                  "Milliseconds": 6.9951
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2360989Z",
+                  "Milliseconds": 0.0028
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2361215Z",
+                  "Milliseconds": 1.5675
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2361235Z",
+                  "Milliseconds": 1.4637
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2376027Z",
+                  "Milliseconds": 0.0671
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2390683Z",
+                  "Milliseconds": 1.8158
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2410593Z",
+                  "Milliseconds": 1.6123
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2410643Z",
+                  "Milliseconds": 1.4787
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2425602Z",
+                  "Milliseconds": 0.0902
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2427232Z",
+                  "Milliseconds": 1.9725
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2427267Z",
+                  "Milliseconds": 1.7427
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.244489Z",
+                  "Milliseconds": 0.1854
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2452322Z",
+                  "Milliseconds": 1.7275
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2452363Z",
+                  "Milliseconds": 1.5684
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2468403Z",
+                  "Milliseconds": 0.0811
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2470654Z",
+                  "Milliseconds": 0.0093
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2470772Z",
+                  "Milliseconds": 0.8745
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2479596Z",
+                  "Milliseconds": 0.0023
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2479692Z",
+                  "Milliseconds": 0.016
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2479702Z",
+                  "Milliseconds": 0.0125
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2479833Z",
+                  "Milliseconds": 0.0015
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480167Z",
+                  "Milliseconds": 0.0277
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480173Z",
+                  "Milliseconds": 0.0206
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480386Z",
+                  "Milliseconds": 0.0054
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.248062Z",
+                  "Milliseconds": 0.0035
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480626Z",
+                  "Milliseconds": 0.0017
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480648Z",
+                  "Milliseconds": 0.0005
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2480787Z",
+                  "Milliseconds": 2.2057
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2502934Z",
+                  "Milliseconds": 31.4389
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2597657Z",
+                  "Milliseconds": 0.9221
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.publication.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2615196Z",
+                  "Milliseconds": 0.8179
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.run.prepare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2623678Z",
+                  "Milliseconds": 6.9827
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2624212Z",
+                  "Milliseconds": 0.0011
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2624396Z",
+                  "Milliseconds": 1.8335
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.262442Z",
+                  "Milliseconds": 1.699
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2641604Z",
+                  "Milliseconds": 0.0988
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2657582Z",
+                  "Milliseconds": 1.6525
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.267522Z",
+                  "Milliseconds": 1.7937
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2675261Z",
+                  "Milliseconds": 1.6764
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2692192Z",
+                  "Milliseconds": 0.0808
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.269365Z",
+                  "Milliseconds": 1.7745
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2693678Z",
+                  "Milliseconds": 1.5975
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2709831Z",
+                  "Milliseconds": 0.1364
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2712105Z",
+                  "Milliseconds": 1.3611
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2712137Z",
+                  "Milliseconds": 1.2785
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2725083Z",
+                  "Milliseconds": 0.0505
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726164Z",
+                  "Milliseconds": 0.006
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726242Z",
+                  "Milliseconds": 0.0534
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726784Z",
+                  "Milliseconds": 0.0004
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726811Z",
+                  "Milliseconds": 0.0129
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726816Z",
+                  "Milliseconds": 0.0104
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2726925Z",
+                  "Milliseconds": 0.0012
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727177Z",
+                  "Milliseconds": 0.0271
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727194Z",
+                  "Milliseconds": 0.0194
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727393Z",
+                  "Milliseconds": 0.0051
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727806Z",
+                  "Milliseconds": 0.0039
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727814Z",
+                  "Milliseconds": 0.0018
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727838Z",
+                  "Milliseconds": 0.0005
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2727948Z",
+                  "Milliseconds": 0.2162
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2730138Z",
+                  "Milliseconds": 34.9375
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.run.commit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2817514Z",
+                  "Milliseconds": 282.7989
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2818062Z",
+                  "Milliseconds": 0.0858
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2818973Z",
+                  "Milliseconds": 0.0014
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2818994Z",
+                  "Milliseconds": 0.0002
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819032Z",
+                  "Milliseconds": 0.015
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819038Z",
+                  "Milliseconds": 0.012
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819165Z",
+                  "Milliseconds": 0.0013
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819469Z",
+                  "Milliseconds": 0.0261
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819474Z",
+                  "Milliseconds": 0.0197
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819676Z",
+                  "Milliseconds": 0.005
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819833Z",
+                  "Milliseconds": 0.0035
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2819838Z",
+                  "Milliseconds": 0.0019
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.281986Z",
+                  "Milliseconds": 0.0006
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2820001Z",
+                  "Milliseconds": 4.3945
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2820009Z",
+                  "Milliseconds": 4.2716
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.286297Z",
+                  "Milliseconds": 0.0828
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2863998Z",
+                  "Milliseconds": 0.01
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2864012Z",
+                  "Milliseconds": 0.0068
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2864086Z",
+                  "Milliseconds": 0.0007
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2864268Z",
+                  "Milliseconds": 1.909
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2864298Z",
+                  "Milliseconds": 1.7443
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.288316Z",
+                  "Milliseconds": 0.0024
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2883389Z",
+                  "Milliseconds": 0.0005
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2883398Z",
+                  "Milliseconds": 0.0151
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2883404Z",
+                  "Milliseconds": 0.0122
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2883532Z",
+                  "Milliseconds": 0.0015
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2884187Z",
+                  "Milliseconds": 0.013
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.2884379Z",
+                  "Milliseconds": 39.1658
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.run.commit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3079689Z",
+                  "Milliseconds": 271.8185
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080254Z",
+                  "Milliseconds": 0.0063
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080334Z",
+                  "Milliseconds": 0.0013
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080353Z",
+                  "Milliseconds": 0.0002
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080389Z",
+                  "Milliseconds": 0.0169
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080395Z",
+                  "Milliseconds": 0.0137
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080539Z",
+                  "Milliseconds": 0.0015
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080867Z",
+                  "Milliseconds": 0.0299
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3080876Z",
+                  "Milliseconds": 0.0219
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081101Z",
+                  "Milliseconds": 0.0061
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081263Z",
+                  "Milliseconds": 0.0043
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081268Z",
+                  "Milliseconds": 0.0025
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081297Z",
+                  "Milliseconds": 0.0007
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081458Z",
+                  "Milliseconds": 1.6395
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3081469Z",
+                  "Milliseconds": 1.5037
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3096723Z",
+                  "Milliseconds": 0.0847
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3097936Z",
+                  "Milliseconds": 0.0122
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3097956Z",
+                  "Milliseconds": 0.0079
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3098045Z",
+                  "Milliseconds": 0.0008
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3098225Z",
+                  "Milliseconds": 1.7712
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3098235Z",
+                  "Milliseconds": 1.6473
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.snapshot.hit",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3115723Z",
+                  "Milliseconds": 0.0024
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3115969Z",
+                  "Milliseconds": 0.0007
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3115982Z",
+                  "Milliseconds": 0.0159
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3115987Z",
+                  "Milliseconds": 0.0128
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3116121Z",
+                  "Milliseconds": 0.0017
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3116155Z",
+                  "Milliseconds": 0.0047
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.311621Z",
+                  "Milliseconds": 39.1791
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3417083Z",
+                  "Milliseconds": 0.0426
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.341845Z",
+                  "Milliseconds": 41.9985
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3661563Z",
+                  "Milliseconds": 0.0357
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3662656Z",
+                  "Milliseconds": 42.9524
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3991014Z",
+                  "Milliseconds": 0.0332
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.3992004Z",
+                  "Milliseconds": 42.9403
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4237517Z",
+                  "Milliseconds": 0.0271
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4238405Z",
+                  "Milliseconds": 50.7144
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4435677Z",
+                  "Milliseconds": 2.0305
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.run.snapshot.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4456079Z",
+                  "Milliseconds": 0.1298
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4456777Z",
+                  "Milliseconds": 2.6145
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4456809Z",
+                  "Milliseconds": 2.3264
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4457643Z",
+                  "Milliseconds": 0.0022
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4457686Z",
+                  "Milliseconds": 0.1147
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.445886Z",
+                  "Milliseconds": 74.2424
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4480389Z",
+                  "Milliseconds": 0.232
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4481091Z",
+                  "Milliseconds": 3.4267
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4481127Z",
+                  "Milliseconds": 3.1601
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4482979Z",
+                  "Milliseconds": 0.0133
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483002Z",
+                  "Milliseconds": 0.0078
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483089Z",
+                  "Milliseconds": 0.0016
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483117Z",
+                  "Milliseconds": 0.0047
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483121Z",
+                  "Milliseconds": 0.0012
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483137Z",
+                  "Milliseconds": 0.0025
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483175Z",
+                  "Milliseconds": 0.0039
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4483222Z",
+                  "Milliseconds": 62.4488
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4512954Z",
+                  "Milliseconds": 0.1968
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4513432Z",
+                  "Milliseconds": 0.0126
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4513581Z",
+                  "Milliseconds": 58.3957
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4515452Z",
+                  "Milliseconds": 0.0862
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4515656Z",
+                  "Milliseconds": 0.0442
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516143Z",
+                  "Milliseconds": 0.015
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516338Z",
+                  "Milliseconds": 0.0292
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516349Z",
+                  "Milliseconds": 0.012
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516492Z",
+                  "Milliseconds": 0.0107
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516658Z",
+                  "Milliseconds": 0.012
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4516804Z",
+                  "Milliseconds": 67.401
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4753049Z",
+                  "Milliseconds": 1.8305
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.run.snapshot.validate",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4771433Z",
+                  "Milliseconds": 0.1866
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4772054Z",
+                  "Milliseconds": 2.3009
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4772082Z",
+                  "Milliseconds": 2.0231
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4774011Z",
+                  "Milliseconds": 0.0026
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.477407Z",
+                  "Milliseconds": 0.1441
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4775549Z",
+                  "Milliseconds": 68.8458
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.479263Z",
+                  "Milliseconds": 0.2047
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4793385Z",
+                  "Milliseconds": 3.9719
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4793428Z",
+                  "Milliseconds": 3.6685
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795154Z",
+                  "Milliseconds": 0.0243
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795186Z",
+                  "Milliseconds": 0.0132
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795341Z",
+                  "Milliseconds": 0.004
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795411Z",
+                  "Milliseconds": 0.0098
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795421Z",
+                  "Milliseconds": 0.003
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795467Z",
+                  "Milliseconds": 0.003
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795532Z",
+                  "Milliseconds": 0.0055
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4795628Z",
+                  "Milliseconds": 62.7335
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4830336Z",
+                  "Milliseconds": 0.203
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4830808Z",
+                  "Milliseconds": 0.0099
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4830927Z",
+                  "Milliseconds": 56.447
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4833193Z",
+                  "Milliseconds": 0.0534
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4833223Z",
+                  "Milliseconds": 0.033
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4833579Z",
+                  "Milliseconds": 0.013
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4833744Z",
+                  "Milliseconds": 0.0256
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4833756Z",
+                  "Milliseconds": 0.0111
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.483389Z",
+                  "Milliseconds": 0.0096
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4834024Z",
+                  "Milliseconds": 0.0125
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4834176Z",
+                  "Milliseconds": 63.3219
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4936893Z",
+                  "Milliseconds": 0.1315
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4936955Z",
+                  "Milliseconds": 0.0809
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4937847Z",
+                  "Milliseconds": 0.0329
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4938414Z",
+                  "Milliseconds": 4.094
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4938441Z",
+                  "Milliseconds": 3.6419
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4975119Z",
+                  "Milliseconds": 0.398
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.497941Z",
+                  "Milliseconds": 0.062
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4979449Z",
+                  "Milliseconds": 0.0419
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4979877Z",
+                  "Milliseconds": 0.0144
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4980036Z",
+                  "Milliseconds": 0.0288
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4980041Z",
+                  "Milliseconds": 0.0123
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4980169Z",
+                  "Milliseconds": 0.0147
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4980479Z",
+                  "Milliseconds": 0.0159
+                },
+                {
+                  "Operation": "same-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.4980647Z",
+                  "Milliseconds": 50.6768
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.527743Z",
+                  "Milliseconds": 0.1052
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5277487Z",
+                  "Milliseconds": 0.065
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5278203Z",
+                  "Milliseconds": 0.0261
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.read",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5279154Z",
+                  "Milliseconds": 2.2569
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.open",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5279167Z",
+                  "Milliseconds": 2.0613
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.deserialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5300022Z",
+                  "Milliseconds": 0.1525
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5301776Z",
+                  "Milliseconds": 0.061
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5301797Z",
+                  "Milliseconds": 0.0423
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302237Z",
+                  "Milliseconds": 0.0139
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.compare",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302393Z",
+                  "Milliseconds": 0.0269
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302397Z",
+                  "Milliseconds": 0.0116
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302519Z",
+                  "Milliseconds": 0.0136
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.serialize",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302794Z",
+                  "Milliseconds": 0.0154
+                },
+                {
+                  "Operation": "independent-cancel",
+                  "Activity": "workspace.json.write",
+                  "StartedAtUtc": "2026-10-19T02:58:36.5302959Z",
+                  "Milliseconds": 36.5787
+                }
+              ],
+              "DroppedSamples": 0,
+              "Scope": "Nested existing owner activities; durations overlap and must not be added as total elapsed time"
+            }
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\007-effects-verified.json",
+        "data": {
+          "Phase": "effects-verified",
+          "ObservedAtUtc": "2026-10-19T02:58:40.9685501+00:00",
+          "Evidence": {
+            "TaskRows": 0,
+            "ReceiptRows": 0,
+            "Writers": 6,
+            "FileAndProjectGuardsReacquired": true,
+            "ReferenceResponsivenessPassed": false
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\008-cleanup.json",
+        "data": {
+          "Phase": "cleanup",
+          "ObservedAtUtc": "2026-10-19T02:58:41.0706639+00:00",
+          "Evidence": {
+            "Confirmed": true,
+            "AllocationUnknown": false,
+            "Failures": []
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6\\009-result.json",
+        "data": {
+          "Phase": "result",
+          "ObservedAtUtc": "2026-10-19T02:58:41.0736941+00:00",
+          "Evidence": {
+            "SourceOnlyReference": "actual SelectedAgent exclusion, synthetic task-plan authority; no live-provider provenance",
+            "observation": {
+              "TasksRequested": 1,
+              "HolderPid": 135044,
+              "PublisherPid": 135117,
+              "ActualBlockingObservedAtMilliseconds": 409.009,
+              "HolderReleasedAtMilliseconds": 5402.4204,
+              "EffectiveSqlCommandTimeoutSeconds": 15,
+              "CooperativeHolderBudgetSeconds": 30,
+              "Authority": {
+                "Guard": "SelectedAgent",
+                "Entered": 2684982570056,
+                "Acquired": 2684984917220,
+                "Released": 2685036157048,
+                "AcquireMilliseconds": 234.7164,
+                "HeldMilliseconds": 5123.9828
+              },
+              "OutcomeType": "Rejected",
+              "Rejection": "Unavailable",
+              "ProcessAllocatedBytes": 239856120,
+              "AllocationScope": "whole cohort process-wide, not per-operation allocations or peak memory",
+              "ObservedWorkbenchEfCommands": 10,
+              "SqlCoverage": "Workbench interceptor only; raw ADO lifecycle/other enlisted commands excluded; not network roundtrips",
+              "LogicalRunReadBytes": 3669,
+              "PhysicalDeviceIoMeasured": false,
+              "FileReadCoverage": "Single saved run-file size only; repeated owner reads, pending scans and catalog bytes excluded"
+            },
+            "samples": [
+              {
+                "Name": "publisher",
+                "StartedAtMilliseconds": 1.5571,
+                "EndedAtMilliseconds": 5398.8465,
+                "ElapsedMilliseconds": 5397.2894,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-checkpoint",
+                "StartedAtMilliseconds": 411.2417,
+                "EndedAtMilliseconds": 900.2891,
+                "ElapsedMilliseconds": 489.0474,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-cancel",
+                "StartedAtMilliseconds": 432.0926,
+                "EndedAtMilliseconds": 1540.3808,
+                "ElapsedMilliseconds": 1108.2882,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "same-grant",
+                "StartedAtMilliseconds": 449.2592,
+                "EndedAtMilliseconds": 1085.7939,
+                "ElapsedMilliseconds": 636.5346999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-checkpoint",
+                "StartedAtMilliseconds": 469.2234,
+                "EndedAtMilliseconds": 978.2597,
+                "ElapsedMilliseconds": 509.0362999999999,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-cancel",
+                "StartedAtMilliseconds": 493.1188,
+                "EndedAtMilliseconds": 1555.2199,
+                "ElapsedMilliseconds": 1062.1011,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              },
+              {
+                "Name": "independent-grant",
+                "StartedAtMilliseconds": 509.2779,
+                "EndedAtMilliseconds": 1222.7767,
+                "ElapsedMilliseconds": 713.4987999999998,
+                "CompletedWhileSqlHolderPresent": true,
+                "FailureType": null
+              }
+            ],
+            "ReferenceResponsivenessPassed": false,
+            "WorkloadFailureType": null,
+            "CleanupFailureType": null,
+            "CleanupConfirmed": true,
+            "CapacityQualified": false,
+            "Limit": "One forced small-file cohort; no normal p95, maximum-size, sustained-load or fairness qualification"
+          }
+        }
+      },
+      {
+        "path": "measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6.intent.json",
+        "data": {
+          "Owner": "AgentPlanningPublicationCostTests",
+          "Guard": "SelectedAgent",
+          "RowRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-selected-profile-v3\\measurements\\selected-8400c0c4ea1e4bfda37b6d966c2677e6",
+          "ProcessId": 44228,
+          "RecordedAtUtc": "2026-10-19T02:58:15.6868409+00:00",
+          "CooperativeRowSeconds": 600,
+          "Profile": "small-file/one-task/one-forced-SQL-wait",
+          "MaximumPostgresLeases": 1,
+          "MaximumFileWorkspaces": 2
+        }
+      }
+    ]
+  }
+}

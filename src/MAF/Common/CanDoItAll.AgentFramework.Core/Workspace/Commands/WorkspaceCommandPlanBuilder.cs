@@ -489,16 +489,16 @@ internal sealed class WorkspaceCommandPlanBuilder
         if (string.IsNullOrWhiteSpace(startupReceiptPath))
         {
             throw WorkspaceCommandInputException.Create(
-                "workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run.",
-                "Provide the workspace-relative startup.json receipt path returned by workspace_dotnet_run.");
+                "workspace_dotnet_stop requires the startup.json path returned by workspace_dotnet_run or workspace_static_serve.",
+                "Provide the workspace-relative startup.json receipt path returned by the owned host's launch tool.");
         }
 
         var startupReceipt = ResolveExistingWorkspacePath(startupReceiptPath, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetFileName(startupReceipt.FullPath), "startup.json", StringComparison.OrdinalIgnoreCase))
         {
             throw WorkspaceCommandInputException.Create(
-                $"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run. Received '{startupReceipt.RelativePath}'.",
-                "The supplied path is not a startup.json receipt. Use the receipt returned by workspace_dotnet_run.");
+                $"workspace_dotnet_stop requires a startup.json receipt produced by workspace_dotnet_run or workspace_static_serve. Received '{startupReceipt.RelativePath}'.",
+                "The supplied path is not a startup.json receipt. Use the receipt returned by the owned host's launch tool.");
         }
 
         var boundedTimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);
@@ -566,7 +566,20 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new targetFramework must be a supported value such as 'net8.0'.");
         }
 
+        var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
+        if (isSolutionTemplate && normalizedTargetFramework.Length > 0) {
+            throw WorkspaceCommandInputException.Create(
+                "The solution template does not accept a target framework.",
+                "Omit targetFramework for template 'sln'. Set it only when creating an application or test project.");
+        }
+
         string trimmedName = name?.Trim() ?? string.Empty;
+        if (trimmedName is "." or "..") {
+            throw WorkspaceCommandInputException.CreateProhibited(
+                "workspace_dotnet_new cannot scaffold into the parent directory or its ancestor.",
+                "Choose a named child project, or inspect and repair the existing project in place. Scaffolding into '.' or '..' is not allowed.");
+        }
+
         if (trimmedName.Length == 0 || !PortablePhysicalFileNamePolicy.IsPortable(trimmedName))
         {
             throw WorkspaceCommandInputException.Create(
@@ -582,11 +595,10 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "workspace_dotnet_new parentDirectory must identify a directory. Pass the containing directory and project name separately.");
         }
 
-        var isSolutionTemplate = WorkspaceDotnetNewTemplateCatalog.IsSolutionTemplate(normalizedTemplate);
         if (InspectTopLevelProjectFiles(
                 workingDirectoryResolution.FullPath,
                 workingDirectoryRelative,
-                includeSolutionFiles: !isSolutionTemplate))
+                includeSolutionFiles: false))
         {
             throw WorkspaceCommandInputException.CreateProhibited(
                 $"workspace_dotnet_new is not allowed inside existing .NET project directory '{workingDirectoryRelative}'.",
@@ -628,6 +640,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
         arguments.Add("-n");
         arguments.Add(trimmedName);
+        if (!isSolutionTemplate) {
+            arguments.Add("--output");
+            arguments.Add(trimmedName);
+        }
+
         if (force)
         {
             arguments.Add("--force");

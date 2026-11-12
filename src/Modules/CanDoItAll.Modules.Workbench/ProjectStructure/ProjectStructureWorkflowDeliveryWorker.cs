@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,10 +31,15 @@ public sealed class ProjectStructureWorkflowDeliveryWorker(
         await using var scope = scopes.CreateAsyncScope();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var outputs = scope.ServiceProvider.GetRequiredService<IWorkflowStructureOutputStore>();
+        var runs = scope.ServiceProvider.GetRequiredService<IWorkflowRunStore>();
         foreach (var output in await outputs.ListPendingAsync(128, cancellationToken)) {
             try {
                 var receipt = await workbench.FindWorkflowContributionAsync(output.Plan.Identity, cancellationToken);
                 if (receipt is null) {
+                    var run = await runs.GetRunAsync(output.Plan.Identity.Occurrence.RunId, cancellationToken);
+                    if (run?.State == WorkflowRunState.Running) {
+                        continue;
+                    }
                     await scope.ServiceProvider.GetRequiredService<WorkbenchProjectStructureRuntimeGateway>()
                         .ReconcileWorkflowOutputAsync(output.Plan.Identity, cancellationToken);
                     receipt = await workbench.FindWorkflowContributionAsync(output.Plan.Identity, cancellationToken);

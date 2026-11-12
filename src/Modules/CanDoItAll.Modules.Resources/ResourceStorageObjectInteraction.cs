@@ -71,9 +71,12 @@ internal sealed class ResourceStorageObjectInteractionService(
                 activation.Size);
             return new ResourceStorageObjectInteraction(resource.Id, request, session, knownFileReleaser);
         }
-        catch
-        {
-            await knownFileReleaser.ReleaseAsync(activation.Request.File, CancellationToken.None);
+        catch (Exception exception) {
+            try {
+                await knownFileReleaser.ReleaseAsync(activation.Request.File, CancellationToken.None);
+            } catch (Exception cleanup) {
+                exception.Data[nameof(IFileToolsKnownFileSessionReleaser.ReleaseAsync)] = cleanup.GetType().Name;
+            }
             throw;
         }
     }

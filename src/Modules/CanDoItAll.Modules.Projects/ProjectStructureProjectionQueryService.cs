@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Projects;
 
 public sealed record ProjectStructureProjectFact(Guid Id, string Name, string Description, string Objective,
-    ProjectStatus Status, string CurrentPhase, DateTimeOffset CreatedAtUtc);
+    ProjectStatus Status, string CurrentPhase, DateTimeOffset CreatedAtUtc) {
+    public Guid LifetimeId { get; init; }
+}
 
 public sealed record ProjectStructurePhaseFact(Guid Id, Guid ProjectId, string Name, string Goal,
     ProjectPhaseStatus Status, int OrderIndex, DateTime? StartDateUtc, DateTime? EndDateUtc);
@@ -33,7 +35,7 @@ public sealed class ProjectStructureProjectionQueryService(
     CoordinatedDatabaseTransaction transactions) {
     private static readonly Expression<Func<Project, ProjectStructureProjectFact>> ProjectFact = project => new(
         project.Id, project.Name, project.Description, project.Objective, project.Status,
-        project.CurrentPhase, project.CreatedAtUtc);
+        project.CurrentPhase, project.CreatedAtUtc) { LifetimeId = project.LifetimeId };
 
     public async Task<ProjectStructureProjectFacts?> GetAsync(Guid projectId, CancellationToken cancellationToken = default) {
         await using var context = await factory.CreateDbContextAsync(cancellationToken);

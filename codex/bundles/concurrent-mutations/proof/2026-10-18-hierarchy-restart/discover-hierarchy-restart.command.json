@@ -1,0 +1,33 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "discover-hierarchy-restart",
+  "Arguments": [
+    "test",
+    "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--no-restore",
+    "-p:UseLocalCanDoItAllLibraries=true",
+    "/m:1",
+    "--filter",
+    "FullyQualifiedName~AgentHistoricalReceiptRestartTests",
+    "--list-tests"
+  ],
+  "StartedUtc": "2026-10-18T20:26:39.5955997+00:00",
+  "State": "Completed",
+  "RunnerPid": 52168,
+  "ChildPid": 58576,
+  "ChildStartedUtc": "2026-10-18T20:26:39.6315199Z",
+  "ExitCode": 0,
+  "Seconds": 2.1948602,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 934,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

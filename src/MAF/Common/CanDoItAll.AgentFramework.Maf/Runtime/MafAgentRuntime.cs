@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -82,7 +83,14 @@ public sealed class MafAgentRuntime
             dependencies.ApprovalContinuationDriver,
             streamingTurnExecutor,
             dependencies.ToolAdmissionJournal,
-            dependencies.SessionPersistenceDriver);
+            dependencies.SessionPersistenceDriver,
+            dependencies.ToolAdmissionJournal is { } savedJournal && dependencies.SavedEffectCatalog is { } savedCatalog
+                ? new MafSavedEffectDispatcher(normalizedWorkspaceRoot, resolvedWorkspaceScope,
+                    dependencies.PhysicalPathPolicyFactory, dependencies.WorkspaceRuntimeServicesFactory,
+                    savedJournal, savedCatalog, dependencies.CapabilityDependencies.RuntimeToolProviders,
+                    dependencies.SavedEffectReceiptProviders, dependencies.ToolInvocationPolicyPipeline, dependencies.ToolPolicies,
+                    dependencies.CapabilityDependencies.LoggerFactory.CreateLogger<MafSavedEffectDispatcher>())
+                : null);
         historyRuntime = new HistoryAgentRuntime(executionAdapter, continuationAdapter);
         diagnosticsAdapter = new MafProviderDiagnosticsAdapter(dependencies.ProviderRuntimeGateway);
         modelAdministrationAdapter = new MafProviderModelAdministrationAdapter(dependencies.ProviderRuntimeGateway);

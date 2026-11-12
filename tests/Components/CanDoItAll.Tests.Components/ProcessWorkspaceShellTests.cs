@@ -1,17 +1,23 @@
 using Bunit;
+using Bunit.TestDoubles;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Voice;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Components.Charts;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Processes.AgentChat;
+using CanDoItAll.Modules.Processes.Pages;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Projections;
@@ -29,16 +35,203 @@ public sealed partial class ProcessWorkspaceShellTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Same_field_comparison_requires_a_choice_and_never_saves_the_chosen_draft(bool useCurrent) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        var editor = session.DefinitionCatalog.SelectedEditor!;
+        session.DefinitionDraft.Name = "My conflicting name";
+        client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+            SelectedEditor = editor with { VersionToken = new("conflicting-peer-version"), Identity = editor.Identity with { Name = "Peer conflicting name" } }
+        } };
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        var comparison = Assert.IsType<CanDoItAll.Processes.UI.ProcessDefinitionComparison>(session.DefinitionComparison);
+        Assert.False(comparison.IsResolved);
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal("My conflicting name", session.DefinitionDraft.Name);
+        Assert.NotNull(session.DefinitionComparisonError);
+        var name = Assert.Single(comparison.Text, item => item.Label == "Name");
+        if (useCurrent) {
+            name.Value.UseCurrent();
+        } else {
+            name.Value.UseLocal();
+        }
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal(useCurrent ? "Peer conflicting name" : "My conflicting name", session.DefinitionDraft.Name);
+        Assert.Equal("conflicting-peer-version", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Null(session.DefinitionComparison);
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Fact]
+    public async Task Revoked_access_during_comparison_hides_the_editor_and_releases_observations_without_writing() {
+        var access = new EditingUiTestAccess();
+        using var context = CreateContext(out var client, services: services => services.AddSingleton<IEditingUiAccess>(access));
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        session.DefinitionDraft.Name = "Retained private draft";
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        Assert.NotNull(session.DefinitionComparison);
+        access.Allowed = false;
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        cut.WaitForAssertion(() => {
+            Assert.Null(session.Shell);
+            Assert.Null(session.DefinitionComparison);
+            Assert.Equal(0, context.Services.GetRequiredService<EditingChangeFeed>().ActiveSubscriptions);
+        });
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Late_authoring_projection_is_hidden_after_access_or_actor_changes(bool changeActor) {
+        var access = new EditingUiTestAccess();
+        using var context = CreateContext(out var client, services: services => services.AddSingleton<IEditingUiAccess>(access));
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        client.DeferShellRequests = true;
+        var read = cut.InvokeAsync(session.RefreshAsync);
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        if (changeActor) {
+            access.Principal = "replacement-principal";
+        } else {
+            access.Allowed = false;
+        }
+        client.CompleteShellRequest(0);
+        await read;
+        cut.WaitForAssertion(() => {
+            Assert.Null(session.Shell);
+            Assert.Empty(cut.FindAll("[data-testid='processes-definition-editor-name']"));
+        });
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Fact]
+    public async Task Peer_hint_is_metadata_only_and_explicit_pull_retains_dirty_original_until_comparison_applies_without_writing() {
+        var scope = new EditingScope(EditingScopeKind.Dataset, Guid.NewGuid());
+        using var context = CreateContext(out var client, services: services => {
+            services.AddSingleton<Func<ProcessEditingSession>>(provider => () => new(provider.GetRequiredService<EditingChangeFeed>(),
+                provider.GetRequiredService<IEditingUiAccess>(), () => scope,
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EditingObservation>>()));
+        });
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        var original = session.DefinitionDraft.Capture();
+        var originalToken = session.DefinitionDraft.VersionToken;
+        var originalEditor = session.DefinitionCatalog.SelectedEditor!;
+        session.DefinitionDraft.Name = "My local name";
+        var feed = context.Services.GetRequiredService<EditingChangeFeed>();
+        var currentRequests = client.Requests.Count;
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged);
+        cut.WaitForElement("[data-testid='processes-authoring-updates']");
+        Assert.Equal(currentRequests, client.Requests.Count);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+            SelectedEditor = originalEditor with { VersionToken = new("peer-version"), Identity = originalEditor.Identity with { OwnerName = "Peer owner" } }
+        } };
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        Assert.Equal(originalToken, session.DefinitionDraft.VersionToken);
+        Assert.True(session.DefinitionDraft.HasConflict);
+        Assert.NotNull(session.DefinitionComparison);
+        Assert.True(session.DefinitionComparison.IsResolved);
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.Equal("My local name", session.DefinitionDraft.Name);
+        Assert.Equal("Peer owner", session.DefinitionDraft.OwnerName);
+        Assert.Equal("peer-version", session.DefinitionDraft.VersionToken!.Value.Value);
+        Assert.Null(session.DefinitionComparison);
+        Assert.False(session.AuthoringUpdatesAvailable);
+        Assert.Equal(0, client.AuthoringCommandCount);
+        Assert.Equal(original.Identity.Summary, session.DefinitionDraft.Summary);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Process_observation_filters_project_and_own_origins_and_releases_every_subscription(bool projectScoped) {
+        var feed = new EditingChangeFeed();
+        var scope = new EditingScope(EditingScopeKind.Dataset, Guid.NewGuid());
+        Guid? project = projectScoped ? Guid.NewGuid() : null;
+        await using var editing = new ProcessEditingSession(feed, new EditingUiTestAccess(), () => scope,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<EditingObservation>.Instance);
+        var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await editing.EnsureAsync(project, () => { changed.TrySetResult(); return Task.CompletedTask; }, () => throw new InvalidOperationException("Unexpected retirement."));
+        Assert.Equal(projectScoped ? 2 : 1, feed.ActiveSubscriptions);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, Guid.NewGuid()), EditingChangeKind.EditableContentChanged);
+        Assert.Equal(0, feed.DeliveredHints);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged, editing.EditorId);
+        Assert.False(editing.UpdatesAvailable);
+        feed.Publish(new(scope, EditingOwner.ProcessAuthoring, project ?? ProcessAuthoringChanges.GlobalResourceId), EditingChangeKind.EditableContentChanged);
+        await changed.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.True(editing.UpdatesAvailable);
+        editing.Acknowledge(editing.ChangeSequence - 1);
+        Assert.True(editing.UpdatesAvailable);
+        editing.Acknowledge(editing.ChangeSequence);
+        Assert.False(editing.UpdatesAvailable);
+        await editing.DisposeAsync();
+        Assert.Equal(0, feed.ActiveSubscriptions);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Definition_comparison_refuses_a_later_local_or_saved_change_without_rebasing(bool localChange) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-definition-save']");
+        var session = (CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance;
+        session.DefinitionDraft.Name = "Local comparison";
+        await cut.InvokeAsync(session.CompareDefinitionAsync);
+        var originalToken = session.DefinitionDraft.VersionToken;
+        if (localChange) {
+            session.DefinitionDraft.Summary = "Later input";
+        } else {
+            client.ShellResultTransform = (_, projection) => projection with { DefinitionCatalog = projection.DefinitionCatalog with {
+                SelectedEditor = projection.DefinitionCatalog.SelectedEditor! with { VersionToken = new("newer-peer") }
+            } };
+            await cut.InvokeAsync(session.RefreshAsync);
+        }
+        await cut.InvokeAsync(session.ApplyDefinitionComparisonAsync);
+        Assert.NotNull(session.DefinitionComparison);
+        Assert.Contains("changed during comparison", session.DefinitionComparisonError, StringComparison.Ordinal);
+        Assert.Equal(originalToken, session.DefinitionDraft.VersionToken);
+        Assert.Equal("Local comparison", session.DefinitionDraft.Name);
+        Assert.Equal(0, client.AuthoringCommandCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Authoring_projection_is_not_read_during_prerender_or_without_current_editing_access(bool interactive) {
+        using var context = CreateContext(out var client, services: services => {
+            services.AddSingleton<IEditingUiAccess>(new EditingUiTestAccess { Allowed = false });
+        });
+        context.SetRendererInfo(new RendererInfo(interactive ? "Server" : "Static", interactive));
+
+        var cut = context.Render<ProcessWorkspaceShell>();
+
+        Assert.Empty(client.Requests);
+        Assert.DoesNotContain("data-testid=\"processes-definition-name\"", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Delayed_dialog_callbacks_cannot_publish_old_rows_with_the_recreated_project_lifetime(bool live) {
         if (live) {
-            await AssertDelayedProjectCallbacksAsync<LiveProcessesDashboard>(component => component.ProjectId, "OpenAgentDetailDialogAsync", "agentDetailAgent");
+            await AssertDelayedProjectCallbacksAsync<LiveProcessesDashboard>(component => component.ProjectId, "OpenAgentDetailDialogAsync", "AgentDetailAgent", "live-processes-refresh-button");
         } else {
-            await AssertDelayedProjectCallbacksAsync<ProcessWorkspaceShell>(component => component.ProjectId, "OpenEventDetailDialogAsync", "eventDetail");
+            await AssertDelayedProjectCallbacksAsync<ProcessWorkspaceShell>(component => component.ProjectId, "OpenEventDetailDialogAsync", "EventDetail", "processes-refresh");
         }
     }
 
     private static async Task AssertDelayedProjectCallbacksAsync<T>(System.Linq.Expressions.Expression<Func<T, Guid?>> projectParameter,
-        string secondCallback, string secondField) where T : ComponentBase {
+        string secondCallback, string secondDetail, string refreshTestId) where T : ComponentBase {
         using var context = CreateContext(out var client, timeProvider: new ManualTimeProvider(Now));
         var projectId = Guid.NewGuid();
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), projectId, Guid.NewGuid());
@@ -57,17 +250,21 @@ public sealed partial class ProcessWorkspaceShellTests
             return result;
         };
         var cut = context.Render<T>(parameters => parameters.Add(projectParameter, projectId));
-        cut.WaitForAssertion(() => Assert.NotNull(held));
+        cut.WaitForAssertion(() => {
+            Assert.NotNull(held);
+            Assert.False(cut.Find($"[data-testid='{refreshTestId}']").HasAttribute("disabled"));
+        });
         if (typeof(T) == typeof(ProcessWorkspaceShell)) {
-            cut.Find("[data-testid='processes-detail-tab-runs']").Click();
+            await cut.InvokeAsync(() => cut.Find("[data-testid='processes-detail-tab-runs']").ClickAsync());
             cut.WaitForAssertion(() => Assert.NotEmpty(held!.Runtime.Events));
         }
         var oldRun = held!.Runtime.Runs.First();
-        object oldDetail = secondField == "agentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
+        object oldDetail = secondDetail == "AgentDetailAgent" ? held.Runtime.ActiveAgents.First() : held.Runtime.Events.First();
         replace = true;
-        await cut.InvokeAsync(() => cut.Render());
+        await cut.InvokeAsync(() => cut.Find($"[data-testid='{refreshTestId}']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(successor,
             ((ProcessWorkspaceShellProjection)typeof(T).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)!).ProjectBinding));
+        var location = CurrentLocation(context);
         await cut.InvokeAsync(async () => {
             foreach (var (method, value) in new[] { ("OpenRunDetailDialogAsync", (object)oldRun), (secondCallback, oldDetail) }) {
                 await (Task)typeof(T).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(cut.Instance, [value])!;
@@ -75,8 +272,10 @@ public sealed partial class ProcessWorkspaceShellTests
             cut.Render();
         });
         cut.WaitForAssertion(() => {
-            Assert.Null(typeof(T).GetField("runDetailSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
-            Assert.Null(typeof(T).GetField(secondField, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            Assert.Null(typeof(T).GetProperty("RunDetailSnapshot", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            Assert.Null(typeof(T).GetProperty(secondDetail, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance));
+            // A row of the replaced lifetime opens no overlay, so the location gains no history entry.
+            Assert.Equal(location, CurrentLocation(context));
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(context.Services.GetRequiredService<IAgentChatContextRegistry>().Capture());
             Assert.Equal(successor.LifetimeId, snapshot.Scope.ObservedProjectLifetime!.LifetimeId);
             Assert.DoesNotContain(snapshot.Scope.SurfacePosition!.Facts, fact => fact.Name == "focused-dialog");
@@ -212,13 +411,16 @@ public sealed partial class ProcessWorkspaceShellTests
     }
 
     [Fact]
-    public void Live_processes_expires_runtime_context_without_an_implicit_projection_read()
+    public async Task Live_processes_expires_historical_context_without_an_implicit_projection_read()
     {
         var timeProvider = new ManualTimeProvider(Now);
         using var context = CreateContext(out var client, timeProvider: timeProvider);
         ConfigureReadyRefresh(client, timeProvider.GetUtcNow);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         var cut = context.Render<LiveProcessesDashboard>();
+        cut.WaitForElement("[data-testid='live-processes-history-window']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='live-processes-history-window']")
+            .ChangeAsync(new ChangeEventArgs { Value = nameof(ProcessRuntimeHistoryWindow.OneDay) }));
 
         AgentChatContextSnapshot initial = null!;
         AgentChatContextAttachmentEnvelope initialAttachment = null!;
@@ -253,8 +455,7 @@ public sealed partial class ProcessWorkspaceShellTests
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         navigation.NavigateTo($"/processes/live?runId={selectedRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, selectedRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -282,6 +483,14 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Equal(initialScopeId, snapshot.Scope.Id);
             Assert.Contains(position.Facts, fact => fact.Name == "focused-dialog" && fact.Value == "run-detail");
         });
+        // The dialog is an overlay entry of its own: the address is shareable and closing returns to the run.
+        Assert.Equal($"/processes/live?runId={selectedRunId:D}&dialog=run", CurrentLocation(context));
+        Assert.False(((BunitNavigationManager)navigation).History.First().Options.ReplaceHistoryEntry);
+
+        await cut.InvokeAsync(() => ((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).CloseRunDetailDialogAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='live-processes-run-detail-dialog']")));
+        Assert.Equal($"/processes/live?runId={selectedRunId:D}", CurrentLocation(context));
     }
 
     [Fact]
@@ -290,9 +499,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes/live?runId={missingRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, missingRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -305,7 +514,10 @@ public sealed partial class ProcessWorkspaceShellTests
                 position.SelectedEntities,
                 entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
             Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+            Assert.NotNull(cut.Find("[data-testid='live-processes-selection-unavailable']"));
         });
+        // The requested run is never silently replaced by another one.
+        Assert.Equal($"/processes/live?runId={missingRunId:D}", CurrentLocation(context));
     }
 
     [Theory]
@@ -313,15 +525,20 @@ public sealed partial class ProcessWorkspaceShellTests
     [InlineData("66666666-6666-6666-6666-666666666666", true)]
     public void Live_processes_launch_notice_waits_only_for_an_unprojected_run(string runId, bool expectedNotice) {
         using var context = CreateContext(out var client);
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, Guid.Parse(runId))
-            .Add(component => component.LaunchStarted, true));
+        NavigateTo(context, $"/processes/live?runId={runId}&processStarted=1");
+
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => {
             Assert.Equal(expectedNotice ? 1 : 0, cut.FindAll("[data-testid='live-processes-started-notification']").Count);
             Assert.DoesNotContain("Process started. Live run projection is loading.", cut.Markup, StringComparison.Ordinal);
             Assert.True(client.Requests[0].ForceRefresh);
+            Assert.Empty(cut.FindAll("[data-testid='live-processes-selection-unavailable']"));
         });
+        // The launch signal is consumed once: the canonical location replaces it without a history entry.
+        Assert.Single(client.Requests);
+        Assert.Equal($"/processes/live?runId={runId}", CurrentLocation(context));
+        Assert.True(((BunitNavigationManager)context.Services.GetRequiredService<NavigationManager>()).History.First().Options.ReplaceHistoryEntry);
     }
 
     [Theory]
@@ -332,12 +549,11 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var unresolvedId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, useProcessId
+            ? $"/processes/live?processId={unresolvedId:D}"
+            : $"/processes/live?launchPlanId={unresolvedId:D}");
 
-        var cut = useProcessId
-            ? context.Render<LiveProcessesDashboard>(parameters => parameters
-                .Add(component => component.ProcessIdQuery, unresolvedId))
-            : context.Render<LiveProcessesDashboard>(parameters => parameters
-                .Add(component => component.LaunchPlanIdQuery, unresolvedId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() =>
         {
@@ -356,9 +572,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?runId={missingRunId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, missingRunId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -371,7 +587,10 @@ public sealed partial class ProcessWorkspaceShellTests
                 position.SelectedEntities,
                 entity => entity.Kind == "process-run" && entity.Id != missingRunId.ToString("D"));
             Assert.DoesNotContain(position.Facts, fact => fact.Name == "run-process-name");
+            Assert.NotNull(cut.Find("[data-testid='processes-selection-unavailable']"));
         });
+        // The requested run is never silently replaced by another one.
+        Assert.Contains($"runId={missingRunId:D}", CurrentLocation(context), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -396,8 +615,9 @@ public sealed partial class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, missingDefinitionKey));
+        NavigateTo(context, $"/processes?definitionKey={missingDefinitionKey}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -411,7 +631,10 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.DoesNotContain(
                 position.Facts,
                 IsSelectedDefinitionFact);
+            // The page shows the unavailable selection instead of the fallback definition's editor.
+            Assert.NotNull(cut.Find("[data-testid='processes-selection-unavailable']"));
         });
+        Assert.Equal($"/processes?definitionKey={missingDefinitionKey}", CurrentLocation(context));
     }
 
     [Fact]
@@ -438,8 +661,9 @@ public sealed partial class ProcessWorkspaceShellTests
             };
         };
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, targetProcessId));
+        NavigateTo(context, $"/processes?processId={targetProcessId:D}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -447,6 +671,8 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
             Assert.Equal(targetDefinitionKey, snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
         });
+        // The legacy process id stays the link's identity; it is not rewritten to a definition key.
+        Assert.Equal($"/processes?processId={targetProcessId:D}", CurrentLocation(context));
     }
 
     [Fact]
@@ -455,9 +681,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var missingProcessId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?processId={missingProcessId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, missingProcessId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -481,9 +707,9 @@ public sealed partial class ProcessWorkspaceShellTests
             new ProcessDefinitionCatalogItemKey("architecture-decision-governance")).Value;
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProcessIdQuery, conflictingProcessId)
-            .Add(component => component.SelectedDefinitionKey, requestedDefinitionKey));
+        NavigateTo(context, $"/processes?definitionKey={requestedDefinitionKey}&processId={conflictingProcessId:D}");
+
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -504,9 +730,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var launchPlanId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        NavigateTo(context, $"/processes?launchPlanId={launchPlanId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.LaunchPlanIdQuery, launchPlanId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() =>
         {
@@ -535,8 +761,7 @@ public sealed partial class ProcessWorkspaceShellTests
             new AgentChatWorkspacePosition("live", "Live processes", "/processes/live", "page"),
             AgentChatNavigationIdentity.CreateForLocation(navigation.BaseUri, navigation.Uri));
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() =>
             Assert.Equal(
                 firstRunId.ToString("D"),
@@ -561,8 +786,7 @@ public sealed partial class ProcessWorkspaceShellTests
             async () => await registry.CaptureAsync());
         Assert.Equal(AgentChatContextPositionMismatchReason.NavigationChanged, mismatch.Reason);
 
-        cut.Render(parameters => parameters
-            .Add(component => component.RunIdQuery, secondRunId));
+        navigation.NavigateTo(nextLocation);
 
         cut.WaitForAssertion(() =>
         {
@@ -582,13 +806,12 @@ public sealed partial class ProcessWorkspaceShellTests
         var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
+        NavigateTo(context, $"/processes/live?runId={firstRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.Render(parameters => parameters
-            .Add(component => component.RunIdQuery, secondRunId));
+        NavigateQuery(context, LiveProcessesUrlCodec.RunKey, secondRunId);
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
             AgentChatContextAccessState.Loading,
@@ -617,7 +840,7 @@ public sealed partial class ProcessWorkspaceShellTests
         var nextProjectId = Guid.Parse("99999999-9999-9999-9999-999999999999");
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
-        client.ShellResultTransform = (requestIndex, projection) => requestIndex == 1
+        client.ShellResultTransform = (requestIndex, projection) => requestIndex == 0
             ? projection with
             {
                 Runtime = projection.Runtime with
@@ -628,25 +851,17 @@ public sealed partial class ProcessWorkspaceShellTests
                 }
             }
             : projection;
+        NavigateTo(context, $"/processes/live?runId={firstRunId:D}&status=needs-attention");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
-        SetPrivateField<Guid?>(cut.Instance, "requiredRouteRunId", null);
-        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.Active);
 
-        client.CompleteShellRequest(0);
-        Assert.True(
-            SpinWait.SpinUntil(() => client.Requests.Count == 2, TimeSpan.FromSeconds(10)),
-            "The filtered follow-up projection request was not started.");
+        // The explicit run and its filter survive the project change; the superseded read stays pending.
+        cut.Render(parameters => parameters.Add(component => component.ProjectId, nextProjectId));
+        cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
+        Assert.Equal(firstRunId, client.Requests[1].Selection.RunId);
 
-        SetPrivateField(cut.Instance, "statusFilter", ProcessProjectedRunStatus.NeedsAttention);
-        cut.Render(parameters => parameters
-            .Add(component => component.ProjectId, nextProjectId)
-            .Add(component => component.RunIdQuery, firstRunId));
-        cut.WaitForAssertion(() => Assert.Equal(3, client.Requests.Count));
-
-        client.CompleteShellRequest(2);
+        client.CompleteShellRequest(1);
         cut.WaitForAssertion(() =>
         {
             var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
@@ -655,17 +870,106 @@ public sealed partial class ProcessWorkspaceShellTests
             Assert.Contains(
                 snapshot.Scope.SurfacePosition!.Facts,
                 fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+            Assert.Contains(
+                snapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "status-filter" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
         });
 
-        client.CompleteShellRequest(1);
+        client.CompleteShellRequest(0);
         Assert.True(
-            SpinWait.SpinUntil(() => client.CompletedShellRequestCount == 3, TimeSpan.FromSeconds(10)),
-            "The superseded filtered projection did not finish.");
-        var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        Assert.Equal(firstRunId.ToString("D"), finalSnapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
-        Assert.Contains(
-            finalSnapshot.Scope.SurfacePosition!.Facts,
-            fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+            SpinWait.SpinUntil(() => client.CompletedShellRequestCount == 2, TimeSpan.FromSeconds(10)),
+            "The superseded projection did not finish.");
+        cut.WaitForAssertion(() =>
+        {
+            var finalSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, finalSnapshot.Scope.AccessState);
+            Assert.Equal(firstRunId.ToString("D"), finalSnapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+            Assert.Contains(
+                finalSnapshot.Scope.SurfacePosition!.Facts,
+                fact => fact.Name == "run-status" && fact.Value == ProcessProjectedRunStatus.NeedsAttention.ToString());
+        });
+        Assert.Equal($"/processes/live?runId={firstRunId:D}&status=needs-attention", CurrentLocation(context));
+    }
+
+    [Fact]
+    public void Selecting_another_definition_replaces_the_legacy_selection_key_and_keeps_the_context_ready()
+    {
+        using var context = CreateContext(out _);
+        var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
+        var processId = ProcessDefinitionCatalogProjectionService.CreateDefinitionId(
+            new ProcessDefinitionCatalogItemKey("blazor-app-delivery")).Value;
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        var navigation = (BunitNavigationManager)NavigateTo(context, $"/processes?processId={processId:D}&runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForAssertion(() => Assert.Equal(AgentChatContextAccessState.Ready, registry.Capture()?.Scope.AccessState));
+        ActivateProcessDetailTab(cut, "processes-tab-definitions", "processes-tab-panel-definitions");
+
+        cut.Find("[data-testid='processes-definition-architecture-decision-governance']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var snapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
+            Assert.Equal(AgentChatContextAccessState.Ready, snapshot.Scope.AccessState);
+            Assert.Equal("architecture-decision-governance", snapshot.Scope.SurfacePosition?.PrimarySelection?.Id);
+        });
+        // The in-app selection is the new address; the legacy process id that named the old definition is gone.
+        Assert.Equal($"/processes?tab=definition&definitionKey=architecture-decision-governance&runId={runId:D}", CurrentLocation(context));
+        Assert.False(navigation.History.First().Options.ReplaceHistoryEntry);
+        Assert.Empty(cut.FindAll("[data-testid='processes-selection-unavailable']"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_deep_linked_run_dialog_for_a_missing_run_reports_it_unavailable_and_close_replaces_the_location(bool live)
+    {
+        using var context = CreateContext(out _);
+        var missingRunId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var path = live ? "/processes/live" : "/processes";
+        var navigation = (BunitNavigationManager)NavigateTo(context, $"{path}?runId={missingRunId:D}&dialog=run");
+        var dialog = live ? "live-processes-run-detail-dialog" : "processes-run-detail-dialog";
+        var unavailable = live ? "live-processes-run-detail-unavailable" : "processes-run-detail-unavailable";
+
+        IRenderedComponent<IComponent> cut = live ? context.Render<LiveProcessesDashboard>() : context.Render<ProcessWorkspaceShell>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='{dialog}'] [data-testid='{unavailable}']")));
+        Assert.Contains("dialog=run", CurrentLocation(context), StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() => live
+            ? ((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).CloseRunDetailDialogAsync()
+            : ((CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance).CloseRunDetailDialogAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll($"[data-testid='{dialog}']")));
+        // A deep-linked overlay has no parent entry, so Close replaces the location instead of going Back.
+        Assert.DoesNotContain("dialog=", CurrentLocation(context), StringComparison.Ordinal);
+        Assert.Contains($"runId={missingRunId:D}", CurrentLocation(context), StringComparison.Ordinal);
+        Assert.True(navigation.History.First().Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public void Live_processes_choosing_all_runs_clears_an_explicit_run_without_snapping_back()
+    {
+        using var context = CreateContext(out var client);
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        NavigateTo(context, $"/processes/live?runId={runId:D}");
+        var cut = context.Render<LiveProcessesDashboard>();
+        cut.WaitForElement("[data-testid='live-processes-run-filter']");
+        cut.WaitForAssertion(() => Assert.False(((CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance).IsLoading));
+        var requests = client.Requests.Count;
+
+        cut.Find("[data-testid='live-processes-run-filter']").Change(string.Empty);
+
+        cut.WaitForAssertion(() =>
+        {
+            var session = (CanDoItAll.Processes.UI.ILiveProcessesSession)cut.Instance;
+            Assert.False(session.IsLoading);
+            Assert.Null(session.SelectedRuntimeRunId);
+            Assert.Equal(string.Empty, session.RuntimeRunSelectValue);
+            Assert.Equal("/processes/live", CurrentLocation(context));
+            Assert.Equal(requests + 1, client.Requests.Count);
+            Assert.Null(client.LastRequest!.Selection.RunId);
+        });
+        Assert.False(((BunitNavigationManager)context.Services.GetRequiredService<NavigationManager>()).History.First().Options.ReplaceHistoryEntry);
     }
 
     [Fact]
@@ -674,13 +978,12 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client);
         var registry = context.Services.GetRequiredService<IAgentChatContextRegistry>();
         client.DeferShellRequests = true;
+        var navigation = NavigateTo(context, "/processes?definitionKey=blazor-app-delivery");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, "blazor-app-delivery"));
+        var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForAssertion(() => Assert.Single(client.Requests));
 
-        cut.Render(parameters => parameters
-            .Add(component => component.SelectedDefinitionKey, "architecture-decision-governance"));
+        navigation.NavigateTo("/processes?definitionKey=architecture-decision-governance");
         cut.WaitForAssertion(() => Assert.Equal(2, client.Requests.Count));
         Assert.Equal(
             AgentChatContextAccessState.Loading,
@@ -812,11 +1115,10 @@ public sealed partial class ProcessWorkspaceShellTests
         var projectId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var processId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        NavigateTo(context, $"/projects/{projectId:D}/processes?processId={processId:D}&runId={runId:D}");
 
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, projectId)
-            .Add(component => component.ProcessIdQuery, processId)
-            .Add(component => component.RunIdQuery, runId));
+            .Add(component => component.ProjectId, projectId));
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-detail-panel-runs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Project, client.LastRequest?.Scope.Kind);
@@ -923,9 +1225,8 @@ public sealed partial class ProcessWorkspaceShellTests
     {
         using var context = CreateContext(out _);
         var runId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
-        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        var navigation = NavigateTo(context, $"/processes?runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-agent-context']")));
         cut.Find("[data-testid='processes-agent-context']").Click();
@@ -1509,12 +1810,10 @@ public sealed partial class ProcessWorkspaceShellTests
         Assert.Contains("USD 0.00", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Tokens", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Time", cut.Markup, StringComparison.Ordinal);
-        var usageOptions = (CdaChartOptions)typeof(ProcessWorkspaceShell)
-            .GetField("RuntimeUsageChartOptions", BindingFlags.NonPublic | BindingFlags.Static)!
-            .GetValue(null)!;
-        var usageSeries = (IReadOnlyList<CdaChartSeries>)typeof(ProcessWorkspaceShell)
-            .GetProperty("RuntimeUsageSeries", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(cut.Instance)!;
+        var usageChart = cut.FindComponents<CdaChart>()
+            .Single(chart => chart.Instance.Title == "Token and cost telemetry").Instance;
+        var usageOptions = usageChart.Options;
+        var usageSeries = usageChart.Series;
         Assert.Equal("k tokens / min / USD x1k", usageOptions.YAxisTitle);
         Assert.Equal(["Tokens (k)", "Minutes", "Cost (USD x1k)"], usageSeries.Select(series => series.Name));
 
@@ -1531,14 +1830,30 @@ public sealed partial class ProcessWorkspaceShellTests
     }
 
     [Fact]
+    public async Task Manager_chat_typing_reaches_the_host_and_the_send_request() {
+        var workspaceService = new RecordingManagerChatWorkspaceService();
+        using var context = CreateContext(out _, workspaceService);
+        var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        NavigateTo(context, $"/processes?runId={runId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
+        ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
+        cut.WaitForElement("[data-testid='chat-prompt-input']");
+        const string prompt = "Explain the selected process in one sentence.";
+        cut.Find("[data-testid='chat-prompt-input']").Input(prompt);
+        cut.WaitForAssertion(() => Assert.Equal(prompt, ReadManagerChatField<string>(cut, "managerChatDraftPrompt")));
+        await cut.Find("[data-testid='chat-send-button']").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.WaitForAssertion(() => Assert.Equal(prompt, workspaceService.LastPrompt));
+    }
+
+    [Fact]
     public void Manager_chat_uses_distinct_thread_per_selected_process_run()
     {
         var workspaceService = new RecordingManagerChatWorkspaceService();
         using var context = CreateContext(out var client, workspaceService);
         var firstRunId = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, firstRunId));
+        NavigateTo(context, $"/processes?runId={firstRunId:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
 
@@ -1571,8 +1886,9 @@ public sealed partial class ProcessWorkspaceShellTests
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var binding = original;
         client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        NavigateTo(context, $"/projects/{original.ProjectId:D}/processes?runId={firstRun:D}");
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+            .Add(component => component.ProjectId, original.ProjectId));
         cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
         var load = typeof(ProcessWorkspaceShell).GetMethod("EnsureManagerChatLoadedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var oldLoad = cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
@@ -1580,7 +1896,7 @@ public sealed partial class ProcessWorkspaceShellTests
         try {
             workspaceService.WorkspaceReadPause = null;
             binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             await cut.InvokeAsync(() => (Task)load.Invoke(cut.Instance, [true])!);
             Assert.Contains(secondRun.ToString("D"), workspaceService.LastWorkspaceSessionTitle, StringComparison.Ordinal);
         } finally {
@@ -1637,8 +1953,9 @@ public sealed partial class ProcessWorkspaceShellTests
         var original = new ProcessProjectionProjectBinding(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         var binding = original;
         client.ShellResultTransform = (_, projection) => projection with { ProjectBinding = binding };
+        NavigateTo(context, $"/projects/{original.ProjectId:D}/processes?runId={firstRun:D}");
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.ProjectId, original.ProjectId).Add(component => component.RunIdQuery, firstRun));
+            .Add(component => component.ProjectId, original.ProjectId));
         cut.WaitForAssertion(() => Assert.NotNull(typeof(ProcessWorkspaceShell).GetField("shell", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(cut.Instance)));
         await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
         var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
@@ -1687,7 +2004,7 @@ public sealed partial class ProcessWorkspaceShellTests
             if (recreateProject) {
                 binding = new(original.DatabaseProfileId, original.ProjectId, Guid.NewGuid());
             }
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             await InvokeManagerChatAsync(cut, "EnsureManagerChatLoadedAsync", true);
             currentSession = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace").SelectedSession!.Id;
             await InvokeManagerChatAsync(cut, "HandleManagerChatDraftPromptChangedAsync", "New project draft");
@@ -1762,7 +2079,8 @@ public sealed partial class ProcessWorkspaceShellTests
         var recording = context.JSInterop.SetupVoid("CanDoItAll.agentFramework.voice.startRecordingForOwner", _ => true);
         var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        NavigateTo(context, $"/processes?runId={firstRun:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
         var originalOwner = ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N");
@@ -1771,7 +2089,7 @@ public sealed partial class ProcessWorkspaceShellTests
             cut.WaitForAssertion(() => Assert.Single(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.startRecordingForOwner"]));
             await InvokeManagerChatAsync(cut, "ReloadManagerChatAsync");
             Assert.Equal(originalOwner, ReadManagerChatField<Guid>(cut, "managerChatVoiceOwnerId").ToString("N"));
-            await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.RunIdQuery, secondRun)));
+            await cut.InvokeAsync(() => NavigateQuery(context, ProcessWorkspaceUrlCodec.RunKey, secondRun));
             Assert.Contains(context.JSInterop.Invocations["CanDoItAll.agentFramework.voice.disposeOwner"],
                 invocation => Equals(invocation.Arguments[0], originalOwner));
         } finally {
@@ -1795,7 +2113,8 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out var client, workspaceService);
         var firstRun = Guid.Parse("77777777-7777-7777-7777-777777777777");
         var secondRun = Guid.Parse("88888888-8888-8888-8888-888888888888");
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.RunIdQuery, firstRun));
+        NavigateTo(context, $"/processes?runId={firstRun:D}");
+        var cut = context.Render<ProcessWorkspaceShell>();
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() => Assert.NotNull(ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace")));
         var oldWorkspace = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
@@ -1817,7 +2136,9 @@ public sealed partial class ProcessWorkspaceShellTests
             client.CompleteShellRequest(0);
             await oldLoad.WaitAsync(TimeSpan.FromSeconds(5));
             await change.WaitAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(secondRun, ReadManagerChatField<Guid>(cut, "selectedRuntimeRunId"));
+            Assert.Equal(secondRun, ((CanDoItAll.Processes.UI.IProcessWorkspaceSession)cut.Instance).SelectedRuntimeRunId);
+            Assert.Contains("tab=manager-chat", CurrentLocation(context), StringComparison.Ordinal);
+            Assert.Contains($"runId={secondRun:D}", CurrentLocation(context), StringComparison.Ordinal);
             Assert.Equal(secondRun, client.LastRequest!.RuntimeQuery!.SelectedRunId);
             var current = ReadManagerChatField<ChatAgentWorkspaceSnapshot>(cut, "managerChatWorkspace");
             Assert.NotEqual(oldWorkspace.SelectedSession!.Id, current.SelectedSession!.Id);
@@ -1878,9 +2199,9 @@ public sealed partial class ProcessWorkspaceShellTests
             timeProvider: new ManualTimeProvider(Now));
         ConfigureReadyRefresh(client, () => Now);
         var runId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        NavigateTo(context, $"/processes?runId={runId:D}");
 
-        var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters
-            .Add(component => component.RunIdQuery, runId));
+        var cut = context.Render<ProcessWorkspaceShell>();
 
         ActivateProcessDetailTab(cut, "processes-detail-tab-manager-chat", "processes-detail-panel-manager-chat");
         cut.WaitForAssertion(() =>
@@ -2043,9 +2364,9 @@ public sealed partial class ProcessWorkspaceShellTests
     public void Live_processes_dashboard_uses_own_projection_page()
     {
         using var context = CreateContext(out var client);
+        NavigateTo(context, "/processes/live?processStarted=1");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.LaunchStarted, true));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-tabs']")));
         Assert.Equal(ProcessWorkspaceScopeKind.Global, client.LastRequest?.Scope.Kind);
@@ -2142,9 +2463,9 @@ public sealed partial class ProcessWorkspaceShellTests
         using var context = CreateContext(out _);
         var tooltipHost = context.Render<Tooltip>();
         var activeRunId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        NavigateTo(context, $"/processes/live?runId={activeRunId:D}");
 
-        var cut = context.Render<LiveProcessesDashboard>(parameters => parameters
-            .Add(component => component.RunIdQuery, activeRunId));
+        var cut = context.Render<LiveProcessesDashboard>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='live-processes-activity-cards']")));
         var activeCard = cut
@@ -2334,7 +2655,8 @@ public sealed partial class ProcessWorkspaceShellTests
         out RecordingProcessWorkspaceProjectionClient client,
         IAgentFrameworkWorkspaceService? agentWorkspaceService = null,
         IAgentVoiceService? voiceService = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        Action<IServiceCollection>? services = null)
     {
         var effectiveTimeProvider = timeProvider ?? TimeProvider.System;
         var context = new BunitContext();
@@ -2346,9 +2668,22 @@ public sealed partial class ProcessWorkspaceShellTests
         context.Services.AddSingleton<ICurrencyFormatter>(new StaticCurrencyFormatter("USD"));
         context.Services.AddSingleton<IProcessProjectionClock>(new FixedProcessProjectionClock(Now));
         context.Services.AddSingleton(effectiveTimeProvider);
+        context.Services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(_ => new ProcessTestHostLifetime());
         context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddSingleton<IDatabaseRuntimeState, DatabaseRuntimeState>();
+        context.Services.AddSingleton<EditingChangeFeed>();
+        context.Services.AddSingleton<IEditingUiAccess, EditingUiTestAccess>();
+        var editingProfileId = Guid.NewGuid();
+        context.Services.AddSingleton<Func<ProcessEditingSession>>(provider => {
+            var changes = provider.GetRequiredService<EditingChangeFeed>();
+            var access = provider.GetRequiredService<IEditingUiAccess>();
+            var runtime = provider.GetRequiredService<IDatabaseRuntimeState>();
+            var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EditingObservation>>();
+            return () => new(changes, access,
+                () => new(EditingScopeKind.Dataset, editingProfileId, runtime.GetSnapshot().Generation), logger);
+        });
         context.Services.AddSingleton<ProcessWorkspaceMockProjectionFactory>();
+        context.Services.AddSingleton<IProcessCancellationClient, UnavailableCancellationClient>();
         var contextRegistry = new AgentChatContextRegistry(effectiveTimeProvider);
         context.Services.AddSingleton<IAgentChatContextRegistry>(contextRegistry);
         context.Services.AddSingleton<IAgentChatExecutionOrchestrator>(
@@ -2375,7 +2710,52 @@ public sealed partial class ProcessWorkspaceShellTests
 
         client = new RecordingProcessWorkspaceProjectionClient();
         context.Services.AddSingleton<IProcessWorkspaceProjectionClient>(client);
+        context.Services.AddSingleton<IAppNavigationHistory>(provider => new BunitNavigationBack(provider.GetRequiredService<NavigationManager>()));
+        services?.Invoke(context.Services);
+        // The routed hosts read RendererInfo; setting it builds the renderer, so it follows every registration.
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
+    }
+
+    private sealed class UnavailableCancellationClient : IProcessCancellationClient {
+        public Task<ProcessCancellationClientView> ReadAsync(ProcessRunId runId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new ProcessCancellationClientView(null, false, false));
+
+        public Task<ProcessCancellationClientResult> RequestAsync(ProcessRunId runId, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("This projection fixture does not admit cancellation.");
+    }
+
+    private static NavigationManager NavigateTo(BunitContext context, string location)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo(location);
+        return navigation;
+    }
+
+    // A location change of one query value, as Back, Forward or an edited address produces it.
+    private static void NavigateQuery(BunitContext context, string key, Guid? value)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo(navigation.GetUriWithQueryParameter(key, value?.ToString("D")));
+    }
+
+    private static string CurrentLocation(BunitContext context)
+    {
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        return "/" + navigation.ToBaseRelativePath(navigation.Uri);
+    }
+
+    // Mirrors the browser's Back: the previous entry returns with its own entry state.
+    private sealed class BunitNavigationBack(NavigationManager navigation) : IAppNavigationHistory
+    {
+        public ValueTask BackAsync(CancellationToken cancellationToken = default)
+        {
+            var previous = ((BunitNavigationManager)navigation).History.Skip(1).FirstOrDefault();
+            navigation.NavigateTo(
+                previous?.Uri ?? navigation.BaseUri,
+                new NavigationOptions { HistoryEntryState = previous?.Options.HistoryEntryState });
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ManualTimeProvider(DateTimeOffset initialUtcNow) : TimeProvider
@@ -2854,7 +3234,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
             Guid agentId,
             Guid? chatSessionId = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, string? initialTitle = null)
         {
             if (chatSessionId is { } sessionId)
             {
@@ -2864,7 +3244,7 @@ public sealed partial class ProcessWorkspaceShellTests
             var session = new ChatSessionRecord(
                 Guid.NewGuid(),
                 agentId,
-                "New exploration thread",
+                initialTitle is null ? "New exploration thread" : ChatSessionTitleChange.Normalize(initialTitle),
                 Now,
                 Now,
                 Messages: []);
@@ -2876,6 +3256,7 @@ public sealed partial class ProcessWorkspaceShellTests
             Guid agentId,
             Guid chatSessionId,
             string title,
+            string expectedTitle,
             CancellationToken cancellationToken = default)
         {
             var sessionIndex = sessions.FindIndex(session => session.AgentId == agentId && session.Id == chatSessionId);
@@ -2884,11 +3265,8 @@ public sealed partial class ProcessWorkspaceShellTests
                 throw new InvalidOperationException($"Chat session '{chatSessionId:D}' was not created.");
             }
 
-            sessions[sessionIndex] = sessions[sessionIndex] with
-            {
-                Title = title,
-                UpdatedAtUtc = Now.AddSeconds(sessions.Count)
-            };
+            sessions[sessionIndex] = new ChatSessionTitleChange(agentId, chatSessionId, expectedTitle, title,
+                Now.AddSeconds(sessions.Count)).Apply(sessions[sessionIndex]);
             return Task.FromResult(sessions[sessionIndex]);
         }
 
@@ -3026,7 +3404,7 @@ public sealed partial class ProcessWorkspaceShellTests
 
         public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(
             bool includeTemplates = false,
@@ -3317,16 +3695,39 @@ public sealed partial class ProcessWorkspaceShellTests
 
     private sealed class RecordingProcessWorkspaceProjectionClient : IProcessWorkspaceProjectionClient
     {
+        public IProcessWorkspaceProjectionClient WithUiAuthority(ProcessAuthoringUiAuthority authority) => this;
+
         private readonly List<TaskCompletionSource> shellRequestCompletions = [];
         private readonly List<TaskCompletionSource> editorCommandCompletions = [];
         private int completedShellRequestCount;
         private int editorCommandCount;
 
         public List<ProcessWorkspaceShellRequest> Requests { get; } = [];
+        public CancellationToken LastShellCancellationToken { get; private set; }
 
         public bool DeferShellRequests { get; set; }
 
         public bool DeferEditorCommands { get; set; }
+        public TaskCompletionSource? AuthoringCompletion { get; set; }
+        public int AuthoringCommandCount { get; private set; }
+        public bool RejectAuthoringCommands { get; set; }
+        public Func<ProcessDefinitionEditorCommandResult, ProcessDefinitionEditorCommandResult>? EditorResultTransform { get; set; }
+        public ProcessAuthoringOperationState AuthoringOperationState { get; set; } = ProcessAuthoringOperationState.Unavailable;
+        public TaskCompletionSource<ProcessAuthoringOperationStatus>? AuthoringStatusCompletion { get; set; }
+        public List<ProcessAuthoringOperationQuery> AuthoringStatusQueries { get; } = [];
+        public List<ProcessDefinitionCanvasCommand> CanvasCommands { get; } = [];
+
+        public Task<ProcessAuthoringOperationStatus> GetAuthoringOperationAsync(ProcessAuthoringOperationQuery query, CancellationToken cancellationToken = default) {
+            AuthoringStatusQueries.Add(query);
+            return AuthoringStatusCompletion?.Task ?? Task.FromResult(new ProcessAuthoringOperationStatus(AuthoringOperationState, null));
+        }
+
+        private async Task WaitForAuthoringAsync(CancellationToken cancellationToken) {
+            AuthoringCommandCount++;
+            if (AuthoringCompletion is { } completion) {
+                await completion.Task.WaitAsync(cancellationToken);
+            }
+        }
 
         public int EditorCommandCount => Volatile.Read(ref editorCommandCount);
 
@@ -3337,6 +3738,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public ProcessWorkspaceShellRequest? LastRequest => Requests.LastOrDefault();
 
         public int FeedDefaultsCommandCount { get; private set; }
+        public TaskCompletionSource<ProcessDefinitionCatalogCommandReceipt>? FeedCompletion { get; set; }
 
         public ProcessDefinitionEditorCommand? LastEditorCommand { get; private set; }
 
@@ -3349,11 +3751,13 @@ public sealed partial class ProcessWorkspaceShellTests
         public ProcessTemplateImportCommand? LastTemplateImportCommand { get; private set; }
 
         public ProcessRuntimeOperatorActionCommand? LastOperatorActionCommand { get; private set; }
+        public TaskCompletionSource<ProcessRuntimeOperatorActionResult>? OperatorCompletion { get; set; }
 
         public async Task<ProcessWorkspaceShellProjection> GetShellAsync(
             ProcessWorkspaceShellRequest request,
             CancellationToken cancellationToken = default)
         {
+            LastShellCancellationToken = cancellationToken;
             var requestIndex = Requests.Count;
             Requests.Add(request);
             if (DeferShellRequests)
@@ -3384,6 +3788,9 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             FeedDefaultsCommandCount++;
+            if (FeedCompletion is not null) {
+                return FeedCompletion.Task;
+            }
             return Task.FromResult(new ProcessDefinitionCatalogCommandReceipt(
                 Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
                 ProcessDefinitionCatalogCommandKind.FeedDefaults,
@@ -3399,6 +3806,7 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             LastEditorCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             if (DeferEditorCommands)
             {
                 var completion = new TaskCompletionSource(
@@ -3409,7 +3817,7 @@ public sealed partial class ProcessWorkspaceShellTests
             }
 
             var lint = CreateEditorLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionEditorCommandStatus.Rejected
                 : ProcessDefinitionEditorCommandStatus.Accepted;
             var authoringStatus = command.CommandKind == ProcessDefinitionEditorCommandKind.Publish && status == ProcessDefinitionEditorCommandStatus.Accepted
@@ -3429,16 +3837,18 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Definition was not published because blocking lint issues remain.",
                 lint.Issues);
             var projection = CreateEditor(command.Draft.DefinitionKey, command.Draft, authoringStatus, versionToken, lint, receipt);
-            return new ProcessDefinitionEditorCommandResult(receipt, projection);
+            var result = new ProcessDefinitionEditorCommandResult(receipt, projection);
+            return EditorResultTransform?.Invoke(result) ?? result;
         }
 
-        public Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
+        public async Task<ProcessDefinitionRoleEditorCommandResult> ExecuteDefinitionRoleEditorCommandAsync(
             ProcessDefinitionRoleEditorCommand command,
             CancellationToken cancellationToken = default)
         {
             LastRoleCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var lint = CreateRoleLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionRoleCommandStatus.Rejected
                 : ProcessDefinitionRoleCommandStatus.Accepted;
             var versionToken = new ProcessDefinitionRoleEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
@@ -3455,35 +3865,38 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Role was not saved because blocking role lint issues remain.",
                 lint.Issues);
             var projection = CreateRoleEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt);
-            return Task.FromResult(new ProcessDefinitionRoleEditorCommandResult(receipt, projection));
+            return new ProcessDefinitionRoleEditorCommandResult(receipt, projection);
         }
 
-        public Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
+        public async Task<ProcessDefinitionCanvasCommandResult> ExecuteDefinitionCanvasCommandAsync(
             ProcessDefinitionCanvasCommand command,
             CancellationToken cancellationToken = default)
         {
             LastCanvasCommand = command;
+            CanvasCommands.Add(command);
+            await WaitForAuthoringAsync(cancellationToken);
             var versionToken = new ProcessDefinitionCanvasVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
             var receipt = new ProcessDefinitionCanvasCommandReceipt(
                 Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
                 command.CommandKind,
-                ProcessDefinitionCanvasCommandStatus.Accepted,
+                RejectAuthoringCommands ? ProcessDefinitionCanvasCommandStatus.Rejected : ProcessDefinitionCanvasCommandStatus.Accepted,
                 versionToken,
                 Now,
                 command.CommandKind == ProcessDefinitionCanvasCommandKind.Recompose
                     ? "Canvas recomposed."
                     : "Canvas command accepted.");
             var projection = CreateCanvas(command.DefinitionKey, versionToken, receipt, command.CommandKind);
-            return Task.FromResult(new ProcessDefinitionCanvasCommandResult(receipt, projection));
+            return new ProcessDefinitionCanvasCommandResult(receipt, projection);
         }
 
-        public Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
+        public async Task<ProcessDefinitionStepEditorCommandResult> ExecuteDefinitionStepEditorCommandAsync(
             ProcessDefinitionStepEditorCommand command,
             CancellationToken cancellationToken = default)
         {
             LastStepCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var lint = CreateStepLint(command);
-            var status = lint.HasBlockingIssues
+            var status = RejectAuthoringCommands || lint.HasBlockingIssues
                 ? ProcessDefinitionStepCommandStatus.Rejected
                 : ProcessDefinitionStepCommandStatus.Accepted;
             var versionToken = new ProcessDefinitionStepEditorVersionToken($"{command.CommandKind.ToString().ToLowerInvariant()}:test");
@@ -3504,19 +3917,20 @@ public sealed partial class ProcessWorkspaceShellTests
                     : "Step command rejected.",
                 lint.Issues);
             var projection = CreateStepEditor(command.DefinitionKey, command.Draft, versionToken, lint, receipt, command.CommandKind);
-            return Task.FromResult(new ProcessDefinitionStepEditorCommandResult(receipt, projection));
+            return new ProcessDefinitionStepEditorCommandResult(receipt, projection);
         }
 
-        public Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
+        public async Task<ProcessTemplateImportCommandResult> ExecuteTemplateImportCommandAsync(
             ProcessTemplateImportCommand command,
             CancellationToken cancellationToken = default)
         {
             LastTemplateImportCommand = command;
+            await WaitForAuthoringAsync(cancellationToken);
             var versionToken = new ProcessTemplateCatalogVersionToken("templates:test:1");
             var receipt = new ProcessTemplateImportCommandReceipt(
                 Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"),
                 command.CommandKind,
-                ProcessTemplateImportCommandStatus.Accepted,
+                RejectAuthoringCommands ? ProcessTemplateImportCommandStatus.Rejected : ProcessTemplateImportCommandStatus.Accepted,
                 versionToken,
                 Now,
                 command.CommandKind switch
@@ -3543,7 +3957,7 @@ public sealed partial class ProcessWorkspaceShellTests
                     Now)
             };
             var projection = CreateTemplateCatalog(command.TargetDefinitionKey, command.Query, receipt, imported);
-            return Task.FromResult(new ProcessTemplateImportCommandResult(receipt, projection));
+            return new ProcessTemplateImportCommandResult(receipt, projection);
         }
 
         public Task<ProcessRuntimeOperatorActionResult> ExecuteRuntimeOperatorActionAsync(
@@ -3551,6 +3965,9 @@ public sealed partial class ProcessWorkspaceShellTests
             CancellationToken cancellationToken = default)
         {
             LastOperatorActionCommand = command;
+            if (OperatorCompletion is not null) {
+                return OperatorCompletion.Task;
+            }
             return Task.FromResult(new ProcessRuntimeOperatorActionResult(
                 command.RunId,
                 command.StepInstanceId,

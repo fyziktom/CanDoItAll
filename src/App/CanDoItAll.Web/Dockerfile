@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-ARG DOTNET_SDK_VERSION=10.0.302
-ARG DOTNET_RUNTIME_VERSION=10.0.10
+ARG DOTNET_SDK_VERSION=10.0.403
+ARG DOTNET_RUNTIME_VERSION=10.0.14
 ARG BUSYBOX_VERSION=1.37.0-musl
 
 FROM busybox:${BUSYBOX_VERSION} AS healthcheck
@@ -45,7 +45,10 @@ WORKDIR /app
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
-RUN apt-get update \
+RUN sed -i -E \
+        's#https?://(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' \
+        /etc/apt/sources.list.d/ubuntu.sources \
+    && apt-get update --error-on=any \
     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux \
     && rm -rf /var/lib/apt/lists/*
 

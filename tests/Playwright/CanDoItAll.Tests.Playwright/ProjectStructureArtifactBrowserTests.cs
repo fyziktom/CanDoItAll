@@ -285,7 +285,7 @@ public sealed partial class AppSmokeTests
         await OpenNodeQuickActionsAsync(page, SelectorForNodeId(recordingId));
         var quickActionsDialog = page.GetByTestId("project-structure-node-quick-actions");
         await quickActionsDialog.WaitForAsync();
-        await quickActionsDialog.GetByTestId("project-structure-quick-action-primary").WaitForAsync();
+        await quickActionsDialog.GetByTestId("project-structure-quick-action-transcript-create").WaitForAsync();
         await CaptureWorkbenchShellAsync(page, Path.Combine(i04Root, "01-primary-state.png"));
         await quickActionsDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('[data-testid=\"project-structure-node-quick-actions\"]')");
@@ -295,11 +295,11 @@ public sealed partial class AppSmokeTests
         await CaptureLocatorAsync(page.GetByTestId("project-structure-selection-window"), Path.Combine(i04Root, "02-secondary-state.png"));
 
         await page.GetByRole(AriaRole.Button, new() { Name = "Summarize", Exact = true }).ClickAsync();
-        var transcriptDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Summarize confirmation" });
+        var transcriptDialog = page.GetByTestId("content-transcript-confirmation");
         await transcriptDialog.WaitForAsync();
         await page.EvaluateAsync(
             @"() => {
-                const select = document.querySelector('[aria-label=""Summarize confirmation""] select');
+                const select = document.querySelector('[data-testid=""content-transcript-confirmation""] select');
                 if (select instanceof HTMLSelectElement) {
                     select.size = Math.min(select.options.length, 3);
                     select.style.height = 'auto';
@@ -307,7 +307,7 @@ public sealed partial class AppSmokeTests
             }");
         await page.WaitForFunctionAsync(
             @"() => {
-                const select = document.querySelector('[aria-label=""Summarize confirmation""] select');
+                const select = document.querySelector('[data-testid=""content-transcript-confirmation""] select');
                 return select instanceof HTMLSelectElement &&
                     Array.from(select.options).some(option => (option.textContent || '').includes('OpenAI API')) &&
                     Array.from(select.options).some(option => (option.textContent || '').includes('Local Ollama'));
@@ -321,8 +321,9 @@ public sealed partial class AppSmokeTests
         await CaptureCanvasSurfaceAsync(page, Path.Combine(i08Root, "01-primary-state.png"));
 
         await SelectStructureOutlineNodeAsync(page, "Validation flow diagram");
-        await page.GetByRole(AriaRole.Button, new() { Name = "View Mermaid", Exact = true }).ClickAsync();
-        var mermaidDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "Validation flow diagram Mermaid viewer" });
+        await page.GetByTestId("project-structure-selection-window")
+            .GetByRole(AriaRole.Button, new() { Name = "Expand preview", Exact = true }).ClickAsync();
+        var mermaidDialog = page.GetByRole(AriaRole.Dialog, new() { Name = "validation-flow.mmd file interaction", Exact = true });
         await mermaidDialog.WaitForAsync();
         await CaptureLocatorAsync(mermaidDialog, Path.Combine(i08Root, "02-secondary-state.png"));
         await page.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
@@ -344,12 +345,21 @@ public sealed partial class AppSmokeTests
         await deleteDialog.WaitForAsync();
         await CaptureLocatorAsync(deleteDialog, Path.Combine(i17Root, "02-secondary-state.png"));
         await deleteDialog.GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
+        await deleteDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
 
-        await SelectCanvasNodesAsync(page, [summaryTaskId, exportTaskId], summaryTaskId);
-        await page.GetByTestId("project-structure-selection-window").WaitForAsync();
-        await page.Locator(".cw-floating-window[data-testid='project-structure-selection-window'] input[placeholder='Name this border']").FillAsync("Delivery swimlane");
-        await page.GetByRole(AriaRole.Button, new() { Name = "Border", Exact = true }).ClickAsync();
-        await WaitForSceneFrameLabelAsync(page, "Delivery swimlane");
+        try {
+            await SelectCanvasNodesAsync(page, [summaryTaskId, exportTaskId], summaryTaskId);
+            await page.GetByTestId("project-structure-selection-window").WaitForAsync();
+            await page.Locator(".cw-floating-window[data-testid='project-structure-selection-window'] input[placeholder='Name this border']").FillAsync("Delivery swimlane");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Border", Exact = true }).ClickAsync();
+            await WaitForSceneFrameLabelAsync(page, "Delivery swimlane");
+        } catch {
+            await File.WriteAllTextAsync(Path.Combine(i17Root, "border-failure.txt"),
+                System.Text.Json.JsonSerializer.Serialize(await CaptureSelectionFailureSnapshotAsync(page)) +
+                Environment.NewLine + fixture.GetLogSnapshot(60));
+            await page.ScreenshotAsync(new() { Path = Path.Combine(i17Root, "border-failure.png") });
+            throw;
+        }
         await CaptureCanvasSurfaceAsync(page, Path.Combine(i17Root, "03-interaction-result.png"));
 
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(featureId));
@@ -358,7 +368,7 @@ public sealed partial class AppSmokeTests
         await summaryDialog.WaitForAsync();
         await CaptureLocatorAsync(summaryDialog, Path.Combine(i19Root, "01-primary-state.png"));
 
-        var summaryStatusSelect = summaryDialog.Locator(".project-structure-summary-row").Filter(new() { HasText = "Capture screenshot evidence" }).Locator("select");
+        var summaryStatusSelect = summaryDialog.Locator(".content-summary-row").Filter(new() { HasText = "Capture screenshot evidence" }).Locator("select");
         await summaryStatusSelect.SelectOptionAsync(new[]
         {
             new SelectOptionValue
@@ -368,7 +378,7 @@ public sealed partial class AppSmokeTests
         });
         await page.WaitForFunctionAsync(
             @"() => {
-                const row = Array.from(document.querySelectorAll('.project-structure-summary-row'))
+                const row = Array.from(document.querySelectorAll('.content-summary-row'))
                     .find(candidate => (candidate.textContent || '').includes('Capture screenshot evidence'));
                 const select = row?.querySelector('select');
                 if (!(select instanceof HTMLSelectElement)) {
@@ -384,7 +394,7 @@ public sealed partial class AppSmokeTests
         Assert.True(
             await WaitForNodeTitleInStateAsync(page, "Canvas editor rollout progress workbook", timeoutMs: 15_000),
             "Expected the workbook export node to exist in canvas state.");
-        await page.GetByText("was exported as an Excel attachment.", new() { Exact = false }).WaitForAsync();
+        await Assertions.Expect(summaryDialog).ToContainTextAsync("Canvas editor rollout progress workbook was saved (");
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await SelectStructureOutlineNodeAsync(page, "Canvas editor rollout");
         await page.GetByRole(AriaRole.Button, new() { Name = "Summary", Exact = true }).ClickAsync();
@@ -393,7 +403,7 @@ public sealed partial class AppSmokeTests
         Assert.True(
             await WaitForNodeTitleInStateAsync(page, "Canvas editor rollout gantt", timeoutMs: 15_000),
             "Expected the Gantt export node to exist in canvas state.");
-        await page.GetByText("was exported as a Mermaid Gantt node.", new() { Exact = false }).WaitForAsync();
+        await Assertions.Expect(summaryDialog).ToContainTextAsync("Canvas editor rollout gantt was saved (");
         await summaryDialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await SelectStructureOutlineNodeAsync(page, "Canvas editor rollout gantt");
         await SetCanvasZoomPercentAsync(page, 52);

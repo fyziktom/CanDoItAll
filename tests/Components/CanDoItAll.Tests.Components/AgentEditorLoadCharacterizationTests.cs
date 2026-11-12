@@ -55,7 +55,8 @@ public sealed class AgentEditorLoadCharacterizationTests {
         cut.WaitForAssertion(() => Assert.Equal(agent.Id,
             Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id));
 
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Clear"));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").ClickAsync());
 
         var draft = Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model);
         Assert.Null(draft.Id);
@@ -75,18 +76,18 @@ public sealed class AgentEditorLoadCharacterizationTests {
             .Add(component => component.Saved, EventCallback.Factory.Create<AgentDetailsDialogResult>(this, completed.Add)));
         cut.WaitForElement("[data-testid='agents-catalog-name']");
         probe.Failure = AgentEditorProbeFailure.RefreshAfterSave;
-        cut.Find("[data-testid='agents-catalog-name']").Change("Refresh characterization");
+        cut.Find("[data-testid='agents-catalog-name']").Input("Refresh characterization");
 
-        cut.Find("form").Submit();
+        await cut.Find("form").SubmitAsync();
 
-        cut.WaitForAssertion(() => Assert.Equal(1, probe.AcceptedSaves));
+        Assert.Equal(1, probe.AcceptedSaves);
         cut.WaitForAssertion(() => Assert.Contains(
             harness.Context.Services.GetRequiredService<NotificationService>().Messages,
             message => message.Summary == "Agent saved, but the editor refresh failed"));
         Assert.Empty(completed);
         Assert.NotNull(Assert.IsType<AgentEditorModel>(cut.FindComponent<EditForm>().Instance.EditContext!.Model).Id);
         Assert.True(cut.Find("[data-testid='agents-catalog-save']").HasAttribute("disabled"));
-        cut.Find("form").Submit();
+        await cut.Find("form").SubmitAsync();
         Assert.Equal(1, probe.AcceptedSaves);
         Assert.NotNull(cut.Find("[data-testid='agents-editor-retry-refresh']"));
     }
@@ -121,7 +122,7 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
     public IAgentFrameworkWorkspaceService Target { get; set; } = default!;
     public AgentEditorProbeFailure Failure { get; set; }
     public int AcceptedSaves { get; private set; }
-    public Func<AgentEditorModel, Task<Guid>>? Save { get; set; }
+    public Func<AgentEditorModel, Task<AgentDefinition>>? Save { get; set; }
     public CancellationToken SaveToken { get; private set; }
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
@@ -137,16 +138,16 @@ public class AgentEditorWorkspaceProbe : DispatchProxy {
             return Task.FromException<IReadOnlyList<CapabilityCatalogItem>>(new InvalidOperationException("Capability catalog probe failure."));
         }
 
-        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) && Save is not null) {
+        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync) && Save is not null) {
             SaveToken = (CancellationToken)args![1]!;
             AcceptedSaves++;
             return Save((AgentEditorModel)args![0]!);
         }
 
-        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) &&
+        if (targetMethod.Name == nameof(IAgentFrameworkWorkspaceService.SaveAgentDefinitionAsync) &&
             Failure == AgentEditorProbeFailure.RefreshAfterSave) {
             AcceptedSaves++;
-            return Task.FromResult(Guid.NewGuid());
+            return Target.SaveAgentDefinitionAsync((AgentEditorModel)args![0]!, (CancellationToken)args[1]!);
         }
 
         try {

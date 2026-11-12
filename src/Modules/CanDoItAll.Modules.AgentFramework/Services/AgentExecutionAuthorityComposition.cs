@@ -28,13 +28,15 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
     private readonly IAgentExecutionProfileGenerationSource profileGenerationSource;
     private readonly TimeProvider timeProvider;
     private readonly IReadOnlyDictionary<string, IAgentExecutionSourceAuthorityProvider> providersBySourceKind;
+    private readonly IAgentHistoricalCatalogReadStore? historicalCatalog;
 
     public CanonicalAgentExecutionAuthorityResolver(
         ICanDoItAllAgentWorkspaceFactory workspaceFactory,
         IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
         IAgentExecutionProfileGenerationSource profileGenerationSource,
         TimeProvider timeProvider,
-        IEnumerable<IAgentExecutionSourceAuthorityProvider> sourceAuthorityProviders)
+        IEnumerable<IAgentExecutionSourceAuthorityProvider> sourceAuthorityProviders,
+        IAgentCatalogReadLeaseStore? catalogReadLeases = null)
     {
         this.workspaceFactory = workspaceFactory ?? throw new ArgumentNullException(nameof(workspaceFactory));
         this.databaseProfileRuntimeAccessor = databaseProfileRuntimeAccessor ?? throw new ArgumentNullException(nameof(databaseProfileRuntimeAccessor));
@@ -42,6 +44,7 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
         this.timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         providersBySourceKind = BuildProviderRegistry(
             sourceAuthorityProviders ?? throw new ArgumentNullException(nameof(sourceAuthorityProviders)));
+        historicalCatalog = catalogReadLeases as IAgentHistoricalCatalogReadStore;
     }
 
     private static Dictionary<string, IAgentExecutionSourceAuthorityProvider> BuildProviderRegistry(
@@ -120,6 +123,20 @@ internal sealed class CanonicalAgentExecutionAuthorityResolver : IAgentExecution
             timeProvider.GetUtcNow(),
             schemaVersion: request.Revalidation?.Authority.EffectiveSchemaVersion ?? AgentExecutionAuthorityRecord.CurrentSchemaVersion,
             sourceProjectLifetime: decision.SourceProjectLifetime);
+    }
+
+    public ValueTask<AgentHistoricalReceiptReadPolicy> ObserveHistoricalReceiptReadAsync(
+        AgentToolSessionObservation original, AgentHistoricalReceiptReadFence currentFence,
+        CancellationToken cancellationToken = default)
+        => CanonicalAgentHistoricalReceiptReadObserver.ObserveAsync(original, currentFence,
+            () => MatchesHistoricalReadFence(currentFence), historicalCatalog,
+            kind => providersBySourceKind.TryGetValue(kind, out var provider) ? provider.ResolveAsync : null, cancellationToken);
+
+    private bool MatchesHistoricalReadFence(AgentHistoricalReceiptReadFence fence) {
+        var generation = profileGenerationSource.GetGeneration();
+        var current = databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile;
+        return generation == fence.Profile.Generation && profileGenerationSource.GetGeneration() == generation &&
+            current.Id == fence.Profile.ProfileId && current.Runtime.Fingerprint == fence.Profile.Fingerprint;
     }
 
     private async Task<AgentDefinition> ResolveActiveAgentAsync(

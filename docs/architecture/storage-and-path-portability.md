@@ -29,6 +29,15 @@ flowchart LR
   download, and save interactions. FileTools is an adapter boundary, not the owner of the
   storage catalog or routing policy.
 
+The workspace Project assets default applies to ordinary uploads as well as edit
+requests. Prompt exports still require edit intent. After upgrading a workspace with
+an older Project assets default, explicitly save that storage's default-purpose
+selection again to replace the old edit-only rule; unrelated routing rules are preserved.
+
+IPFS uploads request `progress=false` because the transport expects a single JSON result.
+Stable placement uses the same response mode for both hash-only preparation and writes,
+while retaining its explicit content-addressing options.
+
 ## Driver Matrix
 
 | Provider | Locator | Main capabilities | Operating-system behavior |

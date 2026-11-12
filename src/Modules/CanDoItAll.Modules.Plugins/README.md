@@ -30,6 +30,14 @@ The complete application model retains these mappings for migrations. This bound
 
 OAuth session and connection changes retain their existing save boundaries. Secret material continues through the Security vault; persisted vault references and parameterized connection/log queries keep their existing formats.
 
+The routed `/plugins` page owns a transient `PluginWorkspaceSession` and delegates
+rendering to Plugins.UI through Plugins.Presentation. The session calls real owners
+in process and supplies the callback URI and transient browser effect. Backend-free
+public models live in Plugins.Contracts with assembly forwarding. Package, grant,
+installation and restart follow-up failures carry known commit receipts; OAuth
+progress distinguishes a resolved connection and a created authorization session.
+See the [UI boundary](../../../docs/architecture/plugins-ui-boundary.md).
+
 ## Related Docs
 
 - Repository overview: `README.md` at the repo root

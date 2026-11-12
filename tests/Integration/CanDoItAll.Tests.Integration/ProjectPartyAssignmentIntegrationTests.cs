@@ -31,6 +31,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Customer, string.Empty),
             Source = "integration-tests"
         })).IsSuccess);
         Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
@@ -40,6 +42,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             PartyId = deliveryUnitId,
             Role = ProjectPartyAssignmentRole.DeliveryUnit,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.DeliveryUnit, string.Empty),
             AllocationPercent = 70m,
             StartsOn = new DateOnly(2026, 7, 1),
             EndsOn = new DateOnly(2026, 7, 31),
@@ -52,6 +56,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Manager, "work-item-alpha"),
             NodeKey = "work-item-alpha",
             Source = "integration-tests"
         })).IsSuccess);
@@ -242,7 +248,7 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             projectId,
             workItem.Id,
             "{}",
-            status: "In progress");
+            status: "In progress", expectedState: await ProjectStructureTestOrigin.ReadStateAsync(workbench, projectId, workItem.Id));
 
         var refreshedDetails = await detailsBridge.GetAsync(
             projectId,
@@ -476,6 +482,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = "custom:missing-work-item",
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(firstAdmission, ProjectPartyAssignmentRole.WorkItemAssignee, "custom:missing-work-item"),
             Source = "integration-tests"
         });
 
@@ -490,6 +498,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = foreignWorkItem.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(firstAdmission, ProjectPartyAssignmentRole.WorkItemAssignee, foreignWorkItem.Id),
             Source = "integration-tests"
         });
 
@@ -541,6 +551,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = noteNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.MeetingParticipant, noteNode.Id),
             Source = "integration-tests"
         });
 
@@ -555,6 +567,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.MeetingParticipant,
             NodeKey = meetingNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.MeetingParticipant, meetingNode.Id),
             Source = "integration-tests"
         });
 
@@ -568,6 +582,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = meetingNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.WorkItemAssignee, meetingNode.Id),
             Source = "integration-tests"
         });
 
@@ -612,6 +628,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = $"project:{projectId}",
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.TeamMember, $"project:{projectId}"),
             Source = "integration-tests"
         });
 
@@ -626,6 +644,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.Partner,
             NodeKey = participantNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Partner, participantNode.Id),
             Source = "integration-tests"
         });
 
@@ -640,6 +660,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             Role = ProjectPartyAssignmentRole.TeamMember,
             NodeKey = participantNode.Id,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.TeamMember, participantNode.Id),
             Source = "integration-tests"
         });
 
@@ -652,6 +674,8 @@ public sealed class ProjectPartyAssignmentIntegrationTests
             PartyId = teamMemberId,
             Role = ProjectPartyAssignmentRole.TeamMember,
             IsPrimary = true,
+            PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.TeamMember, string.Empty),
             Source = "integration-tests"
         });
 

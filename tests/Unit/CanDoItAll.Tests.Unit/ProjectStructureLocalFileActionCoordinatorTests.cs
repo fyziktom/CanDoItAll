@@ -6,6 +6,25 @@ namespace CanDoItAll.Tests.Unit.Projects;
 
 public sealed class ProjectStructureLocalFileActionCoordinatorTests
 {
+    [Theory]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task A_retired_origin_after_resolution_cannot_launch_a_fresh_target(int retireAt) {
+        var node = CreateNode(storageObjectReferenceJson: "{\"current\":true}");
+        var actions = new RecordingKnownFileActionService();
+        var local = new RecordingLocalFileOpener();
+        var owner = new ProjectStructureLocalFileActionCoordinator(new StaticCurrentNodeResolver(node),
+            new StaticScopeProvider(), actions, local);
+        var checks = 0;
+        await Assert.ThrowsAsync<ProjectStructureEditConflictException>(async () => await owner.LaunchAsync(
+            Guid.NewGuid(), node.Id, FileToolsLocalFileAction.OpenInPreferredApplication,
+            ensureOrigin: _ => ++checks == retireAt ? Task.FromException(new ProjectStructureEditConflictException()) : Task.CompletedTask));
+
+        Assert.Equal(0, actions.CallCount);
+        Assert.Equal(0, local.CallCount);
+        Assert.Equal(retireAt, checks);
+    }
+
     [Fact]
     public async Task LaunchAsync_routes_a_current_managed_attachment_through_governed_authorization()
     {
@@ -146,7 +165,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
             FileToolsSemanticScope scope,
             FileToolsKnownFileOccurrence occurrence,
             FileToolsLocalFileAction action,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             LastAction = action;
@@ -166,7 +186,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
 
         public Task<ProjectStructureLocalFileOpenResult> OpenAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened."));
@@ -174,7 +195,8 @@ public sealed class ProjectStructureLocalFileActionCoordinatorTests
 
         public Task<ProjectStructureLocalFileOpenResult> OpenInPreferredApplicationAsync(
             ProjectStructureNode node,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
             CallCount++;
             return Task.FromResult(new ProjectStructureLocalFileOpenResult(true, "Opened."));

@@ -34,7 +34,7 @@ public sealed class CrmHrAccountActivityUiBoundaryTests
     public void Surface_parameters_inject_nothing_and_expose_only_light_graph_types(Type surface)
     {
         var properties = surface.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        Assert.Empty(properties.Where(property => property.GetCustomAttribute<InjectAttribute>() is not null));
+        Assert.DoesNotContain(properties, property => property.GetCustomAttribute<InjectAttribute>() is not null);
 
         var parameterAssemblies = properties
             .Where(property => property.GetCustomAttribute<ParameterAttribute>() is not null)

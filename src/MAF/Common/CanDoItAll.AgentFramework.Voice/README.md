@@ -26,5 +26,6 @@ Voice settings are normalized through the AgentFramework workflow settings path.
 
 ## Related Docs
 
+- [Public voice HTTP API](../../../../docs/agent-voice-api.md): authorization, limits, provider restrictions and validation
 - Repository overview: `README.md` at the repo root
 - Current architecture: `docs/architecture/overview.md`

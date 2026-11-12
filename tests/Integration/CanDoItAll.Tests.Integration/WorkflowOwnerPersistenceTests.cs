@@ -117,7 +117,9 @@ public sealed class WorkflowOwnerPersistenceTests {
         Assert.Equal(run.Summary, restoredRun.Summary);
         await using var scope = restarted.Services.CreateAsyncScope();
         var floating = scope.ServiceProvider.GetRequiredService<IFloatingAgentChatSettingsService>();
-        Assert.Equal(new FloatingAgentChatSettings(25, 9, 7, true, 30), await floating.GetSettingsAsync());
+        var restoredFloating = await floating.GetSettingsAsync();
+        Assert.Equal(new FloatingAgentChatSettings(25, 9, 7, true, 30), restoredFloating with { UpdatedAtUtc = null });
+        Assert.NotNull(restoredFloating.UpdatedAtUtc);
         await using var other = await TestApplication.CreateAsync(new TestHarnessOptions { TestEnvironment = environment, ActiveProfile = otherProfile });
         await using var otherOwner = await other.Services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>().CreateDbContextAsync();
         foreach (var row in expected) {

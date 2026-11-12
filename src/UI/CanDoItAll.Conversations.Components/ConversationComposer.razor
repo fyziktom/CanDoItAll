@@ -1,4 +1,4 @@
-<div class="chat-composer-panel">
+<div class="@(Compact ? "chat-composer-panel chat-composer-panel--compact" : "chat-composer-panel")">
     <FormField>
         <div class="chat-composer">
             <ConversationPromptTextArea @key="ComposerKey"
@@ -29,6 +29,8 @@
 </div>
 
 @code {
+    [Parameter] public bool Compact { get; set; }
+
     [Parameter]
     public string DraftPrompt { get; set; } = string.Empty;
 

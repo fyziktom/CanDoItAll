@@ -1,0 +1,48 @@
+@namespace CanDoItAll.Resources.UI
+
+<Dialog IsOpen="@(Workspace.Promotion is not null)" Eyebrow="Governed promotion" Title="Save storage object as resource"
+        Subtitle="The object will be re-resolved and authorized for the current actor before its stable identity is persisted."
+        Size="ModalSize.Medium" CloseOnBackdrop="false" TestId="resources-promotion-dialog" OnClose="Workspace.ClosePromotion">
+    <ChildContent>
+        @if (Workspace.Promotion is { } draft) {
+            <Stack GapScale="LayoutGap.Large" Class="w-full">
+                <SurfaceCard Soft="true">
+                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Selected object" />
+                    <TextBlock TextStyle="TextStyle.Body1" Value="@draft.Selection.Item.Name" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"{draft.Selection.Source.DisplayName} · {FileBrowserDisplayFormatter.FormatSize(draft.Selection.Item.Size)}")" />
+                </SurfaceCard>
+                @if (draft.Error is { } error) {
+                    <Alert AlertStyle="AlertStyle.Danger" data-testid="resources-promotion-error">@error</Alert>
+                }
+                <FormField Text="Target project" Class="w-full">
+                    <InputSelect @bind-Value="draft.ProjectId" class="cda-input w-full" data-testid="resources-promotion-project">
+                        <option value="">Select a project</option>
+                        @foreach (var project in draft.Projects.OrderBy(p => p.Name)) {
+                            <option value="@project.Id">@project.Name</option>
+                        }
+                    </InputSelect>
+                </FormField>
+                <FormField Text="Resource name" Class="w-full">
+                    <TextBox @bind-Value="draft.Name" Immediate="true" Class="cda-input" Style="width:100%" data-testid="resources-promotion-name" />
+                </FormField>
+                <FormField Text="Sensitivity" Class="w-full">
+                    <InputSelect @bind-Value="draft.Sensitivity" class="cda-input w-full" data-testid="resources-promotion-sensitivity">
+                        @foreach (var option in Enum.GetValues<ResourceSensitivity>()) {
+                            <option value="@option">@option</option>
+                        }
+                    </InputSelect>
+                </FormField>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" Class="justify-end">
+            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Workspace.ClosePromotion" />
+            <Button Text="Save resource" Icon="add_link" Disabled="@Workspace.IsSaving" data-testid="resources-promotion-save" Click="Workspace.SavePromotionAsync" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public IResourceBrowseWorkspace Workspace { get; set; } = default!;
+}

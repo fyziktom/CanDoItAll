@@ -2763,7 +2763,7 @@ public sealed class ProcessLaunchExecutorResolverTests
             => throw new NotSupportedException();
 
         public Task DeleteDefinitionAsync(
-            WorkflowId workflowId,
+            WorkflowDefinitionDeleteRequest request,
             CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
@@ -2853,7 +2853,7 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
 
@@ -2861,9 +2861,9 @@ public sealed class ProcessLaunchExecutorResolverTests
 
         public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null) => throw Unused();
 
-        public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default) => throw Unused();
 

@@ -27,9 +27,13 @@ internal sealed class FileToolsBrowseItemActionService(
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         FileToolsBrowseItemActionResult? unavailable = ValidateLocalLaunch(action);
         if (unavailable is not null)
         {
@@ -46,9 +50,10 @@ internal sealed class FileToolsBrowseItemActionService(
             return await LaunchAuthorizedAsync(
                 scope,
                 occurrence.FileName,
+                occurrence.File,
                 authorized,
                 action,
-                cancellationToken);
+                cancellationToken, authorizeRead);
         }
         finally
         {
@@ -60,10 +65,14 @@ internal sealed class FileToolsBrowseItemActionService(
         FileToolsSemanticScope scope,
         FileToolsKnownFileOccurrence occurrence,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(occurrence);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         FileToolsBrowseItemActionResult? unavailable = ValidateLocalLaunch(action);
         if (unavailable is not null)
         {
@@ -94,9 +103,10 @@ internal sealed class FileToolsBrowseItemActionService(
             return await LaunchAuthorizedAsync(
                 scope,
                 occurrence.FileName,
+                file,
                 authorized,
                 action,
-                cancellationToken);
+                cancellationToken, authorizeRead);
         }
         finally
         {
@@ -107,9 +117,13 @@ internal sealed class FileToolsBrowseItemActionService(
     public async ValueTask<IFileToolsDownloadLease> AuthorizeDownloadAsync(
         FileToolsSemanticScope scope,
         FileBrowserItemKey itemKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         (AuthorizedBrowserFile occurrence, AuthorizedStorageFile authorized) = await AuthorizeAsync(
             scope,
             itemKey,
@@ -126,6 +140,9 @@ internal sealed class FileToolsBrowseItemActionService(
                     "Downloading is not supported by the selected storage source.");
             }
 
+            if (authorizeRead is not null) {
+                await authorizeRead(cancellationToken);
+            }
             logger.LogInformation(
                 "Authorized browser download issued. StorageId={StorageId} ScopeKind={ScopeKind} Extension={Extension}.",
                 authorized.Storage.Id,
@@ -134,7 +151,7 @@ internal sealed class FileToolsBrowseItemActionService(
             return new AuthorizedFileToolsDownloadLease(
                 occurrence.File,
                 occurrence.FileName,
-                contentSource.For(occurrence.File, FileAccessOperation.Download),
+                contentSource.For(occurrence.File, FileAccessOperation.Download, authorizeRead),
                 authorizationCoordinator);
         }
         catch
@@ -161,9 +178,11 @@ internal sealed class FileToolsBrowseItemActionService(
     private async ValueTask<FileToolsBrowseItemActionResult> LaunchAuthorizedAsync(
         FileToolsSemanticScope scope,
         string fileName,
+        FileReference file,
         AuthorizedStorageFile authorized,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeRead)
     {
         EnsureLocalOpenSupported(authorized);
         string fullPath = pathPolicy.ResolveTrustedLocalOpenPath(
@@ -195,6 +214,14 @@ internal sealed class FileToolsBrowseItemActionService(
                 ? DesktopFileLaunchOperation.Open
                 : DesktopFileLaunchOperation.OpenContainingFolder,
             preference?.ExecutablePath);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
+        var context = await contextProvider.GetCurrentAsync(cancellationToken);
+        await authorizationCoordinator.ResolveAsync(file, context, FileAccessOperation.OpenLocally, cancellationToken);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         DesktopFileLaunchResult result = await desktopFileLauncher.LaunchAsync(
             request,
             cancellationToken);

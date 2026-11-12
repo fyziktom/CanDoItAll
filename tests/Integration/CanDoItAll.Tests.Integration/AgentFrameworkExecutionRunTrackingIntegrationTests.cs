@@ -836,8 +836,10 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
         }
     }
 
-    [Fact]
-    public async Task ExecuteRunAsync_finalizes_run_when_caller_cancels_after_runtime_started()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task ExecuteRunAsync_finalizes_run_when_caller_cancels_after_runtime_started(int usageWrapperCount)
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-run-caller-cancel");
         var profile = testEnvironment.CreatePostgreSqlProfile("primary");
@@ -862,6 +864,7 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
             .First(item => item.ProviderProfileId.HasValue);
         var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
         using var callerCancellation = new CancellationTokenSource();
+        runtime.CancellationUsageWrapperCount = usageWrapperCount;
 
         var executionTask = workspaceService.ExecuteRunAsync(
             new ExecutionRunRequest(
@@ -1016,7 +1019,9 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
         Assert.Equal(ExecutionState.Completed, detail!.Run.State);
         Assert.Equal(session.Id, result.ChatSessionId);
         Assert.Equal(result.ExecutionRunId, detail.ChatSession!.LatestExecutionRunId);
-        Assert.Equal(ChatMessageRole.Assistant, result.AssistantMessage.Role);
+        var assistant = result.AssistantMessage;
+        Assert.NotNull(assistant);
+        Assert.Equal(ChatMessageRole.Assistant, assistant.Role);
         Assert.Contains(detail.ChatSession.Messages, message => message.Role == ChatMessageRole.Assistant);
     }
 
@@ -2811,7 +2816,8 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
                 nameof(ISandboxWorkspaceCatalogStore.LoadCatalogSnapshotAsync) => StartupMilestone.CatalogSnapshotLoad,
                 nameof(ISandboxWorkspaceChatQueryStore.GetChatSessionAsync) => StartupMilestone.ChatSessionGet,
                 nameof(ISandboxWorkspaceChatQueryStore.ListChatRunSummariesAsync) => StartupMilestone.ChatRunSummariesList,
-                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunAsync) => StartupMilestone.AtomicChatRunStart,
+                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunAsync) or
+                nameof(ISandboxWorkspaceChatRunStartStore.BeginChatBackedRunWithAdmissionKnowledgeAsync) => StartupMilestone.AtomicChatRunStart,
                 nameof(ISandboxWorkspaceExecutionRunStore.GetExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailGet,
                 nameof(ISandboxWorkspaceExecutionRunStore.SaveExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailSave,
                 nameof(ISandboxWorkspaceExecutionRunMutationStore.UpdateExecutionRunDetailAsync) => StartupMilestone.ExecutionRunDetailUpdate,
@@ -3170,6 +3176,8 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
 
         public Exception? StartupFailure { get; set; }
 
+        public int CancellationUsageWrapperCount { get; set; }
+
         public Task<ProviderHealthResult> TestProviderAsync(
             ProviderProfile provider,
             CancellationToken cancellationToken = default)
@@ -3218,7 +3226,15 @@ public sealed partial class AgentFrameworkExecutionRunTrackingIntegrationTests(I
             }
             await progressCallback(ExecutionState.Running, "Implementation", "Applying the current implementation plan.");
             ProgressPersisted.TrySetResult(true);
-            await AllowCompletion.Task.WaitAsync(cancellationToken);
+            try {
+                await AllowCompletion.Task.WaitAsync(cancellationToken);
+            } catch (OperationCanceledException cancellation) when (CancellationUsageWrapperCount > 0) {
+                Exception failure = cancellation;
+                for (var index = 0; index < CancellationUsageWrapperCount; index++) {
+                    failure = new AgentRuntimeUsageException("Runtime usage retained after cancellation.", failure, []);
+                }
+                throw failure;
+            }
 
             if (Failure is not null)
             {

@@ -1,7 +1,18 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Web.Api;
+
+[Description("Conditional replacement or create-only business stewardship request for the AI party in the route. Send Original from the stewardship GET; this request cannot alter technical Agent settings.")]
+public sealed record AiStewardProfileSaveApiRequest(
+    [property: Description("Existing stewardship profile GUID, or null when Original proves no profile existed.")] Guid? Id,
+    [property: Description("Proposed responsible steward party GUID; null clears the assignment.")] Guid? OwnerPartyId,
+    [property: Description("Proposed business review status as a JSON integer AiValidationStatus.")] AiValidationStatus ValidationStatus,
+    [property: Description("Proposed review calendar date in yyyy-MM-dd form; null means no review date.")] DateOnly? LastReviewedOn,
+    [property: Description("Complete proposed business notes, replacing prior notes after a conditional save.")] string Notes,
+    [property: Description("Required exact stewardship observation returned by GET for this AI party. Retain it unchanged, including when ProfileId is null and proves an absent profile; it grants no write authority.")] AiStewardProfileObservation? Original,
+    [property: Description("Optional audit display label, default api; it never establishes authenticated authority.")] string Actor = "api");
 
 internal static class CrmHrApiContractDefaults
 {
@@ -443,6 +454,8 @@ internal sealed class PartyAddressCreateApiRequest
 /// </summary>
 internal sealed class PartyRelationshipsReplaceApiRequest
 {
+    [Description("Required complete owner-read relationship-set basis from the same party; send unchanged, including an explicitly observed empty Rows array. Omission never authorizes replacement.")]
+    public PartyRelationshipObservation? Original { get; init; }
     /// <summary>
     /// Every relationship the party should have after the call, described from the route party's point of view. An
     /// empty array, or omitting the member, removes all relationships of the party. Do not send null.
@@ -456,6 +469,8 @@ internal sealed class PartyRelationshipsReplaceApiRequest
 /// </summary>
 internal sealed class PartyRelationshipReplaceItemApiRequest
 {
+    [Description("Existing relationship row GUID for a retained or edited row; omit it for a newly proposed relationship.")]
+    public Guid? Id { get; init; }
     /// <summary>
     /// Identifier of the other party, as returned by <c>GET /api/crm-hr/parties</c>; required. It must exist and must
     /// differ from the route party.
@@ -501,6 +516,7 @@ internal sealed class PartyRelationshipReplaceItemApiRequest
     public PartyRelationshipEditorModel ToEditorModel()
         => new()
         {
+            Id = Id,
             RelatedPartyId = RelatedPartyId,
             RelationshipKind = RelationshipKind,
             IsOutgoing = IsOutgoing,
@@ -518,6 +534,9 @@ internal sealed class PartyRelationshipReplaceItemApiRequest
 /// </summary>
 internal sealed class WorkforceProfileSaveApiRequest
 {
+    [Description("Exact original returned with the workforce profile. Required for replacement; omission permits only creation while no profile exists.")]
+    public WorkforceProfileObservation? Original { get; init; }
+
     /// <summary>
     /// Identifier of the party whose profile is saved, as returned by <c>GET /api/crm-hr/workforce</c> or
     /// <c>GET /api/crm-hr/parties</c>; required. Not a workforce profile identifier.
@@ -627,6 +646,8 @@ internal sealed class WorkforceProfileSaveApiRequest
         => new()
         {
             PartyId = PartyId,
+            Original = Original,
+            Id = Original?.ProfileId,
             WorkforceKind = WorkforceKind,
             EmployeeCode = EmployeeCode ?? string.Empty,
             JobTitle = JobTitle ?? string.Empty,
@@ -655,16 +676,13 @@ internal sealed class WorkforceProfileSaveApiRequest
 /// </summary>
 internal sealed class SkillDefinitionSaveApiRequest
 {
-    /// <summary>
-    /// Identifier of the skill definition to update, from <c>GET /api/crm-hr/workforce/skills</c>. Omit it to create a
-    /// definition or to update the one with the same name. An unknown identifier is never used for a new definition.
-    /// </summary>
+    [Description("Exact skill catalog item originally read. Required with an existing identifier; creation never overwrites a same-name definition.")]
+    public SkillCatalogItemModel? Original { get; init; }
+
+    [Description("Existing definition identifier for a conditional replacement with Original; omit it for create-only intent. Unknown identifiers and duplicate names are rejected.")]
     public Guid? Id { get; init; }
 
-    /// <summary>
-    /// Skill name, unique in the catalog; required and trimmed. Without a known <c>id</c>, the definition with this
-    /// exact name is updated instead of creating a new one.
-    /// </summary>
+    [Description("Required, trimmed name, unique in the skill catalog. A name collision never overwrites another definition.")]
     public string Name { get; init; } = string.Empty;
 
     /// <summary>
@@ -687,6 +705,7 @@ internal sealed class SkillDefinitionSaveApiRequest
         => new()
         {
             Id = Id,
+            Original = Original,
             Name = Name ?? string.Empty,
             Category = Category ?? string.Empty,
             Description = Description ?? string.Empty,
@@ -700,10 +719,10 @@ internal sealed class SkillDefinitionSaveApiRequest
 /// </summary>
 internal sealed class PartySkillSaveApiRequest
 {
-    /// <summary>
-    /// Identifier of the party skill to update, from <c>skills[].id</c> of the workforce workspace. Omit it to update
-    /// the record of the same party and skill, or to create one. An unknown identifier is never used for a new record.
-    /// </summary>
+    [Description("Exact original returned with the worker's skill row. Required with an existing identifier; creation never replaces an existing worker/skill pair.")]
+    public PartySkillObservation? Original { get; init; }
+
+    [Description("Existing worker skill identifier for a conditional replacement with Original; omit it for create-only intent. The row cannot move to another worker.")]
     public Guid? Id { get; init; }
 
     /// <summary>
@@ -722,9 +741,7 @@ internal sealed class PartySkillSaveApiRequest
     /// </summary>
     public SkillProficiencyLevel Proficiency { get; init; } = SkillProficiencyLevel.Basic;
 
-    /// <summary>
-    /// Years of experience with the skill, a whole number; negative values are saved as 0. Omitted means 0.
-    /// </summary>
+    [Description("Nonnegative whole years of experience; negative values are rejected. Omitted means zero.")]
     public int YearsExperience { get; init; }
 
     /// <summary>
@@ -747,6 +764,7 @@ internal sealed class PartySkillSaveApiRequest
         {
             Id = Id,
             PartyId = PartyId,
+            Original = Original,
             SkillId = SkillId,
             Proficiency = Proficiency,
             YearsExperience = YearsExperience,
@@ -762,10 +780,12 @@ internal sealed class PartySkillSaveApiRequest
 /// </summary>
 internal sealed class CapacityBlockSaveApiRequest
 {
-    /// <summary>
-    /// Identifier of the block to update, from <c>capacityBlocks[].id</c> of the workforce workspace. Omit it to create
-    /// a block; an unknown identifier creates a new block with a new identifier.
-    /// </summary>
+    [Description("Exact original returned with the capacity row. Required for replacement; an unknown update identifier never creates a block.")]
+    public CapacityBlockObservation? Original { get; init; }
+    [Description("Exact project owner admission captured when choosing the related project. Required whenever RelatedProjectId is supplied; save does not refresh it.")]
+    public ProjectWriteAdmission? RelatedProjectAdmission { get; init; }
+
+    [Description("Existing capacity block identifier for a conditional replacement with Original; omit it for creation. Missing identifiers never create or move an update row.")]
     public Guid? Id { get; init; }
 
     /// <summary>
@@ -811,6 +831,8 @@ internal sealed class CapacityBlockSaveApiRequest
         {
             Id = Id,
             PartyId = PartyId,
+            Original = Original,
+            RelatedProjectAdmission = RelatedProjectAdmission,
             BlockKind = BlockKind,
             StartDate = StartDate,
             EndDate = EndDate,
@@ -824,19 +846,14 @@ internal sealed class CapacityBlockSaveApiRequest
 /// Request of <c>POST /api/crm-hr/recruiting/applications</c>: a recruitment application and its candidate. All
 /// application fields are overwritten; when updating, start from <c>application</c> of the recruitment workspace.
 /// </summary>
-internal sealed class RecruitmentApplicationSaveApiRequest
-{
-    /// <summary>
-    /// Identifier of the application to update, from <c>GET /api/crm-hr/recruiting/applications</c>. Omit it to create
-    /// an application; an unknown identifier creates a new application with a new identifier.
-    /// </summary>
+internal sealed class RecruitmentApplicationSaveApiRequest {
+    [Description("The original observation returned by the recruitment workspace; required for replacement or conversion.")]
+    public RecruitmentApplicationObservation? Original { get; init; }
+
+    [Description("Existing application GUID for a replacement with Original; omit it for create-only application intent.")]
     public Guid? Id { get; init; }
 
-    /// <summary>
-    /// Identifier of the candidate's existing person or AI agent party. When null or omitted, a new person party is
-    /// created from <c>candidateName</c> and the other candidate fields, also when updating an application; so when
-    /// updating, always send it.
-    /// </summary>
+    [Description("Existing candidate party GUID. Required to match Original for replacement; when omitted for creation, candidate fields create a new party.")]
     public Guid? PartyId { get; init; }
 
     /// <summary>
@@ -917,8 +934,8 @@ internal sealed class RecruitmentApplicationSaveApiRequest
     public string Notes { get; init; } = string.Empty;
 
     public RecruitmentApplicationEditorModel ToEditorModel()
-        => new()
-        {
+        => new() {
+            Original = Original,
             Id = Id,
             PartyId = PartyId,
             CandidateName = CandidateName ?? string.Empty,
@@ -943,12 +960,11 @@ internal sealed class RecruitmentApplicationSaveApiRequest
 /// Request of <c>POST /api/crm-hr/recruiting/interviews</c>: an interview of a recruitment application. All interview
 /// fields are overwritten.
 /// </summary>
-internal sealed class RecruitmentInterviewSaveApiRequest
-{
-    /// <summary>
-    /// Identifier of the interview to update, from <c>interviews[].id</c> of the recruitment workspace. Omit it to
-    /// create an interview; an unknown identifier creates a new interview with a new identifier.
-    /// </summary>
+internal sealed class RecruitmentInterviewSaveApiRequest {
+    [Description("The original observation returned by the recruitment workspace; required for replacement or conversion.")]
+    public RecruitmentInterviewObservation? Original { get; init; }
+
+    [Description("Existing interview row GUID for replacement with Original; omit it for a new interview.")]
     public Guid? Id { get; init; }
 
     /// <summary>
@@ -990,8 +1006,8 @@ internal sealed class RecruitmentInterviewSaveApiRequest
     public string Recommendation { get; init; } = string.Empty;
 
     public RecruitmentInterviewEditorModel ToEditorModel()
-        => new()
-        {
+        => new() {
+            Original = Original,
             Id = Id,
             ApplicationId = ApplicationId,
             ScheduledAtLocal = ScheduledAtUtc?.UtcDateTime,
@@ -1007,12 +1023,13 @@ internal sealed class RecruitmentInterviewSaveApiRequest
 /// Request of <c>POST /api/crm-hr/recruiting/lifecycle-tasks</c>: an onboarding, offboarding or training checklist item
 /// of a party. It is not a Project Structure task. All task fields are overwritten.
 /// </summary>
-internal sealed class LifecycleTaskSaveApiRequest
-{
-    /// <summary>
-    /// Identifier of the task to update, from <c>lifecycleTasks[].id</c> of the recruitment workspace. Omit it to
-    /// create a task; an unknown identifier creates a new task with a new identifier.
-    /// </summary>
+internal sealed class LifecycleTaskSaveApiRequest {
+    [Description("The original observation returned by the recruitment workspace; required for replacement or conversion.")]
+    public LifecycleTaskObservation? Original { get; init; }
+    [Description("Owner-issued lifetime observation for the selected related project. Required with that project identifier; null means no related project. This observation does not grant project permissions.")]
+    public ProjectWriteAdmission? RelatedProjectAdmission { get; init; }
+
+    [Description("Existing lifecycle task GUID for replacement with Original; omit it for a new task.")]
     public Guid? Id { get; init; }
 
     /// <summary>
@@ -1059,8 +1076,9 @@ internal sealed class LifecycleTaskSaveApiRequest
     public string Notes { get; init; } = string.Empty;
 
     public LifecycleTaskEditorModel ToEditorModel()
-        => new()
-        {
+        => new() {
+            Original = Original,
+            RelatedProjectAdmission = RelatedProjectAdmission,
             Id = Id,
             PartyId = PartyId,
             TaskKind = TaskKind,
@@ -1079,6 +1097,8 @@ internal sealed class LifecycleTaskSaveApiRequest
 /// </summary>
 internal sealed class RecruitmentSupportAssignmentsSaveApiRequest
 {
+    [Description("Complete relationship-set observation read with the candidate support workspace. Retain unchanged to conditionally replace only support-assignment semantics.")]
+    public PartyRelationshipObservation? Original { get; init; }
     /// <summary>
     /// Identifier of the party that receives support, for example a candidate or new hire; required and must exist.
     /// </summary>
@@ -1102,23 +1122,29 @@ internal sealed class RecruitmentSupportAssignmentsSaveApiRequest
     /// </summary>
     public Guid? MentorPartyId { get; init; }
 
-    public RecruitmentSupportAssignmentsEditorModel ToEditorModel()
-        => new()
-        {
+    public RecruitmentSupportAssignmentsEditorModel ToEditorModel() {
+        var model = new RecruitmentSupportAssignmentsEditorModel {
             PartyId = PartyId,
             ManagerPartyId = ManagerPartyId,
             BuddyPartyId = BuddyPartyId,
             MentorPartyId = MentorPartyId,
             LastChangedBy = CrmHrApiContractDefaults.Actor
         };
+        if (Original is not null) {
+            model.SetOriginal(Original);
+        }
+        return model;
+    }
 }
 
 /// <summary>
 /// Request of <c>POST /api/crm-hr/recruiting/conversions</c>: the application to convert and the workforce profile
 /// values of the candidate. Start from <c>conversion</c> of the recruitment workspace.
 /// </summary>
-internal sealed class RecruitmentConversionApiRequest
-{
+internal sealed class RecruitmentConversionApiRequest {
+    [Description("The original observation returned by the recruitment workspace; required for replacement or conversion.")]
+    public RecruitmentConversionObservation? Original { get; init; }
+
     /// <summary>
     /// Identifier of the recruitment application to convert; required. Its decision must be Approved.
     /// </summary>
@@ -1187,8 +1213,8 @@ internal sealed class RecruitmentConversionApiRequest
     public string Notes { get; init; } = string.Empty;
 
     public RecruitmentConversionEditorModel ToEditorModel()
-        => new()
-        {
+        => new() {
+            Original = Original,
             ApplicationId = ApplicationId,
             WorkforceKind = WorkforceKind,
             JobTitle = JobTitle ?? string.Empty,

@@ -86,13 +86,20 @@ Private/local provider defaults are estimates for comparative planning. They can
 
 | Profile | Default |
 | --- | --- |
-| OpenAI default | Responses with `gpt-5.4-mini` |
-| OpenAI chat completions | Chat Completions with `gpt-5.4-mini` |
+| OpenAI default | Responses with `gpt-6-luna` |
+| OpenAI chat completions | Chat Completions with `gpt-6-luna` |
 | OpenAI image generation | `gpt-image-2` |
 | Local ComfyUI Flux | `flux1-dev.safetensors`, `http://127.0.0.1:8188` |
 | Local Ollama | `llama3.1`, `http://127.0.0.1:11434` |
 
 OpenAI uses `OPENAI_API_KEY` or the runtime secret store. Managed local profiles may be seeded even when their external service or model is not installed; health checks make that state explicit.
+
+Managed OpenAI chat suggestions include GPT-5.6 and newer families. Older models retain
+compatibility and pricing support for saved configurations and historical records, but
+are not suggested defaults. Managed seed repair preserves customized agent assignments.
+When a workflow component changes its model, its own implicitly bound, unedited Gallery
+prompt can publish updated model compatibility through the Gallery owner. Explicit
+Gallery selections still require declared compatibility; old prompt versions stay intact.
 
 ## Shared provider and history evidence
 
@@ -148,3 +155,42 @@ The defaults include `gpt-6-astra`, `gpt-image-2.5-sunburst`, and `gpt-image-2.5
 Rates are standard USD per million tokens, verified on 2026-09-20 against the official [Astra model](https://developers.openai.com/api/docs/models/gpt-6-astra), [Sunburst model](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst), and [Flare model](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare) pages. Astra's long-context rates apply to the entire request above the threshold. Different image models and quality settings can consume different token counts despite equal rates. Image execution history currently records image counts, so a token-based image cost remains unavailable rather than an invented estimate.
 
 GPT Image 2.5 accepts `auto`, `low`, `medium`, `high`, `xhigh`, and `max` quality. The driver rejects the last two for older image models before dispatch. Shared-provider requests and responses preserve these new values.
+
+## October 2026 OpenAI catalog refresh
+
+Verified 8 October 2026 against the official [pricing page](https://developers.openai.com/api/docs/pricing)
+and the [GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol),
+[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna),
+[GPT-4.1](https://developers.openai.com/api/docs/models/gpt-4.1),
+[Mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini) and
+[Nano](https://developers.openai.com/api/docs/models/gpt-4.1-nano) model pages.
+
+| Model | Input | Cached input | Cache write | Output |
+| --- | ---: | ---: | ---: | ---: |
+| GPT-6.1 Sol | 2 | 0.10 | 2.50 | 10 |
+| GPT-6 Sol | 2 | 0.20 | 2.50 | 10 |
+| GPT-6 Luna | 0.10 | 0.01 | 0.125 | 0.50 |
+| GPT-4.1 | 2 | 0.50 | — | 8 |
+| GPT-4.1 Mini | 0.40 | 0.10 | — | 1.60 |
+| GPT-4.1 Nano | 0.10 | 0.025 | — | 0.40 |
+
+These are standard global USD rates per million tokens. Above 272,000 input tokens,
+the GPT-6 Sol/Luna rows use twice the input/cache rates and 1.5 times the output rate
+for the whole request. Dated snapshots retain their exact identifiers and inherit
+their documented family rate during discovery. Other service tiers and regional
+premiums are not represented by these standard rows. Existing execution price
+snapshots are immutable; historical usage is never repriced.
+
+GPT-6 Sol/Luna allow None through Max reasoning; Chat Completions function tools
+require explicit None and record that adjustment. GPT-6.1 Sol allows Low through Max
+and is exposed through Responses in this application's reasoning registry, where
+tool calling is supported. The managed default model is GPT-6 Luna. Historical GPT-5.4
+Mini pricing and the existing GPT-5.6 rates remain available for saved configurations.
+
+Every suggested managed OpenAI chat model now has a price row. Normal startup seeds
+the standard provider profiles and refreshes their owned price catalog. Deployments
+that deliberately set `AgentFramework:Providers:SeedDefaults=false` must supply their
+bindings for every configured agent, including built-in agents. Agent saves reject a
+missing provider before checking
+model prices and tell the operator to restore or select a provider.

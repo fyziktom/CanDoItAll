@@ -1,0 +1,57 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "Frozen source-only test correction; unbuilt/unexecuted",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-dormant-source-inventory.json",
+    "sha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07",
+    "bytes": 8673
+  },
+  "prerequisiteOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-acquisition-cleanup-source-overlay.json",
+    "sha256": "52FF16774D9070B30F2D4AA7E077F3D760FD767105964DAB12975B68442789DA",
+    "bytes": 2133
+  },
+  "independentFixtureOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-fixture-prefix-source-overlay.json",
+    "sha256": "175F8B7C8CEE0B404595F920B8805D201F5CD71B8C1809B06BF0F0F8350CA1C9",
+    "bytes": 2552
+  },
+  "sourceOverlay": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs",
+    "sha256": "9756332407993C6C5797D96A1961570892C9FFCC7F4239173E402471EEADCB6B",
+    "bytes": 31323
+  },
+  "predecessorSha256": "B5E53D3531138CED165F2C312FE101E3C4AC27C6335A486A91E94275583B333E",
+  "mainPredecessorSha256": "B5E53D3531138CED165F2C312FE101E3C4AC27C6335A486A91E94275583B333E",
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-historical-schema-fixture-amendment.md",
+    "sha256": "880829D9B4217F9EAAB1B73D01FA1F82F066A34388BBF072C568A4C33ABA945D",
+    "bytes": 2412
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-historical-schema-fixture-ownership.json",
+      "sha256": "FD59C1F0B3EF678D2A71104870950F2F1542977DF3C3D9EEAC97C9541EFA8248",
+      "bytes": 484
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-historical-schema-fixture-predecessors/AgentSavedEffectDispatchTests.cs.txt",
+      "sha256": "B5E53D3531138CED165F2C312FE101E3C4AC27C6335A486A91E94275583B333E",
+      "bytes": 29941
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1d-D1-historical-schema-fixture-predecessors/R1d-D1-acquisition-cleanup-source-overlay.json",
+      "sha256": "52FF16774D9070B30F2D4AA7E077F3D760FD767105964DAB12975B68442789DA",
+      "bytes": 2133
+    }
+  ],
+  "counts": {
+    "fullD1": 247,
+    "facts": 6,
+    "newFacts": 0
+  },
+  "productionChanged": false,
+  "mainChanged": false,
+  "originalInventoryUnchanged": true
+}

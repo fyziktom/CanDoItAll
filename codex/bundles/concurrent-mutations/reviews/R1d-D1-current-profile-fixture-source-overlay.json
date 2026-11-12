@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root",
+  "createdUtc": "2026-10-17T07:18:46.183987+00:00",
+  "reason": "Stale reflection argument arrays fail after optional historical receipt constructor seams. Use existing internal visibility and typed construction; retain typed captured logger where assertions require it.",
+  "productionChanges": 0,
+  "inputs": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs",
+      "beforeSha256": "7E33680E89C97D924F723E6295F4DE542A7B36FCC92F0EE4CA2AFAB22CAC1DC2",
+      "afterSha256": "E7B966B27627E4C445CF39F8D5A4FFDB9684FC26ED8FDA931B4C1A19B2329A3B",
+      "bytes": 31016,
+      "predecessorPath": "codex/bundles/concurrent-mutations/reviews/R1d-D1-current-profile-fixture-predecessors/CurrentProfileAgentExecutionActivityAdmissionTests.cs.txt"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentFrameworkWorkspaceServiceTests.cs",
+      "beforeSha256": "35016064429A382D46CF5E504ED45FDD400067B6701DF375EDBCB820A00AA4A2",
+      "afterSha256": "5974B27A391D6DA122A7159CC7B18051F08634D263D37BE4BA9B181CF57C8920",
+      "bytes": 23459,
+      "predecessorPath": "codex/bundles/concurrent-mutations/reviews/R1d-D1-current-profile-fixture-predecessors/CurrentProfileAgentFrameworkWorkspaceServiceTests.cs.txt"
+    }
+  ],
+  "validationScope": {
+    "originalActivityRows": 40,
+    "additionalWorkspaceRows": 20,
+    "successorActivityRows": 60,
+    "successorD1Rows": 267,
+    "countsRequireIndependentDiscovery": true
+  },
+  "status": "Managed source only; no build or execution; MAIN remains frozen"
+}

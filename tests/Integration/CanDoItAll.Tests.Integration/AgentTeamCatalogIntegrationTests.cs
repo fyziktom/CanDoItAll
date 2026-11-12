@@ -13,7 +13,7 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 public sealed class AgentTeamCatalogIntegrationTests
 {
     private const string ManagedSeedVersionPropertyName = "managedSeedVersion";
-    private const string ExpectedAgentTemplateSeedVersion = "2026-08-agent-template-teams-v72";
+    private const string ExpectedAgentTemplateSeedVersion = "2026-10-agent-template-teams-v73";
     private const string PreviousAgentTemplateSeedVersion = "2026-07-agent-template-teams-v70";
 
     private static readonly IReadOnlySet<string> LunaTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -73,11 +73,12 @@ public sealed class AgentTeamCatalogIntegrationTests
         var updatedDeliveryTeam = await workspaceService.UpdateAgentTeamMembersAsync(
             deliveryTeamId,
             [reviewerId, reviewerId, Guid.Empty],
-            CancellationToken.None);
+            deliveryTeam.UpdatedAtUtc);
 
         Assert.Equal([reviewerId], updatedDeliveryTeam.AgentIds);
 
-        await workspaceService.DeleteAgentAsync(reviewerId);
+        var reviewer = await workspaceService.GetAgentEditorAsync(reviewerId);
+        await workspaceService.DeleteAgentAsync(reviewerId, reviewer.ExpectedUpdatedAtUtc!.Value);
 
         teams = await workspaceService.ListAgentTeamsAsync();
         deliveryTeam = Assert.Single(teams, item => item.Id == deliveryTeamId);

@@ -1,0 +1,84 @@
+@using CanDoItAll.Editing
+@using CanDoItAll.Editing.UI
+
+@if (State.HasPendingInput && !State.IsSaving) {
+    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Complete the date or reference selection before saving. Your input is retained." /></Alert>
+}
+@if (State.CandidateInputRetained) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-recruiting-later-candidate-input">
+        <TextBlock Value="The candidate was created. Later candidate details are retained in this draft; they were not saved. Use the saved candidate details to continue editing this application." />
+        <Button Text="Use saved candidate details" ButtonStyle="ButtonStyle.Light" Click="UseCandidateRequested" />
+    </Alert>
+}
+@if (State.IsOutdated || State.IsUnknown || State.Missing || Message is not null) {
+    <Alert AlertStyle="@(Attention || State.IsOutdated || State.IsUnknown || State.Missing ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-recruiting-application-outcome">
+        <TextBlock Value="@(State.IsUnknown ? "The application save outcome is unknown. Your submission and later draft are retained; repeating the write is blocked." : State.Missing ? "This application or its candidate identity changed. Reopen the current record before editing it." : State.IsOutdated ? "The application changed. Review its current saved values before replacing it." : Message)" />
+        @if (Attention && Message is not null && (State.IsOutdated || State.Missing)) {
+            <TextBlock Value="@Message" />
+        }
+        <Button Text="Review application changes" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-recruiting-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo application merge" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review recruitment application" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-recruiting-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium" Stretch="true">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Compare the original application, your draft and the current saved application. Apply changes only your draft. Save remains a separate action." /></Alert>
+                @if (State.IsUnknown) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Reading this comparison does not resolve the unknown save outcome. The previous submission cannot be repeated." /></Alert>
+                }
+                @if (State.ReviewIsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-recruiting-review-stale"><TextBlock Value="The application changed again. Refresh this comparison before applying. Your explicit choices are retained." /></Alert>
+                }
+                @if (State.Missing || State.HasPendingInput) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="A changed candidate identity or incomplete input blocks applying. Your draft remains in the form." /></Alert>
+                }
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                <MergeFieldView TValue="string" Label="Desired role" Field="review.Role" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="Guid?" Label="Target unit" Field="review.TargetUnit" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="Guid?" Label="Recruiter" Field="review.Recruiter" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="Guid?" Label="Hiring manager" Field="review.HiringManager" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="RecruitmentDecisionValues" Label="Stage and decision" Field="review.Decision" Format="@(value => $"{value.Stage} / {value.Decision}")" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="DateOnly?" Label="Available from" Field="review.AvailableFrom" Format="@(value => value?.ToString("d") ?? "Not set")" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Source" Field="review.Source" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed" />
+                <MergeFieldView TValue="string" Label="Notes" Field="review.Notes" Format="@(value => value)" ShowUnchanged="showUnchanged" Changed="Changed">
+                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="5" ValueChanged="@(text => SetNotesAsync(review, text))" aria-label="Merged recruitment notes" /></ResultEditor>
+                </MergeFieldView>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="Reading" Click="ReviewRequested" data-testid="crmhr-recruiting-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Reading || !State.CanApply)" Click="ApplyRequested" data-testid="crmhr-recruiting-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showUnchanged;
+    [Parameter, EditorRequired] public RecruitmentApplicationState State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Attention { get; set; }
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public Func<Guid?, string> PartyName { get; set; } = _ => "Referenced party";
+    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] public EventCallback UseCandidateRequested { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private Task SetNotesAsync(RecruitmentApplicationReview review, string? value) {
+        if (!ReferenceEquals(State.Review, review)) {
+            return Task.CompletedTask;
+        }
+        review.Notes.SetResult(value ?? string.Empty);
+        return Changed.InvokeAsync();
+    }
+}

@@ -8,9 +8,13 @@ internal sealed class AuthorizedFileToolsKnownFileSessionFactory(
 {
     public async ValueTask<FileToolsKnownFileSession> CreateAsync(
         FileToolsKnownFileRequest request,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null,
+        Func<CancellationToken, ValueTask>? authorizeWrite = null) {
         ArgumentNullException.ThrowIfNull(request);
+        if (authorizeRead is not null) {
+            await authorizeRead(cancellationToken);
+        }
         FileAccessContext context = await contextProvider.GetCurrentAsync(cancellationToken);
         AuthorizedStorageFile authorized = await coordinator.ResolveAsync(
             request.File,
@@ -31,8 +35,8 @@ internal sealed class AuthorizedFileToolsKnownFileSessionFactory(
 
         return new FileToolsKnownFileSession(
             request.File,
-            contentSource.For(request.File),
+            contentSource.For(request.File, authorizeRead: authorizeRead),
             request.Intent,
-            request.Intent == FileToolsKnownFileIntent.Edit ? saveTarget.For(request.File) : null);
+            request.Intent == FileToolsKnownFileIntent.Edit ? saveTarget.For(request.File, authorizeWrite) : null);
     }
 }

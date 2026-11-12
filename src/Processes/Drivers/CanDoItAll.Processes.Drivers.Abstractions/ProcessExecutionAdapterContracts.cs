@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using CanDoItAll.Processes.Abstractions;
 
 namespace CanDoItAll.Processes.Drivers.Abstractions;
@@ -53,6 +54,9 @@ public sealed record ProcessExecutionAdapterResult(
     public ProcessExecutionRunId? ExecutionRunId { get; init; }
 
     public ProcessHostCapabilityEvaluationEvidence? HostCapabilityEvidence { get; init; }
+
+    [JsonIgnore]
+    public ProcessExecutionOwnerEvidence? OwnerEvidence { get; init; }
 
     public static ProcessExecutionAdapterResult Succeeded(
         string userSafeSummary,

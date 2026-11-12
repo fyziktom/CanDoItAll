@@ -1,13 +1,17 @@
+using CanDoItAll.Modules.Workspace.StorageSelection.Contracts;
 using System.Reflection;
 using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Tests.Components.Memory;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,15 +49,16 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         };
         var cut = RenderIdentityTab(context, editor, [provider]);
 
-        cut.Find("[data-testid='agents-catalog-avatar-open']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-open']").ClickAsync());
 
         var prompt = cut.Find("[data-testid='agents-catalog-avatar-ai-prompt']");
-        Assert.Contains("Luna", prompt.TextContent, StringComparison.Ordinal);
-        Assert.Contains("Research assistant", prompt.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Luna", prompt.GetAttribute("value"), StringComparison.Ordinal);
+        Assert.Contains("Research assistant", prompt.GetAttribute("value"), StringComparison.Ordinal);
 
-        prompt.Input("A calm blue fox with a subtle lunar motif.");
-        await cut.Find("[data-testid='agents-catalog-avatar-ai-generate']")
-            .ClickAsync(new MouseEventArgs());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-ai-prompt']")
+            .InputAsync(new ChangeEventArgs { Value = "A calm blue fox with a subtle lunar motif." }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-avatar-ai-generate']")
+            .ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -91,6 +96,9 @@ public sealed class AgentDetailsDialogAvatarGenerationTests
         context.Services.AddSingleton<IAvatarGenerationGateway>(
             new AgentAvatarGenerationGateway(workspaceService, generationService));
         context.Services.AddAgentEditorReadFixture();
+        context.Services.AddSingleton<ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
+        context.Services.AddSingleton<ProviderEditingWrites>();
+        context.Services.AddSingleton<ProviderEditingChanges>();
         return context;
     }
 

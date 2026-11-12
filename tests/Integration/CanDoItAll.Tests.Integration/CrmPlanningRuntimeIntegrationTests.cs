@@ -321,7 +321,7 @@ public sealed class CrmPlanningRuntimeIntegrationTests {
 
         internal async Task ReplaceProjectAsync() {
             var projects = Services.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(Project.ProjectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(Services, Project.ProjectId);
             Assert.True((await projects.CreateAsync(Project.ProjectId, new() { Name = "Independent replacement" })).IsSuccess);
             var originalLifetime = Project.LifetimeId;
             Project = (await Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(Project.ProjectId))!;

@@ -1,5 +1,6 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.Projects
+@implements IDisposable
 @inject IProjectRecordQueryService ProjectRecordQueryService
 
 <FormField Text="@Label">
@@ -36,8 +37,10 @@
 
 <ProjectRecordPickerDialog IsOpen="@isPickerOpen"
                            SelectedProjectId="@EffectiveSelectedProjectId"
+                           SelectedProjectLifetimeId="@SelectedAdmission?.LifetimeId"
                            InitialScope="ProjectRecordScope.All"
-                           SelectionConfirmed="ConfirmSelectionAsync"
+                           SelectionConfirmed="IdConfirmation"
+                           SnapshotConfirmed="SnapshotConfirmation"
                            OnClose="ClosePickerAsync"
                            Title="@($"Choose {Label.ToLowerInvariant()}")"
                            Subtitle="Search and page through project records."
@@ -48,6 +51,17 @@
     private ProjectRecordQueryItem? resolvedSelectedProject;
     private Guid? resolvedProjectId;
     private long resolveGeneration;
+    private long pickerGeneration;
+    private Guid pickerDatabaseProfileId;
+    private bool disposed;
+    [Parameter] public Guid DatabaseProfileId { get; set; }
+    [Parameter] public ProjectWriteAdmission? SelectedAdmission { get; set; }
+    [Parameter] public EventCallback<ProjectWriteAdmission?> SelectedAdmissionChanged { get; set; }
+    [Parameter] public EventCallback<bool> PendingChanged { get; set; }
+    private EventCallback<Guid> IdConfirmation => SelectedAdmissionChanged.HasDelegate ? default
+        : EventCallback.Factory.Create<Guid>(this, ConfirmSelectionAsync);
+    private EventCallback<ProjectRecordPickerSelection> SnapshotConfirmation => SelectedAdmissionChanged.HasDelegate
+        ? EventCallback.Factory.Create<ProjectRecordPickerSelection>(this, ConfirmSnapshotAsync) : default;
 
     [Parameter]
     public string Label { get; set; } = "Project";
@@ -93,7 +107,7 @@
         }
 
         var project = await ProjectRecordQueryService.GetAsync(selectedProjectId.Value);
-        if (generation != resolveGeneration ||
+        if (disposed || generation != resolveGeneration ||
             resolvedProjectId != EffectiveSelectedProjectId)
         {
             return;
@@ -102,25 +116,73 @@
         resolvedSelectedProject = project;
     }
 
-    private void OpenPicker()
-    {
+    private async Task OpenPicker() {
+        if (disposed) {
+            return;
+        }
+        pickerGeneration++;
+        pickerDatabaseProfileId = DatabaseProfileId;
         isPickerOpen = true;
+        await PendingChanged.InvokeAsync(true);
     }
 
-    private Task ClosePickerAsync()
-    {
+    private async Task ClosePickerAsync() {
+        if (disposed) {
+            return;
+        }
+        pickerGeneration++;
         isPickerOpen = false;
-        return Task.CompletedTask;
+        await PendingChanged.InvokeAsync(false);
     }
 
-    private async Task ConfirmSelectionAsync(Guid projectId)
-    {
-        isPickerOpen = false;
+    private async Task ConfirmSelectionAsync(Guid projectId) {
+        if (disposed || !isPickerOpen) {
+            return;
+        }
         await SelectedProjectIdChanged.InvokeAsync(projectId);
+        await ClosePickerAsync();
     }
 
-    private Task ClearSelectionAsync()
-    {
-        return SelectedProjectIdChanged.InvokeAsync(null);
+    private async Task ConfirmSnapshotAsync(ProjectRecordPickerSelection selection) {
+        if (disposed || !isPickerOpen || pickerDatabaseProfileId != DatabaseProfileId) {
+            return;
+        }
+        var opening = pickerGeneration;
+        var admission = new ProjectWriteAdmission(pickerDatabaseProfileId, selection.ProjectId,
+            selection.LifetimeId ?? throw new InvalidOperationException("Choose a displayed project with its current lifetime."));
+        await SelectedProjectIdChanged.InvokeAsync(selection.ProjectId);
+        if (disposed || opening != pickerGeneration || pickerDatabaseProfileId != DatabaseProfileId) {
+            return;
+        }
+        await SelectedAdmissionChanged.InvokeAsync(admission);
+        await ClosePickerAsync();
+    }
+
+    private async Task ClearSelectionAsync() {
+        if (disposed) {
+            return;
+        }
+        var opening = ++pickerGeneration;
+        var profile = DatabaseProfileId;
+        await PendingChanged.InvokeAsync(true);
+        try {
+            if (disposed || opening != pickerGeneration || profile != DatabaseProfileId) {
+                return;
+            }
+            await SelectedProjectIdChanged.InvokeAsync(null);
+            if (disposed || opening != pickerGeneration || profile != DatabaseProfileId) {
+                return;
+            }
+            await SelectedAdmissionChanged.InvokeAsync(null);
+        } finally {
+            if (!disposed && opening == pickerGeneration && profile == DatabaseProfileId) {
+                await PendingChanged.InvokeAsync(false);
+            }
+        }
+    }
+    public void Dispose() {
+        disposed = true;
+        resolveGeneration++;
+        pickerGeneration++;
     }
 }

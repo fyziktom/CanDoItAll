@@ -1,0 +1,15 @@
+{
+  "name": "CanDoItAll Concurrent Mutations Architecture",
+  "version": "0.1.0",
+  "status": "Proposed architecture for iterative review; not implementation authorization",
+  "created": "2026-09-28",
+  "language": "en",
+  "repository": "fyziktom/CanDoItAll",
+  "baselines": {
+    "development": "7db3543ab437376baeca55089cb331fbe1b30483",
+    "components-decoupling": "e55a780b36e75db39a05b7400408d8267d0f32d5"
+  },
+  "implementation_ref": "Resolve the working branch at phase entry; evidence SHAs are not checkout instructions",
+  "audit_scope": "Static, selected code and repository documentation; no application builds, tests or performance measurements executed",
+  "schema_version": 1
+}

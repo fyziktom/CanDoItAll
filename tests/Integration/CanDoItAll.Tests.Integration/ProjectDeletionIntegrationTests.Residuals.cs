@@ -56,7 +56,7 @@ public sealed partial class ProjectDeletionIntegrationTests {
             participant.CompleteAsync(new(projectId, recoveryId)));
 
         Assert.Equal(recoveryId, failure.RecoveryId);
-        Assert.Contains("require reconciliation", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("no exact original", failure.Message, StringComparison.Ordinal);
         Assert.Equal(original, await ReadDeletionStateAsync(dbContextFactory, projectId));
         Assert.Equal(0, services.GetRequiredService<ObservedStorageDriverRegistry>().FileSystemDeleteCalls);
         await using var restartScope = application.Services.CreateAsyncScope();
@@ -135,9 +135,8 @@ public sealed partial class ProjectDeletionIntegrationTests {
         var admissions = services.GetRequiredService<ProjectWriteAdmissionService>();
         var projectId = await CreateProjectAsync(projects, title);
         var original = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId));
-        var deletion = await projects.DeleteAsync(projectId, expectedProjectAdmission: original);
-        Assert.Equal(projectId, deletion.ProjectId);
-        Assert.Empty(deletion.Warnings);
+        var deletion = await ProjectLifecycleTestCommands.DeleteAsync(services, projectId, expectedProjectAdmission: original);
+        Assert.Equal(original, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(deletion.Result.Acknowledgement).Completion.Original.Project);
         Assert.Null(await admissions.CaptureAsync(projectId));
         await using var database = await services.GetRequiredService<IDbContextFactory<ProjectsDbContext>>().CreateDbContextAsync();
         var retirement = await database.Set<ProjectRetirementRecord>().SingleAsync(row => row.LifetimeId == original.LifetimeId);

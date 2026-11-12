@@ -140,7 +140,7 @@ public sealed class CrmHrAgentProjectionJourneyTests
             Assert.Equal(editedSummary, editedParty.Summary);
             Assert.Equal(target.PartyDisplayName, editedParty.DisplayName);
             Assert.Equal(PartyType.AiAgent, editedParty.PartyType);
-            var afterEdit = Assert.Single((await ReadProjectionAsync(owner)).Where(agent => agent.PartyId == target.PartyId));
+            var afterEdit = Assert.Single(await ReadProjectionAsync(owner), agent => agent.PartyId == target.PartyId);
             Assert.Equal(target with { PartySummary = editedSummary }, afterEdit);
 
             await CrmHrWorkspaceJourneySupport.NavigateAsync(fixture, page, oracle, $"/crm-hr/agents?partyId={target.PartyId:D}");

@@ -1,0 +1,60 @@
+@page "/"
+@page "/test-lab"
+@implements IDisposable
+
+<PageTitle>TestLab sandbox</PageTitle>
+<ThemeHost>
+    <Layout FitViewport="true" LockOverflow="true">
+        <Body FillHeight="true" Scrollable="false">
+            <Stack FillHeight="true" AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small" data-testid="testlab-sandbox" data-scenario="@scenario">
+                <SurfaceCard Class="shrink-0">
+                    <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                        <strong>TestLab sandbox · Parity assets</strong>
+                        <label for="scenario">Scenario</label>
+                        <select id="scenario" class="cda-input" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="testlab-scenario">
+                            @foreach (var value in Enum.GetValues<TestLabScenario>()) {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                        <Button Text="Complete next delayed action" Click="view.CompletePending" data-testid="testlab-complete-pending" />
+                        <p role="status" data-testid="testlab-sandbox-state">@view.PendingCount pending · @view.Store.Commits committed</p>
+                    </Cluster>
+                </SurfaceCard>
+                <TestLabWorkspaceSurface View="view" Interactive="interactive" />
+            </Stack>
+        </Body>
+    </Layout>
+</ThemeHost>
+
+@code {
+    private TestLabScenario scenario;
+    private TestLabScenarioWorkspace view = default!;
+    private bool interactive;
+    private bool disposed;
+
+    protected override void OnInitialized() => view = new(scenario, Changed);
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    private void Changed() {
+        if (!disposed) {
+            _ = InvokeAsync(() => {
+                if (!disposed) {
+                    StateHasChanged();
+                }
+            });
+        }
+    }
+    private void ChangeScenario(ChangeEventArgs args) {
+        scenario = Enum.Parse<TestLabScenario>(args.Value?.ToString() ?? nameof(TestLabScenario.Representative));
+        view.Dispose();
+        view = new(scenario, Changed);
+    }
+    public void Dispose() {
+        disposed = true;
+        view.Dispose();
+    }
+}

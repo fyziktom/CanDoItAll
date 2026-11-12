@@ -22,7 +22,9 @@ public sealed class ProjectStructureTaskDetailsService(
         UpdateWithPricingAsync(
             Guid projectId,
             ProjectStructureTaskDetailsUpdateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Guid? expectedTaskOccurrence = null)
     {
         Validate(projectId, request);
         var expected = ProjectAssignmentAdmission.Require(projectId, request.ExpectedProjectAdmission);
@@ -69,13 +71,17 @@ public sealed class ProjectStructureTaskDetailsService(
                             commit.ProposedCostBasis !=
                                 commit.CurrentState.CostBasis,
                             commit.CurrentState
-                                .DirectAssignmentRevision) { ExpectedProjectAdmission = expected, MutationOwner = request.MutationOwner };
+                                .DirectAssignmentRevision) {
+                            ExpectedProjectAdmission = expected,
+                            MutationOwner = request.MutationOwner,
+                            InitialSchedule = request.InitialSchedule
+                        };
                     return ganttMutationService.ApplyTaskDetailsAsync(
                         projectId,
                         mutationRequest,
-                        token);
+                        token, authorizeCommit, expectedTaskOccurrence);
                 },
-                cancellationToken);
+                cancellationToken, authorizeCommit);
             return new ProjectStructureTaskDetailsUpdateResult(
                 result.PersistenceResult,
                 result.Pricing);
@@ -100,6 +106,9 @@ public sealed class ProjectStructureTaskDetailsService(
         }
 
         ArgumentNullException.ThrowIfNull(request);
+        if (request.InitialSchedule is not null && request.ScheduleChange is not null) {
+            throw InvalidRequest("Send initialSchedule or scheduleChange, never both.");
+        }
         if (string.IsNullOrWhiteSpace(request.CurrentTitle) ||
             string.IsNullOrWhiteSpace(request.ProposedTitle))
         {
@@ -110,11 +119,12 @@ public sealed class ProjectStructureTaskDetailsService(
                 ProjectProgressPolicy.UntrackedPercent &&
              !ProjectProgressPolicy.IsTrackedPercent(
                  request.CurrentProgressPercent)) ||
-            !ProjectProgressPolicy.IsTrackedPercent(
-                request.ProposedProgressPercent))
+            (!(request.CurrentProgressPercent == ProjectProgressPolicy.UntrackedPercent &&
+               request.ProposedProgressPercent == ProjectProgressPolicy.UntrackedPercent) &&
+             !ProjectProgressPolicy.IsTrackedPercent(request.ProposedProgressPercent)))
         {
             throw InvalidRequest(
-                "Current task progress must be untracked (-1) or between 0 and 100 percent; proposed progress must be between 0 and 100 percent.");
+                "Task progress must be untracked (-1) or between 0 and 100 percent.");
         }
 
         if (request.ScheduleChange is not null &&
@@ -139,6 +149,7 @@ public sealed class ProjectStructureTaskDetailsService(
 
         try
         {
+            request.InitialSchedule?.Validate();
             ProjectTaskEstimatePolicy.ValidateAndNormalize(
                 request.CurrentEstimate);
             ProjectTaskEstimatePolicy.ValidateAndNormalize(

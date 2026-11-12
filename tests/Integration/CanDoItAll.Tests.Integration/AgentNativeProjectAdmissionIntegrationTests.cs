@@ -38,7 +38,8 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
         var old = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId));
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
         var node = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.ProjectBlock, "Original", "", "", $"project:{projectId}"));
-        await projects.DeleteAsync(projectId);
+        var originalState = ProjectStructureNodeStateGuard.Capture(node, old)!;
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Restored public id" })).IsSuccess);
         await using (var restored = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
             restored.Add(new ProjectObjectRecord {
@@ -56,28 +57,28 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
                     break;
                 case NativeMutation.Edit:
                     await workbench.UpdateObjectAsync(projectId, node.Id, new("Late edit", "", "", null, null, "{}") {
-                        ExpectedProjectAdmission = old
+                        ExpectedProjectAdmission = old, ExpectedState = originalState
                     });
                     break;
                 case NativeMutation.Reclassify:
                     await workbench.ReclassifyObjectAsync(projectId, node.Id, new(ProjectObjectType.ProjectBlock, "feature", "Late type", "", "") {
-                        ExpectedProjectAdmission = old
+                        ExpectedProjectAdmission = old, ExpectedState = originalState
                     });
                     break;
                 case NativeMutation.Metadata:
-                    await workbench.UpdateObjectMetadataAsync(projectId, node.Id, "{\"late\":true}", expectedProjectAdmission: old);
+                    await workbench.UpdateObjectMetadataAsync(projectId, node.Id, "{\"late\":true}", expectedProjectAdmission: old, expectedState: originalState);
                     break;
                 case NativeMutation.Status:
-                    await workbench.UpdateObjectStatusesAsync(projectId, [node.Id], "Published", expectedProjectAdmission: old);
+                    await workbench.UpdateObjectStatusesAsync(projectId, [node.Id], "Published", expectedProjectAdmission: old, expectedStates: [originalState]);
                     break;
                 case NativeMutation.Progress:
-                    await workbench.UpdateObjectProgressAsync(projectId, [node.Id], "manual", 71, expectedProjectAdmission: old);
+                    await workbench.UpdateObjectProgressAsync(projectId, [node.Id], "manual", 71, expectedProjectAdmission: old, expectedStates: [originalState]);
                     break;
                 case NativeMutation.Marker:
-                    await workbench.UpdateObjectMarkerAsync(projectId, [node.Id], "flag", "danger", "Late", expectedProjectAdmission: old);
+                    await workbench.UpdateObjectMarkerAsync(projectId, [node.Id], "flag", "danger", "Late", expectedProjectAdmission: old, expectedStates: [originalState]);
                     break;
                 case NativeMutation.Priority:
-                    await workbench.UpdateObjectPriorityAsync(projectId, [node.Id], 5, expectedProjectAdmission: old);
+                    await workbench.UpdateObjectPriorityAsync(projectId, [node.Id], 5, expectedProjectAdmission: old, expectedStates: [originalState]);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mutation));
@@ -92,7 +93,9 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
         }
         var active = Assert.IsType<ProjectWriteAdmission>(await admissions.CaptureAsync(projectId));
         Assert.NotEqual(old.LifetimeId, active.LifetimeId);
-        Assert.Equal(1, await workbench.UpdateObjectStatusesAsync(projectId, [node.Id], "Published", expectedProjectAdmission: active));
+        var currentSurface = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(1, await workbench.UpdateObjectStatusesAsync(projectId, [node.Id], "Published", expectedProjectAdmission: active,
+            expectedStates: ProjectStructureNodeStateGuard.CaptureMany(currentSurface.Nodes.Where(current => current.Id == node.Id), active)));
     }
 
     [Fact]
@@ -110,7 +113,7 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
             .AddInterceptors(probe).Options;
         var coordinator = services.GetRequiredService<CoordinatedDatabaseTransaction>();
         var admissionReader = new ProjectWriteAdmissionService(new ProjectFactory(options), options, coordinator,
-            services.GetRequiredService<ICanonicalRuntimeDatabase>());
+            services.GetRequiredService<ICanonicalRuntimeDatabase>(), services.GetRequiredService<DatasetActivationService>());
         var scopes = new ProjectStructureMutationScopeFactory(services.GetRequiredService<ProjectRecordQueryService>(), admissionReader, coordinator);
         var id = Guid.NewGuid();
         await using (var owner = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync()) {
@@ -154,7 +157,7 @@ public sealed class AgentNativeProjectAdmissionIntegrationTests {
         var original = await capture.CaptureNonTaskWriteAsync(agentId, originalAccess, projectId);
         await workspace.RevokeAgentProjectStructureLifetimeAsync(agentId, new(original.DatabaseProfileId, projectId, original.LifetimeId));
         await Assert.ThrowsAsync<ProjectStructureAgentException>(() => capture.CaptureNonTaskWriteAsync(agentId, originalAccess, projectId));
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "New project grant" })).IsSuccess);
         var current = (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId))!;
         await workspace.GrantAgentProjectStructureLifetimeAsync(agentId, new(current.DatabaseProfileId, projectId, current.LifetimeId));

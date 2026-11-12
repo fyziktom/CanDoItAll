@@ -63,7 +63,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 originalTurnContext: observation.TurnContext)) { }
 
         var projectService = services.GetRequiredService<ProjectsService>();
-        await projectService.DeleteAsync(original.ProjectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(original.ProjectId);
         Assert.True((await projectService.CreateAsync(original.ProjectId, new() { Name = "Recreated during admitted invocation" })).IsSuccess);
         var replacement = Assert.IsType<ProjectWriteAdmission>(await projects.CaptureAsync(original.ProjectId));
         Assert.NotEqual(original.LifetimeId, replacement.LifetimeId);
@@ -72,7 +72,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var updated = await fixture.Writer.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(agent => agent.Id == fixture.Agent.Id
             ? agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson, currentAccess) } : agent).ToArray() });
         var successorOwner = owner with { ExpectedProjectAdmission = replacement };
-        await Assert.ThrowsAsync<ProjectStructureAgentException>(() => OrdinaryCreateAsync(services, successorOwner));
+        var refused = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => OrdinaryCreateAsync(services, successorOwner));
+        Assert.Equal("ProjectMutationAuthorityDenied", refused.ErrorCode);
         await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workflow.CaptureForNodeAsync(original.ProjectId, successorOwner, default));
         await Assert.ThrowsAsync<ProjectStructureAgentException>(() => admissions.CaptureSourceProjectAsync(governance, journalFixture.Session, default));
         await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workflow.CaptureAgentAsync(
@@ -229,8 +230,11 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             limited.CanWrite = true;
         }
         var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        owner = owner with { ExpectedNodeStates = [ProjectStructureNodeStateGuard.Capture(
+            Assert.Single(nodes.Origin.Nodes, node => node.Id == nodes.First), nodes.Origin.ExpectedProjectAdmission!)!] };
         var failure = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => linkOnly
-            ? workbench.UnlinkObjectsAsync(fixture.Project.ProjectId, nodes.First, nodes.Second, ProjectObjectLinkKind.DependsOn, mutationOwner: owner)
+            ? workbench.UnlinkObjectsAsync(fixture.Project.ProjectId, nodes.First, nodes.Second, ProjectObjectLinkKind.DependsOn, mutationOwner: owner,
+                expectedLink: Assert.Single(nodes.Origin.Links, link => link.SourceId == nodes.First && link.TargetId == nodes.Second && link.Kind == ProjectObjectLinkKind.DependsOn))
             : workbench.MoveObjectAsync(fixture.Project.ProjectId, nodes.First, 90, 90, mutationOwner: owner));
         Assert.Equal("ProjectTaskWriteDenied", failure.ErrorCode);
         await using var read = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
@@ -296,7 +300,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var original = OrdinaryOwner(fixture) with { AgentMutationAdmission = null };
         var projectId = fixture.Project.ProjectId;
         if (!missing) {
-            await services.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
             Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Recreated Gantt project" })).IsSuccess);
             var current = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
             Assert.NotEqual(original.ExpectedProjectAdmission!.LifetimeId, current.LifetimeId);
@@ -345,7 +349,10 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         using var owned = AgentRuntimeToolOwnershipContext.BeginScope(new(provider.Descriptor.ProviderKey, provider.Descriptor.DisplayName, toolName));
         var request = taskTool
             ? (object)new ProjectStructureTaskCreateRequest("Producer task", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1))
-            : new ProjectStructureNodeMoveInput(nodes.First, 95, 95);
+            : new ProjectStructureNodeMoveInput(nodes!.First, 95, 95) {
+                ExpectedState = ProjectStructureNodeStateGuard.Capture(
+                    Assert.Single(nodes.Origin.Nodes, node => node.Id == nodes.First), nodes.Origin.ExpectedProjectAdmission!)
+            };
         var failure = await Assert.ThrowsAsync<ProjectStructureAgentException>(async () => {
             await tool.InvokeAsync(new AIFunctionArguments { ["projectId"] = fixture.Project.ProjectId, ["request"] = request });
         });
@@ -398,26 +405,31 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             });
 
     private static Task OrdinaryGraphChangeAsync(IServiceProvider services, ProjectStructureAgentContext owner,
-        (string First, string Second) nodes, OrdinaryGraphChange change) {
+        OrdinaryGraphFixture nodes, OrdinaryGraphChange change) {
         var service = services.GetRequiredService<ProjectStructureAgentService>();
         var projectId = owner.ExpectedProjectAdmission!.ProjectId;
+        var graph = ProjectStructureGraphStateGuard.Capture(nodes.Origin);
+        var state = Assert.Single(graph.Nodes, node => node.State.NodeId == nodes.First).State;
+        var link = Assert.Single(nodes.Origin.Links, link => link.SourceId == nodes.First && link.TargetId == nodes.Second && link.Kind == ProjectObjectLinkKind.DependsOn);
         return change switch {
-            OrdinaryGraphChange.Move => service.MoveNodeAsync(projectId, new(nodes.First, 50, 50), owner),
-            OrdinaryGraphChange.Recompose => service.RecomposeNodeAsync(projectId, new(nodes.First), owner),
-            OrdinaryGraphChange.Reparent => service.ReparentNodeAsync(projectId, new(nodes.Second, $"project:{projectId}"), owner),
+            OrdinaryGraphChange.Move => service.MoveNodeAsync(projectId, new(nodes.First, 50, 50) { ExpectedState = state }, owner),
+            OrdinaryGraphChange.Recompose => service.RecomposeNodeAsync(projectId, new(nodes.First) { ExpectedGraph = graph }, owner),
+            OrdinaryGraphChange.Reparent => service.ReparentNodeAsync(projectId, new(nodes.Second, $"project:{projectId}") { ExpectedGraph = graph }, owner),
             OrdinaryGraphChange.Link => service.LinkNodesAsync(projectId, new(nodes.First, nodes.Second), owner),
-            OrdinaryGraphChange.Unlink => service.UnlinkNodesAsync(projectId, new(nodes.First, nodes.Second), owner),
-            OrdinaryGraphChange.Copy => service.CopyNodesAsync(projectId, new([nodes.First], $"project:{projectId}"), owner, ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks),
-            OrdinaryGraphChange.Delete => service.DeleteNodeDetailedAsync(projectId, nodes.First, new(ProjectStructureManagedStorageDisposition.RetainManagedFiles), owner),
+            OrdinaryGraphChange.Unlink => service.UnlinkNodesAsync(projectId, new(nodes.First, nodes.Second) {
+                ExpectedState = new(graph.Project, link.RecordId!.Value, link.SourceId, link.TargetId, link.Kind)
+            }, owner),
+            OrdinaryGraphChange.Copy => service.CopyNodesAsync(projectId, new([nodes.First], $"project:{projectId}") { ExpectedGraph = graph }, owner, ProjectStructureClipboardCopyTaskPolicy.AllowCanonicalTasks),
+            OrdinaryGraphChange.Delete => service.DeleteNodeDetailedAsync(projectId, nodes.First, new(ProjectStructureManagedStorageDisposition.RetainManagedFiles) { ExpectedGraph = graph }, owner),
             OrdinaryGraphChange.Import => service.ImportAsync(new(projectId, null, ProjectStructureImportSourceKind.JsonOutline, "Import", "[]", LeafWorkItemSubtype: "feature"), owner),
-            OrdinaryGraphChange.PromptCommand => service.ExecuteNodeCommandAsync(projectId, nodes.First, new(ProjectStructureCommandKind.Open), owner),
+            OrdinaryGraphChange.PromptCommand => service.ExecuteNodeCommandAsync(projectId, nodes.First, new(ProjectStructureCommandKind.Open) { ExpectedState = state }, owner),
             OrdinaryGraphChange.Approval => service.CreateApprovalRequestAsync(projectId, new("Approval", "", "", "Requested operation"), owner),
             _ => throw new ArgumentOutOfRangeException(nameof(change))
         };
     }
 
     private static Task OrdinaryTaskChangeAsync(IServiceProvider services, ProjectStructureAgentContext owner,
-        (string First, string Second) nodes, OrdinaryTaskChange change) {
+        OrdinaryGraphFixture nodes, OrdinaryTaskChange change) {
         var projectId = owner.ExpectedProjectAdmission!.ProjectId;
         var state = new ProjectStructureTaskEditState(ProjectTaskEstimate.Empty(), ProjectTaskExecutionSnapshot.Unknown, null, 0);
         return change switch {
@@ -438,7 +450,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         };
     }
 
-    private static async Task<(string First, string Second)> SeedOrdinaryGraphAsync(IServiceProvider services, Guid projectId, bool tasks = false) {
+    private sealed record OrdinaryGraphFixture(string First, string Second, ProjectStructureSurface Origin);
+
+    private static async Task<OrdinaryGraphFixture> SeedOrdinaryGraphAsync(IServiceProvider services, Guid projectId, bool tasks = false) {
         await using var context = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
         var first = $"custom:{Guid.NewGuid():N}";
         var second = $"custom:{Guid.NewGuid():N}";
@@ -456,7 +470,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             LinkKind = ProjectObjectLinkKind.DependsOn, CreatedAtUtc = start
         });
         await context.SaveChangesAsync();
-        return (first, second);
+        return new(first, second, await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId));
     }
 
     private sealed class TaskCreationCommitProbe(CatalogCommitProbe catalog) : DbTransactionInterceptor {
@@ -525,13 +539,23 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
 
     private sealed class OrdinaryCatalogStore(IAgentCatalogReadLeaseStore inner, OrdinaryCatalogProbe probe) : IAgentCatalogReadLeaseStore {
         public async Task<IAgentCatalogReadLease> AcquireAgentReadLeaseAsync(Guid agentId, CancellationToken cancellationToken = default) {
+            await ObserveAsync();
+            return await inner.AcquireAgentReadLeaseAsync(agentId, cancellationToken);
+        }
+
+        public async Task<IAgentCatalogReadLease> AcquireAgentAuthoritySnapshotAsync(IReadOnlyList<Guid> agentIds,
+            CancellationToken cancellationToken = default) {
+            await ObserveAsync();
+            return await inner.AcquireAgentAuthoritySnapshotAsync(agentIds, cancellationToken);
+        }
+
+        private async Task ObserveAsync() {
             var before = probe.BeforeRead;
             probe.BeforeRead = null;
             probe.Reads++;
             if (before is not null) {
                 await before();
             }
-            return await inner.AcquireAgentReadLeaseAsync(agentId, cancellationToken);
         }
     }
 }

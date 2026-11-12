@@ -1,0 +1,130 @@
+[
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: ForeignHost)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Native_profile_resolves_without_file_changes_and_snapshot_does_not_alias_mutable_records",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: FutureSchema)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsupported_existing_key_material_does_not_create_or_repair_keys(fault: TooMany)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: MissingProvider)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Production_rejects_unprotected_key_ring",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ControlPlaneDatabaseProfileCatalogTests.Legacy_catalog_migration_preserves_protected_password_and_supports_rollback",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ControlPlaneDatabaseProfileCatalogTests.SaveAsync_persists_postgres_profile_metadata_without_plaintext_password",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: DuplicateProperty)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: Malformed)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: MissingWorkspace)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsupported_existing_key_material_does_not_create_or_repair_keys(fault: Oversized)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ControlPlaneDatabaseProfileCatalogTests.Foreign_legacy_workspace_is_unresolved_until_explicit_rebind",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Explicit_missing_or_empty_identity_never_selects_another_profile(empty: False)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Development_key_ring_restarts_and_uses_private_repository_modes",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: Oversized)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: LegacyWorkspace)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Explicit_missing_or_empty_identity_never_selects_another_profile(empty: True)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Certificate_protector_reads_legacy_ring_and_encrypts_new_generation",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Windows_auto_protects_key_ring_with_dpapi",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: PendingPublication)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: DuplicateIdentity)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsupported_existing_key_material_does_not_create_or_repair_keys(fault: UnsafeXml)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Completed_native_migration_reads_but_missing_or_changed_evidence_is_never_repaired(missingCommit: True)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Completed_native_migration_reads_but_missing_or_changed_evidence_is_never_repaired(missingCommit: False)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: LegacySchema)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsafe_catalog_is_refused_without_repair(fault: InvalidPort)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Private_repository_rejects_foreign_host_and_relative_roots",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Unsupported_existing_key_material_does_not_create_or_repair_keys(fault: Empty)",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Private_repository_refuses_to_clobber_existing_generation",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.DataProtectionKeyRingPortabilityTests.Private_repository_rejects_unsafe_key_names_without_random_fallback",
+    "outcome": "Passed"
+  },
+  {
+    "name": "CanDoItAll.Tests.Unit.Infrastructure.ExistingDatabaseProfileReaderTests.Missing_profile_and_key_roots_are_not_created",
+    "outcome": "Passed"
+  }
+]

@@ -32,7 +32,8 @@ public static class ProjectCalendarAdapter
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                 .ToList(),
-            ViewStateJson = surface.ViewStateJson
+            // The native calendar prefers its view-state JSON over InitialView and SelectedDate, so it carries the resolved state.
+            ViewStateJson = ProjectCalendarStateParser.Serialize(viewState, "{}")
         };
 
     private static CanvasCalendarEvent MapEvent(ProjectCalendarEvent item)

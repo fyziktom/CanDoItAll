@@ -44,9 +44,9 @@ public sealed class ProjectsServiceIntegrationTests
         var childProjectId = await CreateProjectAsync(projectsService, "Child project");
         var siblingProjectId = await CreateProjectAsync(projectsService, "Sibling project");
 
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, childProjectId)).IsSuccess);
-        Assert.True((await projectsService.AddSubprojectAsync(sharedParentProjectId, childProjectId)).IsSuccess);
-        Assert.True((await projectsService.AddSubprojectAsync(parentProjectId, siblingProjectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, parentProjectId, childProjectId));
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, sharedParentProjectId, childProjectId));
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, parentProjectId, siblingProjectId));
 
         var projectSummaries = await projectsService.ListAsync();
         var childSummary = Assert.Single(projectSummaries, project => project.Id == childProjectId);
@@ -130,8 +130,7 @@ public sealed class ProjectsServiceIntegrationTests
     }
 
     [Fact]
-    public async Task CreateAsync_returns_the_committed_project_when_search_projection_fails()
-    {
+    public async Task CreateAsync_rolls_back_project_when_required_search_projection_fails() {
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
             ConfigureServices = services =>
@@ -144,20 +143,18 @@ public sealed class ProjectsServiceIntegrationTests
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var reservedProjectId = Guid.NewGuid();
 
-        var result = await projectsService.CreateAsync(
+        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => projectsService.CreateAsync(
             reservedProjectId,
             new ProjectEditorModel
             {
-                Name = "Committed despite projection failure",
-                Objective = "Keep authoritative project persistence independent from projections.",
+                Name = "Rolled back with projection failure",
+                Objective = "Commit the definition and required search projection together.",
                 CurrentPhase = "Discovery"
-            });
+            }));
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal(reservedProjectId, result.Value);
-        Assert.Equal(
-            "Committed despite projection failure",
-            (await projectsService.GetAsync(reservedProjectId)).Name);
+        Assert.Equal("Expected search projection failure.", failure.Message);
+        var current = await projectsService.GetDefinitionAsync(reservedProjectId);
+        Assert.Contains(current.Errors, error => error.Code == ProjectErrorCodes.NotFound);
     }
 
     [Fact]
@@ -227,20 +224,19 @@ public sealed class ProjectsServiceIntegrationTests
         var leafProjectId = await CreateProjectAsync(projectsService, "Leaf project");
         var replacementParentProjectId = await CreateProjectAsync(projectsService, "Replacement parent");
 
-        Assert.True((await projectsService.AddSubprojectAsync(rootProjectId, middleProjectId)).IsSuccess);
-        Assert.True((await projectsService.AddSubprojectAsync(middleProjectId, leafProjectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, rootProjectId, middleProjectId));
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, middleProjectId, leafProjectId));
 
-        var cycleAttempt = await projectsService.AddSubprojectAsync(leafProjectId, rootProjectId);
+        var cycleAttempt = await ProjectLifecycleTestCommands.EnsureLinkAsync(scope.ServiceProvider, leafProjectId, rootProjectId);
 
-        Assert.True(cycleAttempt.IsFailure);
-        Assert.Contains(cycleAttempt.Errors, error => error.Message.Contains("cycle", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(ProjectLifecycleRefusal.Cycle, Assert.IsType<ProjectLifecycleOutcome.Refused>(cycleAttempt).Reason);
 
-        var reconnectResult = await projectsService.ReconnectSubprojectAsync(
+        var reconnectResult = await ProjectLifecycleTestCommands.ReconnectAsync(scope.ServiceProvider,
             leafProjectId,
             middleProjectId,
             replacementParentProjectId);
 
-        Assert.True(reconnectResult.IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(reconnectResult);
 
         var hierarchyLinks = await projectsService.ListHierarchyLinksAsync();
         Assert.DoesNotContain(hierarchyLinks, link => link.ParentProjectId == middleProjectId && link.ChildProjectId == leafProjectId);
@@ -263,6 +259,9 @@ public sealed class ProjectsServiceIntegrationTests
 
     private sealed class ThrowingSearchIndexService : ISearchIndexService
     {
+        public Task DeleteForMutationAsync(string sourceType, string sourceKey, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("This Project fixture does not delete Resource metadata.");
+
         public Task UpsertForMutationAsync(SearchDocumentInput input, CancellationToken cancellationToken = default) =>
             UpsertAsync(input, cancellationToken);
 

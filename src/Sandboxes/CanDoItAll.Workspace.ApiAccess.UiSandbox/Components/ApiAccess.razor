@@ -1,0 +1,67 @@
+@page "/"
+@implements IDisposable
+<PageTitle>Workspace API Access sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Medium" @onkeydown="keys.Handle">
+    <FormSection Title="Workspace API Access scenarios" Description="Synthetic, bounded in-memory fixtures. Disclosure values are NOT credentials. This sandbox does not authenticate callers or prove production security.">
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+                @foreach (var value in Enum.GetValues<ApiScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="() => workspace.ResetAsync(scenario)" data-testid="scenario-reset" />
+            <InputSelect @bind-Value="operation" aria-label="Operation">
+                @foreach (var value in Enum.GetValues<ApiScenarioOperation>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Hold next operation" Click="() => workspace.Hold(operation)" data-testid="scenario-hold" />
+            <Button Text="Release held operations" Click="workspace.Release" data-testid="scenario-release" />
+            <InputSelect @bind-Value="fault" aria-label="Next outcome">
+                @foreach (var value in Enum.GetValues<ApiScenarioFault>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Set next outcome" Click="() => workspace.Store.FaultNext(operation, fault)" data-testid="scenario-fault" />
+            <Button Text="Change accounts externally" Click="workspace.Store.ChangeAccountsExternally" data-testid="scenario-external-change" />
+            <Button Text="Retire view" Click="workspace.Retire" data-testid="scenario-retire" />
+        </Cluster>
+        <p data-testid="scenario-effects">Current writes: @workspace.Store.DurableWrites. Pending writes: @workspace.Store.PendingWrites. Retired writes: @workspace.Retired.Sum(store => store.DurableWrites). Held: @workspace.HeldCount.</p>
+        <p data-testid="scenario-store">Current store: @workspace.Store.Identity. Retained stores: @workspace.Retired.Count (maximum eight).</p>
+        <p data-testid="scenario-message">@workspace.ControlMessage</p>
+        <p class="cda-body-muted">Press Alt+Shift+R to release held operations while a dialog is open.</p>
+    </FormSection>
+    <ApiAccessSurface @key="workspace.Session" Session="workspace.Session" />
+</Stack>
+
+@code {
+    private readonly ApiScenarioWorkspace workspace = new();
+    private ApiScenario scenario;
+    private ApiScenarioOperation operation = ApiScenarioOperation.IssueToken;
+    private ApiScenarioFault fault = ApiScenarioFault.CommittedWarning;
+    private bool disposed;
+    private ScenarioKeys keys = default!;
+    private sealed class ScenarioKeys(ApiScenarioWorkspace workspace) : IHandleEvent {
+        public void Handle(KeyboardEventArgs args) {
+            if (args.AltKey && args.ShiftKey && args.Key.Equals("R", StringComparison.OrdinalIgnoreCase)) {
+                workspace.Release();
+            }
+        }
+        Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg) => callback.InvokeAsync(arg);
+    }
+    protected override async Task OnInitializedAsync() {
+        keys = new(workspace);
+        workspace.Changed += Changed;
+        await workspace.Session.LoadAsync();
+    }
+    private void Changed() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
+        }
+    });
+    public void Dispose() {
+        disposed = true;
+        workspace.Changed -= Changed;
+        workspace.Dispose();
+    }
+}

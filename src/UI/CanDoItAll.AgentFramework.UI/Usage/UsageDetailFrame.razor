@@ -1,0 +1,31 @@
+@{ var rendered = State; }
+
+<Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+    @if (rendered.Retired) {
+        <EmptyState Eyebrow="Usage unavailable" Title="This usage view has closed"
+                    Description="Return to Overview and open the current workload and period." />
+    } else if (rendered.Loading) {
+        <LoadingState Eyebrow="@Title" Title="@($"Loading {Title.ToLowerInvariant()}")"
+                      Description="Reading usage for the accepted workload and UTC interval." />
+    } else if (!string.IsNullOrWhiteSpace(rendered.Error)) {
+        <EmptyState Eyebrow="Usage unavailable" Title="@($"{Title} could not be loaded")"
+                    Description="@rendered.Error" />
+    } else if (rendered.Snapshot is not null) {
+        @ChildContent
+    }
+    <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
+        @if (!rendered.Retired && !rendered.Loading && rendered.Error is not null) {
+            <Button Text="Retry" Icon="refresh" data-testid="usage-detail-retry"
+                    Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.Query, UsageDetailAction.Retry)))" />
+        }
+        <Button Text="Close" Icon="close" Variant="Variant.Outlined" data-testid="usage-detail-close"
+                Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.Query, UsageDetailAction.Close)))" />
+    </Cluster>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public UsageDetailState State { get; set; } = default!;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public EventCallback<UsageDetailIntent> Intent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

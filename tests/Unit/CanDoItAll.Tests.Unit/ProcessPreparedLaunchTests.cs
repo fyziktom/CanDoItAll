@@ -27,15 +27,18 @@ public sealed class ProcessPreparedLaunchTests {
         Assert.False(document.RootElement.TryGetProperty(nameof(ProcessLaunchRequest.Authority), out _));
         Assert.False(document.RootElement.TryGetProperty(nameof(ProcessLaunchRequest.ProjectAdmission), out _));
         Assert.False(document.RootElement.TryGetProperty(nameof(ProcessLaunchRequest.LinkTarget), out _));
+        Assert.False(document.RootElement.TryGetProperty(nameof(ProcessLaunchRequest.ResolvedDefinitions), out _));
         if (inject) {
             json = json[..^1] + ",\"Authority\":" + JsonSerializer.Serialize(authority) +
                 ",\"ProjectAdmission\":" + JsonSerializer.Serialize(project) +
-                ",\"LinkTarget\":{\"ProjectId\":\"" + project.ProjectId + "\",\"SourceNodeKey\":\"forged\",\"SourceBindingFingerprint\":\"forged\"}}";
+                ",\"LinkTarget\":{\"ProjectId\":\"" + project.ProjectId + "\",\"SourceNodeKey\":\"forged\",\"SourceBindingFingerprint\":\"forged\"}," +
+                "\"ResolvedDefinitions\":{\"DefinitionKey\":\"forged-trusted-content\"}}";
         }
         var read = Assert.IsType<ProcessLaunchRequest>(JsonSerializer.Deserialize<ProcessLaunchRequest>(json));
         Assert.Null(read.Authority);
         Assert.Null(read.ProjectAdmission);
         Assert.Null(read.LinkTarget);
+        Assert.Null(read.ResolvedDefinitions);
     }
 
     [Fact]

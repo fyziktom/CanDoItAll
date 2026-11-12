@@ -1,0 +1,25 @@
+<FormSection Title="Raw metadata" Description="Inspect the stored configuration. Malformed or unavailable configuration requires explicit repair before the typed editor can be used.">
+    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+        <FactTable>
+            <Stack GapScale="LayoutGap.Small">
+                <p class="cda-field-label">Capability id</p>
+                <p class="capability-authoring__mono">@Draft.Model.Id</p>
+                <p class="cda-field-label">Built-in</p>
+                <p>@(Draft.Model.IsBuiltIn ? "Yes" : "No")</p>
+            </Stack>
+        </FactTable>
+        <div>
+            <label class="cda-field-label">Configuration JSON</label>
+            <AuthoringTextArea @bind-Value="Draft.RawConfigurationJson" disabled="@Draft.RawLocked" class="cda-input capability-authoring__large-textarea" data-testid="@($"{TestId}-raw-json")" />
+            @if (Draft.ConfigurationError is not null && !Draft.Model.IsBuiltIn) {
+                <Button Text="Apply repaired configuration" ButtonStyle="ButtonStyle.Light" Click="Apply" data-testid="capability-apply-raw" />
+            }
+        </div>
+    </Grid>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired] public CapabilityAuthoringDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string TestId { get; set; } = string.Empty;
+    private void Apply() => Draft.ApplyRawConfiguration();
+}

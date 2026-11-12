@@ -1331,6 +1331,7 @@ public static class AgentProcessReadinessEvaluator
     private static readonly HashSet<string> ProjectStructureReadRuntimeToolNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "project_structure_projects_list",
+        "project_structure_project_definition_get",
         "project_structure_hierarchy_get",
         "project_structure_read",
         "project_structure_node_catalog",

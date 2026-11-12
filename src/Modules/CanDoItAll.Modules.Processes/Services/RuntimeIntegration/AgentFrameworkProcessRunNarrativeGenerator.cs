@@ -115,13 +115,17 @@ internal sealed class AgentFrameworkProcessRunNarrativeGenerator(
         var result = execution.CreatedExecutionResult
             ?? throw new InvalidOperationException(
                 "A newly created same-source execution did not return an execution result.");
+        if (result.EffectContinuation is not null) {
+            throw new ProcessRunNarrativeGenerationDeferredException(result.ExecutionRunId, result.State, source.SourceKind, source.SourceId);
+        }
+        var metric = result.Metric ?? throw new InvalidOperationException("Narrative generation requires actual provider output and usage.");
         return DeserializeNarrative(
             result.ResponseText,
             new ProcessRunNarrativeProvenance(
                 new ProcessRunParticipantId(manager.Id.ToString("D")),
                 result.ExecutionRunId,
                 GenerationPolicyId,
-                FirstNonEmpty(result.Metric.Model, manager.Model, "unknown"),
+                FirstNonEmpty(metric.Model, manager.Model, "unknown"),
                 timeProvider.GetUtcNow()),
             result.ExecutionRunId);
     }

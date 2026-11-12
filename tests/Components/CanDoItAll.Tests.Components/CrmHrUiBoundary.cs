@@ -26,7 +26,8 @@ internal static class CrmHrUiBoundary
     private static readonly string[] SharedUiFamilies =
     [
         "CanDoItAll.AppComponents.RecordBrowsing",
-        "CanDoItAll.AgentFramework.UI"
+        "CanDoItAll.AgentFramework.UI",
+        "CanDoItAll.Editing.UI"
     ];
 
     // Lightweight contracts: the CRM / HR and Projects contract assemblies, the AgentFramework models the agent
@@ -36,7 +37,8 @@ internal static class CrmHrUiBoundary
         "CanDoItAll.Modules.CrmHr.Contracts",
         "CanDoItAll.Modules.Projects.Contracts",
         "CanDoItAll.AgentFramework.Models",
-        "CanDoItAll.SharedKernel"
+        "CanDoItAll.SharedKernel",
+        "CanDoItAll.Editing"
     ];
 
     // Implementation, persistence and composition assemblies that must never enter the rendering graph, directly or

@@ -32,7 +32,7 @@
     </Header>
 
     <ChildContent>
-        <Stack GapScale="LayoutGap.Medium">
+        <Stack GapScale="LayoutGap.Medium" @oninput="DirtyChanged" @onchange="DirtyChanged">
             @SecondaryNavigation
 
             <SurfaceCard data-testid="crmhr-crm-catalog">
@@ -40,10 +40,12 @@
                     <ListPanelHeader Title="Accounts"
                                      Description="Search and page through customer, partner, and vendor organizations. Open a card to manage the complete CRM workspace."
                                      Count="Server-paged" />
-                    <PartyRecordBrowser AllowedScope="PartyRecordScope.Organizations"
+                    <PartyRecordBrowser RefreshVersion="@CatalogRefreshVersion" AllowedScope="PartyRecordScope.Organizations"
                                         InitialScope="PartyRecordScope.Organizations"
                                         SelectedPartyId="View.SelectedAccount?.AccountPartyId"
                                         SelectionChanged="View.SelectAccountAsync"
+                                        Query="@View.CatalogQuery"
+                                        QueryChanged="View.HandleCatalogQueryChangedAsync"
                                         LoadFailed="View.HandleAccountBrowserLoadFailedAsync"
                                         PageSize="12"
                                         ResultsScrollMode="PagedRecordResultsScrollMode.Bounded"
@@ -67,6 +69,8 @@
                         OnClose="View.CloseAccountDialogAsync">
                     <ChildContent>
                         @AccountSummary
+                        @ProfileEditing
+                        @EditorOverlays
 
                         <Tabs SelectedIndex="@View.SelectedCrmRecordTabIndex"
                               SelectedIndexChanged="View.HandleCrmRecordTabChanged"
@@ -80,13 +84,14 @@
                                 <TabsItem Text="Overview"
                                           Icon="dashboard"
                                           data-testid="crmhr-crm-tab-overview">
-                            <EditForm Model="View.ProfileEditor" OnValidSubmit="View.SaveAccountProfileAsync">
+                            <EditForm EditContext="ProfileContext()" OnValidSubmit="View.SaveAccountProfileAsync">
                                 <FormSection Title="Relationship profile"
                                              Description="Keep prospect conversion, commercial context, and timing risk on the same account record instead of scattering it across notes.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                         <div>
                                             <label class="cda-field-label">Relationship stage</label>
                                             <InputSelect @bind-Value="View.ProfileEditor.RelationshipStage"
+                                                         @bind-Value:after="@(() => ProfileInputChanged.InvokeAsync(AccountProfileField.RelationshipStage))"
                                                          class="cda-input"
                                                          data-testid="crmhr-account-stage">
                                                 @foreach (var stage in Enum.GetValues<CrmAccountRelationshipStage>())
@@ -106,19 +111,19 @@
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
                                         <div>
                                             <label class="cda-field-label">Commercial notes</label>
-                                            <InputTextArea @bind-Value="View.ProfileEditor.CommercialNotes"
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.ProfileEditor.CommercialNotes" PendingChanged="@(_ => SetProfileTextAsync(AccountProfileField.CommercialNotes))"
                                                            class="cda-input cda-input--textarea min-h-[9rem]"
                                                            data-testid="crmhr-account-commercial-notes" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Constraints</label>
-                                            <InputTextArea @bind-Value="View.ProfileEditor.ConstraintNotes"
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.ProfileEditor.ConstraintNotes" PendingChanged="@(_ => SetProfileTextAsync(AccountProfileField.ConstraintNotes))"
                                                            class="cda-input cda-input--textarea min-h-[9rem]"
                                                            data-testid="crmhr-account-constraints" />
                                         </div>
                                         <div>
                                             <label class="cda-field-label">Timing risks</label>
-                                            <InputTextArea @bind-Value="View.ProfileEditor.TimingRiskNotes"
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.ProfileEditor.TimingRiskNotes" PendingChanged="@(_ => SetProfileTextAsync(AccountProfileField.TimingRiskNotes))"
                                                            class="cda-input cda-input--textarea min-h-[9rem]"
                                                            data-testid="crmhr-account-timing-risks" />
                                         </div>
@@ -126,6 +131,7 @@
 
                                     <Cluster Gap="LayoutGap.Small" Class="mt-5">
                                         <Button Text="Save CRM profile"
+                                                Disabled="@ProfileSaveDisabled"
                                                 data-testid="crmhr-account-save-button"
                                                 Type="submit" />
                                         <Button Text="Open directory record"
@@ -145,6 +151,14 @@
                                 <TabsItem Text="Connected records"
                                           Icon="hub"
                                           data-testid="crmhr-crm-tab-connections">
+                            @if (ConnectionsValidationMessage is not null) {
+                                <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-connections-validation"><TextBlock Value="@ConnectionsValidationMessage" /></Alert>
+                            }
+                            @if (ConnectionsMessage is not null) {
+                                <Alert AlertStyle="ConnectionsMessageStyle" data-testid="crmhr-connections-outcome"><TextBlock Value="@ConnectionsMessage" /></Alert>
+                            }
+                            @ConnectionsEditing
+                            <EditForm EditContext="ConnectionsContext()" OnValidSubmit="View.SaveConnectedRecordsAsync" data-testid="crmhr-connections-form">
                             <FormSection Title="Connected records"
                                          Description="Connect the people and other directory records you communicate or cooperate with at this company, then optionally scope each connection to related projects.">
                                 <Split Gap="LayoutGap.Medium"
@@ -176,7 +190,7 @@
                                         {
                                             var rowIndex = index;
                                             var connection = View.ConnectedRecordEditors[index];
-                                            <PanelCard Soft="true">
+                                            <PanelCard @key="connection" Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
                                                     <div class="lg:col-span-2">
                                                         <label class="cda-field-label">Connected directory record</label>
@@ -194,13 +208,13 @@
                                                                         <Button Text="Clear"
                                                                                 ButtonStyle="ButtonStyle.Light"
                                                                                 Size="ButtonSize.Small"
-                                                                                Click="@(() => View.ClearConnectionParty(rowIndex))"
+                                                                            Click="@(() => ConnectionAction(connection, View.ClearConnectionParty))"
                                                                                 data-testid="@($"crmhr-connection-party-clear-{rowIndex}")" />
                                                                     }
                                                                     <Button Text="Choose record"
                                                                             Icon="search"
                                                                             Size="ButtonSize.Small"
-                                                                            Click="@(() => View.OpenConnectionPartyPicker(rowIndex))"
+                                                                            Click="@(() => ConnectionAction(connection, View.OpenConnectionPartyPicker))"
                                                                             data-testid="@($"crmhr-connection-party-{rowIndex}")" />
                                                                 </Cluster>
                                                             </Split>
@@ -209,6 +223,7 @@
                                                     <div>
                                                         <label class="cda-field-label">Relationship role</label>
                                                         <InputSelect @bind-Value="connection.Role"
+                                                                     @bind-Value:after="@(() => ConnectionsInputChanged.InvokeAsync(new(connection, ConnectionField.Role)))"
                                                                      class="cda-input"
                                                                      data-testid="@($"crmhr-connection-role-{rowIndex}")">
                                                             @foreach (var role in Enum.GetValues<CrmAccountConnectionRole>())
@@ -221,26 +236,28 @@
                                                         <Button Text="Remove"
                                                                 ButtonStyle="ButtonStyle.Danger"
                                                                 Size="ButtonSize.Small"
-                                                                Click="@(() => View.RemoveConnectedRecord(rowIndex))"
+                                                                Click="@(() => ConnectionAction(connection, View.RemoveConnectedRecord))"
                                                                 data-testid="@($"crmhr-connection-remove-{rowIndex}")" />
                                                     </div>
                                                 </Grid>
 
                                                 <div class="mt-4">
                                                     <ProjectMultiPicker SelectedProjectIds="@connection.ProjectIds"
-                                                                        SelectedProjectIdsChanged="@(projectIds => View.UpdateConnectedRecordProjects(rowIndex, projectIds))"
+                                                                        SelectedProjectIdsChanged="@(projectIds => SelectConnectionProjectsAsync(connection, projectIds))"
+                                                                        PendingChanged="ConnectionsPickerChanged"
                                                                         TestIdPrefix="@($"crmhr-connection-projects-{rowIndex}")" />
                                                 </div>
 
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div class="lg:col-span-2">
                                                         <label class="cda-field-label">Relationship notes</label>
-                                                        <InputText @bind-Value="connection.Notes"
+                                                        <NativeValueInput TValue="string" @bind-Value="connection.Notes" PendingChanged="@(_ => SetConnectionNotesAsync(connection))"
                                                                    class="cda-input"
                                                                    data-testid="@($"crmhr-connection-notes-{rowIndex}")" />
                                                     </div>
                                                     <div class="flex items-end gap-3">
                                                         <InputCheckbox @bind-Value="connection.IsPrimary"
+                                                                       @bind-Value:after="@(() => ConnectionsInputChanged.InvokeAsync(new(connection, ConnectionField.Primary)))"
                                                                        data-testid="@($"crmhr-connection-primary-{rowIndex}")" />
                                                         <label class="text-sm text-slate-700">Primary for this role</label>
                                                     </div>
@@ -252,10 +269,11 @@
 
                                 <Cluster Gap="LayoutGap.Small" Class="mt-5">
                                     <Button Text="Save connected records"
-                                            Click="View.SaveConnectedRecordsAsync"
+                                            Type="submit" Disabled="ConnectionsSaveDisabled"
                                             data-testid="crmhr-connection-save-button" />
                                 </Cluster>
                             </FormSection>
+                            </EditForm>
                                 </TabsItem>
 
                                 <TabsItem Text="Interactions"
@@ -308,104 +326,10 @@
                                 </SurfaceCard>
                             </Grid>
 
-                            <EditForm Model="View.InteractionEditor" OnValidSubmit="View.SaveInteractionAsync">
-                                <Stack GapScale="LayoutGap.Large">
-                                    <FormSection Title="Interaction journal"
-                                                 Description="Record calls, meetings, emails, and messages against the account so recent context survives handoffs and reloads.">
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                            <div>
-                                                <label class="cda-field-label">Interaction type</label>
-                                                <InputSelect @bind-Value="View.InteractionEditor.InteractionType"
-                                                             class="cda-input"
-                                                             data-testid="crmhr-interaction-type">
-                                                    @foreach (var interactionType in Enum.GetValues<InteractionType>())
-                                                    {
-                                                        <option value="@interactionType">@interactionType</option>
-                                                    }
-                                                </InputSelect>
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Occurred on</label>
-                                                <InputDate @bind-Value="View.InteractionEditor.OccurredOn"
-                                                           class="cda-input"
-                                                           data-testid="crmhr-interaction-occurred-on" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Linked opportunity</label>
-                                                <InputSelect @bind-Value="View.InteractionEditor.RelatedOpportunityId"
-                                                             class="cda-input"
-                                                             data-testid="crmhr-interaction-opportunity">
-                                                    <option value="">No linked opportunity</option>
-                                                    @if (View.SelectedOpportunity is { } selectedOpportunity)
-                                                    {
-                                                        <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
-                                                    }
-                                                </InputSelect>
-                                                <p class="mt-1 text-xs leading-5 text-slate-500">
-                                                    Select an opportunity from the paged Opportunities tab before linking it here.
-                                                </p>
-                                            </div>
-                                        </Grid>
-
-                                        <div class="mt-5">
-                                            <label class="cda-field-label">Subject</label>
-                                            <InputText @bind-Value="View.InteractionEditor.Subject"
-                                                       class="cda-input"
-                                                       data-testid="crmhr-interaction-subject" />
-                                        </div>
-
-                                        <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
-                                            <div>
-                                                <label class="cda-field-label">Summary</label>
-                                                <InputTextArea @bind-Value="View.InteractionEditor.Summary"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
-                                                               data-testid="crmhr-interaction-summary" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Notes</label>
-                                                <InputTextArea @bind-Value="View.InteractionEditor.Notes"
-                                                               class="cda-input cda-input--textarea min-h-[9rem]"
-                                                               data-testid="crmhr-interaction-notes" />
-                                            </div>
-                                        </Grid>
-
-                                        <div class="mt-5">
-                                            <p class="cda-field-label">Participants</p>
-                                            @if (View.ParticipantOptions.Count == 0)
-                                            {
-                                                <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
-                                                    Save at least one connected record to expose reusable participant shortcuts here.
-                                                </div>
-                                            }
-                                            else
-                                            {
-                                                <Grid Gap="LayoutGap.Small" ColumnsMd="2">
-                                                    @foreach (var option in View.ParticipantOptions)
-                                                    {
-                                                        <label class="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700"
-                                                               data-testid="@($"crmhr-interaction-participant-option-{option.Id:N}")">
-                                                            <input type="checkbox"
-                                                                   checked="@View.InteractionEditor.ParticipantPartyIds.Contains(option.Id)"
-                                                                   @onchange="args => View.ToggleInteractionParticipant(option.Id, args)"
-                                                                   data-testid="@($"crmhr-interaction-participant-{option.Id:N}")" />
-                                                            <span>@option.DisplayName (@option.PartyType)</span>
-                                                        </label>
-                                                    }
-                                                </Grid>
-                                            }
-                                        </div>
-                                    </FormSection>
-
-                                    <NextActionEditor Model="View.InteractionEditor"
-                                                      OwnerOptions="View.SelectedAccount.ConnectedParties" />
-
-                                    <Cluster Gap="LayoutGap.Small">
-                                        <Button Text="Log interaction"
-                                                data-testid="crmhr-interaction-save-button"
-                                                Type="submit" />
-                                    </Cluster>
-                                </Stack>
-                            </EditForm>
+                            <InteractionJournalEditor @key="View.InteractionEditor" Model="View.InteractionEditor" SelectedOpportunity="View.SelectedOpportunity"
+                                ParticipantOptions="View.ParticipantOptions" OwnerOptions="View.SelectedAccount.ConnectedParties"
+                                InputChanged="InteractionInputChanged" Submit="View.SaveInteractionAsync" Message="@InteractionMessage" Disabled="InteractionSaveDisabled"
+                                Unknown="InteractionOutcomeUnknown" PartyLabel="View.ResolveConnectionPartyLabel" />
                                     </Stack>
                                 </TabsItem>
 
@@ -426,6 +350,8 @@
                         @* The account record owns its opportunity and connection overlays. Rendered inside it they open above it even
                            when one render opens both (a deep link, a board card), and they close with the record. *@
                         <OpportunityCreateDialog IsOpen="@View.IsOpportunityCreateDialogOpen"
+                            Opening="OpportunityOpening" SaveDisabled="OpportunitySaveDisabled" Editing="OpportunityEditing"
+                            InputChanged="OpportunityInputChanged" PickerChanged="OpportunityPickerChanged" ProjectSelected="OpportunityProjectSelected"
                                                  InitialModel="View.OpportunityEditor"
                                                  AccountDisplayName="@(View.SelectedAccount?.DisplayName ?? string.Empty)"
                                                  RelationshipStageLabel="@View.ProfileEditor.RelationshipStage.ToString()"
@@ -443,6 +369,8 @@
                                                  OpenLinkedProject="View.OpenLinkedProjectAsync" />
 
                         <OpportunityEditDialog IsOpen="@View.IsOpportunityEditDialogOpen"
+                            Opening="OpportunityOpening" SaveDisabled="OpportunitySaveDisabled" Editing="OpportunityEditing"
+                            InputChanged="OpportunityInputChanged" PickerChanged="OpportunityPickerChanged" ProjectSelected="OpportunityProjectSelected" Model="View.OpportunityEditor"
                                                Opportunity="View.SelectedOpportunity"
                                                IsBusy="View.IsOpportunityBusy"
                                                Message="@(View.IsOpportunityEditDialogOpen ? View.Message : null)"
@@ -450,9 +378,13 @@
                                                Close="View.CloseOpportunityEditDialogAsync"
                                                LoadFailed="View.HandleOpportunityPickerLoadFailedAsync" />
 
-                        <OpportunityConversionDialog IsOpen="@View.IsOpportunityConversionDialogOpen"
+                        <OpportunityConversionDialog @key="ConversionOpening" IsOpen="@View.IsOpportunityConversionDialogOpen"
+                                                     Opening="ConversionOpening" SaveDisabled="ConversionSaveDisabled"
+                                                     InputChanged="ConversionInputChanged" PickerChanged="ConversionPickerChanged"
+                                                     ProjectSelected="ConversionProjectSelected"
+                                                     Editing="ConversionEditing"
                                                      DatabaseProfileId="@View.ProjectDatabaseProfileId"
-                                                     Opportunity="View.SelectedOpportunity"
+                                                     Opportunity="ConversionBasis"
                                                      Model="View.OpportunityConversionEditor"
                                                      IsBusy="View.IsOpportunityConversionBusy"
                                                      Message="@(View.IsOpportunityConversionDialogOpen ? View.Message : null)"
@@ -493,6 +425,64 @@
 </PageScaffold>
 
 @code {
+    private EditContext? profileContext;
+    private EditContext? connectionsContext;
+    [Parameter] public EventCallback<ConnectionFieldInput> ConnectionsInputChanged { get; set; }
+    [Parameter] public EventCallback<ConnectionProjectSelection> ConnectionsProjectSelected { get; set; }
+    [Parameter] public EventCallback<bool> ConnectionsPickerChanged { get; set; }
+    [Parameter] public RenderFragment? ConnectionsEditing { get; set; }
+    [Parameter] public string? ConnectionsValidationMessage { get; set; }
+    [Parameter] public string? ConnectionsMessage { get; set; }
+    [Parameter] public AlertStyle ConnectionsMessageStyle { get; set; } = AlertStyle.Info;
+    [Parameter] public bool ConnectionsSaveDisabled { get; set; }
+    [Parameter] public EventCallback InteractionInputChanged { get; set; }
+    [Parameter] public string? InteractionMessage { get; set; }
+    [Parameter] public bool InteractionSaveDisabled { get; set; }
+    [Parameter] public bool InteractionOutcomeUnknown { get; set; }
+    [Parameter] public RenderFragment? OpportunityEditing { get; set; }
+    [Parameter] public long OpportunityOpening { get; set; }
+    [Parameter] public bool OpportunitySaveDisabled { get; set; }
+    [Parameter] public long ConversionOpening { get; set; }
+    [Parameter] public bool ConversionSaveDisabled { get; set; }
+    [Parameter] public EventCallback ConversionInputChanged { get; set; }
+    [Parameter] public EventCallback<bool> ConversionPickerChanged { get; set; }
+    [Parameter] public EventCallback<ProjectRecordPickerSelection> ConversionProjectSelected { get; set; }
+    [Parameter] public RenderFragment? ConversionEditing { get; set; }
+    [Parameter] public CrmOpportunityDetailModel? ConversionBasis { get; set; }
+    [Parameter] public EventCallback<OpportunityInput> OpportunityInputChanged { get; set; }
+    [Parameter] public EventCallback<bool> OpportunityPickerChanged { get; set; }
+    [Parameter] public EventCallback<Guid> OpportunityProjectSelected { get; set; }
+    [Parameter] public long CatalogRefreshVersion { get; set; }
+    [Parameter] public bool ProfileSaveDisabled { get; set; }
+    [Parameter] public RenderFragment? ProfileEditing { get; set; }
+    [Parameter] public RenderFragment? EditorOverlays { get; set; }
+    [Parameter] public EventCallback<AccountProfileField> ProfileInputChanged { get; set; }
+    [Parameter] public EventCallback DirtyChanged { get; set; }
+    private EditContext ProfileContext() => ContextFor(ref profileContext, View.ProfileEditor);
+    private EditContext ConnectionsContext() => ContextFor(ref connectionsContext, View.ConnectedRecordEditors);
+
+    private Task SetConnectionNotesAsync(CrmAccountConnectionEditorModel row) {
+        if (!View.ConnectedRecordEditors.Contains(row)) {
+            return Task.CompletedTask;
+        }
+
+        return ConnectionsInputChanged.InvokeAsync(new(row, ConnectionField.Notes));
+    }
+
+    private void ConnectionAction(CrmAccountConnectionEditorModel row, Action<int> action) {
+        var index = View.ConnectedRecordEditors.IndexOf(row);
+        if (index >= 0) {
+            action(index);
+        }
+    }
+
+    private Task SelectConnectionProjectsAsync(CrmAccountConnectionEditorModel row, IReadOnlyList<Guid> ids) {
+        var index = View.ConnectedRecordEditors.IndexOf(row);
+        return index < 0 ? Task.CompletedTask : ConnectionsProjectSelected.HasDelegate
+            ? ConnectionsProjectSelected.InvokeAsync(new(row, ids)) : View.UpdateConnectedRecordProjects(index, ids);
+    }
+
+    private Task SetProfileTextAsync(AccountProfileField field) => ProfileInputChanged.InvokeAsync(field);
     // Host-owned region: the host composes its adapter here.
     [Parameter]
     public RenderFragment? AccountSummary { get; set; }

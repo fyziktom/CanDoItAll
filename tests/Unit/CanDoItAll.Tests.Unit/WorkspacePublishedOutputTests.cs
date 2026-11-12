@@ -57,6 +57,7 @@ public sealed class WorkspacePublishedOutputTests {
             var served = await commands.ServeStaticFiles(typeof(StaticFileHost).Assembly.Location, webRoot);
             Assert.True(served.Succeeded, served.Message + served.StdoutPreview + served.StderrPreview);
             var startupPath = Assert.Single(served.Receipt.TargetPaths, path => path.EndsWith("/startup.json", StringComparison.Ordinal));
+            Assert.Contains($"workspace_dotnet_stop(startupReceiptPath: \"{startupPath}\")", served.Message, StringComparison.Ordinal);
             using var startup = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, startupPath)));
             var url = startup.RootElement.GetProperty("probeUrl").GetString()!;
             using var client = new HttpClient { BaseAddress = new Uri(url), Timeout = TimeSpan.FromSeconds(5) };

@@ -6,6 +6,51 @@ namespace CanDoItAll.Tests.Unit.Storage;
 [Trait("Category", "UnixPortabilityCore")]
 public sealed class PhysicalFileSystemPathPolicyTests
 {
+    [Theory]
+    [InlineData(PhysicalFileSystemCaseSensitivity.Sensitive)]
+    [InlineData(PhysicalFileSystemCaseSensitivity.Insensitive)]
+    public void Configured_comparison_is_explicit_even_before_the_root_exists(PhysicalFileSystemCaseSensitivity comparisonMode) {
+        using var directory = new TemporaryDirectory();
+        var root = Path.Combine(directory.Path, "missing-root");
+        var factory = new PhysicalFileSystemPathPolicyFactory(comparisonMode);
+        var policy = factory.Create(root);
+
+        Assert.Equal(comparisonMode, policy.CaseSensitivity);
+        Assert.False(Directory.Exists(root));
+        Assert.Equal(comparisonMode == PhysicalFileSystemCaseSensitivity.Insensitive, policy.IsWithinRoot(ChangeCaseOfLeaf(root)));
+        Assert.Equal(Path.Combine(root, "record.json"), policy.ResolveContainedPath("record.json"));
+        Assert.Throws<PhysicalPathValidationException>(() => policy.ResolveContainedPath(Path.Combine("..", "outside.json")));
+        Assert.Equal(PhysicalFileSystemCaseSensitivity.Sensitive,
+            factory.Create(root, PhysicalFileSystemCaseSensitivity.Sensitive).CaseSensitivity);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(directory.Path));
+    }
+
+    [Theory]
+    [InlineData(PhysicalFileSystemCaseSensitivity.Unknown)]
+    [InlineData((PhysicalFileSystemCaseSensitivity)int.MaxValue)]
+    public void Configured_factory_rejects_unknown_or_invalid_comparison(PhysicalFileSystemCaseSensitivity comparisonMode) {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PhysicalFileSystemPathPolicyFactory(comparisonMode));
+    }
+
+    [Fact]
+    public void Exact_factory_revalidates_replaced_parent_instead_of_caching_path_safety() {
+        using var managed = new TemporaryDirectory();
+        using var outside = new TemporaryDirectory();
+        var parent = Path.Combine(managed.Path, "parent");
+        Directory.CreateDirectory(parent);
+        var factory = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive);
+        var original = factory.Create(managed.Path);
+        var target = original.ResolveContainedPath(Path.Combine(parent, "record.json"));
+        Directory.Delete(parent);
+        Directory.CreateSymbolicLink(parent, outside.Path);
+
+        var existing = Assert.Throws<PhysicalPathValidationException>(() => original.RevalidateMutationTarget(target));
+        var fresh = Assert.Throws<PhysicalPathValidationException>(() => factory.Create(managed.Path).RevalidateMutationTarget(target));
+        Assert.Equal(PhysicalPathValidationErrorCode.LinkTraversal, existing.ErrorCode);
+        Assert.Equal(PhysicalPathValidationErrorCode.LinkTraversal, fresh.ErrorCode);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(outside.Path));
+    }
+
     [Fact]
     public void Sensitive_root_does_not_authorize_case_distinct_sibling()
     {
@@ -157,6 +202,78 @@ public sealed class PhysicalFileSystemPathPolicyTests
             policy.RevalidateMutationTarget(targetPath));
 
         Assert.Equal(PhysicalPathValidationErrorCode.LinkTraversal, exception.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Mutation_revalidation_rejects_existing_and_dangling_leaf_links(bool dangling) {
+        using var managed = new TemporaryDirectory();
+        using var outside = new TemporaryDirectory();
+        var outsidePath = Path.Combine(outside.Path, "record.json");
+        if (!dangling) {
+            File.WriteAllText(outsidePath, "outside");
+        }
+        var target = Path.Combine(managed.Path, "record.json");
+        File.CreateSymbolicLink(target, outsidePath);
+        var policy = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive).Create(managed.Path);
+
+        var failure = Assert.Throws<PhysicalPathValidationException>(() => policy.RevalidateMutationTarget(target));
+
+        Assert.Equal(PhysicalPathValidationErrorCode.LinkTraversal, failure.ErrorCode);
+        Assert.Equal(!dangling, File.Exists(outsidePath));
+        if (!dangling) {
+            Assert.Equal("outside", File.ReadAllText(outsidePath));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Mutation_revalidation_requires_an_existing_directory_parent(bool parentIsFile) {
+        using var managed = new TemporaryDirectory();
+        var parent = Path.Combine(managed.Path, "parent");
+        if (parentIsFile) {
+            File.WriteAllText(parent, "parent is a file");
+        }
+        var policy = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive).Create(managed.Path);
+        var target = Path.Combine(parent, "record.json");
+
+        var failure = Assert.Throws<PhysicalPathValidationException>(() => policy.RevalidateMutationTarget(target));
+
+        Assert.Equal(PhysicalPathValidationErrorCode.InvalidPath, failure.ErrorCode);
+        Assert.False(File.Exists(target));
+    }
+
+    [Fact]
+    public void Mutation_revalidation_rejects_a_replaced_ancestor_on_the_same_policy() {
+        using var managed = new TemporaryDirectory();
+        using var outside = new TemporaryDirectory();
+        var ancestor = Path.Combine(managed.Path, "first");
+        var parent = Path.Combine(ancestor, "second");
+        Directory.CreateDirectory(parent);
+        Directory.CreateDirectory(Path.Combine(outside.Path, "second"));
+        var target = Path.Combine(parent, "record.json");
+        var policy = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive).Create(managed.Path);
+        policy.RevalidateMutationTarget(target);
+        Directory.Move(ancestor, Path.Combine(managed.Path, "retired"));
+        Directory.CreateSymbolicLink(ancestor, outside.Path);
+
+        var failure = Assert.Throws<PhysicalPathValidationException>(() => policy.RevalidateMutationTarget(target));
+
+        Assert.Equal(PhysicalPathValidationErrorCode.LinkTraversal, failure.ErrorCode);
+        Assert.False(File.Exists(Path.Combine(outside.Path, "second", "record.json")));
+    }
+
+    [Fact]
+    public void Mutation_revalidation_does_not_authorize_the_managed_root_parent() {
+        using var managed = new TemporaryDirectory();
+        var policy = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive).Create(managed.Path);
+
+        var failure = Assert.Throws<PhysicalPathValidationException>(() => policy.RevalidateMutationTarget(managed.Path));
+
+        Assert.Equal(PhysicalPathValidationErrorCode.OutsideRoot, failure.ErrorCode);
+        Assert.True(Directory.Exists(managed.Path));
     }
 
     private static string ChangeCaseOfLeaf(string path)

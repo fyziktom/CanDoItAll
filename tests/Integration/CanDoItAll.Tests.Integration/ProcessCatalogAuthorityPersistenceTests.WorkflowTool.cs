@@ -272,6 +272,12 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             await before();
             return await inner.AcquireAgentsReadLeaseAsync(ids, cancellationToken);
         }
+
+        public async Task<IAgentCatalogReadLease> AcquireAgentAuthoritySnapshotAsync(IReadOnlyList<Guid> ids,
+            CancellationToken cancellationToken = default) {
+            await before();
+            return await inner.AcquireAgentAuthoritySnapshotAsync(ids, cancellationToken);
+        }
     }
 
     private static WorkflowEventRecord WorkflowStarted(WorkflowRunSnapshot run)

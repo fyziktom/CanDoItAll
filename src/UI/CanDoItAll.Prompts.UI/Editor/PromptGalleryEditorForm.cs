@@ -5,6 +5,43 @@ namespace CanDoItAll.Prompts.UI.Editor;
 // Mutable form draft owned by one editor surface instance. Collections are replaced, never mutated in place.
 public sealed class PromptGalleryEditorForm
 {
+    private readonly long[] fieldRevisions = new long[Enum.GetValues<PromptDraftField>().Length];
+    private long cleanRevision;
+    public long Revision { get; private set; }
+    public bool IsDirty => Revision != cleanRevision;
+
+    public void Touch(PromptDraftField field) => fieldRevisions[(int)field] = ++Revision;
+
+    public PromptGalleryDraftCapture Capture(string temperature, string maxOutputTokens, string topP,
+        string provider, string model) => new(ToSubmission(), Revision, [.. fieldRevisions],
+            temperature, maxOutputTokens, topP, provider, model);
+
+    public void MarkAccepted(PromptGalleryDraftCapture submitted) {
+        if (submitted.PendingProvider.Length == 0 && submitted.PendingModel.Length == 0 && submitted.PendingTag.Length == 0 && submitted.Revision == Revision && ToSubmission() is var live &&
+            live.Title == submitted.Values.Title && live.Summary == submitted.Values.Summary &&
+            live.Kind == submitted.Values.Kind && live.Phase == submitted.Values.Phase && live.Content == submitted.Values.Content &&
+            live.Tags.SequenceEqual(submitted.Values.Tags) && live.SupportedModels.SequenceEqual(submitted.Values.SupportedModels) &&
+            live.SupportedConsumers.SequenceEqual(submitted.Values.SupportedConsumers) && live.Recommendations == submitted.Values.Recommendations) {
+            cleanRevision = Revision;
+        }
+    }
+
+    public void Patch(PromptGalleryEditorSubmission values) {
+        Title = values.Title;
+        Summary = values.Summary;
+        Kind = values.Kind;
+        Phase = values.Phase;
+        Content = values.Content;
+        Tags = [.. values.Tags];
+        SupportedModels = [.. values.SupportedModels];
+        SupportedConsumers = [.. values.SupportedConsumers];
+        Temperature = values.Recommendations.Temperature;
+        MaxOutputTokens = values.Recommendations.MaxOutputTokens;
+        TopP = values.Recommendations.TopP;
+        foreach (var field in Enum.GetValues<PromptDraftField>()) {
+            Touch(field);
+        }
+    }
     public string Title { get; set; } = string.Empty;
 
     public string Summary { get; set; } = string.Empty;

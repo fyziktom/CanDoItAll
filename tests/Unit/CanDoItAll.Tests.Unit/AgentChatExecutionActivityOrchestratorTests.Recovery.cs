@@ -23,7 +23,7 @@ public sealed partial class AgentChatExecutionActivityOrchestratorTests {
         Assert.Equal(context.AgentId, call.Operation.AgentId);
         Assert.Equal(context.Workspace.SessionId, call.Operation.ChatSessionId);
         var expected = new ExecutionRunResult(call.RunId, context.Workspace.SessionId, "Recovered original run", null,
-            context.Workspace.SendResult.Metric) { State = ExecutionState.Completed };
+            Assert.IsType<AgentRunMetric>(context.Workspace.SendResult.Metric)) { State = ExecutionState.Completed };
         context.Workspace.RecoveryCompletion.SetResult(expected);
         Assert.Same(expected, await recovery.Completion.WaitAsync(TestContext.DefaultTimeout));
         Assert.Empty(context.Workspace.SendCalls);

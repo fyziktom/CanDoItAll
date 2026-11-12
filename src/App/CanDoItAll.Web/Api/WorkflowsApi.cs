@@ -13,6 +13,9 @@ namespace CanDoItAll.Web.Api;
 
 internal static class WorkflowsApi
 {
+    private const string DefinitionConflictCode = "workflows.definition-conflict";
+    private const string SettingsConflictCode = "workflows.settings-conflict";
+    private const string ComponentConflictCode = "workflows.component-conflict";
     // The XML comment transformer matches <param> tags by the C# parameter name, which differs from the header's wire
     // name, so the header description is supplied with [Description] instead.
     private const string IdempotencyKeyHeaderDescription =
@@ -33,6 +36,7 @@ internal static class WorkflowsApi
         workflows.MapWorkflowRunIdempotencyApi();
         workflows.MapWorkflowStableIdentityApi();
         workflows.MapWorkflowExternalResponseApi();
+        workflows.MapWorkflowAttachmentsApi();
 
         workflows.MapGet("/contract", GetContract)
             .WithName("GetWorkflowsApiContract")
@@ -45,7 +49,11 @@ internal static class WorkflowsApi
         workflows.MapPost("/settings", SaveSettingsAsync)
             .WithName("SaveWorkflowSettings")
             .Produces<WorkflowSettings>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["409"].Description = "The settings original is missing or stale. The saved settings were retained; reread them before reviewing the local draft.";
+                return Task.CompletedTask;
+            });
 
         workflows.MapGet("/runtime-backends", ListRuntimeBackends)
             .WithName("ListWorkflowRuntimeBackends")
@@ -72,38 +80,62 @@ internal static class WorkflowsApi
 
         workflows.MapPost("/definitions", SaveDefinitionAsync)
             .WithName("SaveWorkflowDefinition")
+            .DescribeApi("Create a workflow or append a version against its original version.",
+                "Existing workflows require expectedVersionId from the original read; null declares create-only absence, including caller-chosen IDs. Missing or stale originals and create collisions return HTTP 409 with workflows.definition-conflict and store nothing. Send the complete graph, input parameters and runtime policy. Blank LLM node provider, model or instructions are filled from the selected component. External namespace/key must be supplied together and are retained when omitted; template provenance cannot be set here.",
+                "The complete accepted workflow version, including its new versionId.",
+                "Complete workflow content and the original expectedVersionId, or null only when creating a new workflow.")
             .Produces<WorkflowDefinition>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         workflows.MapPost("/definitions/import", ImportDefinitionAsync)
             .WithName("ImportWorkflowDefinition")
+            .DescribeApi("Create or conditionally replace a workflow from a portable definition envelope.",
+                "Accepts CanDoItAll.WorkflowDefinition/v1. Status defaults to Draft and a new version identifier is generated. Without preserveWorkflowId a new workflow identifier is generated and external/template identity is omitted; expectedVersionId must be absent. With preserveWorkflowId the source identifier, external identity and template provenance are kept. Replacing an existing target requires its original expectedVersionId. Null declares create-only absence. Missing or stale originals return HTTP 409 with workflows.definition-conflict and preserve the target.",
+                "The imported workflow with its assigned workflow and version identifiers.",
+                "The complete export envelope, requested lifecycle status and whether to retain its source workflow identity.")
             .Produces<WorkflowDefinition>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         workflows.MapPost("/definitions/{workflowId:guid}/publish", PublishDefinitionAsync)
             .WithName("PublishWorkflowDefinition")
+            .DescribeApi("Publish the originally observed workflow version.",
+                "Appends an Active version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Publishing preserves existing runs; future latest-Active starts use the new version.",
+                "The accepted Active workflow version with its new versionId.")
             .Produces<WorkflowDefinition>()
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
+                StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
         workflows.MapPost("/definitions/{workflowId:guid}/suspend", SuspendDefinitionAsync)
             .WithName("SuspendWorkflowDefinition")
+            .DescribeApi("Suspend the originally observed workflow version.",
+                "Appends a Suspended version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Existing runs retain their saved versions.",
+                "The accepted Suspended workflow version with its new versionId.")
             .Produces<WorkflowDefinition>()
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
+                StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
         workflows.MapPost("/definitions/{workflowId:guid}/archive", ArchiveDefinitionAsync)
             .WithName("ArchiveWorkflowDefinition")
+            .DescribeApi("Archive the originally observed workflow version.",
+                "Appends an Archived version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Existing versions and runs remain available under their native read contracts.",
+                "The accepted Archived workflow version with its new versionId.")
             .Produces<WorkflowDefinition>()
             .ProducesApiErrors(
                 StatusCodes.Status400BadRequest,
+                StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
         workflows.MapDelete("/definitions/{workflowId:guid}", DeleteDefinitionAsync)
             .WithName("DeleteWorkflowDefinition")
-            .Produces<ApiAck>();
+            .DescribeApi("Delete the originally observed workflow and its definition versions.",
+                "Requires expectedVersionId from the original read. Missing, empty or stale originals, including a target deleted or recreated since that read, return HTTP 409 with workflows.definition-conflict and remove nothing. A successful delete removes the definition and its stored versions. Runtime runs, events, artifacts, checkpoints and reusable components remain available. No blind retry or freshly read version substitutes for an unresolved original command.",
+                "The original workflow head and all its definition versions were removed; ok is true.")
+            .Produces<ApiAck>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
 
         workflows.MapPost("/definitions/{workflowId:guid}/validate", ValidateSavedDefinitionAsync)
             .WithName("ValidateSavedWorkflowDefinition").WithApiPermission(ApiAccessScopeNames.ReadWorkflows)
@@ -130,11 +162,22 @@ internal static class WorkflowsApi
         workflows.MapPost("/components", SaveComponentAsync)
             .WithName("SaveWorkflowComponent")
             .Produces<LlmCallComponent>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["409"].Description = "The original component revision or its owned Prompt observation is missing or stale. Neither owner was replaced by this rejected request.";
+                return Task.CompletedTask;
+            });
 
         workflows.MapDelete("/components/{componentId:guid}", DeleteComponentAsync)
             .WithName("DeleteWorkflowComponent")
-            .Produces<ApiAck>();
+            .Produces<ApiAck>()
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict)
+            .WithDescription("Delete only the component revision originally read. expectedRevision is required; missing, empty, stale or deleted/recreated originals return 409 without deleting the current component.")
+            .AddOpenApiOperationTransformer((operation, _, _) => {
+                operation.Responses!["400"].Description = "The component or revision query value is malformed; no component was deleted.";
+                operation.Responses["409"].Description = "The original component revision is missing, empty, stale or from a deleted lifetime. The current component was retained.";
+                return Task.CompletedTask;
+            });
 
         workflows.MapPost("/test-runs", RunTestAsync)
             .WithName("RunWorkflowTest").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
@@ -424,109 +467,21 @@ internal static class WorkflowsApi
             : Results.Ok(envelope);
     }
 
-    /// <summary>
-    /// Create a workflow definition or store a new version of an existing one.
-    /// </summary>
-    /// <remarks>
-    /// Without <c>id</c> a new workflow is created with a server-generated identifier. With <c>id</c> the body becomes
-    /// the new current version of that workflow; an unknown <c>id</c> creates a workflow with that identifier. Every
-    /// successful save stores a new version with a new <c>versionId</c>; earlier versions stay readable. The body
-    /// replaces the definition content: send the complete graph, runtime policy and input parameters, not a patch.
-    ///
-    /// To edit safely, read the definition, change it and send the <c>versionId</c> you read as
-    /// <c>expectedVersionId</c>; the save is rejected if another save happened in between. Without
-    /// <c>expectedVersionId</c> the last save wins.
-    ///
-    /// The new version must pass validation whatever its <c>status</c>, so an invalid draft cannot be stored; check a
-    /// draft first with <c>POST /api/workflows/validate</c>. The requested <c>status</c> is stored as sent, so saving
-    /// with Active publishes the new version directly. For LLM call nodes that reference a component, an empty
-    /// provider, model or instructions value is filled from the component when the version is stored. The name and
-    /// description are trimmed.
-    ///
-    /// Stable identity: <c>externalNamespace</c> and <c>externalKey</c> must be sent together; they are stored
-    /// lower-cased and must be unique across workflows. Leaving both empty keeps the identity of the current version,
-    /// so this operation cannot remove an identity. Template provenance cannot be set here.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="request">
-    /// The complete definition content to store and the optional concurrency precondition.
-    /// </param>
-    /// <response code="200">
-    /// The version was stored. The body is the stored definition with its new <c>versionId</c>.
-    /// </response>
-    /// <response code="400">
-    /// Nothing was stored (<c>workflows.request-invalid</c>; the message gives the reason): a blank name, a missing
-    /// graph or runtime policy, a stale <c>expectedVersionId</c>, an incomplete, malformed or already used external
-    /// identity, a validation failure (the message lists the issues), or a component or Prompt Gallery binding that
-    /// cannot be resolved. Read the current version before retrying a stale save. A body the framework cannot bind
-    /// is rejected with HTTP 400 before the operation runs and has no error envelope.
-    /// </response>
     internal static async Task<IResult> SaveDefinitionAsync(
         WorkflowDefinitionSaveRequest request,
         IWorkflowCatalogService catalogService,
         CancellationToken cancellationToken)
         => await ToApiResultAsync(() => catalogService.SaveDefinitionAsync(request, cancellationToken));
 
-    /// <summary>
-    /// Import a workflow definition from an export envelope.
-    /// </summary>
-    /// <remarks>
-    /// Stores the definition inside an envelope produced by <c>GET /api/workflows/definitions/{workflowId}/export</c>.
-    /// Only the definition of the envelope is used; its validation result and export time are ignored. The imported
-    /// version is validated like a save and stored with the requested status, Draft when <c>status</c> is omitted.
-    ///
-    /// With <c>preserveWorkflowId</c> false the import creates a new workflow with a new identifier and without the
-    /// source's external identity or template provenance. With true it keeps the source's workflow identifier,
-    /// external identity and template provenance; if that workflow already exists here, the import becomes its new
-    /// current version without any concurrency check.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="request">The export envelope and the import options.</param>
-    /// <response code="200">The definition was stored. The body is the stored version.</response>
-    /// <response code="400">
-    /// Nothing was stored (<c>workflows.request-invalid</c>): the envelope or its definition is missing, the envelope
-    /// format is not <c>CanDoItAll.WorkflowDefinition/v1</c>, the definition fails validation, or its external
-    /// identity is already used by another workflow. A body the framework cannot bind is rejected with HTTP 400
-    /// before the operation runs and has no error envelope.
-    /// </response>
     internal static async Task<IResult> ImportDefinitionAsync(
         WorkflowDefinitionImportRequest request,
         IWorkflowCatalogService catalogService,
         CancellationToken cancellationToken)
         => await ToApiResultAsync(() => catalogService.ImportDefinitionAsync(request, cancellationToken));
 
-    /// <summary>
-    /// Publish the current version of a workflow definition by storing it as a new Active version.
-    /// </summary>
-    /// <remarks>
-    /// Validates the workflow's current version and stores a copy of it with status Active as the new current version
-    /// (a new <c>versionId</c>). Production runs started with <c>POST /api/workflows/runs/start</c> without a
-    /// <c>versionId</c> use the latest Active version. Publishing does not affect runs that already exist.
-    ///
-    /// Send the <c>versionId</c> you last read as <c>expectedVersionId</c> so that the change is rejected when the
-    /// workflow changed in between; without it the change applies to whatever version is current.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="workflowId">Identifier of the workflow to publish.</param>
-    /// <param name="expectedVersionId">
-    /// Optional <c>versionId</c> of the current version as last read. When it no longer is the current version, the
-    /// change is rejected with HTTP 400.
-    /// </param>
-    /// <response code="200">The new Active version.</response>
-    /// <response code="400">
-    /// Nothing was stored (<c>workflows.request-invalid</c>): the current version fails validation (the message lists
-    /// the issues) or <c>expectedVersionId</c> is stale. Read the definition again before retrying.
-    /// </response>
-    /// <response code="404">No workflow has this identifier (<c>workflows.resource-not-found</c>).</response>
     internal static async Task<IResult> PublishDefinitionAsync(
-        Guid workflowId,
-        Guid? expectedVersionId,
+        [Description("Identifier of the workflow whose originally observed version is being published.")] Guid workflowId,
+        [Description("Original version identifier last read; required. Missing or stale originals return HTTP 409 without storing a version.")] Guid? expectedVersionId,
         IWorkflowCatalogService catalogService,
         CancellationToken cancellationToken)
         => await ChangeDefinitionStatusAsync(
@@ -536,35 +491,9 @@ internal static class WorkflowsApi
             catalogService,
             cancellationToken);
 
-    /// <summary>
-    /// Suspend a workflow definition by storing its current version as a new Suspended version.
-    /// </summary>
-    /// <remarks>
-    /// Stores a copy of the current version with status Suspended as the new current version (a new
-    /// <c>versionId</c>). While the current version is Suspended, no version of the workflow can be started by the
-    /// start operations: latest-Active starts find no runnable version and exact-version starts are rejected. Runs
-    /// that already exist continue. Publish again to make the workflow runnable.
-    ///
-    /// The stored copy is validated like any save, so a definition that no longer validates cannot be suspended until
-    /// it is fixed. Send the <c>versionId</c> you last read as <c>expectedVersionId</c> to detect concurrent changes.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="workflowId">Identifier of the workflow to suspend.</param>
-    /// <param name="expectedVersionId">
-    /// Optional <c>versionId</c> of the current version as last read. When it no longer is the current version, the
-    /// change is rejected with HTTP 400.
-    /// </param>
-    /// <response code="200">The new Suspended version.</response>
-    /// <response code="400">
-    /// Nothing was stored (<c>workflows.request-invalid</c>): the definition fails validation or
-    /// <c>expectedVersionId</c> is stale.
-    /// </response>
-    /// <response code="404">No workflow has this identifier (<c>workflows.resource-not-found</c>).</response>
     internal static async Task<IResult> SuspendDefinitionAsync(
-        Guid workflowId,
-        Guid? expectedVersionId,
+        [Description("Identifier of the workflow whose originally observed version is being suspended.")] Guid workflowId,
+        [Description("Original version identifier last read; required. Missing or stale originals return HTTP 409 without storing a version.")] Guid? expectedVersionId,
         IWorkflowCatalogService catalogService,
         CancellationToken cancellationToken)
         => await ChangeDefinitionStatusAsync(
@@ -574,35 +503,9 @@ internal static class WorkflowsApi
             catalogService,
             cancellationToken);
 
-    /// <summary>
-    /// Archive a workflow definition by storing its current version as a new Archived version.
-    /// </summary>
-    /// <remarks>
-    /// Stores a copy of the current version with status Archived as the new current version (a new <c>versionId</c>).
-    /// Archiving keeps the workflow and its versions but, like suspending, stops the start operations from starting
-    /// it; runs that already exist continue. It does not delete anything: use
-    /// <c>DELETE /api/workflows/definitions/{workflowId}</c> for that.
-    ///
-    /// The stored copy is validated like any save, so a definition that no longer validates cannot be archived until
-    /// it is fixed. Send the <c>versionId</c> you last read as <c>expectedVersionId</c> to detect concurrent changes.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="workflowId">Identifier of the workflow to archive.</param>
-    /// <param name="expectedVersionId">
-    /// Optional <c>versionId</c> of the current version as last read. When it no longer is the current version, the
-    /// change is rejected with HTTP 400.
-    /// </param>
-    /// <response code="200">The new Archived version.</response>
-    /// <response code="400">
-    /// Nothing was stored (<c>workflows.request-invalid</c>): the definition fails validation or
-    /// <c>expectedVersionId</c> is stale.
-    /// </response>
-    /// <response code="404">No workflow has this identifier (<c>workflows.resource-not-found</c>).</response>
     internal static async Task<IResult> ArchiveDefinitionAsync(
-        Guid workflowId,
-        Guid? expectedVersionId,
+        [Description("Identifier of the workflow whose originally observed version is being archived.")] Guid workflowId,
+        [Description("Original version identifier last read; required. Missing or stale originals return HTTP 409 without storing a version.")] Guid? expectedVersionId,
         IWorkflowCatalogService catalogService,
         CancellationToken cancellationToken)
         => await ChangeDefinitionStatusAsync(
@@ -612,30 +515,18 @@ internal static class WorkflowsApi
             catalogService,
             cancellationToken);
 
-    /// <summary>
-    /// Permanently delete a workflow definition and all its versions.
-    /// </summary>
-    /// <remarks>
-    /// Removes the workflow and every stored version; this cannot be undone except by importing an earlier export.
-    /// Runs of the workflow, with their events, artifacts and checkpoints, are not deleted and stay readable through
-    /// the run operations. LLM call components are not deleted. To stop new runs but keep the definition, archive or
-    /// suspend it instead.
-    ///
-    /// The operation is idempotent: deleting an unknown or already deleted workflow also returns
-    /// <c>{ "ok": true }</c>. There is no concurrency precondition.
-    ///
-    /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
-    /// disabled (the development default) the route is open.
-    /// </remarks>
-    /// <param name="workflowId">Identifier of the workflow to delete.</param>
-    /// <response code="200">The workflow no longer exists; <c>{ "ok": true }</c>.</response>
     internal static async Task<IResult> DeleteDefinitionAsync(
-        Guid workflowId,
+        [Description("Identifier of the workflow whose original version is being deleted.")] Guid workflowId,
+        [Description("Required original version identifier returned by the read. Missing, empty or stale values return HTTP 409 without deleting anything.")] Guid? expectedVersionId,
         IWorkflowCatalogService catalogService,
-        CancellationToken cancellationToken)
-    {
-        await catalogService.DeleteDefinitionAsync(new WorkflowId(workflowId), cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        CancellationToken cancellationToken) {
+        if (expectedVersionId is null || expectedVersionId == Guid.Empty) {
+            return ApiEndpointResults.Conflict("An original workflow version is required for deletion.", DefinitionConflictCode);
+        }
+        return await ToApiResultAsync(async () => {
+            await catalogService.DeleteDefinitionAsync(new(new(workflowId), new(expectedVersionId.Value)), cancellationToken);
+            return new ApiAck(true);
+        });
     }
 
     /// <summary>
@@ -798,7 +689,6 @@ internal static class WorkflowsApi
     /// it, but a definition whose LLM call node still references the deleted component fails validation when it is
     /// validated, saved, published or started. Its Prompt Gallery prompt is not deleted.
     ///
-    /// The operation is idempotent: deleting an unknown component also returns <c>{ "ok": true }</c>.
     ///
     /// Authority: when API authorization is enabled, a valid bearer token satisfying this operation's capability policy; with authorization
     /// disabled (the development default) the route is open.
@@ -807,11 +697,16 @@ internal static class WorkflowsApi
     /// <response code="200">The component no longer exists; <c>{ "ok": true }</c>.</response>
     internal static async Task<IResult> DeleteComponentAsync(
         Guid componentId,
+        [Description("The nonempty component revision originally read; a missing or stale original returns 409.")] Guid? expectedRevision,
         IWorkflowComponentLibraryService componentLibrary,
-        CancellationToken cancellationToken)
-    {
-        await componentLibrary.DeleteComponentAsync(new WorkflowComponentId(componentId), cancellationToken);
-        return Results.Ok(new ApiAck(true));
+        CancellationToken cancellationToken) {
+        if (expectedRevision is null || expectedRevision == Guid.Empty) {
+            return ApiEndpointResults.Conflict("An original component revision is required for deletion.", ComponentConflictCode);
+        }
+        return await ToApiResultAsync(async () => {
+            await componentLibrary.DeleteComponentAsync(new(new(componentId), expectedRevision.Value), cancellationToken);
+            return new ApiAck(true);
+        });
     }
 
     /// <summary>
@@ -1376,6 +1271,15 @@ internal static class WorkflowsApi
         catch (ArgumentException exception)
         {
             return ApiEndpointResults.BadRequest(exception.Message, "workflows.request-invalid");
+        }
+        catch (WorkflowDefinitionConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, DefinitionConflictCode);
+        }
+        catch (WorkflowSettingsConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, SettingsConflictCode);
+        }
+        catch (WorkflowComponentConcurrencyException exception) {
+            return ApiEndpointResults.Conflict(exception.Message, ComponentConflictCode);
         }
         catch (InvalidOperationException exception)
         {

@@ -33,7 +33,16 @@ public sealed record TailwindStatusViewModel(
     string InputFilePath,
     string OutputFilePath,
     bool OutputExists,
-    DateTimeOffset? OutputLastWriteUtc);
+    DateTimeOffset? OutputLastWriteUtc)
+{
+    public string WatchCommand { get; init; } = string.Empty;
+
+    public DateTimeOffset? LastBuildUtc { get; init; }
+
+    public int BuildCount { get; init; }
+
+    public int RestartCount { get; init; }
+}
 
 public sealed record ManagerStatusResponse(
     string Name,
@@ -119,7 +128,13 @@ public static class ManagerStatusResponseFactory
                 tailwindInputPath,
                 tailwindOutputPath,
                 tailwind.OutputExists,
-                tailwind.OutputLastWriteUtc),
+                tailwind.OutputLastWriteUtc)
+            {
+                WatchCommand = tailwind.WatchCommand,
+                LastBuildUtc = tailwind.LastBuildUtc,
+                BuildCount = tailwind.BuildCount,
+                RestartCount = tailwind.RestartCount
+            },
             BuildServices(managerBaseUrl, configuredApplicationUrls, activeUrls, watch, tailwind, tailwindInputPath, tailwindOutputPath),
             timestampUtc ?? DateTimeOffset.UtcNow);
     }

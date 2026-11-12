@@ -1,0 +1,387 @@
+{
+  "candidate": "c4-accepted-source-sql-verified",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-history",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessHistoryTests"
+      ],
+      "StartedUtc": "2026-10-20T14:16:56.0776041+00:00",
+      "State": "Completed",
+      "RunnerPid": 49136,
+      "ChildPid": 47444,
+      "ChildStartedUtc": "2026-10-20T14:16:56.0844427Z",
+      "ExitCode": 0,
+      "Seconds": 2.4273761,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3459,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-sql-scaling",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessAcceptedSourceSqlScalingTests"
+      ],
+      "StartedUtc": "2026-10-20T14:16:53.6266731+00:00",
+      "State": "Completed",
+      "RunnerPid": 49136,
+      "ChildPid": 27912,
+      "ChildStartedUtc": "2026-10-20T14:16:53.6643355Z",
+      "ExitCode": 0,
+      "Seconds": 2.3462898,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1236,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-sql-scaling",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessAcceptedSourceSqlScalingTests",
+        "--logger",
+        "trx;LogFileName=sql-scaling.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-sql-verified"
+      ],
+      "StartedUtc": "2026-10-20T14:18:02.3781087+00:00",
+      "State": "Completed",
+      "RunnerPid": 15992,
+      "ChildPid": 53376,
+      "ChildStartedUtc": "2026-10-20T14:18:02.4125622Z",
+      "ExitCode": 1,
+      "Seconds": 46.2678116,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 137531,
+      "StderrRetainedBytes": 1211,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-sql-verified/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T14:17:50.4286922+00:00",
+      "State": "Completed",
+      "RunnerPid": 11508,
+      "ChildPid": 28032,
+      "ChildStartedUtc": "2026-10-20T14:17:50.4563909Z",
+      "ExitCode": 0,
+      "Seconds": 58.7481371,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "a592d366-9c79-4d70-beeb-6ba5d1721bc8",
+      "testId": "25944e80-ac35-0246-ba80-c0bcec08cc8b",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.2202520",
+      "startTime": "2026-10-20T10:18:24.4679912-04:00",
+      "endTime": "2026-10-20T10:18:34.6564596-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a592d366-9c79-4d70-beeb-6ba5d1721bc8",
+      "trx": "sql-scaling.trx",
+      "error": "\n          \nSystem.FormatException : One of the identified items was in an invalid format.\n\n          \n   at System.Text.Json.ThrowHelper.ThrowFormatException()\r\n   at System.Text.Json.JsonElement.GetInt32()\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "b04d36fa-f667-4d21-a935-3d7a7a460114",
+      "testId": "6b3626f7-600b-f3c0-655b-1229d77b4867",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:19.4972582",
+      "startTime": "2026-10-20T10:18:04.9133770-04:00",
+      "endTime": "2026-10-20T10:18:24.4333618-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "b04d36fa-f667-4d21-a935-3d7a7a460114",
+      "trx": "sql-scaling.trx",
+      "error": "\n          \nSystem.FormatException : One of the identified items was in an invalid format.\n\n          \n   at System.Text.Json.ThrowHelper.ThrowFormatException()\r\n   at System.Text.Json.JsonElement.GetInt32()\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "46f41107-426f-42c9-b474-88a8ad163c1b",
+      "testId": "e0689aa6-1172-819d-1da2-11ab12098210",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.4974938",
+      "startTime": "2026-10-20T10:18:43.9074395-04:00",
+      "endTime": "2026-10-20T10:18:48.4026315-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "46f41107-426f-42c9-b474-88a8ad163c1b",
+      "trx": "sql-scaling.trx",
+      "error": "\n          \nSystem.FormatException : One of the identified items was in an invalid format.\n\n          \n   at System.Text.Json.ThrowHelper.ThrowFormatException()\r\n   at System.Text.Json.JsonElement.GetInt32()\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "da0f2848-526f-4732-993a-083c09633a13",
+      "testId": "7e7e66f6-9eac-f59e-bbfa-18895b067403",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.6766711",
+      "startTime": "2026-10-20T10:18:34.6718017-04:00",
+      "endTime": "2026-10-20T10:18:39.3340805-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "da0f2848-526f-4732-993a-083c09633a13",
+      "trx": "sql-scaling.trx",
+      "error": "\n          \nSystem.FormatException : One of the identified items was in an invalid format.\n\n          \n   at System.Text.Json.ThrowHelper.ThrowFormatException()\r\n   at System.Text.Json.JsonElement.GetInt32()\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    },
+    {
+      "executionId": "711e7eeb-7287-455f-ba4d-3563325dac55",
+      "testId": "4a3b5a82-e87f-8f77-50e9-c38c7695d138",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.5691344",
+      "startTime": "2026-10-20T10:18:39.3364969-04:00",
+      "endTime": "2026-10-20T10:18:43.9041630-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Failed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "711e7eeb-7287-455f-ba4d-3563325dac55",
+      "trx": "sql-scaling.trx",
+      "error": "\n          \nSystem.FormatException : One of the identified items was in an invalid format.\n\n          \n   at System.Text.Json.ThrowHelper.ThrowFormatException()\r\n   at System.Text.Json.JsonElement.GetInt32()\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 84\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 86\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n   at CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(Int32 steps, Int32 promptCharacters) in C:\\repositories\\CanDoItAll\\tests\\Integration\\CanDoItAll.Tests.Integration\\ProcessAcceptedSourceSqlScalingTests.cs:line 55\r\n--- End of stack trace from previous location ---\n\n        "
+    }
+  ],
+  "evidence": {
+    "prerequisite-reference.json": {
+      "candidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-persistence-final",
+      "sourceMapIdentical": true,
+      "runtimeIdentical": true,
+      "prerequisiteSourceSha256": "1135B0F97A9EE9D0AB39B732FA3C1EB1251B1DA846F3446D8752735F09154FE8",
+      "prerequisiteRuntimeSha256": "70BB2AAD72F28127549EBB0D3837EB57CC1D0311D77CE98AA857F495D02FBDB4",
+      "review": "Uses actual successful build/model/static/documentation command records from the unchanged candidate; no command is represented as re-executed."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9661,
+      "runtimeFiles": 4166,
+      "sourceSha256": "1135B0F97A9EE9D0AB39B732FA3C1EB1251B1DA846F3446D8752735F09154FE8",
+      "runtimeSha256": "70BB2AAD72F28127549EBB0D3837EB57CC1D0311D77CE98AA857F495D02FBDB4"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "remainingObservedProcesses": [],
+      "databaseNameDelta": [],
+      "outcome": "All5 SQL measurement cases failed at JSON EXPLAIN Actual Rows numeric parsing;20 history cases unexecuted. Production acceptance and selected reads executed before the assertion. No timings are treated as completed scaling proof. The prior unattributed isolated database remains preserved.",
+      "recordedUtc": "2026-10-20T14:19:26.0362654+00:00",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\erns3tle.ec5",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\slne3zav.hr4",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_53376_20261020_101802_616.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ]
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T14:17:50.4286922+00:00",
+      "observerSeconds": 58.7481371,
+      "commands": [
+        {
+          "command": "execute-sql-scaling",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T14:18:02.3781087+00:00",
+          "seconds": 46.2678116
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "confirmedUtc": "2026-10-20T14:18:02.0053875+00:00",
+      "identityConfirmed": true,
+      "observerStartedUtc": "2026-10-20T14:17:50.4563909Z",
+      "observerPid": 28032
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\failed-attempt.json",
+        "data": {
+          "completedScalingProof": false,
+          "records": [
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 2958.8884,
+                "TransactionMilliseconds": 2525.1242
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1024,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.022,\n      \"Actual Total Time\": 0.023,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 5,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.022,\n          \"Actual Total Time\": 0.022,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 5,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.012,\n              \"Actual Total Time\": 0.012,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '53320507-cdc0-4d36-957b-36ec03e95cc8'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.007,\n              \"Actual Total Time\": 0.007,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '53320507-cdc0-4d36-957b-36ec03e95cc8'::uuid) AND (p0.\\\"StepInstanceId\\\" = '7fa956d9-5bb2-45d8-bce7-05432a33d4ec'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 3,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.084,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.060\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 1168.336,
+                "TransactionMilliseconds": 1103.9869
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 64,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.026,\n      \"Actual Total Time\": 0.027,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.025,\n          \"Actual Total Time\": 0.026,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.016,\n              \"Actual Total Time\": 0.017,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '2c517f59-c9b9-4d49-962e-ccb43882a38d'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.006,\n              \"Actual Total Time\": 0.006,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '2c517f59-c9b9-4d49-962e-ccb43882a38d'::uuid) AND (p0.\\\"StepInstanceId\\\" = '31f613be-7eff-4e6a-8f53-c0e892af6c68'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.105,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.064\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "CommitMilliseconds": 74.6079,
+                "TransactionMilliseconds": 55.6687
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.025,\n      \"Actual Total Time\": 0.026,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.024,\n          \"Actual Total Time\": 0.025,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.014,\n              \"Actual Total Time\": 0.014,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '12ceee69-1727-48e4-b8df-c1a147933757'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.007,\n              \"Actual Total Time\": 0.007,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '12ceee69-1727-48e4-b8df-c1a147933757'::uuid) AND (p0.\\\"StepInstanceId\\\" = '977a1c90-35c2-453e-867e-eb5d4191c4fc'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.092,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.062\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 39.8626,
+                "TransactionMilliseconds": 36.2589
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.019,\n      \"Actual Total Time\": 0.020,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.019,\n          \"Actual Total Time\": 0.019,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.011,\n              \"Actual Total Time\": 0.011,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = 'e7c7506d-2a28-4e02-85f4-47bbc4355558'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.005,\n              \"Actual Total Time\": 0.005,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = 'e7c7506d-2a28-4e02-85f4-47bbc4355558'::uuid) AND (p0.\\\"StepInstanceId\\\" = 'faaa1a2c-5164-443e-bd7b-e7751f4e0ee5'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.078,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.063\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 420.9908,
+                "TransactionMilliseconds": 331.9424
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 256,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.016,\n      \"Actual Total Time\": 0.016,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 5,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.015,\n          \"Actual Total Time\": 0.016,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 5,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.009,\n              \"Actual Total Time\": 0.009,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '53622f9c-1d95-4161-ad84-d5970cf30539'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.005,\n              \"Actual Total Time\": 0.005,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '53622f9c-1d95-4161-ad84-d5970cf30539'::uuid) AND (p0.\\\"StepInstanceId\\\" = 'e52b04a2-86e7-4410-82f3-dd93b88ecbf0'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 3,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.058,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.049\n  }\n]"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+@if (IsOpen) {
+    <Dialog IsOpen="true"
+            Eyebrow="Project workspace"
+            Title="@DialogTitle"
+            Subtitle="@DialogSubtitle"
+            Size="ModalSize.Full"
+            DenseChrome="true"
+            CloseOnBackdrop="false"
+            TestId="project-files-dialog"
+            OnClose="State.Closed">
+        <HeaderActions>
+            @if (State.Snapshot?.Search is { } search) {
+                <StatusBadge Tone="neutral" Text="@($"{State.Snapshot.Items.Count} visible")" />
+                <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
+                <StatusBadge Tone="neutral" Text="@($"{search.RetainedItems} retained")" />
+            }
+        </HeaderActions>
+        <ChildContent>
+            @if (State.IsLoading) {
+                <LoadingState Eyebrow="Authorized source"
+                              Title="Opening project files"
+                              Description="Resolving the current project scope and its bounded file source." />
+            }
+            else if (!string.IsNullOrWhiteSpace(State.OpenError)) {
+                <EmptyState Eyebrow="Project files unavailable"
+                            Title="Unable to open this project file scope"
+                            Description="@State.OpenError">
+                    <Actions>
+                        <Button Text="Retry"
+                                data-testid="project-files-retry"
+                                Click="State.Retry" />
+                    </Actions>
+                </EmptyState>
+            }
+            else if (State.IsEmpty) {
+                <EmptyState Eyebrow="No project sources"
+                            Title="No project file sources"
+                            Description="The current project view contains no available file sources." />
+            }
+            else if (State.Preview is not null) {
+                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                    @if (!string.IsNullOrWhiteSpace(State.ActivationError)) {
+                        <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                            @State.ActivationError
+                        </Alert>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(State.ActionFeedback)) {
+                        <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                            @State.ActionFeedback
+                        </Alert>
+                    }
+                    <FileInteraction @key="State.Preview.Request.File" Request="State.Preview.Request"
+                                     ContentSource="State.Preview.ContentSource"
+                                     Composition="State.Preview.Composition"
+                                     OpenExternallyRequested="State.Preview.OpenExternally"
+                                     OpenExternallyLabel="Open in preferred app"
+                                     AllowModeSwitch="false"
+                                     MaximumContentBytes="@(4 * 1024 * 1024)"
+                                     AriaLabel="@($"Read-only project file {State.Preview.Request.FileName}")" />
+                </Stack>
+            }
+            else if (State.Browse is not null) {
+                @if (!string.IsNullOrWhiteSpace(State.ActivationError)) {
+                    <Alert AlertStyle="AlertStyle.Danger"
+                           Variant="Variant.Outlined"
+                           data-testid="project-files-activation-error">
+                        @State.ActivationError
+                    </Alert>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(State.ActionFeedback)) {
+                    <Alert AlertStyle="AlertStyle.Info"
+                           Variant="Variant.Outlined"
+                           data-testid="project-files-action-feedback">
+                        @State.ActionFeedback
+                    </Alert>
+                }
+
+                <FileBrowser @key="State.Browse.Session" Session="State.Browse.Session"
+                             HostActionCatalog="State.Browse.Actions"
+                             Class="[&_.ft-file-browser\_\_action-menu]:[position-try-fallbacks:flip-inline,flip-block,flip-inline_flip-block]"
+                             AriaLabel="@($"Files for {ProjectName}")"
+                             DisplayMode="FileBrowserDisplayMode.Compact"
+                             InitialViewMode="FileBrowserViewMode.List"
+                             SearchDebounceMilliseconds="280"
+                             SnapshotChanged="State.Browse.SnapshotChanged"
+                             ItemInvoked="State.Browse.ItemInvoked"
+                             ActionRequested="State.Browse.ActionRequested" />
+            }
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectFilesViewState State { get; set; } = new();
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    private string DialogTitle => State.Preview?.Request.FileName ?? $"Files \u00B7 {ProjectName}";
+    private string DialogSubtitle => State.Preview is null
+        ? "Browse and search this project's authorized text-file source. Activate a file to replace browsing with a read-only interaction."
+        : "Read-only content is authorized independently from the browser component.";
+}

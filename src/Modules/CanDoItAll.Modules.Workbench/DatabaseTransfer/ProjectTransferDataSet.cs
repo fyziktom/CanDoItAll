@@ -255,7 +255,7 @@ internal sealed class ProjectTransferDataSet {
                 row.PlanFingerprint.Length > 64 || row.MaterializedRequestJson is null || row.MaterializedFingerprint is null ||
                 row.MaterializedFingerprint.Length > 64 || row.NodeJson is null || row.ReceiptJson is null) ||
             Retirements.Any(row => row.ProjectId == Guid.Empty) ||
-            CreationReservations.Any(row => row.DatabaseProfileId == Guid.Empty || row.ProjectId == Guid.Empty ||
+            CreationReservations.Any(row => row.DatabaseProfileId == Guid.Empty || row.NamespaceId == Guid.Empty || row.ProjectId == Guid.Empty ||
                 row.RequesterId == Guid.Empty || row.ParentProjectId.HasValue != row.ParentLifetimeId.HasValue ||
                 row.ParentProjectId == Guid.Empty || row.ParentLifetimeId == Guid.Empty) ||
             WorkflowContributions.Any(row => row.RunId == Guid.Empty || row.ProjectId == Guid.Empty ||

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace CanDoItAll.AgentFramework.Models;
 
 /// <summary>
@@ -18,12 +20,7 @@ public sealed class AgentEditorModel
     /// </summary>
     public Guid? Id { get; set; }
 
-    /// <summary>
-    /// Concurrency revision from the latest read (the agent's <c>updatedAtUtc</c>), sent back unchanged. When present,
-    /// the save is rejected with HTTP 400 unless it equals the stored revision exactly, including when the agent does
-    /// not exist. Null skips the check: use null for a create; for an update it overwrites without protection. Must be
-    /// null for the external-key operation.
-    /// </summary>
+    [Description("Original agent update timestamp. Required and matched exactly for an existing agent; null is allowed only for creation. Retain the original value while editing.")]
     public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
 
     /// <summary>
@@ -214,20 +211,17 @@ public sealed class AgentEditorModel
     }
 }
 
-/// <summary>
-/// Editable form of an agent team, returned by <c>GET /api/agents/teams/{teamId}/editor</c> and accepted by
-/// <c>POST /api/agents/teams</c> and <c>PUT /api/agents/teams/{teamId}</c>. A save replaces the whole team with these
-/// values; there is no concurrency token, so the last save wins.
-/// </summary>
+[Description("Whole-team editor. Existing team replacements require the original expectedUpdatedAtUtc; metadata-only edits require expectedMetadata and preserve current membership.")]
 public sealed class AgentTeamEditorModel
 {
-    /// <summary>
-    /// Identifier of the team. Null or omitted on <c>POST /api/agents/teams</c> creates a team with a new
-    /// identifier; a value replaces that team or creates it with this identifier. <c>PUT</c> ignores this member and
-    /// uses the route identifier. Never send the all-zero identifier: the save reports success but the team is
-    /// discarded.
-    /// </summary>
+    [Description("Team identifier. Null creates a new identity. PUT uses the route identifier. Empty identities are rejected; existing identities require their original update timestamp.")]
     public Guid? Id { get; set; }
+
+    [Description("Original whole-team update timestamp. Required for replacement of an existing team, including its member set.")]
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
+
+    [Description("Original metadata and creation lifetime. Required for metadata-only edits; concurrent membership changes are preserved.")]
+    public AgentTeamMetadataExpectation? ExpectedMetadata { get; set; }
 
     /// <summary>
     /// Team name. It is trimmed and must be non-blank and unique among teams, ignoring case.
@@ -258,10 +252,19 @@ public sealed class AgentTeamEditorModel
             Name = definition.Name,
             Description = definition.Description,
             Icon = AgentTeamIconCatalog.Normalize(definition.Icon),
-            AgentIds = definition.AgentIds.ToList()
+            AgentIds = definition.AgentIds.ToList(),
+            ExpectedUpdatedAtUtc = definition.UpdatedAtUtc,
+            ExpectedMetadata = new(definition.CreatedAtUtc, definition.Name, definition.Description, AgentTeamIconCatalog.Normalize(definition.Icon))
         };
     }
 }
+
+[Description("Original team lifetime and metadata as returned by the editor read for a conditional metadata update.")]
+public sealed record AgentTeamMetadataExpectation(
+    [property: Description("Original server creation timestamp identifying this team lifetime.")] DateTimeOffset CreatedAtUtc,
+    [property: Description("Original saved team name.")] string Name,
+    [property: Description("Original saved team description.")] string Description,
+    [property: Description("Original normalized icon identifier.")] string Icon);
 
 public interface IProviderModelPricingEditorModel
 {
@@ -416,10 +419,7 @@ public sealed class CapabilityEditorModel
     /// </summary>
     public Guid? Id { get; set; }
 
-    /// <summary>
-    /// Concurrency fingerprint from the editor read. On an update, a value that no longer matches the stored
-    /// capability rejects the save and null or blank skips the check; on a create it must be null or blank.
-    /// </summary>
+    [Description("Original configuration fingerprint returned by the capability editor read. Required for existing capabilities; missing or stale originals are refused. Omit on create.")]
     public string? ExpectedFingerprint { get; set; }
 
     /// <summary>
@@ -451,10 +451,7 @@ public sealed class CapabilityEditorModel
     /// </summary>
     public string ConfigurationJson { get; set; } = string.Empty;
 
-    /// <summary>
-    /// True for a capability shipped with the product. It is stored as sent, but shipped capabilities are restored
-    /// to their shipped definition whenever the catalog is written.
-    /// </summary>
+    [Description("Server-owned trust classification for installed capabilities. Send the value returned by the editor read unchanged; an editor cannot create, promote or demote builtin trust.")]
     public bool IsBuiltIn { get; set; }
 
     /// <summary>Labels of the capability; trimmed, a leading <c>#</c> removed, lower-cased and de-duplicated.</summary>

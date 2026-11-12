@@ -24,6 +24,7 @@ public sealed class MemoryProviderProfileEditorMapper
         return new MemoryProviderProfileEditorModel
         {
             InstanceId = profile.InstanceId.Value,
+            ExpectedProfile = profile.ConfigurationRevision is { } revision ? new(profile.InstanceId, revision) : null,
             DisplayName = profile.DisplayName,
             DriverKind = profile.DriverKind,
             IsEnabled = profile.IsEnabled,
@@ -42,7 +43,7 @@ public sealed class MemoryProviderProfileEditorMapper
             SupportsOperationStatus = capabilities.Contains(MemoryCapabilityIds.OperationStatus),
             SupportsRclUi = capabilities.Contains(MemoryCapabilityIds.UiRcl),
             SupportsIframeUi = capabilities.Contains(MemoryCapabilityIds.UiIframe),
-            ProviderUiUrl = MemoryProviderExtensionEditorMapper.ReadProviderUiUrl(profile.Extensions.Values),
+            ProviderUiUrl = MemoryProviderUiUrlPolicy.TryNormalize(MemoryProviderExtensionEditorMapper.ReadProviderUiUrl(profile.Extensions.Values), out var safeUrl) ? safeUrl : string.Empty,
             SelectionTags = profile.SelectionTags.ToList(),
             Http = MemoryProviderHttpExtensionCodec.Read(profile.DriverKind, profile.Extensions.Values),
             Mcp = MemoryProviderMcpExtensionCodec.Read(profile.Extensions.Values),
@@ -52,7 +53,7 @@ public sealed class MemoryProviderProfileEditorMapper
             PreservedLimits = profile.Limits,
             PreservedProtocolVersion = profile.ProtocolVersion,
             PreservedInteractionSupport = profile.InteractionSupport,
-            LegacyRawCredentialKeys = MemoryProviderExtensionEditorMapper.FindLegacyRawCredentialKeys(profile.Extensions)
+            LegacyRawCredentialKeys = profile.LegacyRawCredentialKeys.Concat(MemoryProviderExtensionEditorMapper.FindLegacyRawCredentialKeys(profile.Extensions)).Distinct(StringComparer.Ordinal).ToArray()
         };
     }
 

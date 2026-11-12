@@ -55,6 +55,7 @@ public sealed class CrmInteractionIntegrationTests
         var profileResult = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountWorkspaceAsync(accountId))!.Profile.Original,
             RelationshipStage = CrmAccountRelationshipStage.ActiveCustomer,
             CommercialNotes = "Expansion depends on approval of the pilot budget.",
             ConstraintNotes = "Procurement review still open.",
@@ -70,10 +71,14 @@ public sealed class CrmInteractionIntegrationTests
                     Role = CrmAccountConnectionRole.Sponsor,
                     IsPrimary = true,
                     Notes = "Executive sponsor",
-                    ProjectIds = [projectId]
+                    ProjectIds = [projectId],
+                    ProjectAdmissions = new() {
+                        [projectId] = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId)
+                            ?? throw new InvalidOperationException("The connection fixture project has no current lifetime.")
+                    }
                 }
             ],
-            "integration-tests");
+            "integration-tests", original: (await crmService.GetAccountWorkspaceAsync(accountId))!.ConnectionsOriginal);
         var interactionResult = await crmService.AddInteractionAsync(
             accountId,
             new CrmInteractionEditorModel

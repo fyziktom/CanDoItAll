@@ -1,0 +1,142 @@
+@page "/"
+@implements IDisposable
+<PageTitle>Workspace Settings Core sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Medium">
+    <FormSection Title="Workspace Settings Core scenarios" Description="Synthetic data only. Data Sources, Storage and API Access remain outside this sandbox.">
+        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+                @foreach (var value in Enum.GetValues<WorkspaceScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="ResetAsync" data-testid="scenario-reset" />
+            <InputSelect @bind-Value="operation" aria-label="Operation">
+                @foreach (var value in Enum.GetValues<WorkspaceOperation>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Hold next operation" Click="Hold" Disabled="@(held is not null)" />
+            <Button Text="Release operation" Click="Release" Disabled="@(held is null)" />
+            <InputSelect @bind-Value="fault" aria-label="Next outcome">
+                @foreach (var value in Enum.GetValues<WorkspaceFault>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Set next outcome" Click="() => store.FaultNext(operation, fault)" />
+            <Button Text="Retire profile and authority" Click="Retire" />
+        </Cluster>
+        <p data-testid="scenario-effects">Current store writes: @store.DurableWrites. Retired store writes: @retiredStores.Sum(item => item.DurableWrites). @controlMessage</p>
+        <p data-testid="scenario-reads">Secret payload reads: @store.Calls.GetValueOrDefault(WorkspaceOperation.SecretGet). Policy reads: @store.Calls.GetValueOrDefault(WorkspaceOperation.PolicyLoad).</p>
+    </FormSection>
+    <WorkspaceSettingsSurface Section="section" SectionChanged="SelectAsync" Defaults="defaults" Secrets="secrets" Files="files">
+        <History><WorkspaceHistorySurface State="history" /></History>
+        <DeferredSection Context="deferred">
+            <EmptyState Title="Outside this sandbox" Description="@($"{deferred} remains in its original production host. This scenario does not prove that surface.")" />
+        </DeferredSection>
+    </WorkspaceSettingsSurface>
+</Stack>
+
+@code {
+    private WorkspaceScenario scenario;
+    private WorkspaceOperation operation = WorkspaceOperation.SecretSave;
+    private WorkspaceFault fault = WorkspaceFault.CommittedWarning;
+    private WorkspaceSection section;
+    private WorkspaceScenarioStore store = default!;
+    private WorkspaceDefaultsController defaults = default!;
+    private WorkspaceSecretsController secrets = default!;
+    private WorkspaceFilesController files = default!;
+    private WorkspaceHistoryController history = default!;
+    private WorkspaceScenarioGate? held;
+    private readonly List<WorkspaceScenarioStore> retiredStores = [];
+    private string? controlMessage;
+    private bool disposed;
+
+    protected override Task OnInitializedAsync() => ResetAsync();
+
+    private async Task ResetAsync() {
+        if (store is not null) {
+            if (retiredStores.Count == 8 && held is not null) {
+                controlMessage = "Release the held operation before resetting again.";
+                return;
+            }
+            store.IsCurrent = false;
+            retiredStores.Add(store);
+            if (retiredStores.Count > 8) {
+                retiredStores[0].WriteCompleted -= Changed;
+                retiredStores.RemoveAt(0);
+            }
+            DisposeControllers();
+        }
+        store = new(scenario);
+        store.WriteCompleted += Changed;
+        defaults = new(store);
+        secrets = new(store);
+        files = new(store);
+        history = new(store);
+        defaults.Changed += Changed;
+        secrets.Changed += Changed;
+        files.Changed += Changed;
+        history.Changed += Changed;
+        controlMessage = "Scenario initialized.";
+        await Task.WhenAll(defaults.RefreshAsync(), secrets.RefreshAsync(), files.RefreshAsync());
+    }
+
+    private Task SelectAsync(WorkspaceSection selected) {
+        if (section == WorkspaceSection.ProviderHistory && selected != section) {
+            history.Retire();
+        }
+        section = selected;
+        return Task.CompletedTask;
+    }
+
+    private void Hold() {
+        if (held is null) {
+            held = store.HoldNext(operation);
+            controlMessage = $"Holding the next {operation}.";
+        }
+    }
+
+    private void Release() {
+        held?.Release();
+        held = null;
+        controlMessage = "Operation released; its original store owns the effect.";
+    }
+
+    private void Retire() {
+        store.IsCurrent = false;
+        defaults.Dispose();
+        secrets.Dispose();
+        history.Retire();
+        controlMessage = "Database work retired. Local Files remains usable. Reset to acquire a new scenario.";
+    }
+
+    private void Changed() {
+        if (!disposed) {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void DisposeControllers() {
+        defaults.Changed -= Changed;
+        secrets.Changed -= Changed;
+        files.Changed -= Changed;
+        history.Changed -= Changed;
+        defaults.Dispose();
+        secrets.Dispose();
+        files.Dispose();
+        history.Dispose();
+    }
+
+    public void Dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        held?.Release();
+        store.WriteCompleted -= Changed;
+        foreach (var retired in retiredStores) {
+            retired.WriteCompleted -= Changed;
+        }
+        DisposeControllers();
+    }
+}

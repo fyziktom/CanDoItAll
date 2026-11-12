@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Persistence;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -350,7 +351,7 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
 
         internal async Task ReplaceProjectAsync() {
             var projects = Services.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(Project.ProjectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(Services, Project.ProjectId);
             Assert.True((await projects.CreateAsync(Project.ProjectId, new() { Name = "Unrelated replacement" })).IsSuccess);
             var original = Project;
             Project = (await Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(Project.ProjectId))!;
@@ -383,7 +384,7 @@ public sealed partial class MafWorkspaceToolResultDisclosureIntegrationTests {
         internal async Task ReplaceExecutionProjectAsync() {
             var original = executionProject!;
             var projects = Services.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(original.ProjectId);
+            await ProjectLifecycleTestCommands.DeleteAsync(Services, original.ProjectId);
             Assert.True((await projects.CreateAsync(original.ProjectId, new() { Name = "Replacement execution scope" })).IsSuccess);
             executionProject = (await Services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(original.ProjectId))!;
             Assert.NotEqual(original.LifetimeId, executionProject.LifetimeId);

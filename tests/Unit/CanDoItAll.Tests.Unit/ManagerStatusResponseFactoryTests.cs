@@ -94,6 +94,7 @@ public sealed class ManagerStatusResponseFactoryTests
     [Fact]
     public void Create_includes_tailwind_service_and_paths()
     {
+        var lastBuildUtc = new DateTimeOffset(2026, 9, 28, 12, 0, 0, TimeSpan.Zero);
         var workspaceRoot = Path.Combine(Path.GetTempPath(), "repos", "CanDoItAll");
         var webProjectPath = Path.Combine(
             workspaceRoot,
@@ -117,17 +118,27 @@ public sealed class ManagerStatusResponseFactoryTests
                 ["https://localhost:7271", "http://localhost:5032"]),
             new TailwindWatchStatusSnapshot(
                 TailwindWatchState.Ready,
-                "Tailwind output propagated to output.css.",
+                "'npm run watch' is running; last build finished in 12ms.",
                 9,
                 DateTimeOffset.UtcNow,
                 OutputExists: true,
-                OutputLastWriteUtc: DateTimeOffset.UtcNow),
+                OutputLastWriteUtc: DateTimeOffset.UtcNow)
+            {
+                WatchCommand = "npm run watch",
+                LastBuildUtc = lastBuildUtc,
+                BuildCount = 3,
+                RestartCount = 1
+            },
             new ManagerOptions(),
             "http://127.0.0.1:6407");
 
         var tailwindService = Assert.Single(response.Services, service => service.Key == "tailwind");
 
         Assert.Equal(TailwindWatchState.Ready.ToString(), response.Tailwind.StateName);
+        Assert.Equal("npm run watch", response.Tailwind.WatchCommand);
+        Assert.Equal(lastBuildUtc, response.Tailwind.LastBuildUtc);
+        Assert.Equal(3, response.Tailwind.BuildCount);
+        Assert.Equal(1, response.Tailwind.RestartCount);
         Assert.Equal(Path.Combine(workspaceRoot, "Tailwind"), response.Tailwind.WorkspacePath);
         Assert.Equal(Path.Combine(workspaceRoot, "Tailwind", "input.css"), response.Tailwind.InputFilePath);
         Assert.Equal(

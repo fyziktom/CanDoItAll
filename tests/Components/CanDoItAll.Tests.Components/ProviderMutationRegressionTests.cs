@@ -25,7 +25,7 @@ public sealed class ProviderMutationRegressionTests {
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
         cut.WaitForElement("[data-testid='providers-name-input']");
         await cut.Find("[data-testid='providers-new']").ClickAsync();
-        cut.Find("[data-testid='providers-model-input']").Change("model");
+        cut.Find("[data-testid='providers-model-input']").Input("model");
         await cut.FindComponent<ProviderProfileEditorForm>().Find("form").SubmitAsync();
         var draft = Assert.IsType<ProviderProfileEditorModel>(cut.FindComponent<ProviderProfileEditorForm>().Instance.Context.Model);
         Assert.Equal(reads.Id, draft.Id);
@@ -52,13 +52,13 @@ public sealed class ProviderMutationRegressionTests {
         cut.WaitForElement("[data-testid='providers-name-input']");
         if (firstSave) {
             await cut.Find("[data-testid='providers-new']").ClickAsync();
-            cut.Find("[data-testid='providers-model-input']").Change("model");
+            cut.Find("[data-testid='providers-model-input']").Input("model");
         }
-        cut.Find("[data-testid='providers-name-input']").Change("Submitted");
+        cut.Find("[data-testid='providers-name-input']").Input("Submitted");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         var save = cut.FindComponent<ProviderProfileEditorForm>().Find("form").SubmitAsync();
         cut.WaitForAssertion(() => Assert.NotNull(submitted));
-        cut.Find("[data-testid='providers-name-input']").Change("Later edit");
+        cut.Find("[data-testid='providers-name-input']").Input("Later edit");
         var capturedName = submitted!.Name;
         var independent = !ReferenceEquals(context.Model, submitted);
         await cut.InvokeAsync(() => pending.SetResult(reads.Id));
@@ -75,11 +75,17 @@ public sealed class ProviderMutationRegressionTests {
         public Func<ProviderProfileEditorModel, Task<Guid>> Save { get; set; } = _ => throw new InvalidOperationException();
         public int WriteCount { get; private set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
-            if (targetMethod?.Name == nameof(RuntimeAdministration.SaveProviderAsync)) {
+            if (targetMethod?.Name == nameof(RuntimeAdministration.SaveProviderEditorAsync)) {
                 WriteCount++;
-                return Save((ProviderProfileEditorModel)args![0]!);
+                return SaveEditorAsync((ProviderProfileEditorModel)args![0]!);
             }
             throw new InvalidOperationException("Unexpected runtime operation.");
+        }
+        private async Task<ProviderProfileEditorModel> SaveEditorAsync(ProviderProfileEditorModel request) {
+            var accepted = ProviderEditorSubmission.Copy(request);
+            accepted.Id = await Save(request);
+            accepted.ExpectedConcurrencyToken = Guid.NewGuid();
+            return accepted;
         }
     }
 

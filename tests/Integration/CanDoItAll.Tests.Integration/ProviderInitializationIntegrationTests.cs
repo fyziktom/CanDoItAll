@@ -7,12 +7,58 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PersistedProvider = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 using ProviderEditor = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfileEditorModel;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class ProviderInitializationIntegrationTests {
+    [Fact]
+    public async Task Reenabling_defaults_restores_priced_managed_providers_and_preserves_manual_profiles() {
+        await using var application = await TestApplication.CreateAsync(new TestHarnessOptions {
+            ConfigurationOverrides = new Dictionary<string, string?> {
+                [$"{ProviderInitializationOptions.SectionName}:{nameof(ProviderInitializationOptions.SeedDefaults)}"] = "false"
+            }
+        });
+        await using var scope = application.Services.CreateAsyncScope();
+        var administration = scope.ServiceProvider.GetRequiredService<IProviderAdministrationService>();
+        var saved = await administration.SaveProviderAsync(new ProviderEditor {
+            Name = "Manual provider retained across bootstrap",
+            ConnectorPluginKey = ProviderConnectorKeys.Ollama,
+            ConfigSchemaVersion = "1.0",
+            IsEnabled = true,
+            Configuration = new ConnectorConfigState(new Dictionary<string, string> {
+                ["baseUrl"] = "http://manual-provider.test:11434",
+                ["defaultModel"] = "manual-model",
+                ["timeoutSeconds"] = "91"
+            })
+        });
+        Assert.True(saved.IsSuccess);
+        var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
+        var manualBefore = await registry.GetProviderAsync(saved.Value);
+        var bootstrapper = scope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        scope.ServiceProvider.GetRequiredService<IOptions<ProviderInitializationOptions>>().Value.SeedDefaults = true;
+
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+        await bootstrapper.EnsureCurrentProfileReadyAsync();
+
+        var providers = await registry.ListProvidersAsync();
+        var openAi = Assert.Single(providers, provider => provider.Name == ManagedSeedProviderFallbacks.OpenAiDefaultProviderName);
+        Assert.All(ManagedSeedProviderFallbacks.OpenAiSuggestedModels, model => {
+            Assert.True(ProviderPricingDefaults.TryFindPrice(openAi.ModelPrices, model, out var price), model);
+            Assert.True(price.HasConfiguredStandardPrice, model);
+        });
+        var manualAfter = await registry.GetProviderAsync(saved.Value);
+        Assert.NotNull(manualBefore);
+        Assert.NotNull(manualAfter);
+        Assert.Equal(manualBefore.Name, manualAfter.Name);
+        Assert.Equal(manualBefore.BaseUrl, manualAfter.BaseUrl);
+        Assert.Equal(manualBefore.DefaultModel, manualAfter.DefaultModel);
+        Assert.Equal(manualBefore.ConfigurationJson, manualAfter.ConfigurationJson);
+        Assert.Equal(manualBefore.ModelPrices, manualAfter.ModelPrices);
+    }
+
     [Fact]
     public async Task Default_initialization_keeps_existing_seed_and_runtime_fallback_behavior() {
         await using var application = await TestApplication.CreateAsync();

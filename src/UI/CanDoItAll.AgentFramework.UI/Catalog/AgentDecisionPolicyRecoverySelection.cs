@@ -1,0 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+
+namespace CanDoItAll.AgentFramework.UI.Catalog;
+
+public sealed record AgentDecisionPolicyRecoverySelection(AgentExecutionActivityWorkspaceIdentity Context, AgentDecisionPolicyPendingRecord Record);

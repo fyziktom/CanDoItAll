@@ -39,6 +39,10 @@ internal sealed class LlmChatConversationWorkspaceController(
     public IReadOnlyList<LlmChatMessageListItem> Messages => transcriptPage.Items;
 
     public LlmChatConversationListItem? SelectedConversation { get; private set; }
+    public LlmChatConversationListItem? LastAcceptedMetadata { get; private set; }
+    public bool HasNewerMetadataRead => SelectedConversation is { } current && LastAcceptedMetadata is { } accepted &&
+        current.ConversationId == accepted.ConversationId && (current.ConcurrencyToken > accepted.ConcurrencyToken ||
+        current.ConcurrencyToken == accepted.ConcurrencyToken && current.TranscriptRevision > accepted.TranscriptRevision);
 
     public LlmChatPendingTurn? PendingTurn => operationState.PendingTurn;
 
@@ -70,14 +74,19 @@ internal sealed class LlmChatConversationWorkspaceController(
     public bool IsLoading => authorizationRead is not null || conversationRead is not null || definitionRead is not null || transcriptRead is not null;
 
     public bool IsMutating => mutation is not null;
+    public bool LastMutationUnconfirmed { get; private set; }
+    public string LastMutationFailure { get; private set; } = string.Empty;
 
     public string ErrorMessage { get; private set; } = string.Empty;
 
     public bool CanReloadSelected =>
-        SelectedConversation is not null &&
-        lastFailureCodes.Any(code => code is
-            LlmChatErrorCodes.TranscriptRevisionConflict or
-            LlmChatErrorCodes.StorageConflict);
+        SelectedConversation is not null && Authorization.CanRead;
+
+    public bool HasConcurrencyConflict => lastFailureCodes.Any(code => code is
+        LlmChatErrorCodes.TranscriptRevisionConflict or LlmChatErrorCodes.StorageConflict);
+
+    public Task<bool> RefreshConversationsAsync(CancellationToken cancellationToken)
+        => LoadConversationsAsync(false, cancellationToken);
 
     public bool CanCancel =>
         Authorization.CanExecute &&
@@ -295,28 +304,28 @@ internal sealed class LlmChatConversationWorkspaceController(
     public void SetFollowerFailure(IReadOnlyList<LlmChatUiFailure> failures)
         => SetGatewayFailure(failures);
 
-    public Task<bool> CancelActiveOperationAsync(CancellationToken cancellationToken)
+    public Task<bool> CancelActiveOperationAsync(Guid operationId, CancellationToken cancellationToken)
         => MutateActiveOperationAsync(
             "cancel operation",
-            CanCancel,
+            CanCancel && ActiveOperation?.OperationId == operationId,
             (operation, token) => operations.CancelAsync(operation.OperationId, token),
             confirmRecoveryEvidence: false,
             refreshTranscript: false,
             cancellationToken);
 
-    public Task<bool> ReconcileActiveOperationAsync(CancellationToken cancellationToken)
+    public Task<bool> ReconcileActiveOperationAsync(Guid operationId, CancellationToken cancellationToken)
         => MutateActiveOperationAsync(
             "reconcile operation",
-            CanReconcile,
+            CanReconcile && ActiveOperation?.OperationId == operationId,
             (operation, token) => operations.ReconcileAsync(operation.OperationId, token),
             confirmRecoveryEvidence: true,
             refreshTranscript: true,
             cancellationToken);
 
-    public Task<bool> AbandonActiveOperationAsync(CancellationToken cancellationToken)
+    public Task<bool> AbandonActiveOperationAsync(Guid operationId, CancellationToken cancellationToken)
         => MutateActiveOperationAsync(
             "abandon operation",
-            CanAbandon,
+            CanAbandon && ActiveOperation?.OperationId == operationId,
             (operation, token) => operations.AbandonAsync(
                 operation.ConversationId,
                 operation.OperationId,
@@ -346,14 +355,17 @@ internal sealed class LlmChatConversationWorkspaceController(
                     return false;
                 }
 
+                if (view.Conversation.ConversationId == Guid.Empty || view.Conversation.DefinitionId != definitionId) {
+                    throw new InvalidOperationException("Conversation creation returned a mismatched identity.");
+                }
                 ReplaceOrInsertConversation(view.Conversation);
                 SelectView(view);
                 return true;
             }, cancellationToken);
     }
 
-    public async Task<bool> RenameSelectedAsync(string title, CancellationToken cancellationToken) {
-        if (!Authorization.CanManage || SelectedConversation is not { } selected) {
+    public async Task<bool> RenameSelectedAsync(LlmChatConversationListItem selected, string title, CancellationToken cancellationToken) {
+        if (!Authorization.CanManage || SelectedConversation?.ConversationId != selected.ConversationId) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.Forbidden,
                 "Select a conversation you can manage."));
@@ -373,14 +385,16 @@ internal sealed class LlmChatConversationWorkspaceController(
                     return false;
                 }
 
-                SelectedConversation = view.Conversation;
-                ReplaceOrInsertConversation(view.Conversation);
+                if (view.Conversation.ConversationId != selected.ConversationId) {
+                    throw new InvalidOperationException("The accepted rename belongs to a different conversation.");
+                }
+                AcceptMetadata(view.Conversation);
                 return true;
             }, cancellationToken);
     }
 
-    public async Task<bool> ArchiveSelectedAsync(CancellationToken cancellationToken) {
-        if (!Authorization.CanManage || SelectedConversation is not { } selected) {
+    public async Task<bool> ArchiveSelectedAsync(LlmChatConversationListItem selected, CancellationToken cancellationToken) {
+        if (!Authorization.CanManage || SelectedConversation?.ConversationId != selected.ConversationId) {
             SetFailure(new LlmChatUiFailure(
                 LlmChatUiFailureCodes.Forbidden,
                 "Select a conversation you can manage."));
@@ -398,8 +412,10 @@ internal sealed class LlmChatConversationWorkspaceController(
                     return false;
                 }
 
-                SelectedConversation = view.Conversation;
-                ReplaceOrInsertConversation(view.Conversation);
+                if (view.Conversation.ConversationId != selected.ConversationId) {
+                    throw new InvalidOperationException("The accepted archive belongs to a different conversation.");
+                }
+                AcceptMetadata(view.Conversation);
                 return true;
             }, cancellationToken);
     }
@@ -556,13 +572,23 @@ internal sealed class LlmChatConversationWorkspaceController(
         }
         var generation = SelectionGeneration;
         using var request = Begin(ref mutation, cancellationToken);
+        LastMutationUnconfirmed = false;
+        LastMutationFailure = string.Empty;
         ClearFailure();
         try {
-            return await action(request.Token) && Owns(mutation, request);
+            var accepted = await action(request.Token) && Owns(mutation, request);
+            if (!accepted) {
+                LastMutationFailure = ErrorMessage;
+            }
+            return accepted;
         } catch (OperationCanceledException) when (request.IsCancellationRequested) {
+            LastMutationUnconfirmed = true;
             return false;
+        } catch (UnauthorizedAccessException) {
+            throw;
         } catch (Exception exception) {
             if (Owns(mutation, request) && IsCurrentSelection(generation)) {
+                LastMutationUnconfirmed = exception is not UnauthorizedAccessException;
                 LogReadFailure(exception, operationName);
                 SetUnexpectedFailure();
             }
@@ -635,12 +661,23 @@ internal sealed class LlmChatConversationWorkspaceController(
         return false;
     }
 
+    private void AcceptMetadata(LlmChatConversationListItem accepted) {
+        LastAcceptedMetadata = accepted;
+        if (!HasNewerMetadataRead) {
+            SelectedConversation = accepted;
+            ReplaceOrInsertConversation(accepted);
+        }
+    }
+
     private void ReplaceOrInsertConversation(LlmChatConversationListItem conversation) {
         conversationPage.UpsertFirst(conversation);
     }
 
     private bool TryGetValue<T>(LlmChatUiResult<T> result, out T value) {
         if (result.IsSuccess) {
+            if (!string.IsNullOrWhiteSpace(result.Warning)) {
+                ErrorMessage = result.Warning;
+            }
             value = result.Value!;
             return true;
         }
@@ -675,6 +712,19 @@ internal sealed class LlmChatConversationWorkspaceController(
         => SetFailure(new LlmChatUiFailure(
             LlmChatUiFailureCodes.RequestFailed,
             "The Simple Chat request could not be completed."));
+
+    public void RetireAccess() {
+        Dispose();
+        initialized = true;
+        Authorization = new(false, false, false);
+        conversationPage.Clear();
+        definitionPage.Clear();
+        transcriptPage.Clear();
+        SelectedConversation = null;
+        LastAcceptedMetadata = null;
+        operationState.Reset();
+        ErrorMessage = "Original conversation access changed. Reopen with current access.";
+    }
 
     public void Dispose() {
         disposed = true;

@@ -1,0 +1,38 @@
+{
+  "status": "Source prepared; no build, discovery, execution or database work",
+  "scope": "Additive C2 installed-pool control-plane fence; no migration or owner wire changes",
+  "testProject": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+  "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.DatasetActivationCoordinatorTests",
+  "expectedDiscovery": 9,
+  "expectedRuntime": 9,
+  "newFacts": 4,
+  "unchangedFacts": 5,
+  "files": [
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetLifecycleStore.cs",
+      "sha256": "76C674A152C08BB3D82B72BA9B708C314DEA04F4E7C690C6A0C402DB19D1D864"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Persistence/FiniteOperations/FiniteOperationEpochStore.cs",
+      "sha256": "E79BC7FF08A9FAAC4343A2288ADF841DB2B0BD5F72513A8E37853BAF0F9D07E9"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/DatasetActivationCoordinator.cs",
+      "sha256": "7CFEFF2483AAA76CBE5353C19DE8093F44D3486884FFE83B35220466DFECC918"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.cs",
+      "sha256": "17A4C9D9ABA5EC1CBC81DE0DBC8CB1059CF678F1EDDDFDE23AA84335CF661C59"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCoordinatorTests.PoolFence.cs",
+      "sha256": "E6D978C1DD286AAF539F90CE60E12DF837BDCA110DEACE567C382E224D02CFCF"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/C2-installed-pool-fence-and-migration-refusal.md",
+      "sha256": "58897107450D660A3FA4615A89C7965858AF5764AFB68DE9F7F48E3841FFFBE5"
+    }
+  ],
+  "previousInventorySha256": "0E7A2DC13722CCFA6DF655CBD636132E890770F0E237672A0DB498D392AA45E4",
+  "amendment": "Reuse namespace-aware per-pool complete active retained-prefix readiness before fresh reactivation; two additional arrangements inside existing corruption Fact, no row change."
+}

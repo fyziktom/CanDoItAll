@@ -386,7 +386,7 @@ public sealed class FileSandboxWorkspaceChatRunCommitRecoveryIntegrationTests
         Action<ChatBackedRunCommitStage>? commitBoundary = null)
     {
         var environment = CanDoItAllTestEnvironment.Create(
-            $"chat-run-commit-recovery-{Guid.NewGuid():N}");
+            "chat-run-commit-recovery");
         try
         {
             var profile = environment.CreateInMemoryProfile("primary");

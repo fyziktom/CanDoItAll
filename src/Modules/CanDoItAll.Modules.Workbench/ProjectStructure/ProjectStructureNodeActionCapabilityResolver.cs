@@ -9,7 +9,8 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         ProjectStructureNode node,
         IProjectStructureRuntimeLauncher runtimeLauncher,
         IProjectStructureLocalFileOpener localFileOpener,
-        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode)
+        ProjectStructureRuntimePathAuthorityMode pathAuthorityMode,
+        ProjectStructureRuntimeSessionOwner? runtimeOwner = null)
     {
         var actions = new List<ProjectStructureNodeActionDescriptor>();
         var guidance = new List<string>();
@@ -30,9 +31,14 @@ internal static class ProjectStructureNodeActionCapabilityResolver
         var canOpenInNewTab = IsIpfsBackedNode(node) && CanOpenNodeInNewTab(node);
         var canBrowseFiles = ProjectStructureFileActions.CanBrowseFiles(node);
         var storage = ResolveStorage(node);
+        var isRunning = runtimeOwner is null
+            ? runtimeLauncher.IsRunning(node.Id)
+            : runtimeLauncher.GetIdentity(node.Id, runtimeOwner) is not null;
+        var lastExit = runtimeOwner is null
+            ? runtimeLauncher.GetLastExit(node.Id)
+            : runtimeLauncher.GetLastExit(node.Id, runtimeOwner);
         if (isRuntimeCapable &&
-            !runtimeLauncher.IsRunning(node.Id) &&
-            runtimeLauncher.GetLastExit(node.Id) is { } lastExit)
+            !isRunning && lastExit is not null)
         {
             // Process output can name resolved physical paths, which agent projections never disclose.
             var exitDescription = lastExit.Describe(
@@ -70,7 +76,7 @@ internal static class ProjectStructureNodeActionCapabilityResolver
                 "Elevated launch",
                 "Starts the typed runtime plan through the explicitly supported elevation capability.",
                 "Elevated launch");
-            if (runtimeLauncher.IsRunning(node.Id))
+            if (isRunning)
             {
                 actions.Add(new ProjectStructureNodeActionDescriptor(
                     "runtime:stop",

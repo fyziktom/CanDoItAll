@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
@@ -96,7 +97,10 @@ internal sealed record MemoryProviderProfileApiRequest(
     IReadOnlyList<string>? SelectionTags,
     MemoryProviderCapabilitiesApiRequest Capabilities,
     MemoryProviderHttpTransportApiModel? Http,
-    MemoryProviderMcpTransportApiModel? Mcp);
+    MemoryProviderMcpTransportApiModel? Mcp) {
+    [Description("Original configuration revision from a provider read. Omit it when creating a new provider.")]
+    public Guid? ExpectedRevision { get; init; }
+}
 
 /// <summary>
 /// A memory provider profile as stored by the host, returned by the memory-provider operations. It carries the
@@ -157,7 +161,10 @@ internal sealed record MemoryProviderProfileApiResponse(
     MemoryProviderInteractionSupportApiResponse InteractionSupport,
     MemoryProviderLimitsApiResponse Limits,
     MemoryProviderHttpTransportApiModel? Http,
-    MemoryProviderMcpTransportApiModel? Mcp);
+    MemoryProviderMcpTransportApiModel? Mcp) {
+    [Description("Current provider configuration revision to send as expectedRevision on an update.")]
+    public Guid? ConfigurationRevision { get; init; }
+}
 
 /// <summary>
 /// Query and status capabilities to advertise for a memory provider profile. Each driver supports only some of them:

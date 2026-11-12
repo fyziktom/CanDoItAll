@@ -1,0 +1,36 @@
+{
+  "remainingObservedProcesses": [],
+  "outcome": "27 of 27 canvas and retained recovery components passed; exact source and runtime unchanged",
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "databaseNameDelta": [],
+  "recordedUtc": "2026-10-18T19:03:01.0970791+00:00",
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ulixkri4.jlt",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_28312_20261018_145755_236.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_46788_20261018_145757_082.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\reditp5b.j12",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\0caa1ygm.ijy",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\elmsvun4.fxj",
+      "family": "shared-temp-directory-entries"
+    }
+  ]
+}

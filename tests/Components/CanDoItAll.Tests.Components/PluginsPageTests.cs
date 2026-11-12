@@ -10,6 +10,7 @@ using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.Shell;
@@ -27,8 +28,8 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-executors']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").ClickAsync(new MouseEventArgs()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-executors']").ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='plugin-executor-office365-mail-office365-messages-by-category']");
 
         Assert.Contains("Loaded from plugin descriptor", cut.Markup, StringComparison.Ordinal);
@@ -69,8 +70,8 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-ui-executor-empty']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-ui-executor-empty']").Click());
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-executors']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-ui-executor-empty']").ClickAsync(new MouseEventArgs()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-executors']").ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='plugins-executors-empty']");
 
         Assert.Contains("No workflow executors", cut.Markup, StringComparison.Ordinal);
@@ -92,15 +93,15 @@ public sealed class PluginsPageTests
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
         await cut.InvokeAsync(() =>
-            cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
+            cut.Find("[data-testid='plugins-list-item-office365-mail']").ClickAsync(new MouseEventArgs()));
         await cut.InvokeAsync(() =>
-            cut.Find("[data-testid='plugins-tab-settings']").Click());
+            cut.Find("[data-testid='plugins-tab-settings']").ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='plugin-setting-office365-mail-office365-clientId']");
 
         await cut.InvokeAsync(() =>
-            cut.Find("[data-testid='plugin-setting-office365-mail-office365-clientId']").Change(clientId));
+            cut.Find("[data-testid='plugin-setting-office365-mail-office365-clientId']").InputAsync(new ChangeEventArgs { Value = clientId }));
         await cut.InvokeAsync(() =>
-            cut.Find("[data-testid='plugin-connection-save-office365-mail-office365']").Click());
+            cut.Find("[data-testid='plugin-connection-save-office365-mail-office365']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -155,9 +156,9 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-connections']").Click());
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-oauth-login-office365-mail-office365']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").ClickAsync(new MouseEventArgs()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-connections']").ClickAsync(new MouseEventArgs()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-oauth-login-office365-mail-office365']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -204,10 +205,10 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         Assert.DoesNotContain("plugin-package-upload", cut.Markup, StringComparison.Ordinal);
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-packages-open']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-packages-open']").ClickAsync(new MouseEventArgs()));
         cut.WaitForElement("[data-testid='plugin-package-upload']");
         cut.WaitForElement("[data-testid='plugin-package-install-page-runtime-package']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-package-install-page-runtime-package']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-package-install-page-runtime-package']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -218,8 +219,10 @@ public sealed class PluginsPageTests
         var status = await restartService.GetStatusAsync();
         Assert.True(status.IsRestartRequired);
 
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-runtime-restart']").Click());
-        await Task.Delay(TimeSpan.FromMilliseconds(1500));
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var stopping = lifetime.ApplicationStopping.Register(() => stopped.TrySetResult());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugin-runtime-restart']").ClickAsync(new MouseEventArgs()));
+        await stopped.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         Assert.True(lifetime.ApplicationStopping.IsCancellationRequested);
     }
@@ -254,8 +257,8 @@ public sealed class PluginsPageTests
         var cut = harness.Context.Render<PluginsPage>();
 
         cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").Click());
-        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-logs']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-list-item-office365-mail']").ClickAsync(new MouseEventArgs()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='plugins-tab-logs']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForElement("[data-testid='plugins-logs-installation-row']");
         cut.WaitForElement("[data-testid='plugins-logs-runtime-row']");

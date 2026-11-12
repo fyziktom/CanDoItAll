@@ -47,6 +47,13 @@ public sealed partial class ProcessRuntimeEngine
                 blockedRecoveryAuthorizationIssue);
         }
 
+        if (state.Status == ProcessRuntimeStatus.CancelRequested) {
+            return ProcessRuntimeMutation.Rejected(
+                state,
+                "Runtime.CancellationInProgress",
+                $"Run '{state.RunId}' is cancelling and cannot be reworked.");
+        }
+
         if (state.Status is ProcessRuntimeStatus.Completed or ProcessRuntimeStatus.Cancelled)
         {
             return ProcessRuntimeMutation.Rejected(

@@ -54,6 +54,25 @@ public static class DataProtectionKeyRingProtection
         builder.Services.AddOptions<KeyManagementOptions>().Configure(options =>
             options.XmlRepository = new PrivateDataProtectionKeyRepository(keysPath, durableFileWriter));
 
+        return ConfigureProtection(builder, configuration, isDevelopment, contentRootPath, environmentVariableResolver);
+    }
+
+    public static IDataProtectionBuilder ConfigureExistingReader(IDataProtectionBuilder builder,
+        IConfiguration configuration, IHostEnvironment environment, string keysPath) {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
+        ExistingPrivateFileReader.RequireDirectory(keysPath, keysPath);
+        builder.SetApplicationName(ApplicationName).DisableAutomaticKeyGeneration();
+        builder.Services.AddOptions<KeyManagementOptions>().Configure(options =>
+            options.XmlRepository = new ExistingDataProtectionKeyRepository(keysPath));
+        return ConfigureProtection(builder, configuration, environment.IsDevelopment(), environment.ContentRootPath, null);
+    }
+
+    private static IDataProtectionBuilder ConfigureProtection(IDataProtectionBuilder builder,
+        IConfiguration configuration, bool isDevelopment, string contentRootPath,
+        Func<string, string?>? environmentVariableResolver) {
+
         DataProtectionKeyProtectionOptions options =
             configuration.GetSection(DataProtectionKeyProtectionOptions.SectionName)
                 .Get<DataProtectionKeyProtectionOptions>() ?? new DataProtectionKeyProtectionOptions();

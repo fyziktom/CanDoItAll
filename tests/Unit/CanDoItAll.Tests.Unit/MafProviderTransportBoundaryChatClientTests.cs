@@ -237,6 +237,57 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Assert.IsType<OperationCanceledException>(exception.InnerException);
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task Closed_response_stream_preserves_requested_cancellation_and_failure_disclosure(bool streaming, bool shared, bool cancelled) {
+        var provider = CreateProvider();
+        if (shared) {
+            provider = provider with { CredentialBinding = new(Guid.NewGuid(),
+                ProviderCredentialPurpose.SourceAccessToken, ProviderCredentialConsumerKind.Source, Guid.NewGuid()) };
+        }
+        using var cancellation = new CancellationTokenSource();
+        var disposed = new ObjectDisposedException("private-response-stream");
+        Action? cancel = cancelled ? cancellation.Cancel : null;
+        var recorder = new CanDoItAll.Tests.Unit.RecordingProviderHistory();
+        using var boundary = new MafProviderTransportBoundaryChatClient(
+            new ThrowingChatClient(nonStreamingException: disposed, streamingException: disposed,
+                onStreamingMoveNext: cancel, onNonStreamingResponse: cancel), provider, provider.DefaultModel);
+        using var client = new ProviderHistoryChatClient(boundary, provider, provider.DefaultModel, recorder, TimeProvider.System);
+        var failure = await Record.ExceptionAsync(async () => {
+            if (streaming) {
+                await foreach (var _ in client.GetStreamingResponseAsync(CreateMessages(), cancellationToken: cancellation.Token)) {
+                }
+            } else {
+                await client.GetResponseAsync(CreateMessages(), cancellationToken: cancellation.Token);
+            }
+        });
+        Assert.NotNull(failure);
+        MafProviderTransportException transport;
+        if (cancelled) {
+            var cancelledFailure = Assert.IsAssignableFrom<OperationCanceledException>(failure);
+            Assert.Equal(cancellation.Token, cancelledFailure.CancellationToken);
+            transport = Assert.IsType<MafProviderTransportException>(cancelledFailure.InnerException);
+        } else {
+            transport = Assert.IsType<MafProviderTransportException>(failure);
+        }
+        Assert.Equal(cancelled ? CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome.Cancelled
+                : CanDoItAll.AgentFramework.ProviderHistory.HistoryOutcome.Failed,
+            Assert.Single(recorder.Completions).Completion.Outcome);
+        if (shared) {
+            Assert.IsType<ProviderFailureBoundaryException>(transport.InnerException);
+            Assert.DoesNotContain("private-response-stream", failure.ToString(), StringComparison.Ordinal);
+        } else {
+            Assert.Same(disposed, transport.InnerException);
+        }
+    }
+
     [Fact]
     public async Task Streaming_disposal_failure_is_marked_as_provider_transport_failure()
     {
@@ -531,15 +582,18 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         Exception? nonStreamingException = null,
         Exception? streamingException = null,
         Exception? streamingDisposalException = null,
-        Action? onStreamingMoveNext = null) : IChatClient
+        Action? onStreamingMoveNext = null,
+        Action? onNonStreamingResponse = null) : IChatClient
     {
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
-            CancellationToken cancellationToken = default)
-            => Task.FromException<ChatResponse>(
+            CancellationToken cancellationToken = default) {
+            onNonStreamingResponse?.Invoke();
+            return Task.FromException<ChatResponse>(
                 nonStreamingException ??
                 new InvalidOperationException("A non-streaming exception was not configured."));
+        }
 
         public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> messages,

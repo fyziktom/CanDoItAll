@@ -1,0 +1,11 @@
+# Resource owner fixture cleanup amendment
+
+This test-only successor preserves the original `ResourceMetadataOwnerTests.cs` image `6FCA0DAFF4F4C56337C3F418EE402C21A23354C511DF93819E54D6FD1DE932EF` and amended backend inventory under `P05-R1-resource-owner-cleanup-predecessors/`. It overlays the existing Resource transfer map; it does not rewrite that map or its original source inventory.
+
+The held owner-creation arrangement now retains its accepted result assertions inside the protected operation region. Its `finally` releases the barrier, cancels and terminally observes the actual pending save before fixture disposal. The project-lock arrangement has one explicit owner of its blocker transaction; key acquisition and pending-save creation are inside the same protected `try`. Cancellation, terminal blocker disposal and terminal pending observation all run even after assertion/release failure. A small private fixture helper retains primary and cleanup diagnostics without concurrent connection operations or waiter-only cleanup timeouts. The fixture factory uses the existing `TestFixtureCleanup.DisposeAfterFailureAsync` to attempt both scope and application disposal after setup failure.
+
+The actual wait observation now requires the captured holder backend PID in `pg_blocking_pids(waiter)`, instead of accepting any unrelated blocker. The held transaction already owns that connection. Existing mutation, conflict, exact revision and Search assertions remain.
+
+The first reviewed cleanup image `0A652A09A61CCD4B1B01BD2C5027EC18C08AC3CFDF745DF055C9D833293F5FA9` is retained separately. Root identified duplicate explicit/`await using` blocker disposal in that intermediate image; the final source removes it and protects acquisition before pending-task creation. It is not the transfer candidate.
+
+Source count remains twelve Facts in this file plus six in `ResourceMetadataOwnerTests.Bounds.cs`: eighteen owner rows, no new rows, 346 ordinary and four separate browser rows in the proposed union. No production/model/schema/main change, build, scan, test or database execution accompanied this amendment. Terminal cleanup remains cooperative and requires the parent-owned process deadline/cleanup evidence at runtime.

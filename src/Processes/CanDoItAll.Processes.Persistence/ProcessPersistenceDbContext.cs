@@ -4,11 +4,23 @@ namespace CanDoItAll.Processes.Persistence;
 
 public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersistenceDbContext> options) : DbContext(options)
 {
+    public DbSet<ProcessAuthoringHeadEntity> AuthoringHeads => Set<ProcessAuthoringHeadEntity>();
+
+    public DbSet<ProcessAuthoringPublicationEntity> AuthoringPublications => Set<ProcessAuthoringPublicationEntity>();
+
+    public DbSet<ProcessAuthoringReceiptEntity> AuthoringReceipts => Set<ProcessAuthoringReceiptEntity>();
+
     public DbSet<ProcessPreparedLaunchEntity> PreparedLaunches => Set<ProcessPreparedLaunchEntity>();
+
+    public DbSet<ProcessAcceptedAssignmentSourceEntity> AcceptedAssignmentSources => Set<ProcessAcceptedAssignmentSourceEntity>();
 
     public DbSet<ProcessInstancePlanEntity> InstancePlans => Set<ProcessInstancePlanEntity>();
 
     public DbSet<ProcessRuntimeStateEntity> RuntimeStates => Set<ProcessRuntimeStateEntity>();
+
+    public DbSet<ProcessCancellationRecoveryEntity> CancellationRecoveries => Set<ProcessCancellationRecoveryEntity>();
+
+    public DbSet<ProcessCancellationRecoverySeedEntity> CancellationRecoverySeeds => Set<ProcessCancellationRecoverySeedEntity>();
 
     public DbSet<ProcessRuntimeStepAssignmentEntity> RuntimeStepAssignments => Set<ProcessRuntimeStepAssignmentEntity>();
 
@@ -29,6 +41,30 @@ public sealed class ProcessPersistenceDbContext(DbContextOptions<ProcessPersiste
     public DbSet<ProcessArtifactLedgerEventEntity> ArtifactLedgerEvents => Set<ProcessArtifactLedgerEventEntity>();
 
     public DbSet<ProcessRuntimeIdempotencyEntity> IdempotencyKeys => Set<ProcessRuntimeIdempotencyEntity>();
+
+    public DbSet<ProcessDecisionBudgetEntity> DecisionBudgets => Set<ProcessDecisionBudgetEntity>();
+
+    public DbSet<ProcessDecisionBudgetAllocationEntity> DecisionBudgetAllocations => Set<ProcessDecisionBudgetAllocationEntity>();
+
+    public DbSet<ProcessDecisionRefreshCaptureEntity> RefreshCaptures => Set<ProcessDecisionRefreshCaptureEntity>();
+
+    public DbSet<ProcessDecisionRefreshDeliveryEntity> RefreshDeliveries => Set<ProcessDecisionRefreshDeliveryEntity>();
+
+    public DbSet<ProcessDecisionRefreshCapturePayloadEntity> RefreshCapturePayloads => Set<ProcessDecisionRefreshCapturePayloadEntity>();
+
+    public DbSet<ProcessDecisionHeadEntity> DecisionHeads => Set<ProcessDecisionHeadEntity>();
+
+    public DbSet<ProcessDecisionGenerationEntity> DecisionGenerations => Set<ProcessDecisionGenerationEntity>();
+
+    public DbSet<ProcessDecisionChildEntity> DecisionChildren => Set<ProcessDecisionChildEntity>();
+
+    public DbSet<ProcessDecisionMaterialScopeEntity> DecisionMaterialScopes => Set<ProcessDecisionMaterialScopeEntity>();
+
+    public DbSet<ProcessDecisionMaterialEntity> DecisionMaterials => Set<ProcessDecisionMaterialEntity>();
+
+    public DbSet<ProcessDecisionRunScopeEntity> DecisionRunScopes => Set<ProcessDecisionRunScopeEntity>();
+
+    public DbSet<ProcessDecisionRunScopeMemberEntity> DecisionRunScopeMembers => Set<ProcessDecisionRunScopeMemberEntity>();
 
     public DbSet<ProcessProjectionSnapshotEntity> ProjectionSnapshots => Set<ProcessProjectionSnapshotEntity>();
 

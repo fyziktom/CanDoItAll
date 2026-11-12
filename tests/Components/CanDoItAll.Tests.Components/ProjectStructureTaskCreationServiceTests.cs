@@ -7,6 +7,7 @@ using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
@@ -391,9 +392,10 @@ public sealed class ProjectStructureTaskCreationServiceTests
         Assert.DoesNotContain(rawPhone, searchableText, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public async Task Cancellation_after_party_attachment_compensates_and_rethrows_original_cancellation()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancellation_after_party_attachment_only_compensates_the_created_occurrence(bool replaceTask) {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var services = harness.Context.Services;
         var projectsService = services.GetRequiredService<ProjectsService>();
@@ -404,8 +406,24 @@ public sealed class ProjectStructureTaskCreationServiceTests
         var projectId = admission.ProjectId;
         var partyId = await CreatePartyAsync(partyDirectoryService, "Canceled Gantt Owner");
         using var cancellationSource = new CancellationTokenSource();
+        string? replacementNodeId = null;
         var cancelAfterAssignment = new CancelAfterAssignmentProjectPartyIntegrationBridge(
-            partyBridge, partyId, cancellationSource);
+            partyBridge, partyId, cancellationSource, async () => {
+                if (!replaceTask) {
+                    return;
+                }
+                await using var context = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
+                var original = await context.Set<ProjectObjectRecord>().SingleAsync(node => node.ProjectId == projectId && node.ObjectSubtype == "task");
+                replacementNodeId = original.NodeKey;
+                context.Remove(original);
+                await context.SaveChangesAsync();
+                context.Add(new ProjectObjectRecord {
+                    Id = Guid.NewGuid(), ProjectId = projectId, NodeKey = original.NodeKey, ParentNodeKey = original.ParentNodeKey,
+                    ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = "task", Title = "Replacement occurrence",
+                    CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
+                });
+                await context.SaveChangesAsync();
+            });
         var creationService = CreateTaskCreationService(services, cancelAfterAssignment);
 
         var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
@@ -426,8 +444,15 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         Assert.True(cancellationSource.IsCancellationRequested);
         Assert.NotNull(cancelAfterAssignment.ObservedCommittedAssignmentId);
-        Assert.DoesNotContain(assignments, assignment => assignment.Id == cancelAfterAssignment.ObservedCommittedAssignmentId);
         Assert.Equal(cancellationSource.Token, exception.CancellationToken);
+        var outcome = Assert.IsType<ProjectStructureTaskCreationException>(exception.InnerException);
+        Assert.Equal(!replaceTask, outcome.CompensationSucceeded);
+        if (replaceTask) {
+            Assert.IsType<ProjectStructureEditConflictException>(outcome.CompensationFailure);
+            Assert.Equal("Replacement occurrence", Assert.Single(surface.Nodes, node => node.Id == replacementNodeId).Title);
+            return;
+        }
+        Assert.DoesNotContain(assignments, assignment => assignment.Id == cancelAfterAssignment.ObservedCommittedAssignmentId);
         Assert.DoesNotContain(assignments, assignment => assignment.PartyId == partyId);
         Assert.DoesNotContain(surface.Nodes, node => node.Title == "Canceled assigned task");
     }
@@ -835,7 +860,8 @@ public sealed class ProjectStructureTaskCreationServiceTests
     private sealed class CancelAfterAssignmentProjectPartyIntegrationBridge(
         IProjectPartyIntegrationBridge inner,
         Guid expectedPartyId,
-        CancellationTokenSource cancellationSource)
+        CancellationTokenSource cancellationSource,
+        Func<Task> beforeCancellation)
         : IProjectPartyIntegrationBridge {
         public Guid? ObservedCommittedAssignmentId { get; private set; }
 
@@ -876,6 +902,7 @@ public sealed class ProjectStructureTaskCreationServiceTests
                     assignment.PartyId == expectedPartyId && assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee)) {
                 ObservedCommittedAssignmentId = Assert.Single(assignments, assignment =>
                     assignment.PartyId == expectedPartyId && assignment.Role == ProjectPartyAssignmentRole.WorkItemAssignee).Id;
+                await beforeCancellation();
                 cancellationSource.Cancel();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -891,9 +918,9 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
         {
-            return inner.SaveAssignmentAsync(request, cancellationToken);
+            return inner.SaveAssignmentAsync(request, cancellationToken, onCommitted);
         }
 
         public Task<Result> ReplaceNodeAssignmentsAsync(
@@ -902,16 +929,18 @@ public sealed class ProjectStructureTaskCreationServiceTests
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             CancellationToken cancellationToken = default,
-            ProjectWriteAdmission? expectedProjectAdmission = null)
+            ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
             => inner.ReplaceNodeAssignmentsAsync(projectId, nodeReference, desiredAssignments, targetRoles,
-                cancellationToken, expectedProjectAdmission);
+                cancellationToken, expectedProjectAdmission, expectedAssignments);
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
             CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
         {
-            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference);
+            return inner.DeleteAssignmentAsync(assignmentId, cancellationToken, expectedReference, original, onCommitted);
         }
 
         public Task DeleteAssignmentsForNodesAsync(
@@ -950,9 +979,11 @@ public sealed class ProjectStructureTaskCreationServiceTests
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
         {
-            return inner.CreatePartyAsync(request, cancellationToken);
+            return inner.CreatePartyAsync(request, cancellationToken, authorizeCommit, authorizeRead);
         }
     }
 }

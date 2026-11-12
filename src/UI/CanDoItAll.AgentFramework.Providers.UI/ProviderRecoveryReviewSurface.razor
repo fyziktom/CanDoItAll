@@ -1,0 +1,26 @@
+<Stack GapScale="LayoutGap.Small" data-testid="providers-recovery-review">
+    <TextBlock Value="The original or exact accepted values are unavailable. This review does not perform a three-way merge or establish whether the earlier write committed." />
+    @if (Review.IsStale) {
+        <Alert AlertStyle="AlertStyle.Warning">The provider or your draft changed. Read the current version again.</Alert>
+    }
+    <Grid ColumnsXl="2" Gap="LayoutGap.Small">
+        <FormField Text="My retained draft"><TextBlock Value="@Review.LocalDescription" /></FormField>
+        <FormField Text="Current saved provider"><TextBlock Value="@Review.CurrentDescription" /></FormField>
+    </Grid>
+    <Alert AlertStyle="AlertStyle.Warning">
+        Your complete draft, including unfinished fields, stays local. A later Save can replace the reviewed settings and will be rejected if they change again.
+        <FormField Text="Keep my complete draft against this reviewed version">
+            <CheckBox TValue="bool" Value="Review.KeepDraft" ValueChanged="KeepDraft" />
+        </FormField>
+    </Alert>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public ProviderRecoveryReview Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private async Task KeepDraft(bool value) {
+        Review.KeepDraft = value;
+        await Changed.InvokeAsync();
+    }
+}

@@ -1,0 +1,18 @@
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell {
+    min-height: 38rem;
+}
+
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell .cdi-canvas-calendar-shell,
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell .scheduler-planner-calendar-host,
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell .zy-calendar-shell {
+    width: 100%;
+}
+
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell .zy-calendar-canvas-shell {
+    min-height: 36rem;
+}
+
+.scheduler-calendar-root ::deep .scheduler-planner-calendar-shell .zy-calendar-canvas {
+    height: min(66vh, 46rem);
+    min-height: 36rem;
+}

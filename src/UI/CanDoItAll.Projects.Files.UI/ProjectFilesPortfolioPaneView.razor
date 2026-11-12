@@ -1,0 +1,126 @@
+<Stack GapScale="LayoutGap.Small"
+       AlignItems="AlignItems.Stretch"
+       Class="h-full min-h-0"
+       data-testid="project-files-portfolio-pane">
+    <Split Breakpoint="LayoutBreakpoint.None"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Wrap="FlexWrap.Wrap"
+           Class="shrink-0 border-b border-slate-200 px-1 pb-3">
+        <Stack GapScale="LayoutGap.Tiny"
+               Class="min-w-0">
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="Filtered project files" />
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="@State.SourceSummary" />
+        </Stack>
+        <Cluster Gap="LayoutGap.XSmall"
+                 Wrap="FlexWrap.NoWrap"
+                 JustifyContent="JustifyContent.End">
+            @if (State.Snapshot?.Search is { } search) {
+                <StatusBadge Tone="neutral" Text="@($"{State.Snapshot.Items.Count} visible")" />
+                <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
+            }
+            <TooltipTarget Text="Refresh filtered project sources"
+                           Position="TooltipPosition.Bottom"
+                           TestId="project-files-portfolio-refresh-tooltip">
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Class="cda-button--quick"
+                        Icon="refresh"
+                        aria-label="Refresh filtered project sources"
+                        Disabled="@State.IsLoading"
+                        data-testid="project-files-portfolio-refresh"
+                        Click="State.Refresh" />
+            </TooltipTarget>
+        </Cluster>
+    </Split>
+
+    @if (State.IsEmpty) {
+        <EmptyState Eyebrow="No project sources"
+                    Title="No projects match the shared filters"
+                    Description="Adjust the portfolio filters to select at least one authorized project file source." />
+    }
+    else if (State.IsLoading) {
+        <LoadingState Eyebrow="Filtered portfolio"
+                      Title="Resolving project file sources"
+                      Description="Building the bounded source set from the same project projection used by the cards." />
+    }
+    else if (!string.IsNullOrWhiteSpace(State.OpenError)) {
+        <EmptyState Eyebrow="Project files unavailable"
+                    Title="Unable to open the filtered file sources"
+                    Description="@State.OpenError">
+            <Actions>
+                <Button Text="Retry"
+                        data-testid="project-files-portfolio-retry"
+                        Click="State.Retry" />
+            </Actions>
+        </EmptyState>
+    }
+    else if (State.Preview is not null) {
+        <Stack GapScale="LayoutGap.Small"
+               AlignItems="AlignItems.Stretch"
+               Class="h-full min-h-0">
+            <Cluster Gap="LayoutGap.Small"
+                     Class="shrink-0">
+                <Button ButtonStyle="ButtonStyle.Light"
+                        Icon="arrow_back"
+                        Text="Back to filtered files"
+                        data-testid="project-files-portfolio-back"
+                        Click="State.Back" />
+                <StatusBadge Tone="info" Text="Read only" />
+            </Cluster>
+            @if (!string.IsNullOrWhiteSpace(State.ActivationError)) {
+                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
+                    @State.ActivationError
+                </Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(State.ActionFeedback)) {
+                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
+                    @State.ActionFeedback
+                </Alert>
+            }
+            <FileInteraction @key="State.Preview.Request.File" Request="State.Preview.Request"
+                             ContentSource="State.Preview.ContentSource"
+                             Composition="State.Preview.Composition"
+                             OpenExternallyRequested="State.Preview.OpenExternally"
+                             OpenExternallyLabel="Open in preferred app"
+                             AllowModeSwitch="false"
+                             MaximumContentBytes="@(4 * 1024 * 1024)"
+                             AriaLabel="@($"Read-only project file {State.Preview.Request.FileName}")" />
+        </Stack>
+    }
+    else if (State.Browse is not null) {
+        @if (!string.IsNullOrWhiteSpace(State.ActivationError)) {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   Variant="Variant.Outlined"
+                   data-testid="project-files-portfolio-activation-error">
+                @State.ActivationError
+            </Alert>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(State.ActionFeedback)) {
+            <Alert AlertStyle="AlertStyle.Info"
+                   Variant="Variant.Outlined"
+                   data-testid="project-files-portfolio-action-feedback">
+                @State.ActionFeedback
+            </Alert>
+        }
+
+        <FileBrowser @key="State.Browse.Session" Session="State.Browse.Session"
+                     HostActionCatalog="State.Browse.Actions"
+                     Class="w-full flex-1 min-h-0 [&_.ft-file-browser\_\_action-menu]:[position-try-fallbacks:flip-inline,flip-block,flip-inline_flip-block]"
+                     AriaLabel="Filtered project file sources"
+                     DisplayMode="FileBrowserDisplayMode.Compact"
+                     InitialViewMode="FileBrowserViewMode.List"
+                     SearchDebounceMilliseconds="280"
+                     SnapshotChanged="State.Browse.SnapshotChanged"
+                     ItemInvoked="State.Browse.ItemInvoked"
+                     ActionRequested="State.Browse.ActionRequested" />
+    }
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public ProjectFilesViewState State { get; set; } = new();
+}

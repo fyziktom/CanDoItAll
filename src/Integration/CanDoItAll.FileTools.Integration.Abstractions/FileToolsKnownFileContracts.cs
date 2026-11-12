@@ -155,7 +155,9 @@ public interface IFileToolsKnownFileSessionFactory
 {
     ValueTask<FileToolsKnownFileSession> CreateAsync(
         FileToolsKnownFileRequest request,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeRead = null,
+        Func<CancellationToken, ValueTask>? authorizeWrite = null);
 }
 
 public interface IFileToolsKnownFileSessionReleaser

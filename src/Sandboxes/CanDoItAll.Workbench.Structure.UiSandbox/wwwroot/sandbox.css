@@ -1,0 +1,8 @@
+body { margin: 0; background: #f3f6fc; }
+.scenario-controls { padding: 1rem; }
+.scenario-receipts { max-height: 9rem; overflow: auto; }
+[data-testid="structure-specimen"] {
+    --structure-page-min-height: 0;
+    --structure-stage-min-height: 0;
+    --structure-canvas-height: 640px;
+}

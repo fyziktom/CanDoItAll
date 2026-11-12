@@ -1,0 +1,33 @@
+@if (Entries.Count > 0) {
+    <FormSection Title="Recent operations" Description="Observation checks current state; it does not prove which request changed it.">
+        <Stack GapScale="LayoutGap.Small">
+            @foreach (var entry in Entries.Reverse()) {
+                <Cluster Gap="LayoutGap.Small" data-testid="settings-operation" @key="entry.Id">
+                    <StatusBadge Text="@($"{entry.Action}: {entry.Effect}")" Tone="@(entry.Effect == SettingsEffect.Committed ? "success" : "warning")" />
+                    <span>@SettingsReceiptText.Diagnostic(entry.Diagnostic) @(entry.RecordId?.ToString("D") ?? entry.Extension?.Value)</span>
+                    @if (entry.PolicyVersion is { } version) {
+                        <span>Submitted policy version: @version</span>
+                    }
+                    @if (IdentityReview is not null && entry.RecordId is null && entry.Effect == SettingsEffect.Unknown) {
+                        @IdentityReview(entry)
+                    } else if (Review.HasDelegate && entry.Effect is SettingsEffect.Unknown or SettingsEffect.CommittedWarning) {
+                        <Button Text="Observe current state" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                Disabled="entry.IsReviewing" Click="() => Review.InvokeAsync(entry)" />
+                    }
+                    @if (entry.ObservedExists is { } exists) {
+                        <span>@entry.ObservedRecordId @(exists ? "Record currently exists." : "Record currently absent.") Original outcome: @entry.Effect.</span>
+                    }
+                    @if (entry.ObservationFailed) {
+                        <span>The latest observation failed. The original outcome is unchanged.</span>
+                    }
+                </Cluster>
+            }
+        </Stack>
+    </FormSection>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<SettingsReceipt> Entries { get; set; } = [];
+    [Parameter] public EventCallback<SettingsReceipt> Review { get; set; }
+    [Parameter] public RenderFragment<SettingsReceipt>? IdentityReview { get; set; }
+}

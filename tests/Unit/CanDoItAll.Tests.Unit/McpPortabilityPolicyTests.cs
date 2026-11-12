@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.CapabilityAuthoring.UI;
 using CanDoItAll.AgentFramework.Capabilities.Abstractions;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
@@ -36,8 +37,8 @@ public sealed class McpPortabilityPolicyTests
             })
         };
 
-        var mcpState = CapabilityConfigurationEditorSupport.ReadMcp(mcpEditor);
-        Assert.Empty(CapabilityConfigurationEditorSupport.WriteMcp(mcpEditor, mcpState));
+        var mcpState = CapabilityConfigurationCodec.ReadMcp(mcpEditor);
+        Assert.Empty(CapabilityConfigurationCodec.WriteMcp(mcpEditor, mcpState, new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer));
 
         using (var document = JsonDocument.Parse(mcpEditor.ConfigurationJson))
         {
@@ -72,8 +73,8 @@ public sealed class McpPortabilityPolicyTests
             })
         };
 
-        var toolState = CapabilityConfigurationEditorSupport.ReadTool(toolEditor);
-        Assert.Empty(CapabilityConfigurationEditorSupport.WriteTool(toolEditor, toolState));
+        var toolState = CapabilityConfigurationCodec.ReadTool(toolEditor);
+        Assert.Empty(CapabilityConfigurationCodec.WriteTool(toolEditor, toolState));
 
         using var toolDocument = JsonDocument.Parse(toolEditor.ConfigurationJson);
         var process = toolDocument.RootElement.GetProperty("externalProcess");
@@ -108,13 +109,13 @@ public sealed class McpPortabilityPolicyTests
                 approvalMode = "AlwaysRequire"
             })
         };
-        var state = CapabilityConfigurationEditorSupport.ReadMcp(editor);
+        var state = CapabilityConfigurationCodec.ReadMcp(editor);
         state.EnvironmentVariableBindingsText = string.Join(
             Environment.NewLine,
             "MCP_CASE_TARGET=MCP_SOURCE_ONE",
             "mcp_case_target=MCP_SOURCE_TWO");
 
-        var errors = CapabilityConfigurationEditorSupport.WriteMcp(editor, state);
+        var errors = CapabilityConfigurationCodec.WriteMcp(editor, state, new WorkspaceCommandEnvironmentPolicy().EnvironmentNameComparer);
 
         if (OperatingSystem.IsWindows())
         {

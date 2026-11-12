@@ -1,0 +1,49 @@
+<Dialog IsOpen="true" Title="Compare node changes" Subtitle="Review the result before applying it to the existing editor."
+        Size="ModalSize.Wide" ShowCloseButton="true" OnClose="Cancel" TestId="structure-node-comparison-dialog">
+    <ChildContent>
+        @if (MayBeStale) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="structure-node-comparison-stale"><TextBlock Value="Another update arrived. Refresh this comparison to review it. Your draft and result entries are retained." /></Alert>
+        }
+        @if (Message is not null) {
+            <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="@Message" /></Alert>
+        }
+        @if (Review is not null) {
+            <StructureNodeComparison Review="Review" Changed="NotifyChanged" />
+        }
+        @if (Previous is not null) {
+            <details>
+                <summary>Previous comparison retained for copying</summary>
+                <Stack GapScale="LayoutGap.Small">
+                    <FormField Text="Previous title result"><TextBox Value="@(Previous.Title.IsResolved ? Previous.Title.Result : Previous.Title.Local)" ReadOnly="true" /></FormField>
+                    @if (!Previous.Schema.InlineNote) {
+                        <FormField Text="Previous subtitle result"><TextBox Value="@(Previous.Subtitle.IsResolved ? Previous.Subtitle.Result : Previous.Subtitle.Local)" ReadOnly="true" data-testid="structure-node-previous-subtitle" /></FormField>
+                    }
+                    <FormField Text="Previous notes result"><TextArea Value="@(Previous.Notes.IsResolved ? Previous.Notes.Result : Previous.Notes.Local)" ReadOnly="true" /></FormField>
+                    @foreach (var row in Previous.Fields) {
+                        <FormField Text="@row.Definition.Label"><TextArea Value="@row.ResultInput" ReadOnly="true" /></FormField>
+                    }
+                </Stack>
+            </details>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Wrap="FlexWrap.Wrap">
+            <Button Text="Return to editor" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="structure-node-compare-cancel" />
+            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="@(Busy || Review?.HasPendingInput == true)" data-testid="structure-node-compare-refresh" />
+            <Button Text="Apply to draft" Click="Apply" Disabled="@(Busy || Review?.CanApply != true)" data-testid="structure-node-compare-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter] public StructureNodeFormReview? Review { get; set; }
+    [Parameter] public StructureNodeFormReview? Previous { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool MayBeStale { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Apply { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private Task NotifyChanged() => Changed.InvokeAsync();
+}

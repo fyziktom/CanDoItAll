@@ -16,6 +16,73 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 public sealed class ProjectStructureFileInteractionIntegrationTests
 {
     [Fact]
+    public async Task Same_size_replacement_with_preserved_timestamp_rejects_a_stale_file_editor() {
+        await using var fixture = await InteractionFixture.CreateAsync();
+        await using var editor = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        var timestamp = File.GetLastWriteTimeUtc(fixture.FullPath);
+        var original = await File.ReadAllTextAsync(fixture.FullPath);
+        var replaced = "!" + original[1..];
+        await File.WriteAllTextAsync(fixture.FullPath, replaced);
+        File.SetLastWriteTimeUtc(fixture.FullPath, timestamp);
+
+        await Assert.ThrowsAsync<FileSaveConflictException>(() => editor.SaveAsync(
+            CreateSaveArgs(editor, "# Stale replacement", editor.Request.ContentRevision)));
+        Assert.Equal(replaced, await File.ReadAllTextAsync(fixture.FullPath));
+    }
+
+    [Fact]
+    public async Task Two_native_sessions_conflict_and_mode_changes_keep_the_accepted_revision() {
+        await using var fixture = await InteractionFixture.CreateAsync();
+        await using var first = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        await using var second = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        var accepted = CreateSaveArgs(first, "# First accepted edit", first.Request.ContentRevision);
+        await first.SaveAsync(accepted);
+
+        await Assert.ThrowsAsync<FileSaveConflictException>(() => second.SaveAsync(
+            CreateSaveArgs(second, "# Stale second editor", second.Request.ContentRevision)));
+        Assert.Equal("# First accepted edit", await File.ReadAllTextAsync(fixture.FullPath));
+        Assert.Equal(accepted.PersistedRevision, first.WithMode(FileInteractionMode.Edit).ContentRevision);
+
+        var next = CreateSaveArgs(first, "# Same editor after a mode change", first.WithMode(FileInteractionMode.View).ContentRevision);
+        await first.SaveAsync(next);
+        Assert.NotEqual(accepted.PersistedRevision, next.PersistedRevision);
+        Assert.Equal("# Same editor after a mode change", await File.ReadAllTextAsync(fixture.FullPath));
+    }
+
+    [Fact]
+    public async Task Released_native_handle_cannot_read_or_save_and_does_not_release_its_neighbor() {
+        await using var fixture = await InteractionFixture.CreateAsync();
+        var retired = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        await using var current = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        await retired.DisposeAsync();
+        await retired.DisposeAsync();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => retired.SaveAsync(
+            CreateSaveArgs(retired, "# Retired edit", retired.Request.ContentRevision)));
+        await Assert.ThrowsAsync<FileAccessDeniedException>(async () => {
+            await using var ignored = await retired.Session.ContentSource.OpenReadAsync(new(retired.Session.File));
+        });
+        var accepted = CreateSaveArgs(current, "# Neighbor remains authorized", current.Request.ContentRevision);
+        await current.SaveAsync(accepted);
+        Assert.True(accepted.HasPersistedRevision);
+        Assert.Equal("# Neighbor remains authorized", await File.ReadAllTextAsync(fixture.FullPath));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Native_storage_permission_loss_refuses_an_already_open_editor(bool readOnly) {
+        await using var fixture = await InteractionFixture.CreateAsync();
+        await using var interaction = await fixture.Coordinator.OpenAsync(fixture.ProjectId, fixture.NodeKey);
+        var changed = await fixture.RemoveWritePermissionAsync(readOnly);
+        Assert.True(changed.IsReadOnly || !changed.CapabilityMask.HasFlag(StorageCapability.MutableUpdate));
+
+        await Assert.ThrowsAsync<FileAccessDeniedException>(() => interaction.SaveAsync(
+            CreateSaveArgs(interaction, "# Unauthorized edit", interaction.Request.ContentRevision)));
+        Assert.Equal("# Initial interaction", await File.ReadAllTextAsync(fixture.FullPath));
+    }
+
+    [Fact]
     public async Task Direct_markdown_interaction_saves_with_current_revision_and_publishes_after_persistence()
     {
         await using var fixture = await InteractionFixture.CreateAsync();
@@ -160,6 +227,13 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
 
         public string FullPath { get; }
 
+        public Task<StorageCatalogSnapshot> RemoveWritePermissionAsync(bool readOnly)
+            => scope.ServiceProvider.GetRequiredService<IStorageCatalogService>().SaveAsync(
+                StorageCatalogSaveRequest.FromSnapshot(Storage) with {
+                    IsReadOnly = readOnly,
+                    CapabilityMask = readOnly ? Storage.CapabilityMask : Storage.CapabilityMask & ~StorageCapability.MutableUpdate
+                });
+
         public static Task<InteractionFixture> CreateAsync()
             => CreateAsync(FixtureFileKind.Markdown);
 
@@ -188,7 +262,16 @@ public sealed class ProjectStructureFileInteractionIntegrationTests
             });
             Assert.True(projectResult.IsSuccess, string.Join(" ", projectResult.Errors.Select(error => error.Message)));
             Guid projectId = projectResult.Value;
-            StorageCatalogSnapshot storage = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
+            var bootstrap = await storageCatalog.EnsureBootstrapFileSystemStorageAsync();
+            var fixtureRoot = Path.Combine(bootstrap.EndpointOrRoot, "interaction-sources", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(fixtureRoot);
+            StorageCatalogSnapshot storage = await storageCatalog.SaveAsync(StorageCatalogSaveRequest.FromSnapshot(bootstrap) with {
+                Id = Guid.NewGuid(),
+                ExpectedUpdatedAtUtc = null,
+                Name = "Isolated interaction source",
+                IsSystemDefault = false,
+                EndpointOrRoot = fixtureRoot
+            });
             (string extension, string objectSubtype, string mediaType) = fileKind switch
             {
                 FixtureFileKind.Markdown => (".md", "markdown", "text/plain"),

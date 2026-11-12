@@ -25,9 +25,15 @@ public sealed record ProcessLaunchRequest(
     [JsonIgnore]
     public ProcessProjectAdmission? ProjectAdmission { get; init; }
 
+    [JsonIgnore]
+    public ProcessExecutableDefinitionClosure? ResolvedDefinitions { get; init; }
+
     public ProcessLaunchIntentId? CallerIntentId { get; init; }
     public ProcessLaunchAdmissionId? PreparedAdmissionId { get; init; }
     public string? ProducerInputFingerprint { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessLaunchDecisionOptions? Decision { get; init; }
 
     [JsonIgnore]
     public ProcessLaunchAuthority? Authority { get; init; }
@@ -43,7 +49,9 @@ public sealed record ProcessExistingLaunchLookupRequest(
     string DefinitionKey,
     string? LiveRunProfileKey,
     Guid? ProjectId,
-    IReadOnlyDictionary<string, string> RequiredLaunchVariables);
+    IReadOnlyDictionary<string, string> RequiredLaunchVariables) {
+    public bool StoppedOnly { get; init; }
+}
 
 public sealed record ProcessLaunchExecutorOverride(
     string StepKey,
@@ -112,7 +120,10 @@ public sealed record ProcessLaunchPlanView(
     string? LiveRunProfileKey,
     string PlanHash,
     IReadOnlyList<ProcessLaunchStepView> Steps,
-    IReadOnlyList<ProcessLaunchReadinessFinding> ReadinessFindings);
+    IReadOnlyList<ProcessLaunchReadinessFinding> ReadinessFindings) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProcessLaunchDecisionReview? Decision { get; init; }
+}
 
 public sealed record ProcessLaunchStepView(
     ProcessStepInstanceId StepInstanceId,

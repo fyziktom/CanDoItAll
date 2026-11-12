@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Frozen source-only; root and runtime peer review PASS; unbuilt/unexecuted",
+  "baseInventory": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-source-inventory.json",
+    "sha256": "117DC7FCF0A8F76F210DC064C8CA48503185A1DF43A92D430D5A91D5AE9F3813",
+    "bytes": 4386
+  },
+  "sourceOverlay": {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataMigrationTests.cs",
+    "sha256": "F91A42B47EFEE72B0E193C26D8B6D29DD93062A9EB7D15DD06F7AF9D6FEA3075",
+    "bytes": 22914
+  },
+  "predecessorSha256": "84D9241B9B7727B7806AEB0F892353C0C9258F12946D6E680DA64A791C01F790",
+  "mainPredecessorSha256": null,
+  "proof": {
+    "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-migration-cleanup-successor.md",
+    "sha256": "B87FE1B34A888B0538CC523327B40FEC2BEF968BDBB22429A209159496B1F123",
+    "bytes": 1760
+  },
+  "preservedInputs": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-cleanup-ownership.json",
+      "sha256": "77D9C33936466E84702A366DB13400BD840B067BDE675EDA881283F7AE170BBE",
+      "bytes": 553
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-cleanup-predecessors/ResourceMetadataMigrationTests.cs.txt",
+      "sha256": "84D9241B9B7727B7806AEB0F892353C0C9258F12946D6E680DA64A791C01F790",
+      "bytes": 22029
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-cleanup-predecessors/P05-R1-resource-migration-source-inventory.json",
+      "sha256": "117DC7FCF0A8F76F210DC064C8CA48503185A1DF43A92D430D5A91D5AE9F3813",
+      "bytes": 4386
+    }
+  ],
+  "delta": "Only primary plus cleanup preservation at three existing test boundaries; terminal pending drain retained",
+  "counts": {
+    "facts": 3,
+    "newFacts": 0,
+    "combinedOrdinary": 346,
+    "separateBrowser": 4
+  },
+  "productionChanged": false,
+  "schemaChanged": false,
+  "mainChanged": false,
+  "originalInventoryUnchanged": true
+}

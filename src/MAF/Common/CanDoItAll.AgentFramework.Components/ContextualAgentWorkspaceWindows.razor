@@ -1258,7 +1258,8 @@
 
     private async Task HandleSessionTitleChangedAsync(string title)
     {
-        if (disposed || isChatBusy || !selectedAgentId.HasValue || !selectedSessionId.HasValue)
+        if (disposed || isChatBusy || !selectedAgentId.HasValue || !selectedSessionId.HasValue ||
+                workspace?.SelectedSession is not { } originalSession || originalSession.Id != selectedSessionId)
         {
             return;
         }
@@ -1273,7 +1274,7 @@
             var session = await WorkspaceService.RenameChatSessionAsync(
                 agentId,
                 sessionId,
-                title, request.Token);
+                title, originalSession.Title, request.Token);
             if (!IsCurrentTarget(generation)) {
                 return;
             }

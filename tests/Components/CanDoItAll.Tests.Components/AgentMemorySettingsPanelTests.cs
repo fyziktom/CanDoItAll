@@ -139,7 +139,7 @@ public sealed class AgentMemorySettingsPanelTests : AgentMemorySettingsPanelTest
         var cut = Render(context, settings);
         cut.WaitForElement("[data-testid='agents-catalog-memory-new-provider'] option[value='provider.selected']");
 
-        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Change("team-memory");
+        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Input("team-memory");
         cut.Find("[data-testid='agents-catalog-memory-new-provider']").Change("provider.selected");
         cut.Find("[data-testid='agents-catalog-memory-add-binding']").Click();
 
@@ -162,7 +162,7 @@ public sealed class AgentMemorySettingsPanelTests : AgentMemorySettingsPanelTest
         var cut = Render(context, settings);
         cut.WaitForElement("[data-testid='agents-catalog-memory-new-provider'] option[value='provider.configured']");
 
-        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Change("untrusted");
+        cut.Find("[data-testid='agents-catalog-memory-new-alias']").Input("untrusted");
         cut.Find("[data-testid='agents-catalog-memory-new-provider']").Change("provider.unconfigured");
         cut.Find("[data-testid='agents-catalog-memory-add-binding']").Click();
 

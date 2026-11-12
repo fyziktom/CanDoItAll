@@ -27,10 +27,11 @@ public sealed class AgentDiagnosticsReadsTests {
         var agents = reads.ReadAgentsAsync(CancellationToken.None);
         var runs = reads.ReadRecentRunsAsync(CancellationToken.None);
         await Task.WhenAll(dashboard, agents, runs);
-        Assert.Equal(12, runs.Result.Count);
-        Assert.True(dashboard.Result.FailedRuns >= 14);
-        Assert.Contains(agents.Result, item => item.Id == agent.Id);
-        Assert.DoesNotContain(agents.Result, item => item.IsTemplate);
+        Assert.Equal(12, (await runs).Count);
+        Assert.True((await dashboard).FailedRuns >= 14);
+        var summaries = await agents;
+        Assert.Contains(summaries, item => item.Id == agent.Id);
+        Assert.DoesNotContain(summaries, item => item.IsTemplate);
         using var canceled = new CancellationTokenSource();
         canceled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => reads.ReadRecentRunsAsync(canceled.Token));

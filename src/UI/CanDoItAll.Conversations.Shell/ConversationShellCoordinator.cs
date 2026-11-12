@@ -51,7 +51,7 @@ public sealed class ConversationShellCoordinator : IConversationShellCoordinator
         var key = new ConversationShellWindowKey(sourceId, windowId);
         lock (gate)
         {
-            state = state with { FocusedWindow = key };
+            state = state with { FocusedWindow = key, FocusGeneration = checked(state.FocusGeneration + 1) };
         }
 
         Changed?.Invoke(this, EventArgs.Empty);

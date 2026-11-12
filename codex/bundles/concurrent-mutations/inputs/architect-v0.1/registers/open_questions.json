@@ -1,0 +1,146 @@
+[
+  {
+    "id": "Q01",
+    "question": "What is the complete enabled Projects writer perimeter on the implementation branch?",
+    "review_owner": "Projects + architecture",
+    "decision_gate": "P00",
+    "recommended_default_or_action": "No unknown enabled writer before pilot implementation; map actual callers.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q02",
+    "question": "Which existing durable journal/record can prove Projects ordinary save outcomes?",
+    "review_owner": "Projects + runtime/persistence",
+    "decision_gate": "P01",
+    "recommended_default_or_action": "Reuse only if atomic with effect and valid for UI/API/tool retry; otherwise minimal owner ledger.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q03",
+    "question": "Which current dataset/profile epoch covers destructive restoration without rotating on restart?",
+    "review_owner": "Control plane + migration",
+    "decision_gate": "P01",
+    "recommended_default_or_action": "Inspect current implementation; add maintenance-owned fence only if needed.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q04",
+    "question": "Can the current small Search participant join source transaction within accepted latency/lock bounds?",
+    "review_owner": "Projects + Search + persistence",
+    "decision_gate": "P01",
+    "recommended_default_or_action": "Prefer transactional participant if measured bounded; otherwise completed durable rebuild protocol.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q05",
+    "question": "What is the complete lock-class order across source/claim, Projects, Workbench and storage gates?",
+    "review_owner": "Persistence + runtime owners",
+    "decision_gate": "P01",
+    "recommended_default_or_action": "Preserve existing source-first rules, no universal alphabetical replacement.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q06",
+    "question": "Should Projects no-op save advance UpdatedAt/activity despite no content change?",
+    "review_owner": "Projects product owner",
+    "decision_gate": "P03",
+    "recommended_default_or_action": "Preserve existing external meaning until explicitly changed; do not stamp unrelated effects.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q07",
+    "question": "Where does the API-only UI live and how will its original-stamp/result contract be validated?",
+    "review_owner": "API/UI owners",
+    "decision_gate": "P00",
+    "recommended_default_or_action": "Identify actual repository/contract consumers; no assumption main Blazor tests cover it.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q08",
+    "question": "Which single planning operation and material facts define the first basis pilot?",
+    "review_owner": "Workbench planning + governance",
+    "decision_gate": "P04",
+    "recommended_default_or_action": "Project objective/definition and bounded relevant canonical task set; refine from actual tool.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q09",
+    "question": "Which manual edits retain automation, pin a value, or transfer control?",
+    "review_owner": "Product/governance",
+    "decision_gate": "P04",
+    "recommended_default_or_action": "Explicit action/scope, no global human-always-wins rule.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q10",
+    "question": "What are maximum atomic batch/basis sizes and supported staged alternatives?",
+    "review_owner": "Relevant owner + performance",
+    "decision_gate": "P04",
+    "recommended_default_or_action": "Ratify from current bounds and measured workloads; reject rather than truncate.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q11",
+    "question": "How long can clients/checkpoints/queued work replay operation identities?",
+    "review_owner": "Runtime + operations + privacy",
+    "decision_gate": "P02",
+    "recommended_default_or_action": "Set supported horizon and dedupe detail/compact retention before public promise; extend for later runtime lanes.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q12",
+    "question": "What rollout scope in P05 is approved, given active extraction?",
+    "review_owner": "Architecture + individual owners",
+    "decision_gate": "P05",
+    "recommended_default_or_action": "One small fully mapped owner at a time; graph wave separately scoped.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q13",
+    "question": "Which storage/provider operations offer actual conditional replacement/idempotency/lookup?",
+    "review_owner": "Storage + integration",
+    "decision_gate": "P06",
+    "recommended_default_or_action": "Capability matrix per actual implementation, weaker guarantees explicit.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q14",
+    "question": "Which old process records require re-admission rather than replay?",
+    "review_owner": "Process runtime + governance",
+    "decision_gate": "P07",
+    "recommended_default_or_action": "Readable history retained; never synthesize absent trusted basis.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q15",
+    "question": "What measured SLO/budget and closure environments are actually available?",
+    "review_owner": "Operations + QA + performance",
+    "decision_gate": "P00",
+    "recommended_default_or_action": "Candidate relative thresholds are discussion defaults; null measurements block claims.",
+    "status": "open",
+    "answer": null
+  },
+  {
+    "id": "Q16",
+    "question": "Does any binary-only consumer require compatibility when contracts move assemblies?",
+    "review_owner": "UI extraction + API/package owners",
+    "decision_gate": "P00",
+    "recommended_default_or_action": "Verify actual evaluated graph/consumers; namespace equality alone insufficient.",
+    "status": "open",
+    "answer": null
+  }
+]

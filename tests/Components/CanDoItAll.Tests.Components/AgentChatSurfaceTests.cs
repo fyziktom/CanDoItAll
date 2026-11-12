@@ -2,11 +2,46 @@ using Bunit;
 using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.UiSandbox;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AgentChatSurfaceTests {
+    [Fact]
+    public async Task Focused_details_preserve_the_composer_and_close_when_the_thread_changes() {
+        using var context = Context();
+        var fixture = new AgentChatSandboxFixture();
+        fixture.SetScenario(AgentChatScenario.Focused);
+        var intents = new List<ChatWorkspaceIntent>();
+        var presentation = fixture.Presentation with { DraftPrompt = "Unsent work", ComposerKey = 42 };
+        var cut = context.Render<AgentChatSurface>(p => p.Add(x => x.Presentation, presentation)
+            .Add(x => x.Navigation, fixture.Navigation).Add(x => x.Intent, value => intents.Add(value)));
+        var composer = cut.FindComponent<ConversationPromptTextArea>().Instance;
+        Assert.Empty(cut.FindAll("[data-testid='chat-conversation-details-dialog']"));
+        await cut.Find("[data-testid='chat-conversation-details']").ClickAsync();
+        Assert.Single(cut.FindAll("[data-testid='chat-conversation-details-dialog']"));
+        Assert.Same(composer, cut.FindComponent<ConversationPromptTextArea>().Instance);
+        Assert.Equal("Unsent work", composer.Value);
+        Assert.Empty(intents);
+        await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
+        Assert.Same(composer, cut.FindComponent<ConversationPromptTextArea>().Instance);
+        await cut.Find("[data-testid='chat-conversation-details']").ClickAsync();
+        cut.Render(p => p.Add(x => x.Presentation, presentation with { Session = new(Guid.NewGuid(), "Other thread") }));
+        Assert.Empty(cut.FindAll("[data-testid='chat-conversation-details-dialog']"));
+    }
+
+    [Fact]
+    public void Compact_chat_keeps_pending_approval_actions_in_the_primary_surface() {
+        using var context = Context();
+        var fixture = new AgentChatSandboxFixture();
+        fixture.SetScenario(AgentChatScenario.Approvals);
+        var cut = context.Render<ChatWorkspaceSurface>(p => p.Add(x => x.Presentation, fixture.Presentation).Add(x => x.Compact, true));
+        Assert.NotEmpty(cut.FindAll("[data-testid='chat-approval-approve-fixture-read']"));
+        Assert.NotEmpty(cut.FindAll("[data-testid='chat-reject-button']"));
+        Assert.Empty(cut.FindAll("[data-testid='chat-conversation-details-dialog']"));
+    }
+
     [Theory]
     [InlineData(AgentChatScenario.Loading)]
     [InlineData(AgentChatScenario.NoAgents)]

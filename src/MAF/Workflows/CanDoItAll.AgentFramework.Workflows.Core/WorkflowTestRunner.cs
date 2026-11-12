@@ -87,7 +87,8 @@ public sealed class WorkflowTestRunner(
                 PendingExternalRequests: [],
                 ErrorMessage: exception.Message);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException or ArgumentException)
+        catch (Exception exception) when (exception is not WorkflowLaunchAdmissionObservationException &&
+            exception is InvalidOperationException or KeyNotFoundException or ArgumentException)
         {
             return FailureResult(exception.Message);
         }

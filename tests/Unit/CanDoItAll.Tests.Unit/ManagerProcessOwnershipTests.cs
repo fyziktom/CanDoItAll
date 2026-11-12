@@ -320,6 +320,48 @@ public sealed class ManagerProcessOwnershipTests
         }
     }
 
+    [Theory]
+    [InlineData(false, WorkspaceProcessStandardIoMode.Captured)]
+    [InlineData(true, WorkspaceProcessStandardIoMode.CapturedWithOpenInput)]
+    public async Task Coordinator_holds_standard_input_open_only_when_the_launch_requests_it(
+        bool holdStandardInputOpen,
+        WorkspaceProcessStandardIoMode expectedMode)
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"CanDoItAll.Manager.StandardInput.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            var host = new FakeProcessHost();
+            var coordinator = new ManagerProcessCoordinator(
+                host,
+                new FixedDiscovery(ManagerProcessDiscoveryResult.Available(CreateEvidence())),
+                new InMemoryRegistry(),
+                new PhysicalFileSystemPathPolicyFactory(),
+                ManagerHostKind.Linux);
+
+            await using var lease = await coordinator.StartAsync(
+                new ManagerProcessLaunchRequest(
+                    ManagerProcessPurpose.TailwindWatch,
+                    "manager_tailwind_watch",
+                    "manager.tailwind-watch.v1",
+                    "node",
+                    ["npm-cli.js", "run", "watch"],
+                    root,
+                    new Dictionary<string, string?>(),
+                    root,
+                    "test",
+                    HoldStandardInputOpen: holdStandardInputOpen));
+
+            Assert.NotNull(host.LastSessionRequest);
+            Assert.Equal(expectedMode, host.LastSessionRequest.StandardIoMode);
+            Assert.Null(host.LastSessionRequest.StandardInput);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task Coordinator_refuses_duplicate_or_unverified_active_lease()
     {
@@ -707,6 +749,8 @@ public sealed class ManagerProcessOwnershipTests
 
         public int TerminationCount { get; private set; }
 
+        public WorkspaceProcessSessionRequest? LastSessionRequest { get; private set; }
+
         public ExecutionBoundaryDescriptor DescribeBoundary()
             => new("test", "test", "test", "test", "test", true, "test");
 
@@ -718,7 +762,10 @@ public sealed class ManagerProcessOwnershipTests
         public Task<IWorkspaceProcessSession> StartSessionAsync(
             WorkspaceProcessSessionRequest request,
             CancellationToken cancellationToken = default)
-            => Task.FromResult<IWorkspaceProcessSession>(new FakeSession(Identity));
+        {
+            LastSessionRequest = request;
+            return Task.FromResult<IWorkspaceProcessSession>(new FakeSession(Identity));
+        }
 
         public Task<WorkspaceProcessTerminationResult> TerminateOwnedProcessAsync(
             WorkspaceOwnedProcessIdentity identity,

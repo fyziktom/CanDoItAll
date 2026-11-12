@@ -9,6 +9,8 @@ using System.Text.Json.Serialization.Metadata;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.AI;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using OllamaSharp;
 using OpenAI;
 
@@ -25,6 +27,7 @@ internal static class MafToolProtocolCodec {
     private static readonly IReadOnlyDictionary<string, Type> OllamaTypes = ModelTypes(typeof(OllamaApiClient).Assembly,
         type => type.Namespace?.StartsWith("OllamaSharp.Models", StringComparison.Ordinal) == true);
     private static readonly JsonSerializerOptions Options = CreateOptions();
+    private static readonly string McpPackage = typeof(ContentBlock).Assembly.GetName().Version!.ToString();
     private static readonly string PackageFingerprint = string.Join("|",
         typeof(ChatResponse).Assembly.GetName().Version,
         typeof(OpenAIClient).Assembly.GetName().Version,
@@ -33,7 +36,7 @@ internal static class MafToolProtocolCodec {
     internal static AgentToolProtocolEnvelope Encode<T>(T value) {
         try {
             var payload = JsonSerializer.SerializeToElement(value, Options);
-            var json = JsonSerializer.Serialize(new SavedProtocol(PackageFingerprint, typeof(T).FullName!, payload));
+            var json = JsonSerializer.Serialize(new SavedProtocol(PackageFingerprint, Shape<T>(), payload));
             ArgumentOutOfRangeException.ThrowIfGreaterThan(Encoding.UTF8.GetByteCount(json), AgentToolProtocolEnvelope.MaximumUtf8Bytes);
             var envelope = value is ChatResponse or ChatResponseUpdate or ChatResponseUpdate[]
                 ? AgentToolProtocolEnvelope.Create(Format, CompressedResponseVersion, CompressResponse(json))
@@ -60,12 +63,17 @@ internal static class MafToolProtocolCodec {
         var json = envelope.Version == CompressedResponseVersion ? DecompressResponse(envelope.PayloadJson) : envelope.PayloadJson;
         var saved = JsonSerializer.Deserialize<SavedProtocol>(json)
             ?? throw Unsupported("The saved protocol envelope is empty.");
-        if (saved.Packages != PackageFingerprint || saved.Shape != typeof(T).FullName) {
+        if (saved.Packages != PackageFingerprint || saved.Shape != Shape<T>()) {
             throw Unsupported("The saved protocol requires a different installed SDK or shape; it cannot be replayed implicitly. Reconcile saved approvals and effects using the original runtime or a verified migration before starting replacement work. Keep the history, journal and artifacts together.");
         }
 
         return saved.Value.Deserialize<T>(Options) ?? throw Unsupported("The saved protocol value is empty.");
     }
+
+    private static string Shape<T>()
+        => typeof(T) == typeof(MafToolResultCheckpoint)
+            ? "CanDoItAll.AgentFramework.Maf.MafToolRunContext+ResultCheckpoint"
+            : typeof(T).FullName!;
 
     private static string CompressResponse(string json) {
         using var output = new MemoryStream();
@@ -176,6 +184,17 @@ internal static class MafToolProtocolCodec {
             return new(NativeProtocolKind.Ollama, type.FullName!, JsonSerializer.Serialize(raw, type));
         }
 
+        if (type?.Assembly == typeof(ContentBlock).Assembly) {
+            if (raw is ContentBlock content) {
+                return new(NativeProtocolKind.Mcp, typeof(ContentBlock).FullName!,
+                    JsonSerializer.Serialize(content, McpJsonUtilities.DefaultOptions), McpPackage);
+            }
+            if (raw is ResourceContents resource) {
+                return new(NativeProtocolKind.Mcp, typeof(ResourceContents).FullName!,
+                    JsonSerializer.Serialize(resource, McpJsonUtilities.DefaultOptions), McpPackage);
+            }
+        }
+
         throw Unsupported("An opaque provider item has no supported installed-package serializer.");
     }
 
@@ -193,6 +212,17 @@ internal static class MafToolProtocolCodec {
                 ?? throw Unsupported("The saved Ollama protocol item is empty.");
         }
 
+        if (saved.Kind == NativeProtocolKind.Mcp && saved.Package == McpPackage) {
+            if (saved.Model == typeof(ContentBlock).FullName) {
+                return JsonSerializer.Deserialize<ContentBlock>(saved.Json, McpJsonUtilities.DefaultOptions)
+                    ?? throw Unsupported("The saved MCP content is empty.");
+            }
+            if (saved.Model == typeof(ResourceContents).FullName) {
+                return JsonSerializer.Deserialize<ResourceContents>(saved.Json, McpJsonUtilities.DefaultOptions)
+                    ?? throw Unsupported("The saved MCP resource is empty.");
+            }
+        }
+
         throw Unsupported("The saved opaque provider item is outside the installed-package allowlist.");
     }
 
@@ -203,8 +233,8 @@ internal static class MafToolProtocolCodec {
     private static AgentToolAdmissionException Unsupported(string message)
         => new(AgentToolAdmissionException.UnsupportedProtocolCode, message);
 
-    private enum NativeProtocolKind { OpenAi, Ollama }
-    private sealed record SavedRawModel(NativeProtocolKind Kind, string Model, string Json);
+    private enum NativeProtocolKind { OpenAi, Ollama, Mcp }
+    private sealed record SavedRawModel(NativeProtocolKind Kind, string Model, string Json, string? Package = null);
     private sealed record CompressedResponse(byte[] Brotli);
     private sealed record SavedProtocol(string Packages, string Shape, JsonElement Value);
 }

@@ -1,0 +1,11 @@
+@using CanDoItAll.Components.Mermaid
+@using CanDoItAll.FileTools.FileInteraction.Components
+@implements IFileInteractionRendererComponent
+
+<MermaidDiagram Title="@Context.Request.FileName" Source="@Context.Text"
+                Style="--cda-mermaid-min-height:24rem;" data-testid="files-fixture-mermaid" />
+
+@code {
+    [Parameter, EditorRequired]
+    public FileInteractionRenderContext Context { get; set; } = default!;
+}

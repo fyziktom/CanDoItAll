@@ -1,0 +1,123 @@
+[
+  {
+    "id": "PERF-01",
+    "title": "Small edit read/save",
+    "workload": "1 editor; 1 project with 5 phases/7 options; uncontended same source/ref baseline",
+    "metrics": "p50/p95/p99, SQL count, rows, commit time, allocation; retain original expected stamp",
+    "candidate_gate": "Candidate save p95 +15% investigation threshold; no portfolio/global query",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-02",
+    "title": "Large editable collections",
+    "workload": "Sweep phases/options 10/100/1000 subject to reviewed product limits; identical mutation semantics",
+    "metrics": "Identity-match CPU, SQL writes/rows, request/result bytes, draft memory",
+    "candidate_gate": "No unbounded quadratic regression; reject unsupported size explicitly",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-03",
+    "title": "Disjoint projects and local stripes",
+    "workload": "1/8/32/64 concurrent writers; one host, unrelated IDs, record actual stripe mapping",
+    "metrics": "Throughput, local wait/hold vs database wait, connection pool saturation",
+    "candidate_gate": "Candidate disjoint throughput -10% investigation threshold",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-04",
+    "title": "Deliberate same-stripe interference",
+    "workload": "Two unrelated keys known to resolve to same runtime stripe; compare noncollision and authorized source branch",
+    "metrics": "Wait/hold per scope class; callback duration; no cross-record lost effect",
+    "candidate_gate": "No false claim all PostgreSQL writes follow the stripe branch",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-05",
+    "title": "Hot target and two hosts",
+    "workload": "Same-project saves and hierarchy changes; 2 independent processes over one isolated DB",
+    "metrics": "Conflict rate, successful throughput, retry count, lock wait, correct final content",
+    "candidate_gate": "No local-lock-only correctness; bounded database retries",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-06",
+    "title": "Decision-basis fan-out",
+    "workload": "Required inputs 1/8/32/128 within agreed limit, 1–3 owners, include membership/absence",
+    "metrics": "Roundtrips per owner batch, source guard hold time, serialization bytes",
+    "candidate_gate": "No per-row owner N+1; zero external calls during publication transaction",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-07",
+    "title": "Projection options",
+    "workload": "Same-database projection vs durable rebuild candidate; delayed old update, failed worker and index",
+    "metrics": "Primary p95, lock hold, WAL, backlog/oldest age, recovery drain rate",
+    "candidate_gate": "No stale projection overwrite or dropped required intention",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-08",
+    "title": "Draft and notification load",
+    "workload": "Two editors, typing during save, large rows, repeated close/open, coalesced notifications",
+    "metrics": "Retained draft bytes, allocation/GC, rerenders, interaction latency, leaked subscriptions",
+    "candidate_gate": "No lost text/identity; no shared mutable sessions; bounded repeated lifecycle memory",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-09",
+    "title": "Governed/external operation latency",
+    "workload": "Planning basis change during inference, provider accepts then timeout, bounded retries/replan",
+    "metrics": "Useful completions, stale-basis rate, replan/LLM cost, uncertain outcome age",
+    "candidate_gate": "No blind external replay; separate planning and publication cost",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-10",
+    "title": "Receipt/recovery capacity",
+    "workload": "Parameterized operation rate, compact/full retention horizons, restart and restore",
+    "metrics": "Row/index bytes, write amplification, lookup p95, retention batch cost",
+    "candidate_gate": "No evidence deletion before supported replay horizon; exact result lookup",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  },
+  {
+    "id": "PERF-11",
+    "title": "False conflicts and replanning",
+    "workload": "Rename-only vs objective change, task progress vs planning inputs, broad vs narrow revision candidates",
+    "metrics": "Benign conflict rate, agent recomputation, user resolution time, scope-write amplification",
+    "candidate_gate": "Only semantic evidence justifies splitting scopes; no invalidation from unrelated logs",
+    "status": "planned-not-measured",
+    "baseline": null,
+    "changed": null,
+    "environment": null
+  }
+]

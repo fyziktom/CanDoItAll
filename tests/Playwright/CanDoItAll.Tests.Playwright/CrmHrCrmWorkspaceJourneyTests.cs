@@ -109,12 +109,12 @@ public sealed class CrmHrCrmWorkspaceJourneyTests
 
             var connected = (await ReadAccountAsync(owner, seed.AccountId)).ConnectedRecords;
             Assert.Equal(2, connected.Count);
-            var contactConnection = Assert.Single(connected.Where(item => item.RelatedPartyId == seed.ContactId));
+            var contactConnection = Assert.Single(connected, item => item.RelatedPartyId == seed.ContactId);
             Assert.Equal(CrmAccountConnectionRole.PrimaryContact, contactConnection.Role);
             Assert.Equal(seed.ConnectionNote, contactConnection.Notes);
             Assert.Equal(seed.ContactName, contactConnection.DisplayName);
             Assert.True(contactConnection.IsPrimary);
-            var managerConnection = Assert.Single(connected.Where(item => item.RelatedPartyId == seed.ManagerId));
+            var managerConnection = Assert.Single(connected, item => item.RelatedPartyId == seed.ManagerId);
             Assert.Equal(CrmAccountConnectionRole.AccountManager, managerConnection.Role);
             Assert.False(managerConnection.IsPrimary);
             await AssertConnectionRowsAsync(page, seed);
@@ -156,9 +156,9 @@ public sealed class CrmHrCrmWorkspaceJourneyTests
             Assert.Equal(1, ownerActivity.ActionCount);
             Assert.Equal(1, ownerActivity.OverdueActionCount);
             await Assertions.Expect(page.GetByTestId("crmhr-account-activity-totals")).ToContainTextAsync($"{ownerActivity.TotalCount} activities");
-            var ownerInteraction = Assert.Single(ownerActivity.Items.Where(item =>
+            var ownerInteraction = Assert.Single(ownerActivity.Items, item =>
                 string.Equals(item.Kind, "Interaction", StringComparison.Ordinal) &&
-                string.Equals(item.Title, seed.InteractionSubject, StringComparison.Ordinal)));
+                string.Equals(item.Title, seed.InteractionSubject, StringComparison.Ordinal));
             Assert.True(ownerInteraction.IsOverdue);
             Assert.Contains(seed.ContactName, ownerInteraction.Meta, StringComparison.Ordinal);
             Assert.Contains($"Next action due {Iso(seed.FollowUpDueOn)}", ownerInteraction.Meta, StringComparison.Ordinal);
@@ -338,6 +338,7 @@ public sealed class CrmHrCrmWorkspaceJourneyTests
             var profile = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
             {
                 AccountPartyId = id,
+                Original = (await crmService.GetAccountProfileAsync(id))!.Original,
                 RelationshipStage = CrmAccountRelationshipStage.Prospect,
                 CommercialNotes = notes,
                 LastChangedBy = "playwright-tests"

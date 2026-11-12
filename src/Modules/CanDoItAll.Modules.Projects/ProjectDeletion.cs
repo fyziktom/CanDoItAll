@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Projects;
@@ -8,6 +9,10 @@ public static class ProjectMutationScopeKeys
 
     public static string ForProject(Guid projectId)
         => $"project:{projectId:D}";
+
+    internal static string ForLifecycleOperation(ProjectLifecycleOperation operation, ProjectMutationCallerKind kind, ProjectCallerKey key)
+        => FormattableString.Invariant(
+            $"projects:lifecycle-operation:{operation.Namespace.Value:D}:{operation.Epoch.Value}:{(int)kind}:{key.Hex}:{operation.Id:D}");
 }
 
 public sealed record ProjectDeletionParticipantPreparation(
@@ -28,38 +33,29 @@ public readonly record struct ProjectDeletionPreparationScopeKey
         => Value;
 }
 
-/// <summary>
-/// Identifier of a project-deletion participant, the module part that cleans up its own data after a project is
-/// deleted. It is serialized as an object with one member, for example <c>{ "value": "workbench" }</c>; send the
-/// <c>value</c> text as <c>participantId</c> in the cleanup retry route.
-/// </summary>
-public readonly record struct ProjectDeletionParticipantId
-{
-    public ProjectDeletionParticipantId(string value)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value);
-        Value = value.Trim();
-    }
-
-    /// <summary>
-    /// Text identifier of the participant, currently <c>workbench</c> (Project Structure nodes and managed media) or
-    /// <c>agent-project-structure-access</c> (agents' access to the project). Never null in responses.
-    /// </summary>
-    public string Value { get; }
-
-    public override string ToString()
-        => Value;
-}
-
 public interface IProjectDeletionParticipant
 {
     ProjectDeletionParticipantId Id { get; }
 
+    int RecoveryProtocolVersion { get; }
+
     IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; }
+
+    Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This participant cannot stage exact never-created reservation cancellation.");
+
+    Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectDeletionPreparationContext original,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This deletion participant cannot persist the original durable completion binding.");
 
     Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
         Guid projectId,
         CancellationToken cancellationToken = default);
+
+    Task<ProjectDeletionParticipantObservation> ObserveCompletionAsync(ProjectDeletionPreparationContext original,
+        Guid recoveryId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Exact deletion completion observation is not supported.");
 
     Task<ProjectDeletionParticipantCompletion> CompleteAsync(
         ProjectDeletionParticipantPreparation preparation,
@@ -277,7 +273,10 @@ public sealed record ProjectDeletionRecoveryFailure(
 public sealed record ProjectDeletionRecovery(
     Guid ProjectId,
     IReadOnlyList<ProjectDeletionRecoveryFailure> Failures,
-    string RetryGuidance);
+    string RetryGuidance,
+    bool OwnerCompletionUnconfirmed = false) {
+    public IReadOnlyList<ProjectDeletionRecoveryFailure> Failures { get; init; } = Failures.ToImmutableArray();
+}
 
 public sealed class ProjectDeletionPartialCommitException : Exception
 {

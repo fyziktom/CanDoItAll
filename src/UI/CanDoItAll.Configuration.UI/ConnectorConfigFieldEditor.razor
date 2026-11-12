@@ -1,0 +1,77 @@
+@namespace CanDoItAll.Configuration.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.SharedKernel.Configuration
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+
+<FormField Text="@Field.Label" Class="w-full">
+    @switch (Field.FieldType) {
+        case ConfigurationFieldType.Boolean:
+            <InputCheckbox Value="State.GetBoolean(Field.Key)" ValueChanged="HandleBooleanChanged"
+                           ValueExpression="() => BooleanValue" data-testid="@TestId" />
+            break;
+        case ConfigurationFieldType.Json:
+        case ConfigurationFieldType.MultilineText:
+            <TextArea Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
+                      Rows="4" Class="@InputClass" Style="width:100%" data-testid="@TestId" />
+            break;
+        case ConfigurationFieldType.Select:
+        case ConfigurationFieldType.SecretReference:
+            <InputSelect TValue="string" Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged"
+                         ValueExpression="() => TextValue" class="@($"{InputClass} w-full")" data-testid="@TestId">
+                @if (Field.FieldType == ConfigurationFieldType.SecretReference) {
+                    <option value="">None</option>
+                    @if (!string.IsNullOrWhiteSpace(TextValue) && (!Guid.TryParse(TextValue, out var selectedSecret) || !Secrets.Any(secret => secret.Id == selectedSecret))) {
+                        <option value="@TextValue">Unavailable secret (@TextValue)</option>
+                    }
+                    @foreach (var secret in Secrets) {
+                        <option value="@secret.Id">@secret.Name</option>
+                    }
+                } else {
+                    @if (!string.IsNullOrWhiteSpace(TextValue) && !Field.Options.Any(option => option.Value == TextValue)) {
+                        <option value="@TextValue">Unavailable option (@TextValue)</option>
+                    }
+                    @foreach (var option in Field.Options) {
+                        <option value="@option.Value">@option.Label</option>
+                    }
+                }
+            </InputSelect>
+            break;
+        default:
+            <TextBox Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
+                     Class="@InputClass" Style="width:100%" data-testid="@TestId" />
+            break;
+    }
+    @if (!string.IsNullOrWhiteSpace(Field.HelpText)) {
+        <TextBlock TextStyle="TextStyle.Caption" Value="@Field.HelpText" />
+    }
+</FormField>
+
+@code {
+    [Parameter, EditorRequired] public ConfigurationFieldDescriptor Field { get; set; } = default!;
+    [Parameter, EditorRequired] public ConfigurationState State { get; set; } = default!;
+    [Parameter] public ConfigurationInputDraft? Draft { get; set; }
+    [Parameter] public IReadOnlyList<ConfigurationSecretOption> Secrets { get; set; } = [];
+    [Parameter] public string InputClass { get; set; } = "cda-input";
+    [Parameter] public string? TestId { get; set; }
+    [Parameter] public EventCallback<ConfigurationState> StateChanged { get; set; }
+    private ConfigurationInputDraft? ownedDraft;
+    private ConfigurationInputDraft Input => Draft ?? ownedDraft!;
+    private string TextValue => Input.Text(Field.Key);
+    private bool BooleanValue => State.GetBoolean(Field.Key);
+
+    protected override void OnParametersSet() {
+        if (Draft is not null && !ReferenceEquals(Draft.State, State)) {
+            throw new InvalidOperationException("The configuration draft must own the supplied state.");
+        }
+        if (ownedDraft is null || !ReferenceEquals(ownedDraft.State, State)) {
+            ownedDraft = new(State);
+        }
+    }
+
+    private async Task HandleTextChanged(string value) {
+        Input.SetText(Field.Key, value);
+        await StateChanged.InvokeAsync(State);
+    }
+    private Task HandleBooleanChanged(bool value) => HandleTextChanged(value ? bool.TrueString : bool.FalseString);
+}

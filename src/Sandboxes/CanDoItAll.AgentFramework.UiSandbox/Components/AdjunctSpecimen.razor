@@ -1,0 +1,98 @@
+@page "/adjuncts"
+@using System.Security.Cryptography
+@using CanDoItAll.AgentFramework.Components
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.UI.Avatars
+@using CanDoItAll.AgentFramework.UI.Chat
+@using CanDoItAll.AgentFramework.UI.Runtime
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Agents runtime and conversation sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" Class="p-6">
+    <PageHeader Title="Agents runtime and conversation sandbox" Description="Actual adjunct renderers with owned sample data and deterministic image operations." Compact="true" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        @foreach (var item in Enum.GetValues<AdjunctScenario>()) {
+            <Button Text="@item.ToString()" Click="@(() => scenario = item)" data-testid="@($"adjunct-{item}")" />
+        }
+        <Button Text="Open log" Click="@(() => showLog = true)" data-testid="adjunct-open-log" />
+        <Button Text="Close choices" Click="@(() => showClose = true)" data-testid="adjunct-open-close" />
+        <Button Text="Second instance" Click="@(() => showSecond = !showSecond)" data-testid="adjunct-second" />
+    </Cluster>
+    <output data-testid="adjunct-intent" aria-live="polite">@intent</output>
+    <SurfaceCard>
+        <AgentConversationContextSurface State="context" Intent="ContextIntent">
+            <AgentActivitySurface State="@(new(new(Guid.Parse("ac100000-0000-4000-8000-000000000033")), scenario.ToString(), AdjunctSandboxFixture.Tone(scenario), "Projected activity remains separate from the saved run.", scenario == AdjunctScenario.Partial))" />
+            <Cluster Gap="LayoutGap.Small">
+                <AgentChatActionsSurface State="actions" Intent="@(value => intent = $"Sample {value.Action} / {value.Origin.RunId}")" />
+                <AgentImageAttachmentPicker Generation="1" Selected="ReadAttachmentAsync" />
+                <AvatarPickerSurface Value="@avatar" ValueChanged="@(value => avatar = value)" EntityName="Owned sample" Operations="avatarOperations"
+                                     Notice="@(value => intent = $"{value.Kind}: {value.Detail}")" />
+            </Cluster>
+        </AgentConversationContextSurface>
+    </SurfaceCard>
+    <AgentRuntimeDetailsSurface State="AdjunctSandboxFixture.Runtime(scenario)" />
+    @if (showSecond) {
+        <SurfaceCard data-testid="adjunct-independent">
+            <PageHeader Title="Independent completed run" Description="Closing the first log or context choices leaves this view intact." Compact="true" />
+            <AgentExecutionLogSurface State="@(AdjunctSandboxFixture.Log(AdjunctScenario.Completed) with { Entries = [AdjunctSandboxFixture.Log(AdjunctScenario.Completed).Entries[0] with { RunId = secondRun }] })" />
+        </SurfaceCard>
+    }
+</Stack>
+@if (showLog) {
+    <Dialog IsOpen="true" Title="Execution log" Size="ModalSize.Wide" TestId="adjunct-log-dialog" OnClose="@(() => showLog = false)">
+        <ChildContent><AgentExecutionLogSurface State="AdjunctSandboxFixture.Log(scenario)" /></ChildContent>
+        <Footer><Button Text="Close log" Click="@(() => showLog = false)" data-testid="adjunct-close-log" /></Footer>
+    </Dialog>
+}
+@if (showClose) {
+    <Dialog IsOpen="true" Title="Close active chat" Size="ModalSize.Compact" TestId="adjunct-choice-dialog" OnClose="@(() => showClose = false)">
+        <ChildContent><AgentFloatingCloseSurface State="close" Intent="CloseIntent" /></ChildContent>
+    </Dialog>
+}
+<Tooltip />
+
+@code {
+    private AdjunctScenario scenario;
+    private string intent = "No sample action yet.";
+    private string avatar = string.Empty;
+    private bool showLog;
+    private bool showClose;
+    private bool showSecond;
+    private readonly Guid secondRun = new("ac100000-0000-4000-8000-000000000034");
+    private AgentConversationContextState context = new(new(Guid.NewGuid(), new(Guid.NewGuid()), Guid.NewGuid(), null, null),
+        "Owned source A", true, false, "Following: source A / files", "Next turn: source B / document");
+    private readonly AgentFloatingCloseState close = new(Guid.NewGuid(), new(Guid.NewGuid()), "Owned sample", true, true);
+    private readonly AgentChatActionState actions = new(new(1, Guid.NewGuid(), Guid.NewGuid(), AdjunctSandboxFixture.RunId), null, false, false, true, false, true, false, true);
+    private static readonly AvatarPickerOperations avatarOperations = new(
+        _ => Task.FromResult<AvatarGenerationSource?>(null),
+        (_, _) => Task.FromException<AvatarGenerationResult>(new InvalidOperationException("No image service is configured in this sample.")),
+        ReadImageAsync);
+
+    private void ContextIntent(AgentConversationContextIntent value) {
+        if (value.Origin != context.Origin) {
+            return;
+        }
+        var detached = value.Mode == AgentConversationContextMode.Detached;
+        context = context with { Detached = detached, Affinity = detached ? "Detached from application context" : "Following: source B / document", PendingContext = null };
+        intent = $"Sample {value.Mode} / original handle {value.Origin.HandleId}";
+    }
+
+    private void CloseIntent(AgentFloatingCloseIntent value) {
+        showClose = false;
+        intent = $"Sample {value.Choice} / original handle {value.HandleId}. Durable approval remains undecided.";
+    }
+
+    private async Task ReadAttachmentAsync(AgentImageSelection selection) {
+        foreach (var file in selection.Files.GetMultipleFiles(4)) {
+            await using var stream = file.OpenReadStream(AgentAvatarImagePolicy.MaxAvatarBytes);
+            intent = $"Sample file {file.Name} / {file.Size} bytes / SHA256 {Convert.ToHexString(await SHA256.HashDataAsync(stream))} / generation {selection.Generation}";
+        }
+    }
+
+    private static async Task<string> ReadImageAsync(IBrowserFile file, CancellationToken token) {
+        await using var stream = file.OpenReadStream(AgentAvatarImagePolicy.MaxAvatarBytes, token);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, token);
+        return AgentAvatarImagePolicy.BuildDataUrl(file.ContentType, memory.ToArray());
+    }
+}

@@ -52,6 +52,11 @@ public sealed class WorkflowLlmComponentInvoker(
             new LlmMessage(LlmMessageRole.System, node.Settings.Instructions.Trim()),
             new LlmMessage(LlmMessageRole.User, BuildPrompt(definition, node, effectiveComponent, input))
         };
+        var modelParameters = effectiveComponent.ModelSettings.MaxOutputTokens is { } maximum
+            ? JsonSerializer.Serialize(new Dictionary<string, int> {
+                [AgentProviderModelParameterPolicy.MaxOutputTokensConfigurationPropertyName] = maximum
+            })
+            : string.Empty;
         var request = new LlmInvocationRequest(
             provider,
             model,
@@ -63,7 +68,7 @@ public sealed class WorkflowLlmComponentInvoker(
                     "workflow_llm_component_result",
                     $"Workflow LLM component '{effectiveComponent.Name}' JSON result.")
                 : null,
-            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature),
+            settings: new LlmModelSettings(effectiveComponent.ModelSettings.Temperature, modelParameters),
             correlationId: $"workflow:{definition.Id:N}:{node.Id}") {
                 History = WorkflowHistoryInvocation.Create(invocationId)
             };
@@ -126,14 +131,17 @@ public sealed class WorkflowLlmComponentInvoker(
         var payload = response.ResponseText.Trim();
         try
         {
-            if (RequiresJsonOutput(component))
+            if (requiresJson)
             {
-                ValidateJsonPayload(payload, node, component);
+                ValidateJsonPayload(payload, node, effectiveComponent);
             }
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            throw new WorkflowUsageObservationException(exception.Message, exception, usageObservations);
+            var message = effectiveComponent.ModelSettings.MaxOutputTokens is { } limit && response.Usage.OutputTokens >= limit
+                ? $"LLM workflow node '{node.Id}' returned invalid JSON after reaching its configured output limit of {limit} tokens. Increase the component output budget or reduce the required output. {exception.Message}"
+                : exception.Message;
+            throw new WorkflowUsageObservationException(message, exception, usageObservations);
         }
 
         return new WorkflowNodeExecutionResult(

@@ -81,7 +81,15 @@
                         Click="OpenCreateEditor"
                         data-testid="llm-chat-definition-create" />
             }
+            @if (Presentation.CanRead) {
+                <Button Text="Refresh definitions" Icon="refresh" Variant="Variant.Outlined" Click="@(() => OnIntent.InvokeAsync(new DefinitionCatalogIntent.Refresh()))"
+                        Disabled="@Presentation.IsBusy" data-testid="llm-chat-definition-refresh" />
+            }
         </Split>
+
+        @if (Presentation.NeedsRefresh) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="llm-chat-definition-updates">Definitions changed. Refresh the catalog; open drafts and conversations are retained.</Alert>
+        }
 
         @if (Presentation.Phase == DefinitionCatalogPhase.Authorizing) {
             <LoadingState Title="Checking definition access" Description="Checking Simple Chats permissions." />

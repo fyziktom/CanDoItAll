@@ -11,6 +11,50 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 
 public sealed class AgentVoiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Voice_settings_do_not_bless_an_older_form_with_a_fresh_workflow_revision(bool missingOriginal) {
+        var catalog = new InMemoryWorkflowCatalogService(new WorkflowDefinitionValidator());
+        var original = await catalog.SaveSettingsAsync(WorkflowSettings.Default);
+        var driver = new CapturingVoiceDriver([]);
+        var service = new AgentVoiceService(catalog, new InMemoryProviderRegistry([]), new StaticVoiceDriverFactory(driver, driver),
+            new AgentVoiceSpeechTextPreprocessor());
+        var draft = await service.GetSettingsAsync();
+        Assert.Equal(original.UpdatedAtUtc, draft.UpdatedAtUtc);
+        draft.SampleText = "Unsaved local voice sample";
+        if (missingOriginal) {
+            draft.UpdatedAtUtc = null;
+        }
+        var winner = await catalog.SaveSettingsAsync(original with {
+            ArtifactPolicy = original.ArtifactPolicy with { MaxInlinePayloadCharacters = 512 }
+        });
+        await Assert.ThrowsAsync<WorkflowSettingsConcurrencyException>(() => service.SaveSettingsAsync(draft));
+        Assert.Equal(JsonSerializer.Serialize(winner), JsonSerializer.Serialize(await catalog.GetSettingsAsync()));
+        Assert.Equal("Unsaved local voice sample", draft.SampleText);
+    }
+
+    [Fact]
+    public async Task Voice_save_returns_the_new_original_and_preserves_other_workflow_settings() {
+        var catalog = new InMemoryWorkflowCatalogService(new WorkflowDefinitionValidator());
+        var original = await catalog.SaveSettingsAsync(WorkflowSettings.Default with {
+            ArtifactPolicy = WorkflowSettings.Default.ArtifactPolicy with { MaxInlinePayloadCharacters = 512 }
+        });
+        var driver = new CapturingVoiceDriver([]);
+        var service = new AgentVoiceService(catalog, new InMemoryProviderRegistry([]), new StaticVoiceDriverFactory(driver, driver),
+            new AgentVoiceSpeechTextPreprocessor());
+        var draft = await service.GetSettingsAsync();
+        draft.SampleText = "First voice sample";
+        var accepted = await service.SaveSettingsAsync(draft);
+        Assert.True(accepted.UpdatedAtUtc > original.UpdatedAtUtc);
+        Assert.Equal(accepted.UpdatedAtUtc, (await service.GetSettingsAsync()).UpdatedAtUtc);
+        accepted.SampleText = "Second voice sample";
+        var next = await service.SaveSettingsAsync(accepted);
+        Assert.True(next.UpdatedAtUtc > accepted.UpdatedAtUtc);
+        Assert.Equal("Second voice sample", (await service.GetSettingsAsync()).SampleText);
+        Assert.Equal(512, (await catalog.GetSettingsAsync()).ArtifactPolicy.MaxInlinePayloadCharacters);
+    }
+
     [Fact]
     public void VoiceAccessMetadata_WriteAndRead_RoundTrips()
     {
@@ -272,9 +316,10 @@ public sealed class AgentVoiceTests
             new StaticVoiceDriverFactory(new CapturingVoiceDriver([]), new CapturingVoiceDriver([])),
             new AgentVoiceSpeechTextPreprocessor());
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() =>
             service.TranscribeAsync(new AgentVoiceTranscriptionRequest([1], "voice.webm", "audio/webm")));
 
+        Assert.Equal(AgentVoiceFailureKind.ProviderUnavailable, exception.Kind);
         Assert.Contains("provider profile must be selected", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -339,10 +384,10 @@ public sealed class AgentVoiceTests
             harness,
             new AgentVoiceSpeechTextPreprocessor());
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() =>
             service.SynthesizeSampleAsync("hello"));
 
-        Assert.Contains("OpenAI text-to-speech requires an enabled OpenAI chat provider profile", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(AgentVoiceFailureKind.CapabilityUnavailable, exception.Kind);
     }
 
     [Fact]
@@ -409,11 +454,10 @@ public sealed class AgentVoiceTests
             harness,
             new AgentVoiceSpeechTextPreprocessor());
 
-        var exception = await Assert.ThrowsAsync<UnsupportedProviderCapabilityException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() =>
             service.SynthesizeSampleAsync("hello"));
 
-        Assert.Equal(ProviderKind.Ollama, exception.ProviderKind);
-        Assert.Equal(AgentProviderCapabilityKind.TextToSpeech, exception.Capability);
+        Assert.Equal(AgentVoiceFailureKind.CapabilityUnavailable, exception.Kind);
     }
 
     [Fact]
@@ -551,7 +595,7 @@ public sealed class AgentVoiceTests
             new StaticVoiceDriverFactory(driver, driver),
             new AgentVoiceSpeechTextPreprocessor());
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() =>
             service.TranscribeAsync(new AgentVoiceTranscriptionRequest([], "voice.webm", "audio/webm")
             {
                 AudioChunks = [new AgentVoiceAudioChunk([], "voice-1.webm", "audio/webm")]
@@ -559,6 +603,78 @@ public sealed class AgentVoiceTests
 
         Assert.Contains("audio chunk 1 is empty", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(driver.TranscriptionRequests);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task VoiceService_disabled_features_fail_before_provider_dispatch(bool transcribe) {
+        var (service, driver) = CreateVoiceService(CreateProvider(), enabled: false);
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() => InvokeVoiceAsync(service, transcribe));
+
+        Assert.Equal(AgentVoiceFailureKind.Disabled, exception.Kind);
+        Assert.Empty(driver.TranscriptionRequests);
+        Assert.Empty(driver.SynthesisRequests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VoiceService_missing_or_disabled_provider_fails_explicitly(bool exists) {
+        var (service, driver) = CreateVoiceService(exists ? CreateProvider() with { IsEnabled = false } : null);
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() => InvokeVoiceAsync(service, transcribe: false));
+
+        Assert.Equal(AgentVoiceFailureKind.ProviderUnavailable, exception.Kind);
+        Assert.Empty(driver.SynthesisRequests);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task VoiceService_rejects_shared_provider_audio_before_dispatch(bool transcribe) {
+        var provider = CreateProvider() with {
+            CredentialBinding = new ProviderCredentialBinding(Guid.NewGuid(), ProviderCredentialPurpose.SourceAccessToken,
+                ProviderCredentialConsumerKind.Source, Guid.NewGuid())
+        };
+        var (service, driver) = CreateVoiceService(provider);
+        await Assert.ThrowsAsync<ProviderAudioCapabilityException>(() => InvokeVoiceAsync(service, transcribe));
+
+        Assert.Empty(driver.TranscriptionRequests);
+        Assert.Empty(driver.SynthesisRequests);
+    }
+
+    [Fact]
+    public async Task VoiceService_denied_agent_cannot_override_voice_access() {
+        var (service, driver) = CreateVoiceService(CreateProvider());
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() => service.SynthesizeAsync(
+            new AgentVoiceSynthesisRequest("Synthetic speech", new AgentVoiceAccessSettings { CanUseVoiceMode = false }, "marin")));
+
+        Assert.Equal(AgentVoiceFailureKind.AccessDenied, exception.Kind);
+        Assert.Empty(driver.SynthesisRequests);
+    }
+
+    [Fact]
+    public async Task VoiceService_empty_single_transcript_fails_instead_of_returning_success() {
+        var (service, driver) = CreateVoiceService(CreateProvider());
+        var exception = await Assert.ThrowsAsync<AgentVoiceException>(() => InvokeVoiceAsync(service, transcribe: true));
+
+        Assert.Equal(AgentVoiceFailureKind.ProviderUnavailable, exception.Kind);
+        Assert.Single(driver.TranscriptionRequests);
+    }
+
+    private static Task InvokeVoiceAsync(IAgentVoiceService service, bool transcribe) => transcribe
+        ? service.TranscribeAsync(new AgentVoiceTranscriptionRequest([1], "voice.webm", "audio/webm"))
+        : service.SynthesizeAsync(new AgentVoiceSynthesisRequest("Synthetic speech"));
+
+    private static (AgentVoiceService Service, CapturingVoiceDriver Driver) CreateVoiceService(ProviderProfile? provider, bool enabled = true) {
+        var driver = new CapturingVoiceDriver([]);
+        var settings = new AgentVoiceSettings {
+            SpeechToText = new AgentSpeechToTextSettings { IsEnabled = enabled, ProviderProfileId = provider?.Id ?? Guid.NewGuid() },
+            TextToSpeech = new AgentTextToSpeechSettings { IsEnabled = enabled, ProviderProfileId = provider?.Id ?? Guid.NewGuid() }
+        };
+        return (new AgentVoiceService(new InMemoryWorkflowSettingsService(settings),
+            new InMemoryProviderRegistry(provider is null ? [] : [provider]), new StaticVoiceDriverFactory(driver, driver),
+            new AgentVoiceSpeechTextPreprocessor()), driver);
     }
 
     private static ProviderProfile CreateProvider(

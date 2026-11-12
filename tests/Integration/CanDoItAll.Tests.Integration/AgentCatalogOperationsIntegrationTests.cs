@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
+[Trait("Category", "HostPlatform")]
 public sealed class AgentCatalogOperationsIntegrationTests {
     [Fact]
     public async Task Real_operations_respect_initial_data_and_repair_then_reload() {
@@ -34,9 +35,11 @@ public sealed class AgentCatalogOperationsIntegrationTests {
         var target = await workspace.SaveAgentTeamAsync(new AgentTeamEditorModel { Name = "Catalog seam target" });
         var other = await workspace.SaveAgentTeamAsync(new AgentTeamEditorModel { Name = "Catalog seam survivor" });
         var operations = scope.ServiceProvider.GetRequiredService<IAgentCatalogOperations>();
-        await operations.UpdateMembersAsync(target, [agent.Id]);
-        Assert.Equal([agent.Id], (await workspace.ListAgentTeamsAsync()).Single(team => team.Id == target).AgentIds);
-        await operations.DeleteTeamAsync(target);
+        var original = (await workspace.ListAgentTeamsAsync()).Single(team => team.Id == target);
+        await operations.UpdateMembersAsync(target, [agent.Id], original.UpdatedAtUtc);
+        var updated = (await workspace.ListAgentTeamsAsync()).Single(team => team.Id == target);
+        Assert.Equal([agent.Id], updated.AgentIds);
+        await operations.DeleteTeamAsync(target, updated.UpdatedAtUtc);
         var teams = await workspace.ListAgentTeamsAsync();
         Assert.DoesNotContain(teams, team => team.Id == target);
         Assert.Contains(teams, team => team.Id == other);

@@ -19,7 +19,9 @@ public sealed class PluginsDbContextTests {
             .Select(entity => entity.ClrType).OrderBy(type => type.Name));
         Assert.All(context.Model.GetEntityTypes(), entity => {
             Assert.Empty(entity.GetForeignKeys());
-            Assert.False(entity.FindProperty(nameof(IHasConcurrencyToken.ConcurrencyToken))!.IsConcurrencyToken);
+            var guarded = entity.ClrType == typeof(PluginCapabilityGrantRecord) || entity.ClrType == typeof(PluginConnectionRecord) ||
+                entity.ClrType == typeof(PluginOAuthSessionRecord) || entity.ClrType == typeof(PluginOAuthConnectionRecord);
+            Assert.Equal(guarded, entity.FindProperty(nameof(IHasConcurrencyToken.ConcurrencyToken))!.IsConcurrencyToken);
         });
         Assert.Throws<InvalidOperationException>(() => context.Set<Project>().ToQueryString());
     }

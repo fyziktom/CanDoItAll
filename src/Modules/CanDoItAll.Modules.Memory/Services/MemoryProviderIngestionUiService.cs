@@ -1,5 +1,6 @@
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Memory.Services;
 
@@ -7,7 +8,8 @@ public sealed class MemoryProviderIngestionUiService(
     ManualMemorySourceIngestionService manualIngestionService,
     IMemoryOperationLedgerStore operationLedgerStore,
     MemoryProviderUiRequestFactory requestFactory,
-    MemoryProviderExecutableActionGuard actionGuard)
+    MemoryProviderExecutableActionGuard actionGuard,
+    ILogger<MemoryProviderIngestionUiService> logger)
 {
     public async Task<MemoryProviderManualIngestionUiResult> EnqueueAsync(
         string? selectedProviderInstanceId,
@@ -15,6 +17,7 @@ public sealed class MemoryProviderIngestionUiService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(editor);
+        editor = editor.Capture();
         await actionGuard.EnsureProviderCanExecuteAsync(
             selectedProviderInstanceId,
             MemoryCapabilityIds.IngestionSnapshot,
@@ -32,14 +35,21 @@ public sealed class MemoryProviderIngestionUiService(
                 requestFactory.CreateRequester(),
                 requestFactory.CreateRetentionPolicy()),
             cancellationToken);
-        var operation = await operationLedgerStore.GetAsync(result.OperationId, cancellationToken);
+        MemoryOperationRecord? operation = null;
+        var readFailed = false;
+        try {
+            operation = await operationLedgerStore.GetAsync(result.OperationId, cancellationToken);
+        } catch (Exception exception) {
+            readFailed = true;
+            logger.LogWarning("Memory ingestion job {JobId}, operation {OperationId} was accepted; its ledger read failed with {ExceptionType}.", result.JobId, result.OperationId.Value, exception.GetType().Name);
+        }
         return new MemoryProviderManualIngestionUiResult(
-            MemoryOperationHandlerStatus.Accepted,
-            "Source snapshot captured and queued for provider ingestion.",
+            MemoryProviderActionStatus.Accepted,
+            readFailed ? "Source snapshot captured and queued. Its ledger could not be read; do not enqueue it again." : "Source snapshot captured and queued for provider ingestion.",
             result.JobId,
             result.OperationId,
             result.CapturedSnapshotId.Value,
-            operation is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(operation));
+            operation is null ? null : MemoryProviderUiRecordMapper.ToUiRecord(operation)) { SnapshotReadFailed = readFailed };
     }
 
     private static IReadOnlyList<string> SplitTags(string tags) =>

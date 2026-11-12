@@ -1,0 +1,142 @@
+# WCL-DEL1: Agent deletion cannot confirm cleanup after completed history runs
+
+Status: **Closed on the final R2 source pair**. The original failed attempt
+below remains failed. R2 reproduced the exact retained bytes in a new private root: deletion
+throws `InvalidDataException` while subtracting the canonical receipt count, before journal
+admission. The index records two receipts while the target's two terminal runs own four;
+seven receipt files exist in the scope. The independent audit writer persists receipts and
+artifacts before run-detail persistence, so its subsequent index delta can be zero.
+
+`LoadIndexForAgentDeletionAsync` now reconciles only session, receipt and artifact counts
+from their existing physical owner paths. It preserves the revision and all other strict
+counters. Target run consistency and pending approval checks run before deletion admission.
+No journal format, provider-history retention policy, lease or UI boundary changes.
+This metadata reconciliation can write before journal admission; a missing journal still
+does not prove no effects. Corrupt log counters and foreign run payloads remain refused.
+
+New ignored evidence lives under `artifacts/workspace-closure-r2/20260930-6b05246f7`.
+`deletion-baseline.json` records the original failure with no changed file bytes;
+`deletion-final.json` records deletion of the same Agent, one session and two runs after
+the final owner checks. `del-owner-04` passes all 28 discovered cases, including real audit
+writer histories, survivor bytes, all journal boundaries, restart, cancellation, pending
+approval, unresolved effects and foreign payload refusal. Those were interim owner checks. The completed UI/owner closure below supersedes
+that pending disposition; all original failed attempts remain retained.
+
+## Final R2 UI and owner closure
+
+Application `f09a44a196ea139d1d37cb3ce2bcb33c6cdffd91` with Components
+`4a858412d2c2a3f6123bf23d8c4584f05b47627d` completes the new real scripted two-turn
+history journey and its actual UI deletion. An independent observer captures both successful
+terminal runs before deletion; owner read-back confirms 77 removed target files, 174 unchanged
+unrelated files, exactly five changed catalog/index files, no pending deletion journal,
+and the retained CRM binding projected Missing/Error. All four client history entries and
+attempts match both exact runtime request/usage identities; publisher and relay histories
+remain under their own retention policy. No live model call was issued.
+
+The original retained Agent `6fba9f8d-329c-43b5-ae00-afe220d5a56a` also deletes through
+the recovered private UI. Its 77 target files are removed; 176 unrelated files and all 18
+provider-history rows remain unchanged. The target CRM binding changes availability/status
+while the other 31 bindings remain semantically unchanged. Background maintenance checkpoint
+clocks are separate effects, so whole-database byte equality is not claimed. That UI proof
+uses `12086beedd8e5d642bb1beb9404bc2ebd6745a0d`; the final source comparison proves production
+owner/renderer bytes unchanged across the recorded 02→03→04→05 comparisons. Later changes
+affect test observation and the TestLab validation sandbox, which the application does not consume.
+
+The separate `late-delete-retirement` controls use byte-identical frozen UI/test assemblies.
+They hold an admitted deletion reply across A→B and A→B→A, then verify exactly one original
+owner call and the still-open successor dialog with its unsaved draft intact. Their controlled
+owner boundary supplements, rather than substitutes for, the actual durable owner cases.
+
+Controlling records are `scripted-history-05-owner-observation.json`,
+`scripted-history-05-owner-verification.json`, `external-provider-history-05/result.trx`,
+`original-agent-ui-delete.json`, `original-ui-owner-verification.json`, and
+`source-scope-equivalence-02-03.json`, `source-scope-equivalence-03-04.json` and
+`source-scope-equivalence-04-05.json` in the R2 evidence root. Final full Stable and Linux
+owner controls pass. Private snapshots are preserved in `private-owner-snapshots.dpapi`
+with round-trip hashes and restore instructions; earlier plaintext copies were removed before
+the later unrelated runtime-input cleanup rejection. The final three snapshots are separate
+DPAPI archives captured from Docker through memory, without writing plaintext archive files. The historical investigation below records
+what was known at that time, not a remaining instruction to repeat this repair.
+
+## Original operation, scope and effects
+
+The private client runs published application `3d7c88f384b7920744464a7c7570530ca825325a`
+with Components `22d5b21afdf80c2bca74c1c598f0b1bb72c86f9e`. The test observation correction,
+subsequently signed in `2f658cda606c8ab13f71025ff33023b9c220bcad`, only compares the exact
+legitimate request identities. It does not change the deletion or provider protocol.
+
+`final-shared-history-02` executes two Agent turns against the scripted external fixture.
+Both complete and create durable session/run/history records. Exact global/provider history
+IDs agree: two client attempts, four publisher attempts for credential A (tool and result
+continuations), and one disjoint direct-relay attempt for credential B. Lazy-load and content
+assertions pass. Cleanup confirms deletion through the actual Agent editor, but it reports
+"Agent delete failed" and "The deletion result could not be confirmed. Reload the catalog
+before retrying." A manual UI attempt reproduces the failure at 18:11:25.611Z; a fresh page
+reload still shows the same Agent. No successful deletion, rollback or partial durable
+effect is inferred. Further deletion attempts stopped.
+
+The original Agent ID is `6fba9f8d-329c-43b5-ae00-afe220d5a56a`; session ID is
+`c27a59ce-34ca-4e7d-84e7-68a632b06ae0`. The runs are
+`723aea90-860f-435f-b8b2-a5f70d0cf4c2` (completed 18:04:47.4395887Z) and
+`af767546-37e5-4c28-8287-e93b3d1b8f61` (completed 18:04:57.9636134Z).
+Their original scope in owned container `candoitall-wcl-client-6345bb57` is
+`/data/workspace/data/scopes/organization/356015a2e7dfe2cea5be277c35b6c071`.
+These are task fixture identities, not retained customer data.
+
+## Causal map and limits
+
+The call chain is `AgentDetailsDialog.DeleteAgentAsync` → `AgentEditorCommands` →
+`CurrentProfileAgentFrameworkWorkspaceService` → `AgentFrameworkWorkspaceCatalogService`
+→ `FileSandboxWorkspaceStore.DeleteAgentWorkspaceDataAsync` → coordinated execution/chat/
+usage/catalog deletion and journal → CRM/HR projection refresh. The current UI catch does
+not retain the underlying owner exception, so the failing stage is unknown. The server log
+does not establish a PostgreSQL delete/foreign-key error. A confirmation dialog does not
+make this a Dialog lifetime defect.
+
+Original read-back shows both runs Completed/Succeeded at revision 8, zero pending
+approvals and `HasUnresolvedEffects=false`; summary identities match. Execution, chat and
+usage indexes all have revision 177 and agree on five sessions/five runs. No pending Agent
+deletion journal exists. Both stored run records retain non-null active dispatch lease IDs,
+but the inspected deletion guard uses state/unresolved effects; that field is not an
+established cause. The evidence cannot prove which irreversible commit stage, if any, ran.
+
+The full test and manual reproduction are current-source observations. No claim is made
+that this regression originated in the closure edits. Do not force-delete the fixture,
+widen grants, rewrite indexes, replay services, remove the cleanup assertion, or recreate
+the workspace and present that as preservation of the original effects.
+
+## Evidence and bounded continuation
+
+Ignored root: `artifacts/workspace-closure/20260930-d9273a889`.
+`history-delete-finding-final.json` contains the safe projection and original byte hashes;
+`final-shared-history-02-media/history-attempt-identities.json` contains only compared IDs.
+`history-agent-delete-failure.png` shows the retained editor after the toast expired; it is
+not an image of the toast. The prior projection's `originalSha256` fields were hashes of
+PowerShell-normalized text; only the final finding's byte hashes identify original files.
+
+`agent-deletion-private-snapshot.dpapi` preserves the original directory tar protected with
+Windows DPAPI CurrentUser and null entropy. `agent-deletion-snapshot-receipt.json` records
+plaintext/protected hashes and restore instructions. The plaintext temporary tar was
+removed. The encrypted original remains private after owned fixture cleanup, and can be
+restored only into a new private investigation directory under the same Windows account.
+
+`agent-deletion-private-database.dpapi` also preserves the original
+`wcl_shared_client_6345bb57` database as an encrypted PostgreSQL custom-format dump.
+`agent-deletion-database-receipt.json` records its source container, capture time, tool
+version and plaintext/protected hashes. The shared client was already stopped, and its
+database was captured before removing the owned PostgreSQL instance. This preserves the
+database-backed projection state alongside the original file indexes. The plaintext dump
+was removed. These are state artifacts, not a replayable runtime backup: transient signing
+and data-protection keys/environment files were deliberately cleaned. Restore only into a
+new isolated database/directory; never reconnect copied provider configuration to a service.
+
+First capture the typed exception at the owning service boundary against a private clone
+of this preserved state. Then hold deletion admission and each commit stage independently,
+with completed-run and active/unresolved-effect negative controls. Only after causal
+attribution select a bounded correction in the existing transaction or projection owner.
+Any durable multi-file/authority change needs its owning regressions and a new affected
+broad checkpoint. This mapping is an open finding, not a repair or a permission to change
+the transaction contract. Independent safe validation continues.
+
+See the [closure report](workspace-critical-fixes-closure.md) for the failed acceptance
+row, source binding, cleanup receipt and separate readiness blockers.

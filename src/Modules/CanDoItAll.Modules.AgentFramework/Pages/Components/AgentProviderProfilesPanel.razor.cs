@@ -1,324 +1,322 @@
-using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers.UI;
+using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.Components.BaseLib;
-using CanDoItAll.Modules.Security;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+using CanDoItAll.Editing;
+using ProviderEditingChanges = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderEditingChanges;
+using ProviderEditingOpening = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderEditingOpening;
+using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
-using ProviderConnectorKeys = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderConnectorKeys;
-using ProviderMetadata = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderMetadata;
+// The provider and editor section a route-controlled panel shows, for its page to write into the URL.
+public readonly record struct ProviderRouteSelection(Guid ProviderId, ProviderEditorSection Section);
 
-public partial class AgentProviderProfilesPanel : IDisposable {
-    [Inject]
-    public IProviderEditorCommands Commands { get; set; } = default!;
-
+public partial class AgentProviderProfilesPanel : IProviderProfilesView, IAsyncDisposable {
+    [Inject] public IProviderEditorCommands Commands { get; set; } = default!;
     [Inject] public ProviderEditorRecovery Recovery { get; set; } = default!;
-
-    [Inject]
-    public NotificationService NotificationService { get; set; } = default!;
-
-    private readonly HashSet<string> expandedProviderTreeNodeIds = [];
-    private readonly HashSet<string> knownProviderTagNodeIds = [];
-    [Inject]
-    public IProviderProfilesReads Reads { get; set; } = default!;
-
+    [Inject] public IProviderProfilesReads Reads { get; set; } = default!;
+    [Inject] public NotificationService NotificationService { get; set; } = default!;
+    [Inject] public ProviderEditingChanges EditingChanges { get; set; } = default!;
+    [Parameter] public Guid? ProviderId { get; set; }
+    [Parameter] public ProviderEditorSection Section { get; set; } = ProviderEditorSection.Connection;
+    [Parameter] public bool ConnectionsOpen { get; set; }
+    [Parameter] public ProviderHistoryLocation? HistoryLocation { get; set; }
+    [Parameter] public EventCallback<ProviderRouteSelection> ProviderRequested { get; set; }
+    [Parameter] public EventCallback<ProviderRouteSelection> ProviderPublished { get; set; }
+    [Parameter] public EventCallback NewDraftRequested { get; set; }
+    [Parameter] public EventCallback<ProviderEditorSection> SectionRequested { get; set; }
+    [Parameter] public EventCallback<bool> ConnectionsRequested { get; set; }
+    [Parameter] public EventCallback<ProviderHistoryLocationChange> HistoryLocationChanged { get; set; }
     private ProviderProfilesSession session = default!;
-    private IReadOnlyList<ProviderProfile> providers => session.Catalog.Providers;
-    private IReadOnlyList<SecretListItem> secrets => session.Catalog.Secrets.Items;
-    private ProviderProfileEditorModel providerModel => session.Draft;
-    private EditContext providerEditContext => session.EditContext;
-    private IReadOnlyList<string> providerTagValues = [];
-    private string providerSearch = string.Empty;
-    private string rawSuggestedModels = string.Empty;
-    private string suggestedModelsText {
-        get => rawSuggestedModels;
-        set {
-            rawSuggestedModels = value;
-            if (!SelectedProviderIsSourceManaged) {
-                providerModel.SuggestedModels = ParseLines(value).ToList();
-            }
-        }
-    }
-    private int providerEditorTabIndex {
-        get => ProviderEditorSections.IndexOf(session.State.Section);
-        set => session.SelectSection(ProviderEditorSections.At(value).Section);
-    }
-    private bool isLoading => session.CatalogLoadState == ProviderProfilesLoadState.Loading;
     private ProviderEditorOperations operations = default!;
-    private bool isBusy => operations.IsBusy;
-    private bool sharedConnectionsOpen {
-        get => session.State.SharedConnectionsOpen;
-        set => session.SetSharedConnectionsOpen(value);
-    }
+    private long sharingRevision;
+    private bool disposed;
+    private bool routeApplied;
+    private Guid? appliedProviderId;
+    private ProviderEditorSection? appliedSection;
+    private ProviderEditingOpening? opening;
+    private bool admitted;
+    private bool admissionAttempted;
+    private string? accessError;
+    private long changeSequence;
+    private long refreshedSequence;
 
-    private IReadOnlyList<ProviderProfile> FilteredProviders => providers
-        .Where(MatchesProviderSearch)
-        .OrderBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+    private bool IsRouteControlled => ProviderRequested.HasDelegate;
 
-    private IReadOnlyList<TreeViewNode> ProviderTreeNodes
-        => ProviderProfileTreeNodeBuilder.Build(FilteredProviders, session.State.ProviderId, expandedProviderTreeNodeIds);
+    public ProviderProfilesState State => session.State;
+    public ProviderEditorDraft Editor => session.Editor;
+    public long Activation => session.SelectionVersion;
+    public IReadOnlyList<ProviderProfile> Providers => admitted ? session.Catalog.Providers : [];
+    public IReadOnlyList<ProviderSecretChoice> Secrets => !admitted ? [] : session.Catalog.Secrets.Items
+        .Select(secret => new ProviderSecretChoice(ProviderMetadata.CreateSecretReference(secret.Id), secret.Name)).ToArray();
+    public ProviderProfile? SelectedProvider => admitted ? session.SelectedProvider : null;
+    public ProviderProfilesLoadState CatalogLoadState => session.CatalogLoadState;
+    public bool CanEdit => admitted && session.CanEdit;
+    public bool SourceManaged => session.IsSourceManaged;
+    public bool IsBusy => operations.IsBusy;
+    public bool WritesBlocked => operations.WritesBlocked;
+    public bool HasPendingReconciliation => operations.HasPendingReconciliation;
+    public bool IsWriteUnconfirmed => operations.IsWriteUnconfirmed;
+    public bool CanAcknowledgeDiagnostic => operations.CanAcknowledgeDiagnostic;
+    public bool CanReviewCurrent => operations.CanReviewCurrent;
+    public ProviderRecoveryReview? RecoveryReview => session.RecoveryReview;
+    public bool HasVerifiedRetry => operations.HasVerifiedRetry;
+    public bool NeedsComparison => session.NeedsComparison;
+    public ProviderEditorComparison? Comparison => session.Comparison;
+    public string? Error => accessError ?? session.Error;
+    public bool CatalogChanged => changeSequence > refreshedSequence;
+    public string? MetadataWarning => session.MetadataWarning;
+    public string? SecretMetadataError => session.Catalog.Secrets.Error;
 
-    private IReadOnlyList<string> AvailableProviderTags => providers
-        .SelectMany(provider => provider.Tags)
-        .Where(item => !string.IsNullOrWhiteSpace(item))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    private bool HasUnavailableSecretReference =>
-        !string.IsNullOrWhiteSpace(providerModel.ApiKeyEnvironmentVariable) &&
-        !secrets.Any(secret => string.Equals(
-            ProviderMetadata.CreateSecretReference(secret.Id),
-            providerModel.ApiKeyEnvironmentVariable,
-            StringComparison.OrdinalIgnoreCase));
-
-    private bool SelectedProviderIsSourceManaged => session.IsSourceManaged;
-    private ProviderProfile? SelectedProvider => session.SelectedProvider;
-
-    private string ProviderDefaultModelText {
-        get => SelectedProviderIsSourceManaged
-            ? SelectedProvider!.GetModelDisplayName(providerModel.DefaultModel)
-            : providerModel.DefaultModel;
-        set => providerModel.DefaultModel = value;
-    }
-
-    public void Dispose() => session?.Dispose();
-
-    protected override async Task OnInitializedAsync() {
-        session = new(Reads, Recovery);
+    protected override void OnInitialized() {
+        session = new(new AuthorizedReads(Reads, () => opening ?? throw new UnauthorizedAccessException("Open provider access before reading.")), Recovery);
         operations = new(session, Commands);
-        await LoadAsync();
     }
 
-    private async Task LoadAsync() {
-        if (operations.HasPendingReconciliation) {
-            await RetryReconciliationAsync();
+    protected override async Task OnParametersSetAsync() {
+        if (!RendererInfo.IsInteractive || disposed) {
             return;
         }
-        var applied = await session.RefreshAsync();
-        if (session.CanEdit) {
-            RefreshProviderTreeExpansionDefaults();
-            if (applied) {
-                SyncProviderEditorText();
+        if (!admissionAttempted) {
+            admissionAttempted = true;
+            opening = EditingChanges.Open(Guid.NewGuid(), () => !disposed && accessError is null);
+            try {
+                await opening.StartAsync(batch => InvokeAsync(() => ReceiveChanges(batch)), () => InvokeAsync(RetireAccess));
+                Recovery.Bind(new(opening.Scope, opening.PrincipalStamp));
+                admitted = true;
+                if (!IsRouteControlled) {
+                    await session.RefreshAsync();
+                }
+            } catch (Exception) {
+                RetireAccess();
             }
         }
-    }
-
-    private Task HandleProviderTreeSelectAsync(string nodeId)
-    {
-        if (ProviderProfileTreeNodeBuilder.TryReadProviderId(nodeId, out var providerId) &&
-            providers.Any(item => item.Id == providerId))
-        {
-            return EditProviderAsync(providerId);
+        if (admitted && IsRouteControlled) {
+            await ApplyRouteAsync();
         }
-
-        return Task.CompletedTask;
     }
 
-    private Task HandleProviderTreeToggleAsync(string nodeId)
-    {
-        if (!expandedProviderTreeNodeIds.Add(nodeId))
-        {
-            expandedProviderTreeNodeIds.Remove(nodeId);
+    private void ReceiveChanges(EditingChangeBatch batch) {
+        if (!admitted || disposed) {
+            return;
         }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task<bool> EditProviderAsync(Guid providerId) {
-        if (!await session.SelectAsync(providerId)) {
-            return false;
+        var peers = batch.Changes.Where(change => change.OriginEditorId != opening!.EditorId).ToArray();
+        if (!batch.RequiresResync && peers.Length == 0) {
+            return;
         }
-        RefreshProviderTreeExpansionDefaults();
-        SyncProviderEditorText();
-        return true;
+        changeSequence++;
+        if (State.ProviderId.HasValue && !session.IsSourceManaged &&
+            (batch.RequiresResync || peers.Any(change => change.Resource.ResourceId == State.ProviderId &&
+                change.Kind is not (EditingChangeKind.MetadataChanged or EditingChangeKind.LifecycleChanged)))) {
+            session.RequireComparison();
+        }
+        StateHasChanged();
     }
 
-    private long sharingRevision;
+    private void RetireAccess() {
+        if (disposed) {
+            return;
+        }
+        admitted = false;
+        accessError = "Provider workspace access changed. Reopen it with current access; the local draft is retained.";
+        session.MarkTargetUnavailable(accessError);
+        StateHasChanged();
+    }
 
-    private Task RefreshProvidersAfterSharedChangeAsync(SharedProviderChangeDelivery delivery) =>
+    // A location applies its section when the section changes or the location names another provider, never on a mere
+    // render: a new draft has no provider in its URL and so no section there either, and keeps the one it is on.
+    private async Task ApplyRouteAsync() {
+        var initial = !routeApplied;
+        if (initial || appliedProviderId != ProviderId || Section != appliedSection) {
+            appliedSection = Section;
+            session.SelectSection(Section);
+        }
+        session.SetSharedConnectionsOpen(ConnectionsOpen);
+        if (!initial && appliedProviderId == ProviderId) {
+            return;
+        }
+        routeApplied = true;
+        appliedProviderId = ProviderId;
+        if (initial && !await session.RefreshCatalogAsync()) {
+            return;
+        }
+        if (ProviderId is { } providerId) {
+            await session.SelectAsync(providerId);
+            return;
+        }
+        var fallback = session.Catalog.Providers.FirstOrDefault()?.Id;
+        await session.SelectAsync(fallback);
+        if (fallback is { } selected && appliedProviderId is null) {
+            appliedProviderId = selected;
+            await ProviderPublished.InvokeAsync(new(selected, State.Section));
+        }
+    }
+
+    public void SelectSection(ProviderEditorSection section) {
+        session.SelectSection(section);
+        if (IsRouteControlled) {
+            _ = SectionRequested.InvokeAsync(section);
+        }
+    }
+
+    public void SetSharedConnectionsOpen(bool open) {
+        session.SetSharedConnectionsOpen(open);
+        if (IsRouteControlled) {
+            _ = ConnectionsRequested.InvokeAsync(open);
+        }
+    }
+
+    public async Task RefreshAsync() {
+        var sequence = changeSequence;
+        await session.RefreshAsync();
+        if (session.CatalogLoadState == ProviderProfilesLoadState.Ready && session.MetadataWarning is null) {
+            refreshedSequence = sequence;
+        }
+        await RenderCurrentAsync();
+    }
+
+    public async Task SelectAsync(Guid providerId) {
+        if (IsRouteControlled) {
+            routeApplied = true;
+            appliedProviderId = providerId;
+            await ProviderRequested.InvokeAsync(new(providerId, State.Section));
+        }
+        await session.SelectAsync(providerId);
+        await RenderCurrentAsync();
+    }
+
+    // A draft has no identity to put in the URL, so New leaves the provider's location: Back returns to that provider,
+    // and a reload or a shared link opens the catalog's default selection rather than an unsaved draft.
+    public async Task NewAsync() {
+        if (IsRouteControlled) {
+            routeApplied = true;
+            appliedProviderId = null;
+            await NewDraftRequested.InvokeAsync();
+        }
+        await session.NewAsync();
+        await RenderCurrentAsync();
+    }
+
+    public async Task ExecuteAsync(ProviderEditorIntent intent) {
+        if (!admitted || opening is null || !IsCurrent(intent.Target) || intent.Target.ProviderId != State.ProviderId) {
+            return;
+        }
+        if (intent.Action is ProviderEditorAction.Compare or ProviderEditorAction.ApplyComparison or ProviderEditorAction.CancelComparison or ProviderEditorAction.ReviewCurrent or ProviderEditorAction.ApplyCurrentReview) {
+            try {
+                if (intent.Action == ProviderEditorAction.Compare && !operations.IsBusy && !operations.IsWriteUnconfirmed) {
+                    await session.CompareAsync(session.TargetCancellationToken);
+                } else if (intent.Action == ProviderEditorAction.ApplyComparison) {
+                    await opening.ReadAsync(_ => Task.FromResult(true), session.TargetCancellationToken);
+                    session.ApplyComparison();
+                } else if (intent.Action == ProviderEditorAction.CancelComparison) {
+                    session.CancelComparison();
+                } else if (intent.Action == ProviderEditorAction.ReviewCurrent) {
+                    await operations.ReviewCurrentAsync();
+                } else if (intent.Action == ProviderEditorAction.ApplyCurrentReview) {
+                    await opening.ReadAsync(_ => Task.FromResult(true), session.TargetCancellationToken);
+                    if (operations.ApplyCurrentReview() is { } recovered) {
+                        NotificationService.Warning(recovered.Title, recovered.Message);
+                    }
+                }
+            } catch (OperationCanceledException) when (session.TargetCancellationToken.IsCancellationRequested) {
+            } catch (Exception) {
+                if (IsCurrent(intent.Target)) {
+                    NotificationService.Warning("Provider comparison unavailable", "The current provider could not be read. Your draft is retained.");
+                }
+            }
+            await RenderCurrentAsync();
+            return;
+        }
+        ProviderEditorFeedback? feedback;
+        try {
+            feedback = await opening.WriteAsync(() => intent.Action switch {
+                ProviderEditorAction.Save => operations.SaveAsync(),
+                ProviderEditorAction.Delete => operations.DeleteAsync(),
+                ProviderEditorAction.Health => operations.CheckHealthAsync(),
+                ProviderEditorAction.DiscoverModels => operations.DiscoverModelsAsync(),
+                ProviderEditorAction.Reconcile => operations.RetryReconciliationAsync(),
+                ProviderEditorAction.Verify => operations.VerifyUnconfirmedAsync(),
+                ProviderEditorAction.RetryVerified => operations.RetryVerifiedAsync(),
+                ProviderEditorAction.AcknowledgeDiagnostic => operations.AcknowledgeDiagnosticAsync(),
+                _ => throw new ArgumentOutOfRangeException(nameof(intent))
+            }, () => IsCurrent(intent.Target) && intent.Target.ProviderId == State.ProviderId, session.TargetCancellationToken);
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
+            return;
+        }
+        if (!IsCurrent(intent.Target)) {
+            return;
+        }
+        if (feedback is not null) {
+            switch (feedback.Kind) {
+                case ProviderFeedbackKind.Success:
+                    NotificationService.Success(feedback.Title, feedback.Message);
+                    break;
+                case ProviderFeedbackKind.Warning:
+                    NotificationService.Warning(feedback.Title, feedback.Message);
+                    break;
+                case ProviderFeedbackKind.Error:
+                    NotificationService.Error(feedback.Title, feedback.Message);
+                    break;
+            }
+        }
+        await PublishCommittedIdentityAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PublishCommittedIdentityAsync() {
+        if (!IsRouteControlled || State.ProviderId is not { } providerId || providerId == appliedProviderId) {
+            return;
+        }
+        appliedProviderId = providerId;
+        await ProviderPublished.InvokeAsync(new(providerId, State.Section));
+    }
+
+    private Task RefreshSharedAsync(ProviderEditorTarget target, SharedProviderChangeDelivery delivery) =>
         delivery.ReconcileAsync(async () => {
+            if (!IsCurrent(target)) {
+                await session.RefreshMetadataAsync();
+                return;
+            }
             var change = delivery.Change;
-            var selectedId = session.State.ProviderId;
             var result = await session.ReconcileSharedAsync(change);
             if (!result.Completed) {
                 throw new InvalidOperationException("The provider workspace reconciliation did not complete.");
             }
-            if (result.EditorReplaced) {
-                SyncProviderEditorText();
-            }
-            if (selectedId.HasValue && session.State.ProviderId == selectedId &&
-                change.AffectedProviderProfileIds.Contains(selectedId.Value) &&
+            if (session.IsCurrentSelection(target.Activation) && target.ProviderId is { } providerId &&
+                change.AffectedProviderProfileIds.Contains(providerId) &&
                 change.Kind is not (ProviderManagement.SharedProviderChangeKind.Publication or
-                    ProviderManagement.SharedProviderChangeKind.ImportedSettings or
-                    ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
+                    ProviderManagement.SharedProviderChangeKind.ImportedSettings or ProviderManagement.SharedProviderChangeKind.ImportRetirement)) {
                 sharingRevision++;
             }
-            RefreshProviderTreeExpansionDefaults();
+            await InvokeAsync(StateHasChanged);
         });
 
-    private async Task SaveProviderAsync() {
-        providerModel.SuggestedModels = ParseLines(suggestedModelsText).ToList();
-        providerModel.Tags = providerTagValues.ToList();
-        PublishFeedback(await operations.SaveAsync());
-        RefreshProviderTreeExpansionDefaults();
-    }
-
-    private async Task TestProviderAsync(Guid providerId) {
-        PublishFeedback(await operations.CheckHealthAsync());
-    }
-
-    private async Task DeleteProviderAsync(Guid providerId) {
-        PublishFeedback(await operations.DeleteAsync());
-        RefreshProviderTreeExpansionDefaults();
-    }
-
-    private async Task RetryReconciliationAsync() {
-        PublishFeedback(await operations.RetryReconciliationAsync());
-        RefreshProviderTreeExpansionDefaults();
-    }
-
-    private async Task VerifyUnconfirmedAsync() {
-        PublishFeedback(await operations.VerifyUnconfirmedAsync());
-        RefreshProviderTreeExpansionDefaults();
-    }
-
-    private async Task RetryVerifiedAsync() {
-        PublishFeedback(await operations.RetryVerifiedAsync());
-        RefreshProviderTreeExpansionDefaults();
-    }
-
-    private void PublishFeedback(ProviderEditorFeedback? feedback) {
-        if (feedback is null) {
-            return;
-        }
-        switch (feedback.Kind) {
-            case ProviderFeedbackKind.Success:
-                NotificationService.Success(feedback.Title, feedback.Message);
-                break;
-            case ProviderFeedbackKind.Warning:
-                NotificationService.Warning(feedback.Title, feedback.Message);
-                break;
-            case ProviderFeedbackKind.Error:
-                NotificationService.Error(feedback.Title, feedback.Message);
-                break;
+    private void CloseConnections(ProviderEditorTarget target) {
+        if (IsCurrent(target)) {
+            SetSharedConnectionsOpen(false);
         }
     }
 
-    private async Task ResetProviderAsync() {
-        await session.NewAsync();
-        SyncProviderEditorText();
-    }
+    private EventCallback<ProviderHistoryLocationChange> HistoryChanged => IsRouteControlled ? HistoryLocationChanged : default;
 
-    private void ChangeProviderKind(ProviderKind kind) {
-        if (SelectedProviderIsSourceManaged || providerModel.Kind == kind) {
-            return;
-        }
-
-        providerModel.Kind = kind;
-        providerModel.BaseUrl = string.Empty;
-        providerModel.ApiKeyEnvironmentVariable = string.Empty;
-        providerModel.DefaultModel = string.Empty;
-        providerModel.ConfigurationJson = "{}";
-        providerModel.SuggestedModels = [];
-        providerModel.ModelPrices = [];
-        providerModel.ModelThinkingEffortCapabilities = [];
-        providerModel.Tags = [];
-        providerModel.IsPrivateProvider = ProviderPricingDefaults.IsPrivateProvider(kind);
-        providerModel.Transport = kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
-            ? ProviderTransportKind.Responses : ProviderTransportKind.ChatCompletions;
-        providerModel.SupportsBackgroundResponses = false;
-        SyncProviderEditorText();
-        NotificationService.Info("Provider kind changed",
-            "Connection, models, prices and provider metadata were cleared. Configure the endpoint and load its models before saving.");
-    }
-
-    private async Task RefreshProviderModelPricesAsync() {
-        var feedback = await operations.DiscoverModelsAsync();
-        if (feedback?.Kind == ProviderFeedbackKind.Success) {
-            SyncProviderEditorText();
-        }
-        PublishFeedback(feedback);
-    }
-
-    private Task HandleProviderTagsChangedAsync(IReadOnlyList<string> value)
-    {
-        providerTagValues = value;
-        providerModel.Tags = value.ToList();
-        return Task.CompletedTask;
-    }
-
-    private void ResetProviderSearch()
-    {
-        providerSearch = string.Empty;
-    }
-
-    private void RefreshProviderTreeExpansionDefaults()
-    {
-        var validTagNodeIds = ProviderProfileTreeNodeBuilder.BuildTagNodeIds(FilteredProviders).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        expandedProviderTreeNodeIds.RemoveWhere(nodeId => !validTagNodeIds.Contains(nodeId));
-        knownProviderTagNodeIds.RemoveWhere(nodeId => !validTagNodeIds.Contains(nodeId));
-        foreach (var tagNodeId in validTagNodeIds)
-        {
-            if (knownProviderTagNodeIds.Add(tagNodeId))
-            {
-                expandedProviderTreeNodeIds.Add(tagNodeId);
-            }
+    private bool IsCurrent(ProviderEditorTarget target) => session.IsCurrentSelection(target.Activation) &&
+        ReferenceEquals(target.Context, session.EditContext);
+    private Task RenderCurrentAsync() => disposed ? Task.CompletedTask : InvokeAsync(StateHasChanged);
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        session?.Dispose();
+        if (opening is not null) {
+            await opening.DisposeAsync();
         }
     }
 
-    private bool MatchesProviderSearch(ProviderProfile provider)
-    {
-        if (string.IsNullOrWhiteSpace(providerSearch))
-        {
-            return true;
-        }
-
-        return provider.Name.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.Kind.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.Transport.ToString().Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.GetModelDisplayName(provider.DefaultModel).Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.BaseUrl.Contains(providerSearch, StringComparison.OrdinalIgnoreCase) ||
-               provider.Tags.Any(tag => tag.Contains(providerSearch, StringComparison.OrdinalIgnoreCase));
+    private sealed class AuthorizedReads(IProviderProfilesReads reads, Func<ProviderEditingOpening> original) : IProviderProfilesReads {
+        public Task<ProviderProfilesCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default)
+            => original().ReadAsync(reads.LoadCatalogAsync, cancellationToken);
+        public Task<CanDoItAll.AgentFramework.Models.ProviderProfileEditorModel> LoadEditorAsync(Guid id, CancellationToken cancellationToken = default)
+            => original().ReadAsync(token => reads.LoadEditorAsync(id, token), cancellationToken);
     }
-
-    private void SyncProviderEditorText() {
-        providerTagValues = providerModel.Tags
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        suggestedModelsText = string.Join(Environment.NewLine, SelectedProviderIsSourceManaged
-            ? providerModel.SuggestedModels.Select(SelectedProvider!.GetModelDisplayName)
-            : providerModel.SuggestedModels);
-    }
-
-    private string ResolveSelectedProviderStatus()
-    {
-        if (!session.State.ProviderId.HasValue)
-        {
-            return "Draft provider profile.";
-        }
-
-        var provider = SelectedProvider;
-        if (provider is null)
-        {
-            return "Provider is not loaded in the current catalog snapshot.";
-        }
-
-        return ProviderProfileDisplayAdapter.BuildStatusText(provider);
-    }
-
-    private static IReadOnlyList<string> ParseLines(string value)
-    {
-        return value
-            .Split(['\r', '\n', ',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
 }

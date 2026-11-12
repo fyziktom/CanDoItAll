@@ -1,0 +1,129 @@
+@implements IDisposable
+
+<EditForm EditContext="Controller.Form" OnSubmit="Controller.IssueAsync">
+    <Stack GapScale="LayoutGap.Medium">
+        <Grid ColumnsMd="2" Gap="LayoutGap.Medium">
+            <FormField Text="Subject">
+                <TextBox @bind-Value="Controller.Draft.Subject" Immediate="true" id="api-token-subject" aria-label="Token subject" data-testid="api-token-subject" />
+            </FormField>
+            <FormField Text="Display name">
+                <TextBox @bind-Value="Controller.Draft.DisplayName" Immediate="true" id="api-token-name" aria-label="Token display name" data-testid="api-token-name" />
+            </FormField>
+            <FormField Text="Lifetime minutes">
+                <TextBox @bind-Value="Controller.Draft.LifetimeText" Immediate="true" id="api-token-lifetime" inputmode="numeric" aria-label="Token lifetime minutes" />
+                <ValidationMessage For="() => Controller.Draft.LifetimeText" />
+                <p class="cda-body-muted mt-1">Maximum: @Controller.Configuration.MaxTokenLifetimeMinutes minutes</p>
+            </FormField>
+            <FormField Text="Scopes">
+                <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
+                    <TextBox @bind-Value="Controller.Draft.ScopeText" Immediate="true" id="api-token-scopes" aria-label="Token scopes" Class="min-w-0 flex-1" data-testid="api-token-scopes" />
+                    <Button Icon="checklist" title="Select API scopes" aria-label="Select API scopes" ButtonStyle="ButtonStyle.Light" Click="OpenScopes" data-testid="api-scopes-open" />
+                </Cluster>
+                <p class="cda-body-muted mt-1">Choose scopes or separate them with spaces or commas.</p>
+            </FormField>
+        </Grid>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Create token" Icon="key" Type="submit" Disabled="@(!Controller.CanIssue)" IsBusy="Controller.IsBusy" data-testid="api-token-create" />
+            <Button Text="Manage tokens" Icon="vpn_key" ButtonStyle="ButtonStyle.Light" Click="OpenTokensAsync" data-testid="api-tokens-open" />
+        </Cluster>
+        @if (Controller.Error is { } error) {
+            <Alert AlertStyle="AlertStyle.Danger" data-testid="api-token-error">@error</Alert>
+        }
+        @if (Controller.Outcome is { } outcome) {
+            <Alert AlertStyle="@(outcome.IsCommitted ? AlertStyle.Success : AlertStyle.Warning)" data-testid="api-token-outcome">
+                @ApiOutcomeText.Describe(outcome)
+                @if (outcome.Identity is { } id && outcome.State == ApiWriteState.Unknown) {
+                    <p>Candidate identity: @id. Registration is not confirmed.</p>
+                    <Button Text="Observe exact identity" ButtonStyle="ButtonStyle.Light" Click="Controller.ObserveAsync" />
+                }
+            </Alert>
+        }
+        @if (Controller.ObservationMessage is { } observation) {
+            <Alert AlertStyle="AlertStyle.Info">@observation</Alert>
+        }
+    </Stack>
+</EditForm>
+@if (Controller.Disclosure is { } bearer) {
+    <Alert AlertStyle="AlertStyle.Success" data-testid="api-token-disclosure">
+        <Stack GapScale="LayoutGap.Small">
+            <p>Token created@(Controller.Issued is { } issued ? $" for {issued.DisplayName}. Expires: {issued.ExpiresAtUtc.LocalDateTime:g}" : ".")</p>
+            <p>Copy it now. Only this view can reveal it; the token list contains metadata only.</p>
+            <textarea readonly class="cda-input cda-input--textarea w-full" rows="3" aria-label="New API bearer token" data-testid="api-issued-token">@bearer</textarea>
+            <Cluster Gap="LayoutGap.Small">
+                <CopyButton Value="@bearer" Text="Copy token" data-testid="api-token-copy" />
+                <Button Text="Dismiss token" ButtonStyle="ButtonStyle.Light" Click="Controller.Dismiss" data-testid="api-token-dismiss" />
+            </Cluster>
+        </Stack>
+    </Alert>
+}
+@if (scopeOrigin is { } scope) {
+    <ApiScopePickerDialog @key="scope" Value="@scopeValue" Definitions="Controller.Configuration.Scopes"
+        Confirmed="value => ApplyScopes(scope, value)" OnClose="() => CloseScopes(scope)" />
+}
+@if (tokens is { } list) {
+    <ApiTokensDialog @key="list" Controller="list" OnClose="() => CloseTokens(list)" />
+}
+
+@code {
+    [Parameter, EditorRequired] public ApiTokenIssueController Controller { get; set; } = default!;
+    private ApiTokenIssueController? subscribed;
+    private ApiTokenListController? tokens;
+    private Guid? scopeOrigin;
+    private string scopeValue = string.Empty;
+    private long scopeRevision;
+    private bool disposed;
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(subscribed, Controller)) {
+            Unsubscribe();
+            subscribed = Controller;
+            subscribed.Changed += Changed;
+        }
+    }
+    private void OpenScopes() {
+        scopeOrigin = Guid.NewGuid();
+        scopeValue = Controller.Draft.ScopeText;
+        scopeRevision = Controller.Draft.ScopeRevision;
+    }
+    private void ApplyScopes(Guid origin, string value) {
+        if (!disposed && scopeOrigin == origin && Controller.Draft.ScopeRevision == scopeRevision) {
+            Controller.Draft.ScopeText = value;
+            scopeOrigin = null;
+        }
+    }
+    private void CloseScopes(Guid origin) {
+        if (scopeOrigin == origin) {
+            scopeOrigin = null;
+        }
+    }
+    private async Task OpenTokensAsync() {
+        if (tokens is not null || disposed) {
+            return;
+        }
+        tokens = Controller.OpenTokens();
+        await tokens.Page.RefreshAsync();
+    }
+    private void CloseTokens(ApiTokenListController origin) {
+        if (ReferenceEquals(tokens, origin)) {
+            tokens.Dispose();
+            tokens = null;
+        }
+    }
+    private void Changed() => _ = InvokeAsync(() => {
+        if (!disposed) {
+            StateHasChanged();
+        }
+    });
+    private void Unsubscribe() {
+        if (subscribed is not null) {
+            subscribed.Changed -= Changed;
+        }
+        tokens?.Dispose();
+        tokens = null;
+        scopeOrigin = null;
+    }
+    public void Dispose() {
+        disposed = true;
+        Unsubscribe();
+    }
+}

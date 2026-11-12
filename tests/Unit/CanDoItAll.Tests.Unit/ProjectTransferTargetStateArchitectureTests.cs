@@ -17,6 +17,9 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
     private static readonly SemanticProjectStateRegistration[] SemanticProjectStateRegistry =
     [
         Residue<ProcessPreparedLaunchEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedOrigin),
+        Residue<ProcessAuthoringHeadEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
+        Residue<ProcessAuthoringPublicationEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
+        Residue<ProcessAuthoringReceiptEntity>(ProjectTransferTargetStateArea.Processes, SemanticProjectStateKind.TypedScope),
         Residue<StoragePlacementIntentRecord>(ProjectTransferTargetStateArea.Infrastructure, SemanticProjectStateKind.TypedScope),
         Residue<WorkflowStructureOutputRecord>(ProjectTransferTargetStateArea.AgentFramework, SemanticProjectStateKind.JsonRuntimeAggregate),
         Residue<ProjectWorkflowContributionRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
@@ -25,6 +28,8 @@ public sealed class ProjectTransferTargetStateArchitectureTests {
         Residue<ProjectWorkAssignmentHistoryRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedOrigin),
         Residue<SchedulerFireAdmissionRecord>(ProjectTransferTargetStateArea.SchedulerPlanner, SemanticProjectStateKind.DynamicInput),
         Residue<ProjectCreationReservationRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.RootAggregate),
+        Residue<ProjectDefinitionReceiptRecord>(ProjectTransferTargetStateArea.Projects, SemanticProjectStateKind.TypedScope),
+        Residue<ProjectTaskPlanReceiptRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<ProjectWorkAssignmentRecord>(ProjectTransferTargetStateArea.Workbench, SemanticProjectStateKind.TypedScope),
         Residue<Project>(
             ProjectTransferTargetStateArea.Projects,

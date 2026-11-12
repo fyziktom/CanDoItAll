@@ -198,6 +198,7 @@ public sealed class CrmHrAccountActivityBrowserTests
         var profile = await crmService.SaveAccountProfileAsync(new CrmAccountProfileEditorModel
         {
             AccountPartyId = accountId,
+            Original = (await crmService.GetAccountProfileAsync(accountId))!.Original,
             RelationshipStage = CrmAccountRelationshipStage.Prospect,
             CommercialNotes = "Synthetic prospect for the account summary browser lane.",
             LastChangedBy = "playwright-tests"

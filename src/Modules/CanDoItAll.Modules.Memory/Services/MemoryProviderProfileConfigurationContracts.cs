@@ -14,6 +14,7 @@ public interface IMemoryProviderProfileConfigurationService
     Task<MemoryProviderProfileConfigurationSnapshot> SaveAsync(
         MemoryProviderInstanceId providerId,
         MemoryProviderProfileConfiguration configuration,
+        Guid? expectedRevision,
         CancellationToken cancellationToken = default);
 }
 

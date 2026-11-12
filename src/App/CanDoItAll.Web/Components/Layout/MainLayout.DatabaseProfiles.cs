@@ -1,4 +1,6 @@
 using System.Text.Json;
+using CanDoItAll.Application.UI.Profiles;
+using CanDoItAll.Application.UI.Shell;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
@@ -10,9 +12,21 @@ public partial class MainLayout
 {
     private async Task LoadDatabaseProfileUiAsync(bool showStartupPrompt)
     {
-        databaseProfiles = await DatabaseProfileWorkspaceService.ListProfilesAsync();
-        databaseSelection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync();
-        currentDatabaseEditor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync();
+        EnsureLayoutCurrent();
+        var generation = ++databaseProfileReadGeneration;
+        var openingId = databaseDialogOpeningId;
+        var profiles = await DatabaseProfileWorkspaceService.ListProfilesAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        var selection = await DatabaseProfileWorkspaceService.GetCurrentSelectionAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        var editor = await DatabaseProfileWorkspaceService.GetCurrentEditorAsync(layoutLifetime.Token);
+        EnsureLayoutCurrent();
+        if (generation != databaseProfileReadGeneration || openingId != databaseDialogOpeningId) {
+            return;
+        }
+        databaseProfiles = profiles;
+        databaseSelection = selection;
+        currentDatabaseEditor = editor;
         selectedDatabaseProfileId ??= databaseSelection.RuntimeProfileId;
         if (databaseProfiles.Count > 0 &&
             !databaseProfiles.Any(profile => profile.Id == selectedDatabaseProfileId))
@@ -26,8 +40,13 @@ public partial class MainLayout
         }
 
         if (ShouldPromptForStartupDatabaseConfirmation(databaseSelection) &&
-            !await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed"))
+            !await JS.InvokeAsync<bool>("CanDoItAll.browserState.isDatabaseStartupPromptDismissed", layoutLifetime.Token))
         {
+            EnsureLayoutCurrent();
+            if (generation != databaseProfileReadGeneration || openingId != databaseDialogOpeningId) {
+                return;
+            }
+            databaseDialogOpeningId = Guid.NewGuid();
             databaseDialogStartupMode = true;
             databaseDialogOpen = true;
         }
@@ -48,123 +67,166 @@ public partial class MainLayout
         .Take(2)
         .ToList();
 
-    private async Task OpenDatabaseDialogAsync()
-    {
-        databaseProfileMessage = null;
-        databaseDialogStartupMode = false;
-        await LoadDatabaseProfileUiAsync(showStartupPrompt: false);
-        databaseDialogOpen = true;
-    }
+    private bool IsDatabaseOpeningCurrent(Guid openingId)
+        => IsLayoutCurrent && openingId == databaseDialogOpeningId;
 
-    private Task SelectDatabaseProfileAsync(Guid profileId)
-    {
-        selectedDatabaseProfileId = profileId;
+    private Task OpenDatabaseDialogAsync(Guid openingId) => RunLayoutWorkAsync(nameof(OpenDatabaseDialogAsync), async () => {
+        if (!IsDatabaseOpeningCurrent(openingId) || databaseDialogBusy) {
+            return;
+        }
+        var requestedOpening = databaseDialogOpeningId = Guid.NewGuid();
+        await LoadDatabaseProfileUiAsync(showStartupPrompt: false);
+        if (!IsDatabaseOpeningCurrent(requestedOpening)) {
+            return;
+        }
         databaseProfileMessage = null;
+        databaseActivationUncertain = false;
+        databaseDialogStartupMode = false;
+        databaseDialogOpen = true;
+    });
+
+    private Task SelectDatabaseProfileAsync(DatabaseProfileIntent intent) {
+        if (IsDatabaseOpeningCurrent(intent.OpeningId) && databaseDialogOpen && !databaseDialogBusy &&
+            databaseProfiles.Any(profile => profile.Id == intent.ProfileId)) {
+            selectedDatabaseProfileId = intent.ProfileId;
+            if (!databaseActivationUncertain) {
+                databaseProfileMessage = null;
+            }
+        }
         return Task.CompletedTask;
     }
 
-    private async Task ContinueWithCurrentDatabaseAsync()
-    {
+    private Task CloseDatabaseDialogAsync(Guid openingId)
+        => LeaveDatabaseDialogAsync(openingId, openSettings: false);
+
+    private Task OpenDatabaseSettingsAsync(Guid openingId)
+        => LeaveDatabaseDialogAsync(openingId, openSettings: true);
+
+    private Task LeaveDatabaseDialogAsync(Guid openingId, bool openSettings) => RunLayoutWorkAsync(nameof(LeaveDatabaseDialogAsync), async () => {
+        if (!IsDatabaseOpeningCurrent(openingId) || !databaseDialogOpen) {
+            return;
+        }
+        var closingOpening = databaseDialogOpeningId = Guid.NewGuid();
         await DismissStartupPromptIfNeededAsync();
+        if (!IsDatabaseOpeningCurrent(closingOpening)) {
+            return;
+        }
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
+        if (openSettings) {
+            Navigation.NavigateTo("/settings?tab=data-sources");
+        }
+    });
+
+    private Task SwitchDatabaseProfileAsync(DatabaseProfileIntent intent)
+        => ActivateDatabaseProfileAsync(intent, fromFlyout: false);
+
+    private Task SwitchDatabaseProfileFromFlyoutAsync(DatabaseProfileIntent intent) {
+        if (!IsDatabaseOpeningCurrent(intent.OpeningId) || !CanManageDatabases || databaseDialogBusy ||
+            !RecentDatabaseProfiles.Any(profile => profile.Id == intent.ProfileId)) {
+            return Task.CompletedTask;
+        }
+        selectedDatabaseProfileId = intent.ProfileId;
+        return ActivateDatabaseProfileAsync(intent, fromFlyout: true);
     }
 
-    private async Task CloseDatabaseDialogAsync()
-    {
-        await DismissStartupPromptIfNeededAsync();
-        databaseDialogOpen = false;
-        databaseDialogStartupMode = false;
-    }
-
-    private async Task OpenDatabaseSettingsAsync()
-    {
-        await DismissStartupPromptIfNeededAsync();
-        databaseDialogOpen = false;
-        databaseDialogStartupMode = false;
-        Navigation.NavigateTo("/settings?tab=data-sources");
-    }
-
-    private async Task SwitchDatabaseProfileAsync()
-    {
-        if (!selectedDatabaseProfileId.HasValue || !CanSwitchSelectedProfile)
-        {
-            return;
-        }
-
-        databaseDialogBusy = true;
-        databaseProfileMessage = null;
-
-        var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(selectedDatabaseProfileId.Value);
-        databaseDialogBusy = false;
-        if (result.IsFailure)
-        {
-            databaseProfileMessage = DescribeErrors(result.Errors);
-            return;
-        }
-
-        if (result.Value is not { } switchResult)
-        {
-            databaseProfileMessage = "Database profile activation completed without an activation result.";
-            return;
-        }
-
-        databaseProfileMessage = string.IsNullOrWhiteSpace(switchResult.Message)
-            ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
-            : switchResult.Message;
-        if (switchResult.RequiresRestart)
-        {
-            databaseDialogOpen = true;
-            databaseDialogStartupMode = false;
-            return;
-        }
-
-        await DismissStartupPromptIfNeededAsync();
-        databaseDialogOpen = false;
-        databaseDialogStartupMode = false;
-    }
-
-    private async Task SwitchDatabaseProfileFromFlyoutAsync(Guid profileId)
-    {
-        if (!CanManageDatabases || databaseDialogBusy)
-        {
-            return;
-        }
-
-        selectedDatabaseProfileId = profileId;
-        await SwitchDatabaseProfileAsync();
-    }
+    private Task ActivateDatabaseProfileAsync(DatabaseProfileIntent intent, bool fromFlyout)
+        => RunLayoutWorkAsync(nameof(ActivateDatabaseProfileAsync), async () => {
+            if (!IsDatabaseOpeningCurrent(intent.OpeningId) || databaseDialogBusy ||
+                (!fromFlyout && !databaseDialogOpen) || selectedDatabaseProfileId != intent.ProfileId ||
+                !CanSwitchSelectedProfile) {
+                return;
+            }
+            var selectedProfile = databaseProfiles.SingleOrDefault(profile => profile.Id == intent.ProfileId);
+            if (selectedProfile is null) {
+                return;
+            }
+            databaseDialogBusy = true;
+            databaseProfileMessage = null;
+            try {
+                var result = await DatabaseProfileWorkspaceService.ActivateProfileAsync(intent.ProfileId);
+                if (!IsDatabaseOpeningCurrent(intent.OpeningId)) {
+                    return;
+                }
+                if (result.IsFailure) {
+                    databaseProfileMessage = new(DescribeErrors(result.Errors), DatabaseProfileMessageTone.Error);
+                    return;
+                }
+                var activation = result.Value ?? throw new InvalidOperationException("Database profile activation returned no outcome.");
+                if (activation.RequiresRestart) {
+                    var pendingId = activation.PendingRestartProfileId ?? throw new InvalidOperationException("Restart activation returned no pending profile identity.");
+                    if (databaseSelection is not null) {
+                        databaseSelection.PendingRestartProfileId = pendingId;
+                        databaseSelection.PendingRestartDisplayName = selectedProfile.DisplayName;
+                        databaseSelection.PendingRestartDescriptor = selectedProfile.Descriptor;
+                    }
+                    databaseProfiles = databaseProfiles.Select(profile => profile with {
+                        IsPendingRestartActivation = profile.Id == pendingId
+                    }).ToArray();
+                    databaseProfileMessage = new(string.IsNullOrWhiteSpace(activation.Message)
+                        ? "Database profile activation was saved. Restart the process to make it the canonical runtime database."
+                        : activation.Message, DatabaseProfileMessageTone.RestartRequired);
+                    databaseDialogOpen = true;
+                    databaseDialogStartupMode = false;
+                    return;
+                }
+                await CloseDatabaseDialogAsync(intent.OpeningId);
+            } catch (Exception failure) {
+                CollaborationLogger.LogError("Database profile activation has an unconfirmed outcome. ProfileId={ProfileId}; OpeningId={OpeningId}; FailureType={FailureType}.",
+                    intent.ProfileId, intent.OpeningId, failure.GetType().Name);
+                if (IsDatabaseOpeningCurrent(intent.OpeningId)) {
+                    databaseActivationUncertain = true;
+                    databaseProfileMessage = new("The activation outcome could not be confirmed. Close and reopen Database profiles to read the saved selection before trying again.",
+                        DatabaseProfileMessageTone.Error);
+                }
+            } finally {
+                databaseDialogBusy = false;
+            }
+        });
 
     private async Task DismissStartupPromptIfNeededAsync()
     {
+        EnsureLayoutCurrent();
         if (!databaseDialogStartupMode)
         {
             return;
         }
 
-        await JS.InvokeVoidAsync("CanDoItAll.browserState.dismissDatabaseStartupPrompt");
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.dismissDatabaseStartupPrompt", layoutLifetime.Token);
     }
 
     [JSInvokable]
     public Task HandleBrowserDatabaseSwitchAsync(string payload)
     {
+        if (!IsLayoutCurrent) {
+            return Task.CompletedTask;
+        }
         var browserMessage = DeserializeDatabaseSwitchMessage(payload);
         if (browserMessage is null || browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
         {
             return Task.CompletedTask;
         }
 
-        return HandleDatabaseSwitchAsync(browserMessage, publishToBrowser: false);
+        return RunLayoutWorkAsync(nameof(HandleBrowserDatabaseSwitchAsync), () => HandleDatabaseSwitchAsync(browserMessage, publishToBrowser: false));
     }
 
-    private string ResolveDatabaseMessageClass()
-    {
-        var toneClass = databaseProfileMessage?.Contains("Restart", StringComparison.OrdinalIgnoreCase) == true ||
-            databaseProfileMessage?.Contains("activation was saved", StringComparison.OrdinalIgnoreCase) == true
-            ? "border-amber-300 bg-amber-50 text-amber-950"
-            : "border-rose-200 bg-rose-50 text-rose-950";
-        return $"rounded-[1.35rem] border px-4 py-3 text-sm leading-6 {toneClass}";
-    }
+    private DatabaseProfileDialogPresentation DatabaseDialogPresentation => new(databaseDialogOpeningId,
+        databaseDialogOpen, databaseDialogStartupMode,
+        databaseSelection is { } selection ? new DatabaseSelectionDisplay(selection.DisplayName,
+            DescribeDatabaseProvider(selection.ProviderKind), DescribeDatabaseSource(selection.SourceKind),
+            DescribeResolutionSource(selection.ResolutionSource), BuildSafeDatabaseDescriptor(selection), selection.WorkspaceRoot,
+            selection.IsRuntimeLocked, selection.PendingRestartProfileId, selection.PendingRestartDisplayName) : null,
+        databaseProfiles.Select(ToProfileDisplay).ToArray(), selectedDatabaseProfileId, databaseDialogBusy,
+        SelectedDialogProfileIsActive, SelectedDialogProfileIsPendingRestart, CanSwitchSelectedProfile, databaseProfileMessage);
+
+    private ShellUtilitiesPresentation UtilitiesPresentation => new(databaseDialogOpeningId,
+        databaseSelection?.DisplayName ?? "Loading runtime profile", BuildSafeDatabaseDetails(databaseSelection, currentDatabaseEditor),
+        BuildSafeDatabaseSummary(databaseSelection, currentDatabaseEditor), RecentDatabaseProfiles.Select(ToProfileDisplay).ToArray(),
+        databaseDialogBusy, CanManageDatabases);
+
+    private static DatabaseProfileDisplay ToProfileDisplay(DatabaseProfileSummary profile) => new(profile.Id, profile.DisplayName,
+        DescribeDatabaseProvider(profile.ProviderKind), DescribeDatabaseSource(profile.SourceKind), profile.Descriptor,
+        profile.IsActive, profile.IsPendingRestartActivation, profile.IsRuntimeLocked);
 
     private static string DescribeErrors(IReadOnlyList<Error> errors)
     {
@@ -309,38 +371,43 @@ public partial class MainLayout
     }
 
     private void HandleDatabaseSwitchChanged(object? sender, DatabaseProfileChangedNotification notification)
-        => _ = InvokeAsync(() => HandleDatabaseSwitchAsync(
+        => _ = RunLayoutWorkAsync(nameof(HandleDatabaseSwitchChanged), () => InvokeAsync(() => HandleDatabaseSwitchAsync(
             new BrowserDatabaseSwitchMessage(
                 notification.CurrentProfileId,
                 notification.CurrentFingerprint,
                 notification.Generation,
                 Workbench.HasDirtyTabs),
-            publishToBrowser: true));
+            publishToBrowser: true)));
 
     private async Task HandleDatabaseSwitchAsync(BrowserDatabaseSwitchMessage browserMessage, bool publishToBrowser)
     {
+        EnsureLayoutCurrent();
         if (browserMessage.Generation <= lastObservedDatabaseSwitchGeneration)
         {
             return;
         }
 
         lastObservedDatabaseSwitchGeneration = browserMessage.Generation;
+        databaseDialogOpeningId = Guid.NewGuid();
         databaseDialogOpen = false;
         databaseDialogStartupMode = false;
         databaseProfileMessage = null;
         var payload = JsonSerializer.Serialize(browserMessage);
         if (publishToBrowser)
         {
-            await JS.InvokeVoidAsync("CanDoItAll.browserState.publishDatabaseSwitch", payload);
+            await JS.InvokeVoidAsync("CanDoItAll.browserState.publishDatabaseSwitch", layoutLifetime.Token, payload);
+            EnsureLayoutCurrent();
         }
 
-        await JS.InvokeVoidAsync("CanDoItAll.browserState.rememberDatabaseSwitchAlert", payload);
+        await JS.InvokeVoidAsync("CanDoItAll.browserState.rememberDatabaseSwitchAlert", layoutLifetime.Token, payload);
+        EnsureLayoutCurrent();
         Navigation.NavigateTo(ResolveDatabaseSwitchRecoveryRoute(), forceLoad: true);
     }
 
     private async Task RestoreDatabaseSwitchAlertAsync()
     {
-        var payload = await JS.InvokeAsync<string?>("CanDoItAll.browserState.consumeDatabaseSwitchAlert");
+        var payload = await JS.InvokeAsync<string?>("CanDoItAll.browserState.consumeDatabaseSwitchAlert", layoutLifetime.Token);
+        EnsureLayoutCurrent();
         var browserMessage = DeserializeDatabaseSwitchMessage(payload);
         if (browserMessage is null)
         {
@@ -353,16 +420,19 @@ public partial class MainLayout
             : "The active database changed and the workbench reloaded a safe route for the current profile.";
     }
 
-    private async Task LoadCollaborationShellStateAsync()
-    {
-        var unreadCount = (await CollaborationService.GetShellStateAsync()).UnreadCount;
-        if (collaborationUnreadCount == unreadCount)
-        {
-            return;
-        }
+    private async Task LoadCollaborationShellStateAsync() {
+        var generation = ++collaborationReadGeneration;
+        try {
+            var unreadCount = (await CollaborationService.GetShellStateAsync()).UnreadCount;
+            if (collaborationDisposed || generation != collaborationReadGeneration || collaborationUnreadCount == unreadCount) {
+                return;
+            }
 
-        collaborationUnreadCount = unreadCount;
-        await InvokeAsync(StateHasChanged);
+            collaborationUnreadCount = unreadCount;
+            await InvokeAsync(StateHasChanged);
+        } catch (Exception exception) {
+            CollaborationLogger.LogWarning(exception, "Collaboration shell badge refresh failed at generation {Generation}; retaining the accepted count.", generation);
+        }
     }
 
     private string ResolveDatabaseSwitchRecoveryRoute()
@@ -397,8 +467,4 @@ public partial class MainLayout
         long Generation,
         bool HadDirtyTabs);
 
-    private sealed record DatabaseFlyoutDetails(
-        string Server,
-        string Database,
-        string User);
 }

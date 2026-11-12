@@ -1,6 +1,8 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.FileTools.FileBrowser;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
+using CanDoItAll.Infrastructure.Editing;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -12,6 +14,109 @@ public partial class ProjectStructurePage
     private string objectIndexSearchText = string.Empty;
     private string? expandedToolboxGroupKey;
     private ProjectStructureFileCollectionRequest? fileBrowserRequest;
+    private ProjectStructureFileCollectionOpening? fileBrowserOpening;
+    private ProjectStructureActionContext? fileBrowserContext;
+    private EditingObservation? fileBrowserAccess;
+    private readonly Queue<ProjectStructureFileActionOutcome> fileActionOutcomes = new();
+
+    internal IReadOnlyList<ProjectStructureFileActionOutcome> FileActionOutcomes => fileActionOutcomes.ToArray();
+
+    private async Task PrepareFileBrowserOpeningAsync() {
+        var request = CurrentFileBrowserRequest;
+        if (fileBrowserOpening is not null && fileBrowserContext is { } current && IsCurrentAction(current) &&
+            fileBrowserOpening.Request == request) {
+            return;
+        }
+        RetireFileBrowserOpening();
+        await DisposeRetiredNodeSessionsAsync();
+        var context = CaptureActionContext();
+        var node = CurrentFileBrowserNode;
+        var access = ObserveActionAccess();
+        fileBrowserContext = context;
+        fileBrowserAccess = access;
+        async Task EnsureCurrentAsync(CancellationToken token) {
+            try {
+                if (!ReferenceEquals(fileBrowserAccess, access)) {
+                    throw new UnauthorizedAccessException("The original file collection has retired.");
+                }
+                await AuthorizeActionAsync(context, access, write: false, token);
+                await EnsureFileOriginAsync(context, request.ProjectId, node, token);
+                await AuthorizeActionAsync(context, access, write: false, token);
+                if (!ReferenceEquals(fileBrowserAccess, access)) {
+                    throw new UnauthorizedAccessException("The original file collection changed during authorization.");
+                }
+            } catch (Exception failure) {
+                Logger.LogWarning("File collection authorization failed. ProjectId={ProjectId} Collection={Collection} FailureType={FailureType}.",
+                    context.Admission.ProjectId, request.Identity, failure.GetType().Name);
+                throw;
+            }
+        }
+        try {
+            await access.StartAsync(_ => Task.CompletedTask, () => InvokeAsync(() => {
+                if (ReferenceEquals(fileBrowserAccess, access)) {
+                    RetireFileBrowserOpening();
+                    workflowFeedback = "The original file collection access ended. Reopen it with current access.";
+                    workflowFeedbackTone = "warn";
+                    StateHasChanged();
+                }
+            }));
+            await EnsureCurrentAsync(deferredCompletionCts.Token);
+            fileBrowserOpening = new(request, EnsureCurrentAsync);
+        } catch {
+            RetireFileBrowserOpening();
+            throw;
+        }
+    }
+
+    private void RetireFileBrowserOpening() {
+        fileBrowserOpening = null;
+        fileBrowserContext = null;
+        if (fileBrowserAccess is { } access) {
+            fileBrowserAccess = null;
+            access.Stop();
+            retiredAuthoringSessions.Add(access);
+        }
+    }
+
+    private async Task EnsureFileOriginAsync(ProjectStructureActionContext context, Guid targetProject, ProjectStructureNode? expectedNode,
+        CancellationToken cancellationToken) {
+        if (!IsCurrentAction(context)) {
+            throw new ProjectStructureEditConflictException();
+        }
+        var expected = targetProject == context.Admission.ProjectId ? context.Admission
+            : context.Surface.HierarchyAdmissions.GetValueOrDefault(targetProject)
+                ?? throw new ProjectStructureEditConflictException();
+        var original = await ProjectWorkbenchService.GetStructureAsync(context.Admission.ProjectId, cancellationToken);
+        if (!IsCurrentAction(context) || original.ExpectedProjectAdmission != context.Admission) {
+            throw new CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException(context.Admission);
+        }
+        if (expectedNode is not null) {
+            var current = original.Nodes.SingleOrDefault(node => node.Id == expectedNode.Id);
+            if (current is null || current.IsSystemManaged != expectedNode.IsSystemManaged ||
+                (!current.IsSystemManaged && current.RecordId != expectedNode.RecordId) || current.ObjectType != expectedNode.ObjectType ||
+                current.ObjectSubtype != expectedNode.ObjectSubtype || current.ParentId != expectedNode.ParentId ||
+                current.ArtifactKind != expectedNode.ArtifactKind || current.ArtifactId != expectedNode.ArtifactId ||
+                current.StorageObjectReferenceJson != expectedNode.StorageObjectReferenceJson || current.RelatedProjectId != expectedNode.RelatedProjectId ||
+                current.NodeReferences?.InfrastructureStorageCatalogId != expectedNode.NodeReferences?.InfrastructureStorageCatalogId) {
+                throw new ProjectStructureEditConflictException();
+            }
+        }
+        if (targetProject != context.Admission.ProjectId) {
+            var target = await ProjectWorkbenchService.GetStructureAsync(targetProject, cancellationToken);
+            if (!IsCurrentAction(context) || target.ExpectedProjectAdmission != expected) {
+                throw new CanDoItAll.Modules.Projects.ProjectWriteAdmissionRejectedException(expected);
+            }
+        }
+    }
+
+    private void RecordFileActionOutcome(ProjectStructureFileActionOutcome outcome) {
+        fileActionOutcomes.Enqueue(outcome);
+        while (fileActionOutcomes.Count > 16) {
+            fileActionOutcomes.Dequeue();
+        }
+        Logger.LogInformation("File action outcome. OpeningId={OpeningId} Collection={Collection} Action={Action} Outcome={Outcome}.",
+            outcome.OpeningId, outcome.Collection.Identity, outcome.Action, outcome.Kind);
+    }
 
     private CanvasWorkbenchWindowState ToolboxWindowState => ResolveToolboxWindowState();
 
@@ -59,22 +164,18 @@ public partial class ProjectStructurePage
     private Task HandleToolboxWindowStateChangedAsync(CanvasWorkbenchWindowState state)
         => PersistWindowStateAsync(ToolboxWindowKey, state);
 
-    private Task HandleObjectIndexWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(ObjectIndexWindowKey, state);
-
-    private Task HandleFileBrowserWindowStateChangedAsync(CanvasWorkbenchWindowState state)
-        => PersistWindowStateAsync(FileBrowserWindowKey, state);
+    private async Task HandleFileBrowserWindowStateChangedAsync(CanvasWorkbenchWindowState state) {
+        if (!state.IsVisible) {
+            RetireFileBrowserOpening();
+        }
+        await PersistWindowStateAsync(FileBrowserWindowKey, state);
+    }
 
     private Task OpenCurrentFileBrowserNodeInExplorerAsync()
         => CurrentFileBrowserNode is { } node
             ? OpenAttachmentLocallyAsync(node)
             : Task.CompletedTask;
 
-    private Task HandleObjectIndexSearchTextChangedAsync(string value)
-    {
-        objectIndexSearchText = value;
-        return Task.CompletedTask;
-    }
 
     private async Task OpenToolboxAsync()
     {
@@ -105,10 +206,12 @@ public partial class ProjectStructurePage
 
         try
         {
+            RetireFileBrowserOpening();
             fileBrowserRequest = FileActionCoordinator.CreateRequest(
                 ProjectId,
                 surface.ProjectName,
                 node);
+            await PrepareFileBrowserOpeningAsync();
             CanvasWorkbenchWindowState state = ResolveFileBrowserWindowState();
             state.IsVisible = true;
             state.IsMinimized = false;
@@ -117,6 +220,11 @@ public partial class ProjectStructurePage
         catch (FileBrowserProviderException exception)
         {
             workflowFeedback = exception.Error.Message;
+            workflowFeedbackTone = "warn";
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (UnauthorizedAccessException exception) {
+            workflowFeedback = exception.Message;
             workflowFeedbackTone = "warn";
             await InvokeAsync(StateHasChanged);
         }

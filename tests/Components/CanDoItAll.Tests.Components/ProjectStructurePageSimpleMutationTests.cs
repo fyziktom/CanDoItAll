@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +17,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Content.UI.Generation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +28,7 @@ using Microsoft.Extensions.Hosting;
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
-public sealed class ProjectStructurePageSimpleMutationTests
+public sealed partial class ProjectStructurePageSimpleMutationTests
 {
     [Fact]
     public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()
@@ -57,14 +59,13 @@ public sealed class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
-    public async Task Agent_completion_reload_preserves_immediate_canvas_selection_without_capturing_javascript_state()
+    public async Task Visible_agent_commit_preserves_immediate_canvas_selection_without_capturing_javascript_state()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var workbenchService = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
-        var registry = harness.Context.Services.GetRequiredService<IAgentChatContextRegistry>();
-        var notificationHub = harness.Context.Services.GetRequiredService<IAgentChatExecutionNotificationHub>();
-        var projectId = await CreateProjectAsync(projectsService, "Agent completion selection refresh");
+        var chats = harness.Context.Services.GetRequiredService<IActiveAgentChatRegistry>();
+        var projectId = await CreateProjectAsync(projectsService, "Agent commit selection refresh");
         var rootNodeId = $"project:{projectId}";
         var selectedNode = await workbenchService.CreateObjectAsync(
             projectId,
@@ -77,6 +78,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
                 420,
                 240));
         await SaveSelectedNodeStateAsync(workbenchService, projectId, rootNodeId);
+        var agent = new AgentChatIdentity(Guid.NewGuid(), "Structure agent", null, null);
+        var chat = chats.Open(agent, Guid.NewGuid(), FloatingAgentChatSettings.Default);
 
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
@@ -87,32 +90,23 @@ public sealed class ProjectStructurePageSimpleMutationTests
             JsonSerializer.Serialize(new[] { selectedNode.Id }),
             1));
 
-        var refreshedNode = await workbenchService.CreateObjectAsync(
-            projectId,
-            new ProjectObjectCreateRequest(
-                ProjectObjectType.Note,
-                "Created by agent",
-                "Completion refresh",
-                "Authoritative data loaded after agent completion.",
-                rootNodeId,
-                660,
-                240));
-        var contextSnapshot = Assert.IsType<AgentChatContextSnapshot>(registry.Capture());
-        var publishTask = notificationHub.PublishAsync(new AgentChatExecutionCompleted(
-            contextSnapshot.Scope.Id,
-            contextSnapshot.Scope.Source,
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            DateTimeOffset.UtcNow));
-
-        await publishTask.WaitAsync(TimeSpan.FromSeconds(10));
+        var now = DateTimeOffset.UtcNow;
+        ProjectStructureNode refreshedNode;
+        using (WorkspaceExecutionAuditContext.BeginScope(new ExecutionRunRecord(
+            Guid.NewGuid(), chat.Agent.AgentId, chat.ChatSessionId, "Structure commit",
+            AgentChatTrustedSourceKinds.ProjectStructure, projectId.ToString("D"),
+            string.Empty, string.Empty, string.Empty, string.Empty, "{}", string.Empty, string.Empty,
+            "fixture", "fixture", ExecutionState.Running, null, now, now, now, null, string.Empty, null, []))) {
+            refreshedNode = await workbenchService.CreateObjectAsync(projectId, new(
+                ProjectObjectType.Note, "Created by agent", "", "", rootNodeId, 660, 240));
+        }
 
         cut.WaitForAssertion(() =>
         {
             var reloadedWorkbench = cut.FindComponent<CanvasWorkbench>();
             Assert.Contains(reloadedWorkbench.Instance.Surface.Nodes, node => node.Id == refreshedNode.Id);
             Assert.Equal(new[] { selectedNode.Id }, reloadedWorkbench.Instance.Surface.UiState.SelectedNodeIds);
+            Assert.Empty(cut.FindAll("[data-testid='project-structure-changes-window']"));
         });
         Assert.DoesNotContain(
             harness.Context.JSInterop.Invocations,
@@ -192,8 +186,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         createCounter.Reset();
 
         const string updatedNoteBody = "Updated heading\r\nSecond line of note";
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnNodeEdited(JsonSerializer.Serialize(
-            new CanvasWorkbenchNodeEditRequest(noteNode.Id, noteNode.Title, updatedNoteBody))));
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.EditAsync(canvasWorkbench.Instance,
+            new(noteNode.Id, noteNode.Title, noteNode.Notes),
+            new(noteNode.Id, noteNode.Title, updatedNoteBody)));
 
         cut.WaitForAssertion(() =>
         {
@@ -238,7 +233,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             "Final line includes symbols #release @owner and punctuation.";
         const string expectedTitle = "Long simple note first line that deliberately exceeds the sho...";
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
                 "add-note",
                 projectRootId,
@@ -354,12 +349,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
             cut,
             canvasWorkbench);
-        var providerField = Assert.Single(
-            generatedImageAction.InputFields,
-            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
-        Assert.Contains(
-            providerField.Options,
-            option => string.Equals(option.Value, providerId.ToString("D"), StringComparison.Ordinal));
+        Assert.Contains(generatedImageAction.Providers, provider => provider.Id == providerId);
 
         const string prompt = "Create a crisp dashboard thumbnail with teal, white, and charcoal UI panels.";
         var createdNodeId = await InvokeCreateActionAsync(
@@ -472,15 +462,8 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var generatedImageAction = await RefreshGeneratedImageCreateActionAsync(
             cut,
             canvasWorkbench);
-        var providerField = Assert.Single(
-            generatedImageAction.InputFields,
-            field => string.Equals(field.Key, "imageProviderProfileId", StringComparison.Ordinal));
-        Assert.Contains(
-            providerField.Options,
-            option => string.Equals(
-                option.Label,
-                "OpenAI image generation (gpt-image-1-mini)",
-                StringComparison.Ordinal));
+        Assert.Contains(generatedImageAction.Providers, provider => provider.Id == providerId &&
+            provider.Name == "OpenAI image generation" && provider.DefaultModelLabel == "gpt-image-1-mini");
 
         const string prompt = "Create a crisp settings panel thumbnail with teal controls.";
         await InvokeCreateActionAsync(
@@ -555,17 +538,17 @@ public sealed class ProjectStructurePageSimpleMutationTests
             var updatedNode = Assert.Single(
                 canvasWorkbench.Instance.Surface.Nodes,
                 node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
-            Assert.Equal("Image generation failed", updatedNode.Status);
+            Assert.Equal("Image generation requires observation", updatedNode.Status);
             Assert.Equal("waiting-for-image-creation-by-ai.svg", updatedNode.MediaFileName);
         });
 
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
         var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
-        Assert.Equal("Image generation failed", persistedNode.Status);
+        Assert.Equal("Image generation requires observation", persistedNode.Status);
         Assert.Equal("waiting-for-image-creation-by-ai.svg", persistedNode.MediaOriginalFileName);
         var metadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
-        Assert.Equal(ProjectStructureDeferredNodeCompletionState.Failed, metadata.DeferredCompletion?.State);
-        Assert.Contains("provider unavailable", metadata.DeferredCompletion?.ErrorMessage, StringComparison.Ordinal);
+        Assert.Equal(ProjectStructureDeferredNodeCompletionState.RequiresObservation, metadata.DeferredCompletion?.State);
+        Assert.Contains("provider outcome is unconfirmed", metadata.DeferredCompletion?.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -607,7 +590,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         createCounter.Reset();
 
         const string insertedNote = "Inserted quick note\r\nwith enough text\r\nto require vertical room";
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(
             new CanvasWorkbenchCreateActionRequest(
                 "add-note",
                 sourceNode.Id,
@@ -667,7 +650,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() => Assert.Contains("Change block", cut.Markup));
         createCounter.Reset();
 
-        FindButtonByLabel(cut, "Change block", "[data-testid='project-structure-node-actions'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Change block", "[data-testid='project-structure-node-actions'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -675,7 +658,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         });
 
         cut.Find("[data-testid='project-structure-block-mutation-select']").Change("add-block-router");
-        cut.Find("[data-testid='project-structure-block-mutation-submit']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-block-mutation-submit']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -735,34 +718,36 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         await SaveSelectedNodeStateAsync(workbenchService, projectId, runtimeNode.Id);
 
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
         var cut = harness.Context.Render<ProjectStructurePage>(
             parameters => parameters.Add(page => page.ProjectId, projectId));
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         cut.WaitForAssertion(() => Assert.Contains("API runtime", cut.Markup));
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction(runtimeNode.Id, "edit", 0, 0));
+        var invocation = Assert.Single(harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.openCreateComposer"]);
+        var original = Assert.IsType<CanvasWorkbenchCreateActionRequest>(invocation.Arguments[2]);
+        var opening = Guid.NewGuid();
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnComposerOpened(JsonSerializer.Serialize(
+            new CanvasWorkbenchComposerOpening(opening, original, null))));
         createCounter.Reset();
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(
-            new CanvasWorkbenchCreateActionRequest(
-                "edit:add-environment-dotnet-watch",
-                runtimeNode.Id,
-                runtimeNode.X,
-                runtimeNode.Y,
-                runtimeNode.ParentId,
-                "API runtime updated",
-                "Release host",
-                "Edited runtime description.",
-                "edit",
-                "dialog",
-                "dotnet-watch",
-                null,
-                [
-                    new CanvasWorkbenchInputValue { Key = "environmentKind", Value = "dotNetWatch" },
-                    new CanvasWorkbenchInputValue { Key = "projectPath", Value = runtimeProjectPath },
-                    new CanvasWorkbenchInputValue { Key = "launchProfileName", Value = "staging" },
-                    new CanvasWorkbenchInputValue { Key = "runtimeProtocol", Value = "http" },
-                    new CanvasWorkbenchInputValue { Key = "localhostUrl", Value = "http://localhost:5099" }
-                ]))));
+        var submitted = original with {
+            Title = "API runtime updated",
+            Subtitle = "Release host",
+            Notes = "Edited runtime description.",
+            ComposerOpeningId = opening,
+            InputValues = original.InputValues!.Select(value => new CanvasWorkbenchInputValue {
+                Key = value.Key,
+                Value = value.Key switch {
+                    "launchProfileName" => "staging",
+                    "runtimeProtocol" => "http",
+                    "localhostUrl" => "http://localhost:5099",
+                    _ => value.Value
+                }
+            }).ToArray()
+        };
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(submitted)));
 
         cut.WaitForAssertion(() =>
         {
@@ -1053,7 +1038,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1062,7 +1047,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Dependency tool:", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1071,7 +1056,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Delete tool:", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-select']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-select']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1107,7 +1092,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         cut.WaitForAssertion(() => Assert.Contains("Reset source", cut.Markup));
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-dependency']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1125,7 +1110,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("Click to select", cut.Markup);
         });
 
-        cut.Find("[data-testid='project-structure-toolbar-tool-delete']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -1348,7 +1333,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.Contains(surfaceBeforeConfirmation.Nodes, node => string.Equals(node.Id, asset.Id, StringComparison.Ordinal));
         Assert.True(File.Exists(physicalPath));
 
-        FindButtonByLabel(cut, "Delete node and file", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete node and file", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("eligible managed files were deleted", cut.Markup, StringComparison.Ordinal));
         var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
@@ -1401,7 +1386,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             cut.Markup,
             StringComparison.Ordinal));
 
-        FindButtonByLabel(cut, "Delete node only", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete node only", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains(
             "managed files were preserved",
@@ -1496,7 +1481,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         await cut.InvokeAsync(() =>
             canvasWorkbench.Instance.OnContextAction(validNode.Id, "delete", 0, 0));
         cut.WaitForAssertion(() => Assert.Contains("Delete nodes and files", cut.Markup, StringComparison.Ordinal));
-        FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains(
             "1 node was confirmed deleted. 1 selected branch requires separate follow-up.",
@@ -1602,7 +1587,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.True(File.Exists(physicalPath));
         Assert.True(File.Exists(secondPhysicalPath));
 
-        FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete nodes and files", "[role='dialog'] button").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("eligible managed files were deleted", cut.Markup, StringComparison.Ordinal));
         var surfaceAfterConfirmation = await workbenchService.GetStructureAsync(projectId);
@@ -1667,7 +1652,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
         });
 
-        FindButtonByLabel(cut, "Delete selected").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete selected").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -1727,7 +1712,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
             Assert.Contains("This will delete 2 selected nodes.", cut.Markup, StringComparison.Ordinal);
         });
 
-        FindButtonByLabel(cut, "Delete selected").Click();
+        await cut.InvokeAsync(() => FindButtonByLabel(cut, "Delete selected").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() => Assert.Contains("2 selected branches were deleted.", cut.Markup, StringComparison.Ordinal));
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
@@ -1780,9 +1765,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() => Assert.Contains("2 nodes selected", cut.Markup));
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "In progress", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1800,9 +1785,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "Risk", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1820,9 +1805,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "P2", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1836,9 +1821,9 @@ public sealed class ProjectStructurePageSimpleMutationTests
         Assert.InRange(createCounter.CreateCount, 1, 2);
 
         createCounter.Reset();
-        cut.FindAll("button")
+        await cut.InvokeAsync(() => cut.FindAll("button")
             .First(button => string.Equals(button.TextContent.Trim(), "100%", StringComparison.Ordinal))
-            .Click();
+            .Click());
         cut.WaitForAssertion(() =>
         {
             var updatedNodes = canvasWorkbench.Instance.Surface.Nodes
@@ -1886,7 +1871,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
         var canvasWorkbench = WaitForCanvasWorkbench(cut);
 
         cut.WaitForAssertion(() => Assert.Contains("Signals", cut.Markup));
-        cut.Find("[data-testid='project-structure-signals-toggle']").Click();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-signals-toggle']").ClickAsync(new MouseEventArgs()));
 
         cut.WaitForAssertion(() =>
         {
@@ -2282,7 +2267,7 @@ public sealed class ProjectStructurePageSimpleMutationTests
 
         var projectId = await CreateProjectAsync(projectsService, "Clipboard projected destination");
         var subprojectId = await CreateProjectAsync(projectsService, "Clipboard projected subproject");
-        Assert.True((await projectsService.AddSubprojectAsync(projectId, subprojectId)).IsSuccess);
+        ProjectLifecycleTestCommands.RequireAccepted(await ProjectLifecycleTestCommands.EnsureLinkAsync(harness.Context.Services, projectId, subprojectId));
         var projectRootNodeId = $"project:{projectId}";
         var projectedSubprojectNodeId = $"project-child:{subprojectId}";
         var sourceNode = await workbenchService.CreateObjectAsync(
@@ -2423,7 +2408,17 @@ public sealed class ProjectStructurePageSimpleMutationTests
             uploadedFile,
             inputValues);
 
-        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnCreateAction(JsonSerializer.Serialize(request)));
+        await cut.InvokeAsync(() => CanvasComposerTestDispatch.CreateAsync(canvasWorkbench.Instance, JsonSerializer.Serialize(request)));
+
+        if (actionId == "generate-image-asset") {
+            var values = (inputValues ?? []).ToDictionary(value => value.Key, value => value.Value);
+            var image = cut.FindComponent<ContentImageDialog>().Instance;
+            await cut.InvokeAsync(() => image.Submit(new(title, subtitle, notes,
+                Guid.Parse(values["imageProviderProfileId"]), values.GetValueOrDefault("imageModel") ?? string.Empty,
+                values.GetValueOrDefault("imageSize") switch { "auto" => ContentImageSize.Auto, "1536x1024" => ContentImageSize.Landscape, "1024x1536" => ContentImageSize.Portrait, _ => ContentImageSize.Square },
+                values.GetValueOrDefault("imageQuality") switch { "auto" => ContentImageQuality.Auto, "medium" => ContentImageQuality.Medium, "high" => ContentImageQuality.High, _ => ContentImageQuality.Low },
+                values.GetValueOrDefault("imageOutputFormat") switch { "jpeg" => ContentImageFormat.Jpeg, "webp" => ContentImageFormat.Webp, _ => ContentImageFormat.Png })));
+        }
 
         string createdNodeId = string.Empty;
         cut.WaitForAssertion(() =>
@@ -2442,23 +2437,11 @@ public sealed class ProjectStructurePageSimpleMutationTests
         return createdNodeId;
     }
 
-    private static async Task<CanvasWorkbenchAction> RefreshGeneratedImageCreateActionAsync(
-        IRenderedComponent<ProjectStructurePage> cut,
-        IRenderedComponent<CanvasWorkbench> canvasWorkbench)
-    {
-        var assetGroup = Assert.Single(
-            canvasWorkbench.Instance.Surface.Chrome.QuickCreateActions,
-            action => string.Equals(action.ActionId, "group-assets", StringComparison.Ordinal));
-        var generatedImageAction = Assert.Single(
-            assetGroup.Children,
-            action => string.Equals(action.ActionId, "generate-image-asset", StringComparison.Ordinal));
-        var refreshMethod = typeof(ProjectStructurePage).GetMethod(
-            "RefreshGeneratedImageCreateActionAsync",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(refreshMethod);
-        var refreshTask = Assert.IsAssignableFrom<Task<CanvasWorkbenchAction>>(
-            refreshMethod!.Invoke(cut.Instance, [generatedImageAction]));
-        return await refreshTask;
+    private static async Task<ContentImageSetup> RefreshGeneratedImageCreateActionAsync(
+        IRenderedComponent<ProjectStructurePage> cut, IRenderedComponent<CanvasWorkbench> canvasWorkbench) {
+        await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextAction($"project:{cut.Instance.ProjectId:D}", "generate-image-asset", 0, 0));
+        cut.WaitForAssertion(() => Assert.False(cut.FindComponent<ContentImageDialog>().Instance.State.IsLoading));
+        return cut.FindComponent<ContentImageDialog>().Instance.State;
     }
 
     private static string ResolveComponentTestProjectPath()

@@ -18,8 +18,10 @@ internal static class AgentDefinitionFactory
             model.Name);
         EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, operationLabel);
 
+        var originalConfiguration = AgentDecisionDataPolicyMetadata.Preserve(
+            existingAgent?.ConfigurationJson, model.ConfigurationJson);
         var configurationJson = AgentProjectStructureAccessMetadata.Write(
-            model.ConfigurationJson,
+            AgentDecisionDataPolicyMetadata.ProjectOrdinaryConfiguration(originalConfiguration),
             model.ProjectStructureAccess);
         configurationJson = AgentProcessAccessMetadata.Write(configurationJson, model.ProcessAccess);
         configurationJson = AgentWorkspaceToolAccessMetadata.Write(configurationJson, model.WorkspaceToolAccess);
@@ -51,9 +53,14 @@ internal static class AgentDefinitionFactory
             configurationJson,
             thinkingEffortOverride);
         configurationJson = AgentManagedSeedCustomizationMetadata.MarkCustomized(configurationJson);
+        configurationJson = AgentDecisionDataPolicyMetadata.Preserve(existingAgent?.ConfigurationJson, configurationJson);
 
+        var selectedCapabilityIds = model.SelectedCapabilityIds.ToHashSet();
+        if (selectedCapabilityIds.Except(catalog.Capabilities.Select(item => item.Id)).Any()) {
+            throw new InvalidOperationException("A selected capability is no longer available. Refresh and review the assignment before saving.");
+        }
         var capabilities = catalog.Capabilities
-            .Where(item => model.SelectedCapabilityIds.Contains(item.Id))
+            .Where(item => selectedCapabilityIds.Contains(item.Id))
             .Select(item =>
             {
                 var existingCapability = existingAgent?.Capabilities
@@ -133,11 +140,14 @@ internal static class AgentDefinitionFactory
 
     private static ProviderProfile? ResolveSelectedProvider(
         Guid? providerProfileId,
-        IReadOnlyList<ProviderProfile> providers)
-    {
-        return providerProfileId.HasValue
-            ? providers.FirstOrDefault(item => item.Id == providerProfileId.Value)
-            : null;
+        IReadOnlyList<ProviderProfile> providers) {
+        if (providerProfileId is not { } selectedId) {
+            return null;
+        }
+
+        return providers.FirstOrDefault(item => item.Id == selectedId)
+            ?? throw new InvalidOperationException(
+                $"Agent references missing provider profile '{selectedId}'. Restore that provider or select an available provider before saving.");
     }
 
     private static string ResolveEffectiveModel(

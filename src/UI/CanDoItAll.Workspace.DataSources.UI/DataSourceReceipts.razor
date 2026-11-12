@@ -1,0 +1,22 @@
+@if (Operations.IsBusy) {
+    <Alert AlertStyle="AlertStyle.Info" data-testid="database-operation-pending">An operation is settling at its original profile. Closing a dialog does not cancel or release it.</Alert>
+}
+@if (Operations.HasUnknown) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="database-operation-unknown">Progress needs operator review. Observe the original profiles; further operations in this session are held. No automatic retry or rollback is assumed.</Alert>
+}
+@foreach (var receipt in Operations.Receipts.Where(item => item.Result is not null)) {
+    <details data-testid="database-operation-receipt" open="@(receipt.Result!.Outcome != DataSourceOutcome.Confirmed)">
+        <summary>@receipt.Action: @receipt.Result!.Outcome — @receipt.TargetProfileId</summary>
+        <p>@receipt.Result!.Message</p>
+        @if (receipt.SourceProfileId is { } source) {
+            <p>Original source: @source</p>
+        }
+        @foreach (var group in receipt.Result!.Groups ?? []) {
+            <p data-testid="@($"database-transfer-group-result-{group.Key.Value}")">@group.Label: @group.Message</p>
+        }
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired] public DataSourceOperationLedger Operations { get; set; } = null!;
+}

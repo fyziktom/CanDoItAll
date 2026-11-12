@@ -119,6 +119,7 @@
 
     [Parameter]
     public EventCallback<IReadOnlyList<Guid>> SelectedProjectIdsChanged { get; set; }
+    [Parameter] public EventCallback<bool> PendingChanged { get; set; }
 
     [Parameter]
     public string TestIdPrefix { get; set; } = "crmhr-project-multi-picker";
@@ -183,15 +184,16 @@
     private Task ReloadAsync()
         => ResolveProjectsAsync(BuildSelectionKey(SelectedProjectIds));
 
-    private void OpenPicker()
+    private Task OpenPicker()
     {
         isPickerOpen = true;
+        return PendingChanged.InvokeAsync(true);
     }
 
     private Task ClosePickerAsync()
     {
         isPickerOpen = false;
-        return Task.CompletedTask;
+        return PendingChanged.InvokeAsync(false);
     }
 
     private async Task AddProjectAsync(Guid projectId)
@@ -203,7 +205,11 @@
             projectIds.Add(projectId);
         }
 
-        await SelectedProjectIdsChanged.InvokeAsync(projectIds);
+        try {
+            await SelectedProjectIdsChanged.InvokeAsync(projectIds);
+        } finally {
+            await PendingChanged.InvokeAsync(false);
+        }
     }
 
     private Task RemoveProjectAsync(Guid projectId)

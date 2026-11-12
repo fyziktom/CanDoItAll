@@ -1,0 +1,28 @@
+@switch (Section) {
+    case AgentEditorSection.Memory:
+        @Memory
+        break;
+    case AgentEditorSection.ProjectStructureAccess:
+        <AgentEditorProjectStructureAccessSection State="State" />
+        break;
+    case AgentEditorSection.WorkspaceTools:
+        <AgentEditorWorkspaceToolsSection State="State" ExternalRoots="ExternalRoots" StorageSelection="StorageSelection" />
+        break;
+    case AgentEditorSection.Secrets:
+        <AgentEditorSecretsSection State="State" />
+        break;
+    case AgentEditorSection.ProcessAccess:
+        <AgentEditorProcessAccessSection State="State" />
+        break;
+    case AgentEditorSection.Capabilities:
+        <AgentEditorCapabilitiesSection State="State" CapabilityList="CapabilityList" />
+        break;
+}
+@code {
+    [Parameter, EditorRequired] public AgentEditorAccessState State { get; set; } = default!;
+    [Parameter] public AgentEditorSection Section { get; set; }
+    [Parameter] public RenderFragment? Memory { get; set; }
+    [Parameter] public RenderFragment? ExternalRoots { get; set; }
+    [Parameter] public RenderFragment? StorageSelection { get; set; }
+    [Parameter] public RenderFragment<IReadOnlyList<CapabilityCatalogItem>>? CapabilityList { get; set; }
+}

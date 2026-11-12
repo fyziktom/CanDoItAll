@@ -116,7 +116,12 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         await using (var app = await TestApplication.CreateAsync(new() { TestEnvironment = environment, ActiveProfile = profile, ConfigureServices = RemoveAutomaticDelivery })) {
             fixture = await CreateFixtureAsync(app);
             first = await fixture.Owner.CreateWorkflowContributionAsync(fixture.Plan, fixture.Request);
-            var edited = await fixture.Owner.UpdateObjectAsync(fixture.ProjectId, first.Node.Id, "Human title", "Human subtitle", "Human notes");
+            var edited = await fixture.Owner.UpdateObjectAsync(fixture.ProjectId, first.Node.Id,
+                new ProjectObjectEditRequest("Human title", "Human subtitle", "Human notes", first.Node.StartUtc, first.Node.EndUtc,
+                    first.Node.MetadataJson, first.Node.DurationSeconds) {
+                    ExpectedNode = first.Node,
+                    ExpectedProjectAdmission = ProjectStructureWorkflowAuthorityService.ToProjectAdmission(fixture.Plan.ProjectLifetime!)
+                });
             Assert.NotNull(edited);
             await fixture.DisposeAsync();
         }
@@ -127,10 +132,15 @@ public sealed partial class WorkflowStructureDeliveryPersistenceTests {
         var replay = await owner.CreateWorkflowContributionAsync(fixture.Plan, fixture.Request);
         Assert.Equal(first.Receipt, replay.Receipt);
         Assert.Equal(first.Node.Id, replay.Node.Id);
-        var current = Assert.Single((await owner.GetStructureAsync(fixture.ProjectId)).Nodes, node => node.Id == first.Node.Id);
+        var deletionView = await owner.GetStructureAsync(fixture.ProjectId);
+        var current = Assert.Single(deletionView.Nodes, node => node.Id == first.Node.Id);
         Assert.Equal("Human title", current.Title);
         Assert.Equal("Human notes", current.Notes);
-        Assert.Equal(1, await owner.DeleteObjectAsync(fixture.ProjectId, first.Node.Id));
+        Assert.Equal(1, await owner.DeleteObjectAsync(fixture.ProjectId, first.Node.Id,
+            mutationOwner: new ProjectStructureAgentContext("human", "Human", "", "", "", "") {
+                ExpectedProjectAdmission = deletionView.ExpectedProjectAdmission,
+                ExpectedGraph = ProjectStructureGraphStateGuard.Capture(deletionView)
+            }));
         var tombstone = await owner.CreateWorkflowContributionAsync(fixture.Plan, fixture.Request);
         Assert.True(tombstone.WasReplay);
         Assert.True(tombstone.TargetDeleted);

@@ -8,9 +8,9 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <CanDoItAllComponentsPackageVersion>0.3.0</CanDoItAllComponentsPackageVersion>
     <CanDoItAllFileToolsPackageVersion>0.3.0</CanDoItAllFileToolsPackageVersion>
-    <MicrosoftAspNetCoreComponentsVersion>10.0.10</MicrosoftAspNetCoreComponentsVersion>
-    <MicrosoftExtensionsPackageVersion>10.0.12</MicrosoftExtensionsPackageVersion>
-    <MicrosoftExtensionsAIPackageVersion>10.10.0</MicrosoftExtensionsAIPackageVersion>
+    <MicrosoftAspNetCoreComponentsVersion>10.0.14</MicrosoftAspNetCoreComponentsVersion>
+    <MicrosoftExtensionsPackageVersion>10.0.14</MicrosoftExtensionsPackageVersion>
+    <MicrosoftExtensionsAIPackageVersion>10.11.0</MicrosoftExtensionsAIPackageVersion>
     <DefaultItemExcludes>
       $(DefaultItemExcludes);
       .mcp-state/**;

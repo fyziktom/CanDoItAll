@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "AuthoredUnbuiltIndependentReviewPending",
+  "approvedDesignSha256": "D004F77B280B54DBB864B554EABEF82884E5EFC34879753DE0C464102193905C",
+  "mainReadOnly": true,
+  "files": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolJournalModels.cs",
+      "bytes": 24418,
+      "sha256": "1DBC46BC84C660A21D3761D5F713755684F2ADD5BCF67014F8F6FC63FAC69C92",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "4C6B1BB44C041ADDBFF9866FC4866552CFE3F7832421A1AE717E0510D601D923",
+      "managedPredecessorExists": true,
+      "managedPredecessorSha256": "4C6B1BB44C041ADDBFF9866FC4866552CFE3F7832421A1AE717E0510D601D923"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolJournalJsonSize.cs",
+      "bytes": 1650,
+      "sha256": "499D2F9FA6BD8CE0B101DA7CCADF590D7779D5FDCEBB5E7B8F4D4681069B0697",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedPredecessorExists": false,
+      "managedPredecessorSha256": null
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs",
+      "bytes": 23023,
+      "sha256": "F2FE1DA33C0E2B600CCF0434048BA096AF5044B09D572B48C8F3CA6F3E1B38BF",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "F5B3424B646919C07E6FB5471037A82C56DFD952ED2A45467E96DC7331C4EEC8",
+      "managedPredecessorExists": true,
+      "managedPredecessorSha256": "F5B3424B646919C07E6FB5471037A82C56DFD952ED2A45467E96DC7331C4EEC8"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs",
+      "bytes": 8196,
+      "sha256": "09194532BDC433DB1C082E6D05801D122313D9DB559042E4715EB0DE913C96CE",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedPredecessorExists": false,
+      "managedPredecessorSha256": null
+    }
+  ],
+  "documents": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/R1bc-journal-json-byte-count.md",
+      "bytes": 14945,
+      "sha256": "4577B6D97B09FFDFC6A8048760674E725D9378330ADB2F4C37AFB857BAA5366E"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1bc-journal-json-size-source.md",
+      "bytes": 4977,
+      "sha256": "0C6FC693FFD03BA73A1DA301A1E579B74BADEB7495E3A10ED5F3C8A9174F47B4"
+    }
+  ],
+  "selection": {
+    "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests",
+    "expectedDiscovery": 23,
+    "expectedRuntime": 23,
+    "existingFacts": 10,
+    "existingInlineTheoryRows": 8,
+    "addedFacts": 5,
+    "dynamicProviders": 0,
+    "skips": 0,
+    "categoryExclusions": 0
+  },
+  "execution": {
+    "build": false,
+    "discovery": false,
+    "tests": false,
+    "static": false,
+    "performance": false
+  },
+  "cost": {
+    "unchangedPerformanceRows": 22,
+    "capacityQualified": false,
+    "forcedGc": false,
+    "newBudget": false
+  }
+}

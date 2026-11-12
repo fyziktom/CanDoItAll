@@ -1,0 +1,127 @@
+[
+  {
+    "id": "INV-01",
+    "title": "One authoritative writer",
+    "rule": "Every enabled mutation entry point delegates to the fact owner; a projection or renderer never becomes an alternate master."
+  },
+  {
+    "id": "INV-02",
+    "title": "Captured expected state",
+    "rule": "An existing-object replacement uses the expected state captured with the original read, never a fresh stamp attached to an old body."
+  },
+  {
+    "id": "INV-03",
+    "title": "Aggregate coverage",
+    "rule": "Every mutation of fields or children in a revision boundary advances that boundary atomically; irrelevant telemetry does not."
+  },
+  {
+    "id": "INV-04",
+    "title": "Coherent read",
+    "rule": "A returned edit stamp describes all returned editable data from one coherent observation."
+  },
+  {
+    "id": "INV-05",
+    "title": "Atomic check and effect",
+    "rule": "The required target predicate and business invariants are enforced at the actual owner write boundary, not only at an earlier preflight."
+  },
+  {
+    "id": "INV-06",
+    "title": "Identity and lifecycle",
+    "rule": "Profile/data epoch, object lifetime and content state have distinct meanings; stale or imported history cannot authorize a new incarnation."
+  },
+  {
+    "id": "INV-07",
+    "title": "Authority fence",
+    "rule": "Current actor/claim/source authority is enforced where the effect occurs, including late results from cancelled or superseded attempts."
+  },
+  {
+    "id": "INV-08",
+    "title": "Bound decision basis",
+    "rule": "Governed proposals name the required owner-validated source facts and set-membership witnesses; a model cannot omit mandatory dependencies."
+  },
+  {
+    "id": "INV-09",
+    "title": "No blind semantic retry",
+    "rule": "Refreshing a token does not repair a stale intention or approval; a material basis change requires reconsideration."
+  },
+  {
+    "id": "INV-10",
+    "title": "Exact approval",
+    "rule": "Approval binds the actual proposed effect, relevant basis and permitted authority scope; materially changed proposals do not inherit it."
+  },
+  {
+    "id": "INV-11",
+    "title": "Commit knowledge",
+    "rule": "Known rejection, known commit, committed warning and uncertain observation remain distinct through every adapter."
+  },
+  {
+    "id": "INV-12",
+    "title": "Operation identity",
+    "rule": "A scoped operation identity has one semantic request and at most one owned committed effect; duplicate delivery resolves that effect."
+  },
+  {
+    "id": "INV-13",
+    "title": "Draft survival",
+    "rule": "A conflict, read failure, stale callback or post-dispatch typing must not silently destroy the current draft or its validation lifetime."
+  },
+  {
+    "id": "INV-14",
+    "title": "Projection safety",
+    "rule": "A delayed projection cannot replace a newer source state or revive a retired incarnation; durable requirements have durable recovery."
+  },
+  {
+    "id": "INV-15",
+    "title": "Bounded coordination",
+    "rule": "No human wait, LLM inference, external network call or unbounded traversal occurs while a correctness transaction or business gate is held."
+  },
+  {
+    "id": "INV-16",
+    "title": "Complete lock participation",
+    "rule": "All writers of a guarded fact participate in the same documented exclusion/serialization protocol; keys and lock-class ordering are explicit."
+  },
+  {
+    "id": "INV-17",
+    "title": "Safe cleanup",
+    "rule": "A failed/cancelled path releases every owned gate/context; cleanup failure after a known commit does not relabel it as rejection."
+  },
+  {
+    "id": "INV-18",
+    "title": "No hidden bypass",
+    "rule": "Missing stamps, unconverted callers, bulk SQL, imports or test setup do not silently bypass a protected ordinary-write contract."
+  },
+  {
+    "id": "INV-19",
+    "title": "Owner-preserving boundaries",
+    "rule": "Contracts stay data-only; shared infrastructure knows mechanics, not module-specific content semantics or service-locator routing."
+  },
+  {
+    "id": "INV-20",
+    "title": "Honest external effects",
+    "rule": "External delivery and compensation expose their actual idempotency/conditional-write guarantees and uncertainty; no universal exactly-once claim."
+  },
+  {
+    "id": "INV-21",
+    "title": "Evidence before closure",
+    "rule": "Discovery counts, current source identities, real database races and required UI/platform lanes are explicit; skipped or unavailable proof is not passing."
+  },
+  {
+    "id": "INV-22",
+    "title": "Bounded retention and disclosure",
+    "rule": "Receipt/basis/audit retention respects retry horizons and access control; logs never expose secrets or unauthorized conflict values."
+  },
+  {
+    "id": "INV-23",
+    "title": "No notification dependency",
+    "rule": "Correct writes do not depend on receiving a UI/cache invalidation event."
+  },
+  {
+    "id": "INV-24",
+    "title": "No-op semantics",
+    "rule": "Every command defines equality/normalization and no-op behavior; no-op checks cannot conceal a semantically stale approved proposal."
+  },
+  {
+    "id": "INV-25",
+    "title": "Compatibility cutover",
+    "rule": "Protected writers and their active callers transition as a coherent perimeter; old binaries or restored authority cannot re-enable unsafe writes."
+  }
+]

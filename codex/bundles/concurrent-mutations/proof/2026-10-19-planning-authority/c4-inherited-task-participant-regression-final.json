@@ -1,0 +1,87 @@
+{
+  "candidate": "c4-inherited-task-participant-regression-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-authority-history",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessAuthorityTests|FullyQualifiedName~ProjectTaskPlanProcessHistoryTests"
+      ],
+      "StartedUtc": "2026-10-20T15:29:19.2671856+00:00",
+      "State": "Completed",
+      "RunnerPid": 5520,
+      "ChildPid": 40916,
+      "ChildStartedUtc": "2026-10-20T15:29:19.2733621Z",
+      "ExitCode": 0,
+      "Seconds": 2.3800793,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 8405,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [],
+  "evidence": {
+    "prerequisite-reference.json": {
+      "original": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-task-participant",
+      "corrected": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-task-participant-final",
+      "review": "Uses actual prior successful production/Unit build records with exact input bridge and fresh Integration/static/docs. No copied command outcomes."
+    },
+    "execution-not-started.json": {
+      "reason": "Registered runtime lane in main candidate failed before authority/history regression. No observer or test execution started here.",
+      "expected": 48,
+      "executed": 0
+    },
+    "discovery-review.json": {
+      "lanes": [
+        {
+          "lane": "authority-history",
+          "expected": 48,
+          "actual": 48
+        }
+      ],
+      "total": 48,
+      "note": "Count concrete discovered rows including parameterized cases with truncated equal display names; never deduplicate display text."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9695,
+      "runtimeFiles": 2850,
+      "sourceSha256": "E0826730B5BAEA2677BD14E000C325648AA130DB763CA35C2B64F16F7912CE01",
+      "runtimeSha256": "45173FB589D8494D4EA380673A5D30B066F5D4E6CB41C7D7DBA37762AADB6072"
+    },
+    "production-bridge.json": {
+      "originalCandidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-inherited-task-participant",
+      "sourceChanges": [
+        "codex/bundles/concurrent-mutations/plan/execution-plan.md",
+        "codex/bundles/concurrent-mutations/readme.md",
+        "codex/bundles/concurrent-mutations/validation/2026-10-20-inherited-task-participant.md",
+        "tests/integration/candoitall.tests.integration/projecttaskplanprocessruntimefixture.cs",
+        "tests/integration/candoitall.tests.integration/projecttaskplanprocessruntimetests.cs"
+      ],
+      "runtimeChanges": [
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.pdb"
+      ],
+      "productionAndUnitInputsUnchanged": true,
+      "reason": "Two integration fixture/test files corrected to use explicit inherited request and assert intended refusal. Three Markdown status records updated. Full156 behavior selection repeats."
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

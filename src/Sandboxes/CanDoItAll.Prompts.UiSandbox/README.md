@@ -60,3 +60,8 @@ the context; filters, paging, favorites and the intent line stay transient.
 Inline validation appears in `editor-new` when Save draft is clicked with an empty name or
 content. Simulated saves in this sandbox do not replace the production effect-owning host
 tests; see [Prompt Gallery UI boundary](../../../docs/architecture/prompt-gallery-ui-boundary.md).
+
+Concurrent comparison specimens are `editor-review`, `editor-review-conflict`,
+`editor-review-raw` and `editor-review-preferred`. They render the production typed review
+surface over the editor, with local-only Apply/Cancel; no owner service or database is used.
+Production authorization, observations and commit races are proved in their native hosts.

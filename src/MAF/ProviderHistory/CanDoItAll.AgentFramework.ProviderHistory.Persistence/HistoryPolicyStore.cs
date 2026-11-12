@@ -19,12 +19,16 @@ public sealed class HistoryPolicyStore(
             return Snapshot(row);
         }, cancellationToken);
 
-    public Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicy policy, CancellationToken cancellationToken) {
-        HistoryContractValidation.Validate(policy);
+    public Task<HistoryRetentionPreview> PreviewShorterRetentionAsync(HistoryPolicyPreviewRequest request, CancellationToken cancellationToken) {
+        HistoryContractValidation.Validate(request.Policy);
         return operations.RunAsync(HistoryPermission.Manage, async (context, token) => {
             await using var db = await factory.CreateDbContextAsync(token);
             await HistoryPartitionStore.RequireAsync(db, context.Partition, token);
-            return await HistoryPolicyRetention.PreviewAsync(db, context.Partition.StorageLineageId, policy, token);
+            if (!await db.Set<HistoryPolicyRow>().AnyAsync(row => row.PartitionId == context.Partition.StorageLineageId &&
+                row.Version == request.ExpectedVersion, token)) {
+                throw Conflict();
+            }
+            return await HistoryPolicyRetention.PreviewAsync(db, context.Partition.StorageLineageId, request.Policy, token);
         }, cancellationToken);
     }
 
@@ -49,7 +53,7 @@ public sealed class HistoryPolicyStore(
         await HistoryPartitionStore.RequireAsync(db, context.Partition, cancellationToken);
         var row = await LockAsync(db, context.Partition.StorageLineageId, cancellationToken);
         if (row.Version != update.ExpectedVersion) {
-            throw new ProviderHistoryException(HistoryFailure.Conflict, "The history policy was changed by another operator.");
+            throw Conflict();
         }
         if (update.ApplyShorterRetention) {
             await HistoryPolicyRetention.ShortenAsync(db, row.PartitionId, update.Policy, cancellationToken);
@@ -85,4 +89,7 @@ public sealed class HistoryPolicyStore(
 
     private static ProviderHistoryException Stale() =>
         new(HistoryFailure.StaleContext, "The active database changed before the history policy could commit.");
+
+    private static ProviderHistoryException Conflict() =>
+        new(HistoryFailure.Conflict, "The history policy was changed by another operator.");
 }

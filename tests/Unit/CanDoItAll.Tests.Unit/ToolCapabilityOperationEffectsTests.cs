@@ -12,7 +12,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
     public void Every_installed_metadata_field_matches_the_independent_pre_cut_catalog() {
         var expected = Rows(ExpectedMetadata);
         var actual = ProductToolPolicies.Capabilities.OrderBy(policy => policy.Name, StringComparer.Ordinal).Select(Describe).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -22,7 +22,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             .Select(policy => RuntimeToolCapabilityDescriptorFactory.CreateRuntimeToolCapabilityDescriptor(
                 policy.Name, policy.Name, "Descriptor parity", [], toolPolicies: ProductToolPolicies))
             .Select(Describe).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(Rows(ExpectedDescriptors), actual);
     }
 
@@ -40,7 +40,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
             values[2] = "maf.tool." + values[1];
             return string.Join('|', values);
         }).ToArray();
-        Assert.Equal(215, actual.Length);
+        Assert.Equal(219, actual.Length);
         Assert.Equal(expected, actual);
     }
 
@@ -105,7 +105,7 @@ public sealed class ToolCapabilityOperationEffectsTests {
         Assert.Throws<ArgumentException>(() => new ToolCapabilityOperationEffects([scope!]));
     }
 
-    private static string[] Rows(string value) => value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    private static string[] Rows(string value) => value.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     private static string Flag(bool value) => value ? "true" : "false";
 
     private static string Describe(ToolCapabilityMetadata policy) => string.Join('|', policy.Name, policy.Classification.ToString(),
@@ -124,10 +124,12 @@ public sealed class ToolCapabilityOperationEffectsTests {
     private const string ExpectedMetadata = """
 agent_package_export|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 browser_click|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
+browser_close|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|None|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_console_messages|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_drag|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_evaluate|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_fill_form|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
+browser_hover|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess
 browser_navigate|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Navigation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_network_requests|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Observation|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
 browser_press_key|Validation|false|false|RuntimeProofCapture|Static|CaptureRuntimeProof|ExternalProductTargetReadOnly|false|false|true|false|Interaction|RuntimeStateDependent||false|Validation,BrowserAccess,ResourceCleanup
@@ -243,6 +245,7 @@ project_structure_nodes_status_update|Mutation|true|true|ProjectStructureMutatio
 project_structure_nodes_to_new_subproject|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_process_subprocess_launch|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_project_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
+project_structure_project_definition_get|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
 project_structure_project_lease_acquire|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_project_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_projects_list|Read|false|false|WorkspaceRead|None|||false|false|true|false|None|Idempotent||false|
@@ -251,6 +254,7 @@ project_structure_repo_branch_lease_acquire|Mutation|true|true|ProjectStructureM
 project_structure_subproject_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_structure_subproject_link|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_task_create|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
+project_task_plan_publish|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction
 project_task_resource_attach|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 project_task_update|Mutation|true|true|ProjectStructureMutation|Static|ExecuteExternalAction|ExternalActionControlled|false|true|false|false|None|StateChanging||false|ExternalAction,ScriptExecution
 prompt_gallery_catalog_search|Read|false|false|InternalDataRead|None|||false|false|true|false|None|Idempotent|prompt-curator-approval-redacted-v1|false|
@@ -342,10 +346,12 @@ workspace_zip_path|Mutation|true|true|WorkspaceWrite|WorkspaceFileMutation||Exte
     private const string ExpectedDescriptors = """
 agent_package_export|agent-package-export|maf.agent_package_export|Read|WorkspaceRead|false|false
 browser_click|browser-click|maf.browser_click|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
+browser_close|browser-close|maf.browser_close|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_console_messages|browser-console-messages|maf.browser_console_messages|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_drag|browser-drag|maf.browser_drag|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_evaluate|browser-evaluate|maf.browser_evaluate|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_fill_form|browser-fill-form|maf.browser_fill_form|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
+browser_hover|browser-hover|maf.browser_hover|BrowserAccess,Validation|RuntimeProofCapture|false|false
 browser_navigate|browser-navigate|maf.browser_navigate|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_network_requests|browser-network-requests|maf.browser_network_requests|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
 browser_press_key|browser-press-key|maf.browser_press_key|BrowserAccess,ResourceCleanup,Validation|RuntimeProofCapture|false|false
@@ -461,6 +467,7 @@ project_structure_nodes_status_update|project-structure-nodes-status-update|maf.
 project_structure_nodes_to_new_subproject|project-structure-nodes-to-new-subproject|maf.project_structure_nodes_to_new_subproject|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_process_subprocess_launch|project-structure-process-subprocess-launch|maf.project_structure_process_subprocess_launch|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_project_create|project-structure-project-create|maf.project_structure_project_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
+project_structure_project_definition_get|project-structure-project-definition-get|maf.project_structure_project_definition_get|Read|WorkspaceRead|false|false
 project_structure_project_lease_acquire|project-structure-project-lease-acquire|maf.project_structure_project_lease_acquire|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_project_update|project-structure-project-update|maf.project_structure_project_update|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_projects_list|project-structure-projects-list|maf.project_structure_projects_list|Read|WorkspaceRead|false|false
@@ -469,6 +476,7 @@ project_structure_repo_branch_lease_acquire|project-structure-repo-branch-lease-
 project_structure_subproject_create|project-structure-subproject-create|maf.project_structure_subproject_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_structure_subproject_link|project-structure-subproject-link|maf.project_structure_subproject_link|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_task_create|project-task-create|maf.project_task_create|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
+project_task_plan_publish|project-task-plan-publish|maf.project_task_plan_publish|ExternalAction|ProjectStructureMutation|true|true
 project_task_resource_attach|project-task-resource-attach|maf.project_task_resource_attach|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 project_task_update|project-task-update|maf.project_task_update|ExternalAction,ScriptExecution|ProjectStructureMutation|true|true
 prompt_gallery_catalog_search|prompt-gallery-catalog-search|maf.prompt_gallery_catalog_search|Read|InternalDataRead|false|false

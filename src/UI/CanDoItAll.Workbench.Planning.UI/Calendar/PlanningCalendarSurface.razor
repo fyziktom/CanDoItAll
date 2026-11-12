@@ -1,0 +1,136 @@
+@namespace CanDoItAll.Workbench.Planning.UI
+@using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject IJSRuntime JsRuntime
+@inject ILogger<PlanningCalendarSurface> Logger
+@{
+    var accepted = Presentation;
+    var selectionCallback = SelectionChanged;
+    var stateCallback = StateChanged;
+    var openCallback = OpenRequested;
+    var retryCallback = RetryRequested;
+    var projectsCallback = ProjectsRequested;
+}
+<PageScaffold MaxWidthClass="max-w-full">
+    <Header>
+        <PageHeader Eyebrow="Workbench"
+                    Title="@(accepted.State == PlanningReadState.Unavailable ? "Project calendar unavailable" : string.IsNullOrEmpty(accepted.ProjectName) ? "Project calendar" : $"{accepted.ProjectName} calendar")"
+                    Description="Review scheduled project items and open their linked artifacts."
+                    Compact="true">
+            <Stats>
+                @if (accepted.Calendar is { } calendar) {
+                    <CompactStat Label="events" Value="@calendar.Events.Count.ToString()" />
+                    <CompactStat Label="linked artifacts" Value="@accepted.LinkedArtifactCount.ToString()" />
+                    <CompactStat Label="selected" Value="@(accepted.SelectedEvent?.Kind ?? "None")" />
+                    <CompactStat Label="statuses" Value="@accepted.StatusCount.ToString()" />
+                }
+            </Stats>
+        </PageHeader>
+    </Header>
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium" Class="w-full min-w-0" AlignItems="AlignItems.Stretch">
+            @if (accepted.State == PlanningReadState.Loading) {
+                <LoadingState Eyebrow="Loading" Title="Preparing the calendar" Description="Loading the project schedule and saved view." />
+            }
+            else if (accepted.State == PlanningReadState.Unavailable) {
+                <EmptyState Eyebrow="Project unavailable" Title="Project calendar unavailable" Description="@accepted.Error">
+                    <Actions>
+                        <Button Text="Open projects" Click="@(() => projectsCallback.InvokeAsync(new(accepted.Origin)))" />
+                    </Actions>
+                </EmptyState>
+            }
+            else {
+                @if (accepted.Error is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="planning-calendar-load-error">@accepted.Error</Alert>
+                }
+                @if (accepted.PersistenceWarning is not null) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="planning-calendar-persistence-warning">@accepted.PersistenceWarning</Alert>
+                }
+                @if (exportError is { } failure && failure.Origin == accepted.Origin) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="planning-calendar-export-error">@failure.Message</Alert>
+                }
+                <Button Text="@(accepted.State is PlanningReadState.Failed or PlanningReadState.Stale ? "Retry calendar" : "Refresh calendar")"
+                        Icon="refresh" Click="@(() => retryCallback.InvokeAsync(new(accepted.Origin)))" />
+                @if (accepted.Calendar is not null) {
+                    @if (accepted.State == PlanningReadState.Stale) {
+                        <Alert AlertStyle="AlertStyle.Warning">This is the last accepted schedule. Refresh before changing the view or opening an artifact.</Alert>
+                    }
+                    <SectionCard Title="Project calendar" Description="Select an event to inspect its timing and linked artifact.">
+                        <CanvasCalendar @key="accepted.Origin" Surface="@accepted.Calendar"
+                                        HostClass="min-h-[36rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                        SelectionChanged="@(args => selectionCallback.InvokeAsync(new(accepted.Origin, Guid.TryParse(args.SelectedEvent?.EventId, out var id) ? id : null)))"
+                                        ExportAsync="@(request => ExportAsync(accepted, request))"
+                                        StateChanged="@(args => stateCallback.InvokeAsync(new(accepted.Origin, args)))" />
+                    </SectionCard>
+                    <SectionCard Title="Selected event" Description="Times use the selected calendar timezone.">
+                        @if (accepted.SelectedEvent is not { } selected) {
+                            <EmptyState Eyebrow="No selection" Title="Choose an event" Description="Select an event to inspect its timing, state and linked artifact." />
+                        }
+                        else {
+                            <Stack GapScale="LayoutGap.Small" data-testid="planning-calendar-detail">
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@selected.Title" />
+                                <Cluster Gap="LayoutGap.Small">
+                                    <Pill Text="@selected.Kind" />
+                                    <TextBlock Value="@selected.Status" />
+                                    <Pill Text="@selected.Timezone" Tone="PillTone.Info" />
+                                </Cluster>
+                                <SurfaceCard Soft="true">
+                                    <TextBlock Value="@($"Start: {selected.Start}")" />
+                                    <TextBlock Value="@($"End: {selected.End}")" />
+                                    <TextBlock Value="@selected.Route" Class="break-all" />
+                                </SurfaceCard>
+                                <Button Text="Open linked artifact" Disabled="@(accepted.State != PlanningReadState.Ready || string.IsNullOrWhiteSpace(selected.Route))"
+                                        Click="@(() => openCallback.InvokeAsync(new(accepted.Origin, selected.Id)))" />
+                            </Stack>
+                        }
+                    </SectionCard>
+                }
+            }
+        </Stack>
+    </ChildContent>
+</PageScaffold>
+
+@code {
+    [Parameter, EditorRequired] public CalendarPresentation Presentation { get; set; } = new(Guid.Empty);
+    [Parameter] public EventCallback<CalendarSelectionIntent> SelectionChanged { get; set; }
+    [Parameter] public EventCallback<CalendarStateIntent> StateChanged { get; set; }
+    [Parameter] public EventCallback<CalendarOpenIntent> OpenRequested { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> RetryRequested { get; set; }
+    [Parameter] public EventCallback<PlanningOriginIntent> ProjectsRequested { get; set; }
+
+    private bool disposed;
+    private Guid? exportOperation;
+    private (Guid Origin, string Message)? exportError;
+
+    private async Task ExportAsync(CalendarPresentation accepted, CanvasCalendarExportRequest request) {
+        if (disposed || accepted.Origin != Presentation.Origin || accepted.State != PlanningReadState.Ready) {
+            return;
+        }
+        var operation = Guid.NewGuid();
+        exportOperation = operation;
+        exportError = null;
+        try {
+            var file = CalendarListExport.Create(accepted, request);
+            await using var module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/CanDoItAll.Workbench.Planning.UI/planning-download.js");
+            if (disposed || accepted.Origin != Presentation.Origin || exportOperation != operation) {
+                return;
+            }
+            using var stream = new DotNetStreamReference(new MemoryStream(file.Content));
+            await module.InvokeVoidAsync("download", file.Name, file.MediaType, stream);
+        } catch (Exception exception) {
+            Logger.LogWarning("Calendar export failed for origin {Origin}, format {Format}; failure type {FailureType}.",
+                accepted.Origin, request.Format, exception.GetType().Name);
+            if (!disposed && accepted.Origin == Presentation.Origin && exportOperation == operation) {
+                exportError = (accepted.Origin, "The visible calendar rows could not be exported. Refresh the calendar and try again.");
+                await InvokeAsync(StateHasChanged);
+            }
+        } finally {
+            if (exportOperation == operation) {
+                exportOperation = null;
+            }
+        }
+    }
+
+    public void Dispose() => disposed = true;
+}

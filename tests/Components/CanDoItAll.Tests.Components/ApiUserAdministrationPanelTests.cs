@@ -1,4 +1,5 @@
 using Bunit;
+using CanDoItAll.Workspace.ApiAccess.UI;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages.Components;
@@ -13,12 +14,12 @@ public sealed class ApiUserAdministrationPanelTests {
         var store = new ControlledUserStore();
         await using var harness = await ComponentTestHarness.CreateAsync(services => {
             services.AddSingleton<IApiUserStore>(store);
-            services.AddSingleton<IApiTokenAdministrationAccess>(new LocalAccess());
+            services.EnableUi().AddSingleton<IApiTokenAdministrationAccess>(new LocalAccess());
         });
-        var cut = harness.Context.Render<ApiUserAdministrationPanel>();
+        var cut = harness.Context.Render<WorkspaceApiAccessHost>();
         cut.WaitForElement("[data-testid='api-user-create']").Click();
-        cut.Find("[data-testid='api-user-name']").Change("save-once");
-        cut.Find("[data-testid='api-user-display-name']").Change("Save once");
+        cut.Find("[data-testid='api-user-name']").Input("save-once");
+        cut.Find("[data-testid='api-user-display-name']").Input("Save once");
         cut.Find("[data-testid='api-user-password']").Change(Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)));
         var saving = cut.Find("[data-testid='api-user-save']").ClickAsync(new MouseEventArgs());
         await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -55,6 +56,11 @@ public sealed class ApiUserAdministrationPanelTests {
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public List<ApiUserRecord> Users { get; } = [];
         public int SaveCalls { get; private set; }
+
+        public Task EnsureAuthorityFormatAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ApiUserStoreSnapshot> ReadSnapshotAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<ApiUserAuthorityObservation> ObserveAuthorityAsync(ApiUserAuthorityGeneration expected, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
 
         public Task<IReadOnlyList<ApiUserRecord>> ReadAsync(CancellationToken cancellationToken = default) {
             if (failRead) {

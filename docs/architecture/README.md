@@ -3,6 +3,9 @@
 The architecture documentation is intentionally small:
 
 - [Overview](overview.md) defines boundaries and dependency direction.
+- [Current components closure](components-decoupling-closure.md) and its
+  [source register](components-decoupling-register.json) map rendering, retained native
+  owners, dynamic activation, validation and the next backend refactoring handoff.
 - [Storage, paths, and host portability](storage-and-path-portability.md) defines provider
   dispatch, logical locators, host-bound filesystem roots, and cross-host rebind.
 - [Runtime execution and shell portability](runtime-execution-portability.md) distinguishes
@@ -28,6 +31,15 @@ The architecture documentation is intentionally small:
   split of the Prompt Gallery, its behavior matrix, contracts decision and validation.
 - [HTTP API documentation](api-documentation.md) explains how XML documentation becomes the
   OpenAPI document and Swagger UI text, the conventions that pipeline requires, and its gates.
+- [Navigation state](navigation-state.md) defines what a routed page keeps in its URL, the
+  codec and binding contract, Push and Replace history, route-driven dialogs and the Workbench rule.
 
 Detailed operational contracts live beside their subject in the parent documentation
 directory. Project READMEs describe the local project boundary and validation command.
+
+[TestLab UI boundary](testlab-ui-boundary.md) records the full workspace extraction,
+form and submission lifetimes, production owner proof and standalone development loop.
+
+[Plugins UI boundary](plugins-ui-boundary.md) records the six-section workspace,
+connection lifetimes, staged owner receipts, real upload/OAuth/restart proof and
+[standalone sandbox](../../src/Sandboxes/CanDoItAll.Plugins.UiSandbox/README.md).

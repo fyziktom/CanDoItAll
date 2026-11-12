@@ -29,6 +29,10 @@ public sealed class PluginOAuthService(
     private const int PkceVerifierBytes = 64;
     private const string OfflineAccessScope = "offline_access";
     private const string OpenIdScope = "openid";
+    private const string PendingSession = "Pending";
+    private const string ExchangingSession = "Exchanging";
+    private const string FailedSession = "Failed";
+    private const string CompletedSession = "Completed";
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan AccessTokenClockSkew = TimeSpan.FromMinutes(1);
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -40,12 +44,30 @@ public sealed class PluginOAuthService(
         EnvironmentVariableTarget.Machine
     ];
 
-    public async Task<Result<PluginOAuthStartResponse>> StartAsync(
+    public Task<Result<PluginOAuthStartResponse>> StartAsync(
         PluginId pluginId,
         PluginOAuthStartRequest request,
         Uri requestBaseUri,
         string actor,
         CancellationToken cancellationToken = default)
+        => StartCoreAsync(pluginId, request, requestBaseUri, actor, null, cancellationToken);
+
+    public Task<Result<PluginOAuthStartResponse>> StartObservedAsync(
+        PluginId pluginId,
+        PluginOAuthStartRequest request,
+        Uri requestBaseUri,
+        string actor,
+        Action<PluginOAuthProgress> progress,
+        CancellationToken cancellationToken = default)
+        => StartCoreAsync(pluginId, request, requestBaseUri, actor, progress, cancellationToken);
+
+    private async Task<Result<PluginOAuthStartResponse>> StartCoreAsync(
+        PluginId pluginId,
+        PluginOAuthStartRequest request,
+        Uri requestBaseUri,
+        string actor,
+        Action<PluginOAuthProgress>? progress,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(requestBaseUri);
@@ -70,6 +92,7 @@ public sealed class PluginOAuthService(
         }
 
         var connection = connectionResult.Value!;
+        progress?.Invoke(new(connection.Id, PluginOAuthStage.ConnectionResolved));
         var connectionSettings = ConfigurationState.FromJson(connection.SettingsJson);
         var clientId = ResolveClientId(oauth, connectionSettings);
         if (string.IsNullOrWhiteSpace(clientId))
@@ -106,10 +129,11 @@ public sealed class PluginOAuthService(
             RequestedScopesJson = JsonSerializer.Serialize(requestedScopes, JsonOptions),
             CreatedAtUtc = timestamp,
             ExpiresAtUtc = timestamp.Add(SessionLifetime),
-            Status = "Pending"
+            Status = PendingSession
         };
         dbContext.Set<PluginOAuthSessionRecord>().Add(session);
         await dbContext.SaveChangesAsync(cancellationToken);
+        progress?.Invoke(new(connection.Id, PluginOAuthStage.SessionCreated));
 
         var authorizationUrl = BuildAuthorizationUrl(oauth, clientId, redirectUri, requestedScopes, state, codeVerifier);
         logger.LogInformation(
@@ -147,11 +171,25 @@ public sealed class PluginOAuthService(
         }
 
         var returnPath = NormalizeReturnPath(session.ReturnPath);
-        if (!string.Equals(session.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(session.Status, PendingSession, StringComparison.OrdinalIgnoreCase))
         {
+            if (session.Status == FailedSession) {
+                await DeleteRetiredCredentialAsync(session.CodeVerifierVaultKey, session.ConnectionId);
+            }
             return BuildReturnUri(returnPath, "failed", "state-used", session.ConnectionId);
         }
 
+        try {
+            session.Status = ExchangingSession;
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return await CompleteClaimedCallbackAsync(dbContext, session, returnPath, code, providerError, providerErrorDescription, cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            return BuildReturnUri(returnPath, "failed", "state-used", session.ConnectionId);
+        }
+    }
+
+    private async Task<Uri> CompleteClaimedCallbackAsync(PluginsDbContext dbContext, PluginOAuthSessionRecord session, string returnPath,
+        string? code, string? providerError, string? providerErrorDescription, CancellationToken cancellationToken) {
         var timestamp = clock.GetUtcNow();
         if (session.ExpiresAtUtc <= timestamp)
         {
@@ -162,17 +200,10 @@ public sealed class PluginOAuthService(
 
         if (!string.IsNullOrWhiteSpace(providerError))
         {
+            await StageOAuthConnectionErrorAsync(dbContext, session, providerError, providerErrorDescription ?? string.Empty, timestamp, cancellationToken);
             await MarkSessionFailedAsync(
                 dbContext,
                 session,
-                providerError,
-                providerErrorDescription ?? string.Empty,
-                timestamp,
-                cancellationToken);
-            await UpsertOAuthConnectionErrorAsync(
-                dbContext,
-                session,
-                PluginOAuthConnectionStatusKind.Error,
                 providerError,
                 providerErrorDescription ?? string.Empty,
                 timestamp,
@@ -203,7 +234,7 @@ public sealed class PluginOAuthService(
             new PluginId(session.PluginId),
             new PluginConnectionId(session.ConnectionId),
             cancellationToken);
-        if (connection is null)
+        if (connection is not { IsEnabled: true })
         {
             await MarkSessionFailedAsync(dbContext, session, "connection-missing", "OAuth connection no longer exists.", timestamp, cancellationToken);
             await DeleteSessionSecretAsync(session, cancellationToken);
@@ -221,24 +252,24 @@ public sealed class PluginOAuthService(
             cancellationToken);
         if (exchangeResult.IsFailure)
         {
+            await StageOAuthConnectionErrorAsync(dbContext, session, exchangeResult.Errors[0].Code, exchangeResult.Errors[0].Message, timestamp, cancellationToken);
             await MarkSessionFailedAsync(dbContext, session, exchangeResult.Errors[0].Code, exchangeResult.Errors[0].Message, timestamp, cancellationToken);
-            await UpsertOAuthConnectionErrorAsync(
-                dbContext,
-                session,
-                PluginOAuthConnectionStatusKind.Error,
-                exchangeResult.Errors[0].Code,
-                exchangeResult.Errors[0].Message,
-                timestamp,
-                cancellationToken);
             await DeleteSessionSecretAsync(session, cancellationToken);
             return BuildReturnUri(returnPath, "failed", exchangeResult.Errors[0].Code, session.ConnectionId);
         }
 
-        await StoreTokenEnvelopeAsync(dbContext, session, exchangeResult.Value!, timestamp, cancellationToken);
-        session.Status = "Completed";
+        var tokenVaultKey = ResolveTokenVaultKey(session.ConnectionId, session.Id);
+        var previousToken = await StoreTokenEnvelopeAsync(dbContext, session, tokenVaultKey, exchangeResult.Value!, timestamp, cancellationToken);
+        session.Status = CompletedSession;
         session.CompletedAtUtc = timestamp;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await DeleteSessionSecretAsync(session, cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            await DeleteRetiredCredentialAsync(tokenVaultKey, session.ConnectionId);
+            throw;
+        }
+        await DeleteRetiredCredentialAsync(previousToken, session.ConnectionId);
+        await DeleteRetiredCredentialAsync(session.CodeVerifierVaultKey, session.ConnectionId);
 
         logger.LogInformation(
             "Completed OAuth session for plugin {PluginId} connection {ConnectionId}.",
@@ -274,28 +305,37 @@ public sealed class PluginOAuthService(
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = await dbContext.Set<PluginOAuthConnectionRecord>()
             .SingleOrDefaultAsync(item => item.PluginId == pluginId.Value && item.ConnectionId == connectionId.Value, cancellationToken);
-        if (record is null)
+        var timestamp = clock.GetUtcNow();
+        var sessions = await RetireSessionsAsync(dbContext, pluginId.Value, connectionId.Value, "disconnected", timestamp, cancellationToken);
+        if (record is null && sessions.Count == 0)
         {
             return Result<PluginOAuthDisconnectResponse>.Failure(Error.Failure(
                 $"OAuth connection '{connectionId}' was not found for plugin '{pluginId}'.",
                 "plugins.oauth-connection-not-found"));
         }
 
-        if (!string.IsNullOrWhiteSpace(record.TokenVaultKey))
-        {
-            await secretVault.DeleteAsync(record.TokenVaultKey, cancellationToken);
+        var previousToken = record?.TokenVaultKey;
+        if (record is not null) {
+            record.TokenVaultKey = string.Empty;
+            record.Status = nameof(PluginOAuthConnectionStatusKind.NotConnected);
+            record.AccountDisplay = string.Empty;
+            record.GrantedScopesJson = "[]";
+            record.AccessTokenExpiresAtUtc = null;
+            record.RefreshTokenExpiresAtUtc = null;
+            record.LastErrorCode = string.Empty;
+            record.LastErrorDescription = string.Empty;
+            record.UpdatedAtUtc = timestamp;
         }
-
-        record.TokenVaultKey = string.Empty;
-        record.Status = nameof(PluginOAuthConnectionStatusKind.NotConnected);
-        record.AccountDisplay = string.Empty;
-        record.GrantedScopesJson = "[]";
-        record.AccessTokenExpiresAtUtc = null;
-        record.RefreshTokenExpiresAtUtc = null;
-        record.LastErrorCode = string.Empty;
-        record.LastErrorDescription = string.Empty;
-        record.UpdatedAtUtc = clock.GetUtcNow();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            return Result<PluginOAuthDisconnectResponse>.Failure(Error.Failure(
+                "The OAuth connection changed during disconnect. Review the current connection before trying again.", "plugins.oauth-connection-changed"));
+        }
+        await DeleteRetiredCredentialAsync(previousToken, connectionId.Value);
+        foreach (var session in sessions) {
+            await DeleteRetiredCredentialAsync(session.CodeVerifierVaultKey, connectionId.Value);
+        }
 
         return Result<PluginOAuthDisconnectResponse>.Success(new PluginOAuthDisconnectResponse(
             connectionId,
@@ -464,14 +504,23 @@ public sealed class PluginOAuthService(
         }
 
         var refreshed = refreshResult.Value!;
-        await secretVault.SetAsync(oauthRecord.TokenVaultKey, JsonSerializer.Serialize(refreshed, JsonOptions), cancellationToken);
+        var previousToken = oauthRecord.TokenVaultKey;
+        var newToken = ResolveTokenVaultKey(connectionId.Value, Guid.NewGuid());
+        await secretVault.SetAsync(newToken, JsonSerializer.Serialize(refreshed, JsonOptions), cancellationToken);
+        oauthRecord.TokenVaultKey = newToken;
         oauthRecord.AccessTokenExpiresAtUtc = refreshed.AccessTokenExpiresAtUtc;
         oauthRecord.RefreshTokenExpiresAtUtc = refreshed.RefreshTokenExpiresAtUtc;
         oauthRecord.GrantedScopesJson = JsonSerializer.Serialize(refreshed.Scopes, JsonOptions);
         oauthRecord.LastErrorCode = string.Empty;
         oauthRecord.LastErrorDescription = string.Empty;
         oauthRecord.UpdatedAtUtc = timestamp;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            await DeleteRetiredCredentialAsync(newToken, connectionId.Value);
+            throw;
+        }
+        await DeleteRetiredCredentialAsync(previousToken, connectionId.Value);
 
         EnsureScopesGranted(scopes, refreshed.Scopes);
         return new PluginOAuth2TokenSnapshot(refreshed.AccessToken, refreshed.AccessTokenExpiresAtUtc, refreshed.Scopes);
@@ -684,14 +733,14 @@ public sealed class PluginOAuthService(
         });
     }
 
-    private async Task StoreTokenEnvelopeAsync(
+    private async Task<string?> StoreTokenEnvelopeAsync(
         PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
+        string tokenVaultKey,
         PluginOAuthTokenEnvelope envelope,
         DateTimeOffset timestamp,
         CancellationToken cancellationToken)
     {
-        var tokenVaultKey = ResolveTokenVaultKey(session.ConnectionId);
         await secretVault.SetAsync(tokenVaultKey, JsonSerializer.Serialize(envelope, JsonOptions), cancellationToken);
 
         var record = await dbContext.Set<PluginOAuthConnectionRecord>()
@@ -709,6 +758,7 @@ public sealed class PluginOAuthService(
             dbContext.Set<PluginOAuthConnectionRecord>().Add(record);
         }
 
+        var previousToken = record.TokenVaultKey;
         record.TokenVaultKey = tokenVaultKey;
         record.Status = nameof(PluginOAuthConnectionStatusKind.Connected);
         record.AccountDisplay = envelope.AccountDisplay;
@@ -718,6 +768,32 @@ public sealed class PluginOAuthService(
         record.LastErrorCode = string.Empty;
         record.LastErrorDescription = string.Empty;
         record.UpdatedAtUtc = timestamp;
+        return previousToken;
+    }
+
+    private async Task DeleteRetiredCredentialAsync(string? key, Guid connectionId) {
+        if (string.IsNullOrWhiteSpace(key)) {
+            return;
+        }
+        try {
+            await secretVault.DeleteAsync(key, CancellationToken.None);
+        } catch (Exception exception) {
+            logger.LogWarning("Retired OAuth credential cleanup for connection {ConnectionId} requires review. FailureType={FailureType}.",
+                connectionId, exception.GetType().Name);
+        }
+    }
+
+    internal static async Task<IReadOnlyList<PluginOAuthSessionRecord>> RetireSessionsAsync(PluginsDbContext dbContext, string pluginId,
+        Guid connectionId, string reason, DateTimeOffset timestamp, CancellationToken cancellationToken) {
+        var sessions = await dbContext.Set<PluginOAuthSessionRecord>().Where(session => session.PluginId == pluginId &&
+            session.ConnectionId == connectionId && (session.Status == PendingSession || session.Status == ExchangingSession))
+            .ToListAsync(cancellationToken);
+        foreach (var session in sessions) {
+            session.Status = FailedSession;
+            session.ErrorCode = reason;
+            session.CompletedAtUtc = timestamp;
+        }
+        return sessions;
     }
 
     private async Task<PluginOAuthTokenEnvelope> ReadTokenEnvelopeAsync(
@@ -747,17 +823,16 @@ public sealed class PluginOAuthService(
         DateTimeOffset timestamp,
         CancellationToken cancellationToken)
     {
-        session.Status = "Failed";
+        session.Status = FailedSession;
         session.ErrorCode = NormalizeErrorCode(errorCode);
         session.ErrorDescription = Truncate(errorDescription, 600);
         session.CompletedAtUtc = timestamp;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task UpsertOAuthConnectionErrorAsync(
+    private static async Task StageOAuthConnectionErrorAsync(
         PluginsDbContext dbContext,
         PluginOAuthSessionRecord session,
-        PluginOAuthConnectionStatusKind status,
         string errorCode,
         string errorDescription,
         DateTimeOffset timestamp,
@@ -765,6 +840,9 @@ public sealed class PluginOAuthService(
     {
         var record = await dbContext.Set<PluginOAuthConnectionRecord>()
             .SingleOrDefaultAsync(item => item.ConnectionId == session.ConnectionId, cancellationToken);
+        if (record?.Status is nameof(PluginOAuthConnectionStatusKind.Connected) or nameof(PluginOAuthConnectionStatusKind.NotConnected)) {
+            return;
+        }
         if (record is null)
         {
             record = new PluginOAuthConnectionRecord
@@ -778,11 +856,10 @@ public sealed class PluginOAuthService(
             dbContext.Set<PluginOAuthConnectionRecord>().Add(record);
         }
 
-        record.Status = status.ToString();
+        record.Status = nameof(PluginOAuthConnectionStatusKind.Error);
         record.LastErrorCode = NormalizeErrorCode(errorCode);
         record.LastErrorDescription = Truncate(errorDescription, 600);
         record.UpdatedAtUtc = timestamp;
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task MarkReconnectRequiredAsync(
@@ -1109,8 +1186,8 @@ public sealed class PluginOAuthService(
     private static string ResolveProviderKey(PluginConnectionKey connectionKey)
         => connectionKey.Value;
 
-    private static string ResolveTokenVaultKey(Guid connectionId)
-        => $"plugins/oauth/tokens/{connectionId:N}";
+    private static string ResolveTokenVaultKey(Guid connectionId, Guid version)
+        => $"plugins/oauth/tokens/{connectionId:N}/{version:N}";
 
     private static string CreateRandomBase64Url(int byteCount)
         => Base64Url(RandomNumberGenerator.GetBytes(byteCount));

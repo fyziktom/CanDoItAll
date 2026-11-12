@@ -13,7 +13,19 @@ internal enum E2eScenarioStatus
 
 internal sealed record E2eScenarioCheckResult(
     string CheckId,
-    bool Passed);
+    bool Passed,
+    E2eStreamingTiming? Streaming = null);
+
+internal sealed record E2eStreamingTiming(
+    int StatusCode, double HeadersMilliseconds, double? FirstDataMilliseconds,
+    double? TerminalMilliseconds, double CompletionMilliseconds, double? FirstDataToCompletionMilliseconds,
+    int FrameCount, bool DoneFrame, bool ResponsesCompletedEvent, int MinimumIncrementalMilliseconds) {
+    public static E2eStreamingTiming From(E2eSseObservation observation) => new(
+        (int)observation.StatusCode, observation.HeadersAt.TotalMilliseconds, observation.FirstDataAt?.TotalMilliseconds,
+        observation.TerminalAt?.TotalMilliseconds, observation.CompletedAt.TotalMilliseconds,
+        observation.FirstDataAt is { } first ? (observation.CompletedAt - first).TotalMilliseconds : null,
+        observation.DataFrameCount, observation.HasDoneFrame, observation.HasResponsesCompletedEvent, 50);
+}
 
 internal sealed record E2eScenarioStageResult(
     E2eScenarioPhase Phase,
@@ -327,7 +339,7 @@ internal sealed class E2eScenarioEvidenceBuilder
 {
     private readonly List<E2eScenarioCheckResult> checks = [];
 
-    public void Expect(string checkId, bool condition)
+    public void Expect(string checkId, bool condition, E2eStreamingTiming? streaming = null)
     {
         if (string.IsNullOrWhiteSpace(checkId) ||
             checkId.Any(character =>
@@ -336,7 +348,7 @@ internal sealed class E2eScenarioEvidenceBuilder
             throw new ArgumentException("A scenario check id must be a non-empty safe token.", nameof(checkId));
         }
 
-        checks.Add(new E2eScenarioCheckResult(checkId, condition));
+        checks.Add(new E2eScenarioCheckResult(checkId, condition, streaming));
     }
 
     public IReadOnlyList<E2eScenarioCheckResult> Build()

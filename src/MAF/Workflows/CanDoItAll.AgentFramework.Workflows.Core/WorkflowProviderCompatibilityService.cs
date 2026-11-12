@@ -152,7 +152,10 @@ internal sealed class WorkflowProviderCompatibilityService(
             provider.SupportsTools,
             featureMatrix?.SupportsStructuredOutput ?? true,
             featureMatrix?.SupportsVision ?? true,
-            provider.SupportsBackgroundResponses);
+            provider.SupportsBackgroundResponses) {
+            ModelCatalog = provider.ModelCatalog,
+            IsSourceManaged = provider.IsSourceManaged
+        };
     }
 
     private static IReadOnlyList<string> BuildModelOptions(ProviderProfile provider)

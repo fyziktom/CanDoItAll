@@ -36,7 +36,8 @@ internal static class SandboxWorkspaceSeedBuilder
 
     internal static SandboxWorkspaceDocument Build(
         string? capabilityTemplatePackRoot = null,
-        string? agentTemplatePackRoot = null)
+        string? agentTemplatePackRoot = null,
+        Func<string, string>? readText = null)
     {
         var now = SeedTimestamp;
 
@@ -47,8 +48,8 @@ internal static class SandboxWorkspaceSeedBuilder
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
         var localOllamaProviderId = CreateStableGuid("providers/ollama-local-default");
 
-        var capabilityPack = new CapabilityTemplatePackLoader(capabilityTemplatePackRoot).Load();
-        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(capabilityPack);
+        var capabilityPack = new CapabilityTemplatePackLoader(capabilityTemplatePackRoot, readText).Load();
+        var capabilities = CapabilityTemplateSeedMaterializer.MaterializeDefaultCapabilities(capabilityPack, readText);
         var sessionId = CreateStableGuid("sessions/integration-target-summary");
 
         var providers = new List<ProviderProfile>
@@ -224,7 +225,8 @@ internal static class SandboxWorkspaceSeedBuilder
             providerIdsByKey,
             providers,
             capabilities,
-            agentTemplatePackRoot);
+            agentTemplatePackRoot,
+            readText);
         var agentIdsByTemplateKey = agentSeed.Agents.ToDictionary(
             item => item.TemplateKey,
             item => item.Id,
@@ -278,9 +280,10 @@ internal static class SandboxWorkspaceSeedBuilder
         IReadOnlyDictionary<string, Guid> providerIdsByKey,
         IReadOnlyList<ProviderProfile> providers,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
-        string? agentTemplatePackRoot)
+        string? agentTemplatePackRoot,
+        Func<string, string>? readText)
     {
-        var pack = new AgentTemplatePackLoader(agentTemplatePackRoot).Load();
+        var pack = new AgentTemplatePackLoader(agentTemplatePackRoot, readText).Load();
         var seedVersion = string.IsNullOrWhiteSpace(pack.Manifest.SeedVersion)
             ? SeriousDeliveryManagedSeedVersion
             : pack.Manifest.SeedVersion.Trim();

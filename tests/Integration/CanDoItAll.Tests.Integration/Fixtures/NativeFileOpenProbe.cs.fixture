@@ -1,0 +1,23 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
+var root = Environment.GetEnvironmentVariable("CANDOITALL_FILE_OPEN_PROBE_ROOT")
+    ?? throw new InvalidOperationException("Missing owned root.");
+var receipt = Environment.GetEnvironmentVariable("CANDOITALL_FILE_OPEN_PROBE_RECEIPT")
+    ?? throw new InvalidOperationException("Missing receipt.");
+if (args.Length != 1) {
+    throw new InvalidOperationException("Exactly one governed file is required.");
+}
+var target = Path.GetFullPath(args[0]);
+if (!target.StartsWith(Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+    StringComparison.OrdinalIgnoreCase)) {
+    throw new InvalidOperationException("Target is outside the owned test root.");
+}
+var bytes = await File.ReadAllBytesAsync(target);
+var evidence = JsonSerializer.Serialize(new {
+    Target = target,
+    Bytes = bytes.Length,
+    Sha256 = Convert.ToHexString(SHA256.HashData(bytes)),
+    ProcessId = Environment.ProcessId
+});
+await File.AppendAllTextAsync(receipt, evidence + Environment.NewLine);

@@ -1,0 +1,51 @@
+@using CanDoItAll.Modules.Workbench
+@using CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Components.Gantt
+
+<Alert AlertStyle="AlertStyle.Info">Synthetic task editor. This dialog has no native project authority.</Alert>
+@if (Scenario.Outcome == TaskFormOutcome.HeldQuote) {
+    <Button Text="Release synthetic quote" Click="Scenario.ReleaseQuote" data-testid="synthetic-quote-release" />
+}
+@if (Mode is TaskFormMode.GanttCreate or TaskFormMode.GanttEdit) {
+    <PlanningGanttTaskEditor @key="opening" ProjectId="Scenario.ProjectId" QuoteContext="opening"
+                            DefaultStartUtc="Start" DefaultEndUtc="@(Start.AddHours(8))" AfterTaskNodeId="@AfterTaskId"
+                            EditModel="@(Mode == TaskFormMode.GanttEdit ? Scenario.Model(ExistingTask) : null)"
+                            DefaultCurrencyCode="USD" ResourceOptions="Scenario.Resources" QuoteResolver="Scenario.QuoteAsync"
+                            CreateSubmitted="CreateAsync" EditSubmitted="EditAsync" Readback="Scenario.ReadbackAsync" Cancelled="CancelAsync" />
+} else {
+    <PlanningStructureTaskEditor @key="opening" ProjectId="Scenario.ProjectId" QuoteContext="opening" CreateRequest="request"
+                                IsEditMode="@(Mode == TaskFormMode.StructureEdit)" InitialExecution="ProjectTaskExecutionSnapshot.Unknown"
+                                CanChangeDirectAssignee="@(Scenario.Outcome != TaskFormOutcome.Restricted)"
+                                DefaultCurrencyCode="USD" ResourceOptions="Scenario.Resources" QuoteResolver="Scenario.QuoteAsync"
+                                RepositoryOptions="repositories" Submitted="StructureAsync" Readback="Scenario.ReadbackAsync" Cancelled="CancelAsync" />
+}
+
+@code {
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    [Parameter, EditorRequired] public TaskFormScenario Scenario { get; set; } = default!;
+    [Parameter] public TaskFormMode Mode { get; set; }
+    [Parameter] public GanttScenario? Gantt { get; set; }
+    [Parameter] public GanttTask? ExistingTask { get; set; }
+    [Parameter] public DateTimeOffset Start { get; set; } = new(2026, 10, 5, 8, 0, 0, TimeSpan.Zero);
+    [Parameter] public string? AfterTaskId { get; set; }
+    private readonly ProjectTaskQuoteContext opening = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+    private CanvasWorkbenchCreateActionRequest request = default!;
+    private static readonly CanvasWorkbenchInputOption[] repositories = [new() { Value = "synthetic-repository", Label = "Synthetic repository" }];
+
+    protected override void OnInitialized() => request = Scenario.Request(Mode);
+    private Task CancelAsync() => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private Task<PlanningTaskSaveResult> CreateAsync(PlanningGanttTaskCreate draft) {
+        var id = new GanttTaskId($"synthetic:{Guid.NewGuid():N}");
+        return FinishAsync(Scenario.Save(id.Value, () => Gantt?.AcceptCreate(id, draft)));
+    }
+    private Task<PlanningTaskSaveResult> EditAsync(ProjectStructureTaskEditDialogResult draft)
+        => FinishAsync(Scenario.Save(draft.TaskId.Value, () => Gantt?.AcceptEdit(draft)));
+    private Task<PlanningTaskSaveResult> StructureAsync(ProjectStructureTaskDialogResult draft)
+        => FinishAsync(Scenario.Save($"synthetic:{Guid.NewGuid():N}", () => request = draft.CreateRequest));
+    private async Task<PlanningTaskSaveResult> FinishAsync(PlanningTaskSaveResult result) {
+        if (result.ShouldClose && DialogReference is { } reference) {
+            await reference.CloseAsync(result);
+        }
+        return result;
+    }
+}

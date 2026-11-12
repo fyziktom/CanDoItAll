@@ -400,7 +400,7 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
 
         public Task<Result<Guid>> SaveAssignmentAsync(
             ProjectPartyAssignmentUpsertRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, Action<ProjectAssignmentSaveReceipt>? onCommitted = null)
             => throw UnexpectedCall();
 
         public Task<Result> ReplaceNodeAssignmentsAsync(
@@ -409,13 +409,15 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
             IReadOnlyList<ProjectPartyAssignmentUpsertRequest> desiredAssignments,
             IReadOnlyList<ProjectPartyAssignmentRole> targetRoles,
             CancellationToken cancellationToken = default,
-        ProjectWriteAdmission? expectedProjectAdmission = null)
+        ProjectWriteAdmission? expectedProjectAdmission = null,
+            IReadOnlyCollection<ProjectPartyAssignmentConcurrencySnapshot>? expectedAssignments = null)
             => throw UnexpectedCall();
 
         public Task DeleteAssignmentAsync(
             Guid assignmentId,
             CancellationToken cancellationToken = default,
-        ProjectAssignmentReference? expectedReference = null)
+        ProjectAssignmentReference? expectedReference = null, ProjectAssignmentObservation? original = null,
+            Action<ProjectAssignmentDeleteReceipt>? onCommitted = null)
             => throw UnexpectedCall();
 
         public Task DeleteAssignmentsForNodesAsync(
@@ -443,7 +445,9 @@ public sealed class ProjectPlanAnalyticsQueryServiceTests
 
         public Task<Result<ProjectPartyQuickCreateResult>> CreatePartyAsync(
             ProjectPartyQuickCreateRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Func<CancellationToken, ValueTask>? authorizeCommit = null,
+            Func<CancellationToken, ValueTask>? authorizeRead = null)
             => throw UnexpectedCall();
     }
 }

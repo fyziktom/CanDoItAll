@@ -1,131 +1,120 @@
-@using CanDoItAll.AgentFramework.Models
-@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.AgentFramework.UI.Teams
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.Editing
+@using Microsoft.Extensions.Logging
+@implements IAsyncDisposable
+@inject AgentConfigurationChanges ConfigurationChanges
+@inject IAgentCatalogOperations CatalogOperations
+@inject ILogger<AgentTeamMembersDialog> Logger
+@inject NotificationService Notifications
 
-<div class="agent-team-members-dialog" data-testid="agents-team-members-dialog">
-    <Stack GapScale="LayoutGap.Medium">
-        <FilterBar ResultText="@($"{FilteredAgents.Count} of {Agents.Count} agent(s)")">
-            <input @bind="searchText"
-                   @bind:event="oninput"
-                   class="cda-input min-w-[14rem] flex-1"
-                   placeholder="Search agents"
-                   data-testid="agents-team-members-search" />
-            <StatusBadge Tone="info" Text="@($"{selectedAgentIds.Count} selected")" />
-        </FilterBar>
-
-        @if (FilteredAgents.Count == 0)
-        {
-            <EmptyState Eyebrow="No matches"
-                        Title="No agents match the current filters"
-                        Description="Clear the search filter to choose agents for this team." />
-        }
-        else
-        {
-            <Grid Gap="LayoutGap.Medium"
-                  ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))"
-                  Class="agent-team-members-dialog__grid">
-                @foreach (var agent in FilteredAgents)
-                {
-                    <AgentSelectionCard Agent="@agent"
-                                        IsSelected="@selectedAgentIds.Contains(agent.Id)"
-                                        IsPrivateProvider="@PrivateAgentIds.Contains(agent.Id)"
-                                        SelectedLabel="In team"
-                                        Compact="true"
-                                        CenterContent="true"
-                                        ShowDetailsTooltip="true"
-                                        ShowWorkload="false"
-                                        ShowUpdatedAt="false"
-                                        ShellTestId="agents-team-member-card-shell"
-                                        SelectTestId="agents-team-member-card"
-                                        OnSelect="@(() => ToggleAgent(agent.Id))" />
-                }
-            </Grid>
-        }
-
-        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
-            <Button Text="Cancel"
-                    Icon="close"
-                    Variant="Variant.Outlined"
-                    Click="CancelAsync" />
-            <Button Text="Save membership"
-                    Icon="check"
-                    Click="ConfirmAsync"
-                    data-testid="agents-team-members-confirm" />
-        </Cluster>
-    </Stack>
-</div>
+@if (!RendererInfo.IsInteractive || opening?.IsReady != true) {
+    <SurfaceCard data-testid="agents-team-members-access"><TextBlock Value="@(accessError ?? "Initializing Team membership access.")" /></SurfaceCard>
+} else {
+<TeamMembersSelector @ref="selector" Team="Team" Agents="Agents" PrivateAgentIds="PrivateAgentIds"
+                     OwnerCancellationToken="ownerToken" Operations="operations" ChangeSequence="changeSequence" Completed="CompleteAsync" Cancelled="CancelAsync" />
+}
 
 @code {
-    [Parameter, EditorRequired]
-    public AgentTeamDefinition Team { get; set; } = default!;
+    [Parameter, EditorRequired] public AgentTeamDefinition Team { get; set; } = default!;
+    [Parameter] public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+    [Parameter] public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
+    private TeamMembersSelector? selector;
+    private AgentConfigurationOpening? opening;
+    private TeamMembershipOperations? operations;
+    private CancellationTokenSource? owner;
+    private CancellationToken ownerToken;
+    private Guid? boundTeamId;
+    private CancellationToken boundToken;
+    private Guid openingId;
+    private long changeSequence;
+    private string? accessError;
+    private bool disposed;
 
-    [Parameter]
-    public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
-
-    [Parameter]
-    public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
-
-    [CascadingParameter]
-    public DialogReference? DialogReference { get; set; }
-
-    private readonly HashSet<Guid> selectedAgentIds = [];
-    private bool hasInitializedSelection;
-    private string searchText = string.Empty;
-
-    private IReadOnlyList<AgentDefinition> FilteredAgents => Agents
-        .Where(MatchesSearch)
-        .OrderByDescending(item => selectedAgentIds.Contains(item.Id))
-        .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    protected override void OnParametersSet()
-    {
-        if (hasInitializedSelection)
-        {
+    protected override async Task OnParametersSetAsync() {
+        if (disposed || !RendererInfo.IsInteractive || boundTeamId == Team.Id && boundToken == OwnerCancellationToken && opening is not null) {
             return;
         }
-
-        selectedAgentIds.Clear();
-        foreach (var agentId in Team.AgentIds)
-        {
-            selectedAgentIds.Add(agentId);
+        owner?.Cancel();
+        if (opening is { } oldOpening) {
+            await oldOpening.DisposeAsync();
         }
-
-        hasInitializedSelection = true;
+        owner?.Dispose();
+        boundTeamId = Team.Id;
+        boundToken = OwnerCancellationToken;
+        var id = openingId = Guid.NewGuid();
+        opening = new(ConfigurationChanges, EditingOwner.AgentTeam, Team.Id, id, () => !disposed && openingId == id && !OwnerCancellationToken.IsCancellationRequested);
+        operations = new(SaveAsync, ReadCurrentAsync);
+        try {
+            await opening.StartAsync(batch => InvokeAsync(() => {
+                if (!disposed && openingId == id && (batch.RequiresResync || batch.Changes.Any(change => change.OriginEditorId != id))) {
+                    changeSequence++;
+                    StateHasChanged();
+                }
+            }), RetireAsync);
+            owner = CancellationTokenSource.CreateLinkedTokenSource(OwnerCancellationToken, opening.Lifetime);
+            ownerToken = owner.Token;
+        } catch (Exception error) {
+            accessError = "Team membership access is unavailable. Close and reopen with current access.";
+            Logger.LogWarning("Team membership access could not be opened for {TeamId}: {FailureType}", Team.Id, error.GetType().Name);
+        }
     }
 
-    private void ToggleAgent(Guid agentId)
-    {
-        if (!selectedAgentIds.Add(agentId))
-        {
-            selectedAgentIds.Remove(agentId);
+    private async Task<TeamMembershipOutcome> SaveAsync(TeamMembershipCommand command, CancellationToken token) {
+        if (disposed || command.TeamId != boundTeamId || ownerToken.IsCancellationRequested) {
+            return new TeamMembershipOutcome.Rejected();
+        }
+        try {
+            await opening!.WriteAsync(request => CatalogOperations.UpdateMembersAsync(command.TeamId, command.AgentIds, command.ExpectedUpdatedAtUtc, request), token);
+            return new TeamMembershipOutcome.Accepted();
+        } catch (AgentCatalogCommittedException<AgentTeamDefinition> exception) when (exception.Accepted.Id == command.TeamId) {
+            Notifications.Warning("Membership saved with warning", exception.Message);
+            return new TeamMembershipOutcome.Accepted();
+        } catch (AgentTeamConcurrencyException) {
+            return new TeamMembershipOutcome.Conflict();
+        } catch (UnauthorizedAccessException) {
+            return new TeamMembershipOutcome.Rejected();
+        } catch (InvalidOperationException) {
+            return new TeamMembershipOutcome.Rejected();
+        } catch (Exception error) {
+            Logger.LogWarning("Team membership acknowledgement unavailable for {TeamId}: {FailureType}", command.TeamId, error.GetType().Name);
+            return new TeamMembershipOutcome.Unknown();
         }
     }
 
-    private Task ConfirmAsync()
-    {
-        return DialogReference?.CloseAsync(new AgentTeamMembersDialogResult(
-            Team.Id,
-            selectedAgentIds
-                .OrderBy(item => item)
-                .ToList()))
-            ?? Task.CompletedTask;
+    private Task<AgentTeamDefinition> ReadCurrentAsync(Guid id, CancellationToken token) {
+        if (id != boundTeamId) {
+            throw new UnauthorizedAccessException("The requested Team does not belong to this original opening.");
+        }
+        return opening!.ReadAsync(request => CatalogOperations.ReadTeamAsync(id, request), token);
     }
 
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private Task RetireAsync() {
+        owner?.Cancel();
+        return InvokeAsync(() => {
+            if (!disposed) {
+                accessError = "Team membership access changed. Close and reopen with current access.";
+                StateHasChanged();
+            }
+        });
+    }
 
-    private bool MatchesSearch(AgentDefinition agent)
-    {
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            return true;
+    private Task CompleteAsync(TeamMembershipSelection result) => disposed || ownerToken.IsCancellationRequested
+        ? Task.CompletedTask : DialogReference?.CloseAsync(new AgentTeamMembersDialogResult(result.TeamId, result.AgentIds)) ?? Task.CompletedTask;
+    private Task CancelAsync() => disposed ? Task.CompletedTask : DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
         }
-
-        var query = searchText.Trim();
-        return agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               agent.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase));
+        disposed = true;
+        selector?.Dispose();
+        owner?.Cancel();
+        opening?.Stop();
+        if (opening is { } current) {
+            await current.DisposeAsync();
+        }
+        owner?.Dispose();
     }
 }

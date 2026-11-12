@@ -48,25 +48,27 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid projectId,
         string nodeKey,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => DeleteObjectDetailedAsync(
             projectId,
             nodeKey,
             ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
     public Task<ProjectStructureDeletionResult> DeleteObjectDetailedAsync(
         Guid projectId,
         string nodeKey,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => DeleteObjectCoreAsync(
             projectId,
             nodeKey,
             managedStorageDisposition,
             reconcileDetachedTaskResource: true,
-            cancellationToken, mutationOwner);
+            cancellationToken, mutationOwner, authorizeCommit);
 
     internal async Task<int> DeleteCanonicalTaskResourceAsync(
         Guid projectId,
@@ -85,47 +87,53 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid projectId,
         string rootNodeKey,
         Guid? durableMutationId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => ReplayDeletionCoreAsync(
             projectId,
             rootNodeKey,
             durableMutationId,
             expectedDisposition: null,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
 
     internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
         Guid projectId,
         string rootNodeKey,
         Guid durableMutationId,
         ProjectStructureManagedStorageDisposition expectedDisposition,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => ReplayDeletionCoreAsync(
             projectId,
             rootNodeKey,
             durableMutationId,
             expectedDisposition,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
 
     internal Task<ProjectStructureDeletionReplayResult?> ReplayDeletionAsync(
         Guid projectId,
         string rootNodeKey,
         ProjectStructureManagedStorageDisposition expectedDisposition,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => ReplayDeletionCoreAsync(
             projectId,
             rootNodeKey,
             durableMutationId: null,
             expectedDisposition,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
 
     private async Task<ProjectStructureDeletionReplayResult?> ReplayDeletionCoreAsync(
         Guid projectId,
         string rootNodeKey,
         Guid? durableMutationId,
         ProjectStructureManagedStorageDisposition? expectedDisposition,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit) {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootNodeKey);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -142,11 +150,9 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             .OrderBy(record => record.Status == ProjectCrossModuleMutationStatus.Completed)
             .ThenByDescending(record => record.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
-        if (mutation is null)
-        {
-            await mutationScope.CommitAsync(cancellationToken);
-            if (durableMutationId.HasValue)
-            {
+        if (mutation is null) {
+            await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
+            if (durableMutationId.HasValue) {
                 throw new ProjectStructureDeletionRecoveryNotFoundException(
                     projectId,
                     rootNodeKey,
@@ -161,8 +167,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                           new JsonSerializerOptions(JsonSerializerDefaults.Web))
                       ?? throw new InvalidOperationException(
                           "Unable to deserialize the durable subtree-deletion payload.");
-        if (!string.Equals(payload.RootNodeKey, rootNodeKey, StringComparison.Ordinal))
-        {
+        if (!string.Equals(payload.RootNodeKey, rootNodeKey, StringComparison.Ordinal)) {
             throw new ProjectStructureDeletionRecoveryNotFoundException(
                 projectId,
                 rootNodeKey,
@@ -176,11 +181,10 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             payload,
             expectedDisposition);
 
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         await mutationScope.DisposeAsync();
         var completedPayload = payload;
-        if (mutation.Status != ProjectCrossModuleMutationStatus.Completed)
-        {
+        if (mutation.Status != ProjectCrossModuleMutationStatus.Completed) {
             completedPayload = await ProcessDeletionMutationOrThrowAsync(
                 projectId,
                 rootNodeKey,
@@ -188,7 +192,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
                     payload.ManagedStorageDisposition),
                 "The subtree is deleted, but durable cleanup remains incomplete.",
-                cancellationToken);
+                cancellationToken, authorizeCommit);
         }
 
         return new ProjectStructureDeletionReplayResult(
@@ -198,8 +202,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
     internal async Task<IReadOnlyList<ProjectStructureDeletionRecovery>> ListPendingDeletionRecoveriesAsync(
         Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var mutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
@@ -220,8 +223,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                               new JsonSerializerOptions(JsonSerializerDefaults.Web))
                           ?? throw new InvalidOperationException(
                               "Unable to deserialize the durable subtree-deletion payload.");
-            if (!string.Equals(payload.RootNodeKey, mutation.ScopeNodeKey, StringComparison.Ordinal))
-            {
+            if (!string.Equals(payload.RootNodeKey, mutation.ScopeNodeKey, StringComparison.Ordinal)) {
                 throw new InvalidOperationException(
                     "The durable subtree-deletion payload has an invalid root scope.");
             }
@@ -242,8 +244,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
     internal async Task<IReadOnlyList<ProjectStructureDeletionCompletionNotice>> ListDeletionCompletionNoticesAsync(
         Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var mutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .AsNoTracking()
@@ -277,9 +278,15 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
         bool reconcileDetachedTaskResource,
         CancellationToken cancellationToken,
-        ProjectStructureAgentContext? mutationOwner = null)
-    {
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        if (reconcileDetachedTaskResource) {
+            mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, projectId);
+        }
         ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(managedStorageDisposition);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -295,8 +302,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             .Where(item => item.ProjectId == projectId)
             .ToListAsync(cancellationToken);
         var root = records.FirstOrDefault(item => item.NodeKey == nodeKey && !item.IsSystemManaged);
-        if (root is null)
-        {
+        if (root is null) {
             var pendingDeletion = await dbContext.Set<ProjectCrossModuleMutationRecord>()
                 .Where(record =>
                     record.ProjectId == projectId &&
@@ -305,8 +311,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                     record.Status != ProjectCrossModuleMutationStatus.Completed)
                 .OrderByDescending(record => record.CreatedAtUtc)
                 .FirstOrDefaultAsync(cancellationToken);
-            if (pendingDeletion is not null)
-            {
+            if (pendingDeletion is not null) {
                 var payload = JsonSerializer.Deserialize<DeleteSubtreeMutationPayload>(
                                   pendingDeletion.PayloadJson,
                                   new JsonSerializerOptions(JsonSerializerDefaults.Web))
@@ -318,7 +323,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                     pendingDeletion.Id,
                     payload,
                     managedStorageDisposition);
-                await mutationScope.CommitAsync(cancellationToken);
+                await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
                 await mutationScope.DisposeAsync();
                 var completedPayload = await ProcessDeletionMutationOrThrowAsync(
                     projectId,
@@ -327,7 +332,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                     ProjectStructureManagedStorageDispositionPolicy.ResolvePersisted(
                         payload.ManagedStorageDisposition),
                     "The subtree is deleted, but durable cleanup remains incomplete.",
-                    cancellationToken);
+                    cancellationToken, authorizeCommit);
                 return new ProjectStructureDeletionResult(
                     completedPayload.DeletedNodeKeys.Count,
                     MapDeletionWarnings(completedPayload.ManagedStorageOutcomes));
@@ -339,10 +344,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 nodeKey,
                 reconcileDetachedTaskResource,
                 cancellationToken);
-            await mutationScope.CommitAsync(cancellationToken);
+            await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
             return new ProjectStructureDeletionResult(hiddenCount, []);
         }
 
+        if (reconcileDetachedTaskResource) {
+            await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner!, projectId, [nodeKey], null, true, records, cancellationToken);
+        }
         var keysToDelete = CollectEditableDescendantKeys(records, root.NodeKey);
         var linksToDelete = await dbContext.Set<ProjectObjectLinkRecord>()
             .Where(item =>
@@ -390,8 +398,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         await dbContext.Set<ProjectCrossModuleMutationRecord>().AddAsync(mutationRecord, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        if (linksToDelete.Count > 0)
-        {
+        if (linksToDelete.Count > 0) {
             dbContext.RemoveRange(linksToDelete);
         }
 
@@ -406,7 +413,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 clock.GetUtcNow(),
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         await mutationScope.DisposeAsync();
 
         var completedDeletionPayload = await ProcessDeletionMutationOrThrowAsync(
@@ -415,7 +422,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             mutationRecord.Id,
             managedStorageDisposition,
             "Deleting the subtree committed the Workbench change, but durable cleanup failed.",
-            cancellationToken);
+            cancellationToken, authorizeCommit);
         return new ProjectStructureDeletionResult(
             recordsToDelete.Count,
             MapDeletionWarnings(completedDeletionPayload.ManagedStorageOutcomes));
@@ -584,13 +591,16 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         string sourceNodeKey,
         Guid targetProjectId,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
-    {
-        if (string.IsNullOrWhiteSpace(sourceNodeKey) || sourceProjectId == targetProjectId)
-        {
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        if (string.IsNullOrWhiteSpace(sourceNodeKey) || sourceProjectId == targetProjectId) {
             return null;
         }
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, sourceProjectId);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -605,14 +615,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
             .ToListAsync(cancellationToken);
-        if (sourceRecords.Count == 0)
-        {
+        await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner, sourceProjectId, [sourceNodeKey], null, true, sourceRecords, cancellationToken);
+        if (sourceRecords.Count == 0) {
             return null;
         }
 
         var (movedNodeKeys, movedRootKeys) = CollectEditableMoveKeys(sourceRecords, sourceNodeKey);
-        if (movedNodeKeys.Count == 0)
-        {
+        ProjectStructureNodeExpectations.EnsureCurrent(mutationOwner?.ExpectedTransferRoots, sourceRecords);
+        if (movedNodeKeys.Count == 0) {
             return new ProjectStructureSubprojectTransferResult(targetProjectId, [], 0, 0, []);
         }
 
@@ -627,7 +637,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             ProjectCrossModuleMutationKind.MoveDescendants,
             "Moving descendants committed the Workbench change, but canonical assignment reconciliation failed.",
             mutationScope,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     public async Task<ProjectStructureSubprojectTransferResult?> MoveNodesToProjectAsync(
@@ -636,18 +646,21 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid targetProjectId,
         bool includeDescendants = true,
         CancellationToken cancellationToken = default,
-        ProjectStructureAgentContext? mutationOwner = null)
-    {
+        ProjectStructureAgentContext? mutationOwner = null,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         var normalizedSourceNodeKeys = sourceNodeKeys
             .Where(nodeKey => !string.IsNullOrWhiteSpace(nodeKey))
             .Select(nodeKey => nodeKey.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        if (normalizedSourceNodeKeys.Count == 0 || sourceProjectId == targetProjectId)
-        {
+        if (normalizedSourceNodeKeys.Count == 0 || sourceProjectId == targetProjectId) {
             return null;
         }
 
+        mutationOwner = ProjectStructureGraphStateGuard.Require(mutationOwner, sourceProjectId);
+        if (authorizeCommit is not null) {
+            await authorizeCommit(cancellationToken);
+        }
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await ProjectWorkbenchSchemaInitializer.EnsureAsync(dbContext, cancellationToken);
         await using var mutationScope =
@@ -662,14 +675,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         var sourceRecords = await dbContext.Set<ProjectObjectRecord>()
             .Where(item => item.ProjectId == sourceProjectId)
             .ToListAsync(cancellationToken);
-        if (sourceRecords.Count == 0)
-        {
+        await ProjectStructureGraphStateGuard.EnsureAsync(dbContext, mutationOwner, sourceProjectId, normalizedSourceNodeKeys, null, includeDescendants, sourceRecords, cancellationToken);
+        if (sourceRecords.Count == 0) {
             return null;
         }
 
         var (movedNodeKeys, movedRootKeys) = CollectEditableSelectedMoveKeys(sourceRecords, normalizedSourceNodeKeys, includeDescendants);
-        if (movedNodeKeys.Count == 0)
-        {
+        ProjectStructureNodeExpectations.EnsureCurrent(mutationOwner?.ExpectedTransferRoots, sourceRecords);
+        if (movedNodeKeys.Count == 0) {
             return new ProjectStructureSubprojectTransferResult(targetProjectId, [], 0, 0, []);
         }
 
@@ -684,7 +697,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             ProjectCrossModuleMutationKind.MoveSelectedNodes,
             "Moving selected nodes committed the Workbench change, but canonical assignment reconciliation failed.",
             mutationScope,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private static IReadOnlyCollection<ProjectWriteAdmission>? ResolveTransferAdmissions(ProjectStructureAgentContext? owner, Guid sourceId, Guid targetId) {
@@ -709,8 +722,8 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         ProjectCrossModuleMutationKind mutationKind,
         string failureMessage,
         ProjectStructureSerializableMutationScope mutationScope,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit) {
         var sourceReference = await CaptureCommittedReferenceAsync(dbContext, sourceProjectId, cancellationToken);
         var targetReference = await CaptureCommittedReferenceAsync(dbContext, targetProjectId, cancellationToken);
         var targetAdmission = targetReference.RequireBoundAdmission();
@@ -718,8 +731,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             .Where(item => item.ProjectId == targetProjectId)
             .Select(item => item.NodeKey)
             .ToListAsync(cancellationToken);
-        if (targetNodeKeys.Any(movedNodeKeys.Contains))
-        {
+        if (targetNodeKeys.Any(movedNodeKeys.Contains)) {
             return null;
         }
 
@@ -758,8 +770,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             .ToList();
         var updatedAtUtc = clock.GetUtcNow();
 
-        foreach (var record in movedRecords)
-        {
+        foreach (var record in movedRecords) {
             var originalParentNodeKey = record.ParentNodeKey;
             var binding = ProjectNodeBindingStorage.ResolveForRuntime(record);
             record.ProjectId = targetProjectId;
@@ -779,8 +790,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 !movedNodeKeys.Contains(item.NodeKey) &&
                 movedNodeKeys.Contains(item.ParentNodeKey ?? string.Empty))
             .ToList();
-        foreach (var child in leftBehindChildren)
-        {
+        foreach (var child in leftBehindChildren) {
             var originalMovedParentNodeKey = child.ParentNodeKey ?? string.Empty;
             var fallbackParentNodeKey = originalParentByMovedNodeKey.TryGetValue(originalMovedParentNodeKey, out var originalParentNodeKey) &&
                                         !string.IsNullOrWhiteSpace(originalParentNodeKey) &&
@@ -798,18 +808,15 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
             .ToListAsync(cancellationToken);
         var movedLinkCount = 0;
         var removedBoundaryLinks = new List<ProjectStructureBoundaryLinkRemoval>();
-        foreach (var link in linksToProcess)
-        {
-            if (IsLegacyEditableHierarchyLink(link, movedRecordByNodeKey))
-            {
+        foreach (var link in linksToProcess) {
+            if (IsLegacyEditableHierarchyLink(link, movedRecordByNodeKey)) {
                 dbContext.Remove(link);
                 continue;
             }
 
             var hasMovedSource = movedNodeKeys.Contains(link.SourceNodeKey);
             var hasMovedTarget = movedNodeKeys.Contains(link.TargetNodeKey);
-            if (hasMovedSource && hasMovedTarget)
-            {
+            if (hasMovedSource && hasMovedTarget) {
                 link.ProjectId = targetProjectId;
                 movedLinkCount++;
                 continue;
@@ -829,8 +836,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 !movedNodeKeys.Contains(link.SourceNodeKey))
             .Select(link => link.SourceNodeKey));
 
-        foreach (var record in movedRecords)
-        {
+        foreach (var record in movedRecords) {
             await ProjectNodeBindingStorage.PersistAsync(dbContext, record, cancellationToken);
         }
 
@@ -851,14 +857,14 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 updatedAtUtc,
                 cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await mutationScope.CommitAsync(cancellationToken);
+        await mutationScope.CommitAsync(cancellationToken, authorizeCommit);
         await mutationScope.DisposeAsync();
 
         await ProcessTransferMutationOrThrowAsync(
             targetProjectId,
             mutationRecord.Id,
             failureMessage,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
         return new ProjectStructureSubprojectTransferResult(
             targetProjectId,
             movedNodeIds,
@@ -876,16 +882,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid targetProjectId,
         Guid mutationId,
         string failureMessage,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ProjectCrossModuleMutationStatus status;
-        try
-        {
-            status = await mutationProcessor.ProcessAsync(mutationId, cancellationToken)
+        try {
+            status = (await mutationProcessor.ProcessWithPayloadAsync(mutationId, cancellationToken, authorizeCommit))?.Status
                 ?? ProjectCrossModuleMutationStatus.WorkbenchCommitted;
-        }
-        catch (Exception exception)
-        {
+        } catch (Exception exception) {
             throw CreateTransferPartialCommitException(
                 targetProjectId,
                 mutationId,
@@ -894,8 +897,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 exception);
         }
 
-        if (status != ProjectCrossModuleMutationStatus.Completed)
-        {
+        if (status != ProjectCrossModuleMutationStatus.Completed) {
             throw CreateTransferPartialCommitException(
                 targetProjectId,
                 mutationId,
@@ -943,19 +945,16 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
         Guid mutationId,
         ProjectStructureManagedStorageDisposition managedStorageDisposition,
         string failureMessage,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
         ProjectStructureManagedStorageDispositionPolicy.EnsureSpecified(
             managedStorageDisposition);
         ProjectCrossModuleMutationProcessingResult? processingResult;
-        try
-        {
+        try {
             processingResult = await mutationProcessor.ProcessWithPayloadAsync(
                 mutationId,
-                cancellationToken);
-        }
-        catch (Exception exception)
-        {
+                cancellationToken, authorizeCommit);
+        } catch (Exception exception) {
             throw await CreateDeletionPartialCommitExceptionAsync(
                 projectId,
                 rootNodeId,
@@ -968,8 +967,7 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
 
         var status = processingResult?.Status ??
             ProjectCrossModuleMutationStatus.WorkbenchCommitted;
-        if (status != ProjectCrossModuleMutationStatus.Completed)
-        {
+        if (status != ProjectCrossModuleMutationStatus.Completed) {
             throw await CreateDeletionPartialCommitExceptionAsync(
                 projectId,
                 rootNodeId,
@@ -978,16 +976,13 @@ public sealed class ProjectWorkbenchCrossModuleMutationService(
                 failureMessage);
         }
 
-        try
-        {
+        try {
             return JsonSerializer.Deserialize<DeleteSubtreeMutationPayload>(
                        processingResult!.PayloadJson,
                        new JsonSerializerOptions(JsonSerializerDefaults.Web))
                    ?? throw new JsonException(
                        "The durable subtree-deletion completion receipt is empty.");
-        }
-        catch (Exception exception) when (exception is JsonException or NotSupportedException)
-        {
+        } catch (Exception exception) when (exception is JsonException or NotSupportedException) {
             throw await CreateDeletionPartialCommitExceptionAsync(
                 projectId,
                 rootNodeId,

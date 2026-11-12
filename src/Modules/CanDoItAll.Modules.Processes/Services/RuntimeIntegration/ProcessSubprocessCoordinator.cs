@@ -92,6 +92,10 @@ internal sealed class ProcessSubprocessCoordinator(
         {
             throw;
         }
+        catch (ProcessExistingLaunchReconciliationRequiredException exception) {
+            var issue = CreateSubprocessLaunchFailedIssue(assignment, subprocessDefinitionKey, exception);
+            return NeedsManagerForCompletionIssue(assignment, ComputeHash(issue.Evidence), issue);
+        }
         catch (Exception exception)
         {
             ProcessRunId? pendingChildRunId;

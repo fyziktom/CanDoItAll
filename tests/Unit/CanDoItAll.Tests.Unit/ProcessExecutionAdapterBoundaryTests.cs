@@ -14,6 +14,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
     {
         var runId = ProcessRunId.New();
         var stepId = ProcessStepInstanceId.New();
+        var ownerEvidence = new ProcessExecutionOwnerEvidence<string>("local-owner-evidence");
         var attestation = ProcessExecutionSafetyAttestation.FailedBeforeRecordedSideEffects(
             ProcessExecutionRunId.New(),
             runId,
@@ -55,7 +56,8 @@ public sealed class ProcessExecutionAdapterBoundaryTests
                 "sha256:result")
             {
                 ExecutionRunId = attestation.ExecutionRunId,
-                HostCapabilityEvidence = hostCapabilityEvidence
+                HostCapabilityEvidence = hostCapabilityEvidence,
+                OwnerEvidence = ownerEvidence
             });
         var package = StandardProcessAdapterDriverPackageFactory.CreateAdapterPackage(
             driver,
@@ -83,6 +85,7 @@ public sealed class ProcessExecutionAdapterBoundaryTests
         Assert.Equal(attestation, Assert.Single(result.Diagnostics).ExecutionSafetyAttestation);
         Assert.Equal(attestation.ExecutionRunId, result.ExecutionRunId);
         Assert.Equal(hostCapabilityEvidence, result.HostCapabilityEvidence);
+        Assert.Same(ownerEvidence, result.OwnerEvidence);
     }
 
     [Fact]

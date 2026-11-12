@@ -139,7 +139,7 @@ public sealed class PromptGalleryItemEditorHostTests
     }
 
     [Fact]
-    public async Task Foreign_change_before_an_own_archive_is_surfaced_as_a_conflict_and_reload_accepts_the_latest_revision()
+    public async Task Foreign_change_before_own_archive_keeps_the_draft_until_explicit_restore_and_review()
     {
         var gallery = new ScriptedPromptGalleryService();
         var itemId = Guid.NewGuid();
@@ -186,22 +186,22 @@ public sealed class PromptGalleryItemEditorHostTests
         Assert.Contains("Restore", cut.Find("[data-testid='prompt-gallery-editor-archive']").TextContent, StringComparison.Ordinal);
 
         await cut.Find("form").SubmitAsync();
-
-        cut.WaitForAssertion(() => Assert.Single(gallery.SavedDrafts));
-        Assert.Equal(loaded, gallery.SavedDrafts[0].ExpectedUpdatedAtUtc);
-        Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft was not saved");
-        Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-conflict']"));
-
-        cut.Find("[data-testid='prompt-gallery-editor-reload']").Click();
-
-        cut.WaitForAssertion(() => Assert.Equal("Changed by someone else", cut.Find("[data-testid='prompt-gallery-editor-title']").GetAttribute("value")));
-        Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-editor-conflict']"));
+        Assert.Empty(gallery.SavedDrafts);
+        Assert.Equal("My unsaved edit", cut.Instance.Surface!.CurrentForm!.Title);
+        cut.Find("[data-testid='prompt-gallery-editor-review']").Click();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-merge-restore']")));
+        await cut.Find("[data-testid='prompt-merge-restore']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.False(persistedArchived));
+        cut.Find("[data-testid='prompt-merge-title'] button:last-of-type").Click();
+        cut.Find("[data-testid='prompt-merge-apply']").Click();
+        cut.WaitForAssertion(() => Assert.Equal("Changed by someone else", cut.Instance.Surface!.CurrentForm!.Title));
+        Assert.Empty(gallery.SavedDrafts);
         cut.Find("[data-testid='prompt-gallery-editor-title']").Change("Merged edit");
         await cut.Find("form").SubmitAsync();
 
-        cut.WaitForAssertion(() => Assert.Equal(2, gallery.SavedDrafts.Count));
-        Assert.Equal(archived, gallery.SavedDrafts[1].ExpectedUpdatedAtUtc);
-        Assert.Equal("Merged edit", gallery.SavedDrafts[1].Title);
+        cut.WaitForAssertion(() => Assert.Single(gallery.SavedDrafts));
+        Assert.Equal(archived, gallery.SavedDrafts[0].ExpectedUpdatedAtUtc);
+        Assert.Equal("Merged edit", gallery.SavedDrafts[0].Title);
         Assert.Contains(notifications.Messages, message => message.Summary == "Prompt draft saved");
     }
 
@@ -211,6 +211,7 @@ public sealed class PromptGalleryItemEditorHostTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
+        CanDoItAll.Tests.Support.PromptGalleryUiTestAccess.Register(context.Services);
         return context;
     }
 }

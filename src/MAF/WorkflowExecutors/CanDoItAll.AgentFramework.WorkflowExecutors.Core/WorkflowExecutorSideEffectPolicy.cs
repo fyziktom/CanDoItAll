@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Workflows.Definitions;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -7,10 +8,7 @@ public static class WorkflowExecutorSideEffectPolicy
     public static bool IsRetryPolicySafe(
         WorkflowExecutorDescriptor descriptor,
         WorkflowExecutorExecutionPolicy policy)
-        => policy.MaxRetryAttempts == 0 ||
-           !descriptor.SideEffects.WritesExternalState ||
-           descriptor.SideEffects.AllowsIdempotentRetry ||
-           descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker);
+        => WorkflowExecutionPolicyRules.IsRetryPolicySafe(descriptor, policy);
 
     public static void ThrowIfUnsafeRetryPolicy(
         WorkflowExecutorDescriptor descriptor,

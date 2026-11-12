@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 public sealed class WorkflowPromptGalleryMigrationService(
     IWorkflowComponentLibraryService componentLibrary,
     IDbContextFactory<WorkflowDbContext> dbContextFactory,
+    WorkflowChanges changes,
     ILogger<WorkflowPromptGalleryMigrationService> logger)
 {
     private const int MigrationBatchSize = 100;
@@ -33,10 +35,10 @@ public sealed class WorkflowPromptGalleryMigrationService(
         if (definitionResult.ProcessedCount > 0)
         {
             logger.LogInformation(
-                "Verified {ProcessedWorkflowDefinitionCount} workflow definitions against LLM node snapshot schema {InstructionSnapshotSchemaVersion}; repaired {RepairedWorkflowDefinitionCount} definitions.",
+                "Inspected {ProcessedWorkflowDefinitionCount} retained workflow versions against LLM node snapshot schema {InstructionSnapshotSchemaVersion}; appended {AppendedWorkflowSnapshotCount} materialized heads without rewriting exact versions.",
                 definitionResult.ProcessedCount,
                 WorkflowPersistenceSchemaVersions.InstructionSnapshot,
-                definitionResult.RepairedCount);
+                definitionResult.AppendedCount);
         }
     }
 
@@ -67,6 +69,7 @@ public sealed class WorkflowPromptGalleryMigrationService(
                         component.ResultShape,
                         component.Permissions)
                     {
+                        ExpectedRevision = component.Revision,
                         PromptArtifactId = component.PromptArtifactId,
                         PromptVersionId = component.PromptVersionId
                     },
@@ -92,22 +95,20 @@ public sealed class WorkflowPromptGalleryMigrationService(
             .Where(record =>
                 record.PromptGalleryBindingSchemaVersion < WorkflowPersistenceSchemaVersions.PromptGalleryBinding)
             .OrderBy(record => record.Id)
-            .Select(record => new { record.Id, record.ComponentJson })
+            .Select(record => new { record.Id, record.Revision, record.ComponentJson })
             .Take(MigrationBatchSize)
             .ToArrayAsync(cancellationToken);
 
         return records
-            .Select(record => DeserializeLegacyComponent(record.Id, record.ComponentJson))
+            .Select(record => DeserializeLegacyComponent(record.Id, record.ComponentJson) with { Revision = record.Revision })
             .ToArray();
     }
 
     private async Task<DefinitionMigrationResult> BackfillDefinitionLlmNodeSettingsAsync(
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         var processedCount = 0;
-        var repairedCount = 0;
-        while (true)
-        {
+        var appendedCount = 0;
+        while (true) {
             await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             var definitionRecords = await dbContext.Set<WorkflowDefinitionRecord>()
                 .Where(record =>
@@ -115,11 +116,13 @@ public sealed class WorkflowPromptGalleryMigrationService(
                 .OrderBy(record => record.VersionId)
                 .Take(MigrationBatchSize)
                 .ToArrayAsync(cancellationToken);
-            if (definitionRecords.Length == 0)
-            {
-                return new DefinitionMigrationResult(processedCount, repairedCount);
+            if (definitionRecords.Length == 0) {
+                return new DefinitionMigrationResult(processedCount, appendedCount);
             }
-
+            var workflowIds = definitionRecords.Select(record => record.WorkflowId).Distinct().ToArray();
+            var heads = await dbContext.Set<WorkflowDefinitionHeadRecord>()
+                .Where(head => workflowIds.Contains(head.WorkflowId))
+                .ToDictionaryAsync(head => head.WorkflowId, cancellationToken);
             var definitions = definitionRecords
                 .Select(CreateDefinitionMigrationItem)
                 .ToArray();
@@ -135,21 +138,18 @@ public sealed class WorkflowPromptGalleryMigrationService(
                 .Distinct()
                 .ToArray();
             var components = await LoadComponentsAsync(requiredComponentIds, cancellationToken);
-
-            foreach (var item in definitions)
-            {
+            var appended = new HashSet<WorkflowId>();
+            foreach (var item in definitions) {
                 cancellationToken.ThrowIfCancellationRequested();
                 var changed = false;
                 var nodes = new List<WorkflowNode>(item.Definition.Graph.Nodes.Count);
-                foreach (var node in item.Definition.Graph.Nodes)
-                {
+                foreach (var node in item.Definition.Graph.Nodes) {
                     var result = BackfillNode(node, components);
                     nodes.Add(result.Node);
                     changed |= result.Changed;
-                    if (result.FailureReason is not null)
-                    {
+                    if (result.FailureReason is not null) {
                         logger.LogWarning(
-                            "Could not backfill workflow {WorkflowId} version {WorkflowVersionId} LLM node {WorkflowNodeId} from component {WorkflowComponentId}: {BackfillFailure}. The node was preserved unchanged and its definition was advanced to instruction snapshot schema {InstructionSnapshotSchemaVersion}.",
+                            "Could not backfill workflow {WorkflowId} version {WorkflowVersionId} LLM node {WorkflowNodeId} from component {WorkflowComponentId}: {BackfillFailure}. The exact legacy version is retained; its inspection marker advances to schema {InstructionSnapshotSchemaVersion}.",
                             item.Definition.Id.Value,
                             item.Definition.VersionId.Value,
                             node.Id.Value,
@@ -159,23 +159,38 @@ public sealed class WorkflowPromptGalleryMigrationService(
                     }
                 }
 
-                if (changed)
-                {
-                    var repaired = item.Definition with
-                    {
+                if (changed && heads.TryGetValue(item.Record.WorkflowId, out var head) && head.VersionId == item.Record.VersionId) {
+                    var repaired = item.Definition with {
+                        VersionId = WorkflowVersionId.New(),
+                        UpdatedAtUtc = DateTimeOffset.UtcNow,
                         Graph = new WorkflowGraph(
                             item.Definition.Graph.StartNodeId,
                             nodes.ToArray(),
                             item.Definition.Graph.Edges.ToArray())
                     };
-                    item.Record.DefinitionJson = JsonSerializer.Serialize(repaired, JsonOptions);
-                    repairedCount++;
+                    dbContext.Add(WorkflowDefinitionRecord.FromDefinition(repaired, checked(item.Record.Revision + 1)));
+                    head.VersionId = repaired.VersionId.Value;
+                    appended.Add(repaired.Id);
+                    appendedCount++;
+                } else if (changed) {
+                    logger.LogDebug("Retained exact workflow version {WorkflowId}/{WorkflowVersionId}; it is not the observed current head, so only its schema inspection marker advances.",
+                        item.Definition.Id.Value, item.Definition.VersionId.Value);
                 }
 
                 item.Record.InstructionSnapshotSchemaVersion = WorkflowPersistenceSchemaVersions.InstructionSnapshot;
             }
 
-            await dbContext.SaveChangesAsync(cancellationToken);
+            try {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            } catch (DbUpdateException error) when (error is DbUpdateConcurrencyException ||
+                PersistentWorkflowCatalogService.IsWorkflowDefinitionWriteCollision(error)) {
+                logger.LogWarning("Workflow schema snapshot batch refused after an original head or schema changed. Retained version count {VersionCount}; failure {FailureType}.",
+                    definitionRecords.Length, error.GetType().Name);
+                throw new WorkflowDefinitionConcurrencyException("A workflow head or schema changed during legacy snapshot inspection. This batch was not committed; reopen the migration against current observations.", error);
+            }
+            foreach (var workflowId in appended) {
+                changes.Publish(workflowId, EditingChangeKind.EditableContentChanged);
+            }
             processedCount += definitionRecords.Length;
         }
     }
@@ -290,7 +305,7 @@ public sealed class WorkflowPromptGalleryMigrationService(
         bool Changed,
         string? FailureReason);
 
-    private sealed record DefinitionMigrationResult(int ProcessedCount, int RepairedCount);
+    private sealed record DefinitionMigrationResult(int ProcessedCount, int AppendedCount);
 }
 
 public sealed class WorkflowPromptGalleryMigrationHostedService(

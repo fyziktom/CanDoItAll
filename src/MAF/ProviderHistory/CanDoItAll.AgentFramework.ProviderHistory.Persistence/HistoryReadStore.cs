@@ -60,7 +60,7 @@ public sealed class HistoryReadStore(
         if (owner is null) {
             return true;
         }
-        var link = metadata.Owners.SingleOrDefault(link => link.Source == owner && link.State == HistoryOwnerState.Linked);
+        var link = metadata.Owners.SingleOrDefault(link => link.Source == owner && link.CanReadContent);
         if (link is null) {
             return false;
         }
@@ -70,7 +70,7 @@ public sealed class HistoryReadStore(
             where retained.PartitionId == context.Partition.StorageLineageId &&
                 retained.EntryId == entry.Id.Value && source.Id == sourceId &&
                 !source.IsDeleted && source.Version == link.Version.Value &&
-                retained.State == HistoryOwnerState.Linked && retained.Role == HistoryOwnerRole.ContentOwner
+                retained.State == HistoryOwnerState.Linked && retained.Role == link.Role
             select source.Id).AnyAsync(cancellationToken);
     }
 }

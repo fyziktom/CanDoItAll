@@ -105,9 +105,10 @@ public sealed class AgentMemoryProviderSettingsPlaywrightTests
         await page.GetByTestId("memory-ui-add-demo-providers").ClickAsync();
         await page.GetByTestId("memory-ui-provider-list").WaitForAsync();
         await page.GetByTestId("memory-provider-provider-programming-demo").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("memory-ui-editor-instance-id")).ToHaveValueAsync("provider.programming-demo");
         await page.GetByTestId("memory-ui-editor-health").SelectOptionAsync("Healthy");
         await page.GetByTestId("memory-ui-save-provider").ClickAsync();
-        await Assertions.Expect(page.GetByText("Programming demo memory", new PageGetByTextOptions { Exact = true }).First).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByTestId("memory-provider-provider-programming-demo")).ToContainTextAsync("Healthy");
     }
 
     private static async Task OpenMemorySettingsAsync(IPage page) {

@@ -1,0 +1,27 @@
+@inject DialogService Dialogs
+<SectionCard Title="Both task editor families" Description="Synthetic create/edit forms with independent openings, quote timing and save outcomes.">
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        @foreach (var outcome in Enum.GetValues<TaskFormOutcome>()) {
+            <Button Text="@outcome.ToString()" Click="@(() => scenario.Outcome = outcome)" />
+        }
+    </Cluster>
+    <TextBlock Value="@($"Synthetic outcome: {scenario.Outcome}; submissions: {scenario.SubmissionCount}")" data-testid="synthetic-task-scenario" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        @foreach (var mode in Enum.GetValues<TaskFormMode>()) {
+            <Button Text="@mode.ToString()" Click="@(() => OpenAsync(mode, scenario))" />
+        }
+        <Button Text="Stack two independent editors" Click="StackAsync" />
+    </Cluster>
+</SectionCard>
+
+@code {
+    private readonly TaskFormScenario scenario = new();
+    private Task OpenAsync(TaskFormMode mode, TaskFormScenario owner) => Dialogs.OpenAsync<TaskFormSpecimen>($"Synthetic {mode}",
+        new Dictionary<string, object?> { [nameof(TaskFormSpecimen.Scenario)] = owner, [nameof(TaskFormSpecimen.Mode)] = mode },
+        new DialogOptions { Size = ModalSize.Wide, TestId = $"synthetic-{mode}", DenseChrome = true });
+    private async Task StackAsync() {
+        var first = OpenAsync(TaskFormMode.GanttEdit, new());
+        var second = OpenAsync(TaskFormMode.StructureEdit, new());
+        await Task.WhenAll(first, second);
+    }
+}

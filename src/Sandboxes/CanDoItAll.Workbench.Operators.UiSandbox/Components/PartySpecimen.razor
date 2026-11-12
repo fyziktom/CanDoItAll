@@ -1,0 +1,49 @@
+<SurfaceCard data-testid="@($"operators-party-{Name.ToLowerInvariant()}")">
+    <Stack GapScale="LayoutGap.Medium">
+        <TextBlock TextStyle="TextStyle.H4" Value="@($"{Name} specimen")" />
+        <Cluster>
+            <FormField Text="Editor">
+                <InputSelect class="cda-input" @bind-Value="Kind" @bind-Value:after="Reset" data-testid="operators-party-kind">
+                    @foreach (var kind in Enum.GetValues<PartyEditorKind>()) {
+                        <option value="@kind">@kind</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <FormField Text="Scenario">
+                <InputSelect class="cda-input" @bind-Value="Scenario" @bind-Value:after="Reset" data-testid="operators-party-scenario">
+                    @foreach (var scenario in Enum.GetValues<PartyScenarioKind>()) {
+                        <option value="@scenario">@scenario</option>
+                    }
+                </InputSelect>
+            </FormField>
+            <Button Text="Remount" Click="Reset" />
+        </Cluster>
+        <PartyEditor @key="fixture.State.OpeningId" State="@fixture.State" Create="CreateAsync" Save="SaveAsync" Retry="fixture.RetryAsync" />
+        <TextBlock Value="@($"Fixture create calls {fixture.CreateCalls}; fixture save calls {fixture.SaveCalls}.")" TextStyle="TextStyle.Caption" />
+    </Stack>
+</SurfaceCard>
+
+@code {
+    [Parameter] public string Name { get; set; } = "Specimen";
+    private PartyEditorKind Kind { get; set; }
+    private PartyScenarioKind Scenario { get; set; }
+    private PartyScenario fixture = new(PartyEditorKind.Participant, PartyScenarioKind.Normal);
+    private async Task CreateAsync(PartyQuickCreateInput input) {
+        var owner = fixture;
+        await owner.CreateAsync(input);
+        if (ReferenceEquals(owner, fixture)) {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    private async Task SaveAsync(PartySelection selection) {
+        var owner = fixture;
+        await owner.SaveAsync(selection);
+        if (ReferenceEquals(owner, fixture)) {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    private void Reset() {
+        fixture.State.IsRetired = true;
+        fixture = new(Kind, Scenario);
+    }
+}

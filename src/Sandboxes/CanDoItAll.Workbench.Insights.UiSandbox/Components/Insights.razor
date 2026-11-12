@@ -1,0 +1,53 @@
+@page "/"
+@implements IDisposable
+
+<PageTitle>Workbench Insights sandbox</PageTitle>
+<main class="insights-sandbox">
+    <Stack GapScale="LayoutGap.Large">
+        <TextBlock TextStyle="TextStyle.H3" Value="Workbench Insights" />
+        <TextBlock Value="Independent renderer scenarios. Each report has its own draft, reads, dialogs and accepted snapshot." />
+        <SupportSpecimen Name="Left" />
+        <SupportSpecimen Name="Right" />
+        <Cluster Gap="LayoutGap.Small">
+            @foreach (var scenario in Enum.GetValues<ReportScenarioKind>()) {
+                <Button Text="@scenario.ToString()" Click="@(() => SetScenario(scenario))" data-testid="@($"scenario-{scenario}")" />
+            }
+            <Button Text="Release delayed reads" Click="Release" data-testid="scenario-release" />
+            <Button Text="Replace left view" Click="Replace" data-testid="scenario-replace" />
+        </Cluster>
+        <TextBlock Value="@($"Left: {leftSource.ScopeReads} scope / {leftSource.ReportReads} report / {leftSource.ActivityReads} Activity reads. Right: {rightSource.ScopeReads} scope / {rightSource.ReportReads} report / {rightSource.ActivityReads} Activity reads.")" />
+        <Grid ColumnTemplateXl="minmax(0,1fr)" Gap="LayoutGap.Large">
+            <section data-testid="left-report">
+                <ProjectManagerSummaryPanel @key="left" Session="left" />
+            </section>
+            <section data-testid="right-report">
+                <ProjectManagerSummaryPanel Session="right" />
+            </section>
+        </Grid>
+    </Stack>
+</main>
+
+@code {
+    private readonly ReportScenario leftSource = new("Left original project");
+    private readonly ReportScenario rightSource = new("Right independent project");
+    private ManagerSummarySession left = default!;
+    private ManagerSummarySession right = default!;
+
+    protected override void OnInitialized() {
+        left = new(leftSource);
+        right = new(rightSource);
+    }
+
+    private void SetScenario(ReportScenarioKind kind) => leftSource.Kind = kind;
+    private void Release() => leftSource.Release();
+    private void Replace() {
+        left.Dispose();
+        left = new(leftSource);
+    }
+    public void Dispose() {
+        left.Dispose();
+        right.Dispose();
+        leftSource.Release();
+        rightSource.Release();
+    }
+}

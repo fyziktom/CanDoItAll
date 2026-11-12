@@ -179,6 +179,45 @@ public sealed partial class WorkflowHttpSecretAdmissionIntegrationTests {
         Assert.IsType<WorkflowLaunchOrigin.ProcessAssignment>((await read.Set<WorkflowRunRecordEntity>().SingleAsync()).ToSnapshot().Origin);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostgreSql_UnsupportedDecisionPolicyBlocksDeferredContinuationBeforeSecretAccess(bool afterObservation) {
+        var (fixture, parent) = await CreateMappedFixtureAsync(legacy: false);
+        await using var lifetime = fixture;
+        var services = fixture.Scope.ServiceProvider;
+        var authority = services.GetRequiredService<IProcessWorkflowDispatchAuthorityReader>();
+        var request = new ProcessWorkflowContinuationRequest(parent.Assignment.RunId, parent.Assignment.StepInstanceId,
+            new(fixture.Run.RunId.Value), new(parent.Claim.Value), parent.Contract.ContractHash);
+        var original = await authority.ReadContinuationAsync(request);
+        Assert.False(original.Dispatch.IsCurrent);
+        if (!afterObservation) {
+            await ChangePolicyAsync();
+        }
+        var observation = new ContinuationChangeProbe(parent.Source, afterObservation ? ChangePolicyAsync : () => Task.CompletedTask);
+        fixture.Headers.Inner = fixture.CreateOwner(mappedProcessSource: observation);
+        var failure = await Assert.ThrowsAsync<WorkflowExecutorInvocationException>(() => fixture.InvokeAsync());
+        Assert.Contains("decision policy", Assert.IsType<WorkflowExecutorSanitizedException>(failure.InnerException).Message, StringComparison.Ordinal);
+        Assert.Equal(1, observation.Observed);
+        Assert.Equal(0, fixture.Vault.ReadCount);
+        Assert.False(fixture.Server.Request.IsCompleted);
+        Assert.False(fixture.Headers.SecretHeaderWasApplied);
+        await fixture.AssertPendingUnchangedAsync();
+        var historical = await authority.ReadContinuationAsync(request);
+        Assert.NotNull(historical.Dispatch.Assignment.DecisionDataPolicy);
+        Assert.Equal(original.Dispatch.OwnerFingerprint, historical.Dispatch.OwnerFingerprint);
+        Assert.Equal(original.OriginalClaimSequence, historical.OriginalClaimSequence);
+
+        async Task ChangePolicyAsync() {
+            await using var context = parent.Context();
+            var assignment = await context.RuntimeStepAssignments.SingleAsync(item => item.RunId == parent.Assignment.RunId.Value);
+            var plan = await context.InstancePlans.SingleAsync(item => item.PlanId == assignment.PlanId);
+            assignment.DecisionDataPolicyJson = ProcessDecisionDataPolicyAdmissionCodec.Serialize(
+                ProcessDecisionPolicyFixture.Create(new(plan.DefinitionVersionId), new(assignment.StepInstanceId)));
+            await context.SaveChangesAsync();
+        }
+    }
+
     public enum DeferredChange { Rework, ReworkThenDeferred, Assignment, ProjectReplacement, MissingEvents, PendingReceipt, MissingReceipt, ReceiptInput, ReceiptChild, AmbiguousChild }
 
     private static async Task<(Fixture Http, MappedParent Parent)> CreateMappedFixtureAsync(bool legacy, bool captureDisclosure = false, bool projectBound = true) {
@@ -323,7 +362,7 @@ public sealed partial class WorkflowHttpSecretAdmissionIntegrationTests {
         public async Task ReplaceProjectAsync() {
             Assert.NotNull(project);
             var projects = services.GetRequiredService<ProjectsService>();
-            await projects.DeleteAsync(project.ProjectId);
+            await new ProjectLifecycleTestDriver(services).DeleteAsync(project.ProjectId);
             Assert.True((await projects.CreateAsync(project.ProjectId, new() { Name = "Replacement source" })).IsSuccess);
             var current = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(project.ProjectId));
             Assert.NotEqual(project.LifetimeId, current.LifetimeId);

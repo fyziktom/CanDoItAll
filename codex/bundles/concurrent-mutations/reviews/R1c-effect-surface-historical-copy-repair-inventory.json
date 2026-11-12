@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "sourceOnly": true,
+  "parentSourceSha256": "EEF051EF99C58A0E96AD3521055696BE6B597BE7FF1F4E1B631604D6F7D0F571",
+  "selectedRows": 50,
+  "newRows": 0,
+  "inputs": [
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+      "sha256": "54F280ABF728F9F501121250E776FBF0B90A45312EDF95713EC911C1F2F70D16",
+      "bytes": 27609
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-effect-surface-before-historical-copy-repair.cs.txt",
+      "sha256": "EEF051EF99C58A0E96AD3521055696BE6B597BE7FF1F4E1B631604D6F7D0F571",
+      "bytes": 27474
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-effect-surface-historical-copy-repair.md",
+      "sha256": "B171A1A0822A3DB5402657F6AE75FD80281803C84419395EF4AAAFCA97FA2FE7",
+      "bytes": 1269
+    }
+  ]
+}

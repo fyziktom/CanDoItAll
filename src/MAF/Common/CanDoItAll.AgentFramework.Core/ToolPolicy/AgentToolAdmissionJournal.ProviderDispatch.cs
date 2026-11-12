@@ -9,7 +9,7 @@ public sealed partial class AgentToolAdmissionJournal {
         IReadOnlyList<AgentToolApprovalBinding> approvedCalls, CancellationToken cancellationToken) {
         AgentToolProviderDispatchRecord? selected = null;
         await MutateAsync(lease, true, journal => {
-            RequireRecoverable(journal);
+            RequireLiveEffectOrigin(lease, journal);
             if (journal.Segments.LastOrDefault()?.Id != segmentId || journal.HasUnresolvedProviderDispatch) {
                 throw ProviderUncertain();
             }
@@ -21,11 +21,12 @@ public sealed partial class AgentToolAdmissionJournal {
 
             var segment = journal.Segments[^1];
             var previous = journal.Segments.SingleOrDefault(item => item.Id == segment.ContinuesSegmentId);
+            var approvals = segment.CheckpointKind == AgentToolCheckpointKind.EffectsOnly ? segment : previous;
             foreach (var binding in approvedCalls) {
                 var proposal = AgentToolJournalTransitions.RequireProposal(journal, binding);
                 if (proposal.ProviderCall is null || proposal.State != AgentToolProposalState.Prepared ||
                     proposal.ApprovalStatus != ExecutionApprovalStatus.Approved || proposal.ApprovedDigest != binding.Digest ||
-                    previous is null || !previous.PendingApprovals.Any(approval => approval.ToolAdmission == binding)) {
+                    approvals is null || !approvals.PendingApprovals.Any(approval => approval.ToolAdmission == binding)) {
                     throw Failure("The provider request does not bind an exact approved native continuation.");
                 }
             }
@@ -52,8 +53,8 @@ public sealed partial class AgentToolAdmissionJournal {
 
             selected = dispatch;
             return journal with {
-                SchemaVersion = journal.SchemaVersion == AgentToolJournalRecord.TypedContextSchemaVersion
-                    ? AgentToolJournalRecord.TypedContextSchemaVersion : AgentToolJournalRecord.ProviderDispatchSchemaVersion,
+                SchemaVersion = journal.SchemaVersion is AgentToolJournalRecord.TypedContextSchemaVersion or AgentToolJournalRecord.EffectJournalSchemaVersion
+                    ? journal.SchemaVersion : AgentToolJournalRecord.ProviderDispatchSchemaVersion,
                 Revision = checked(journal.Revision + 1), Batches = batches, ProviderDispatches = dispatches.Add(dispatch)
             };
         }, cancellationToken);
@@ -64,6 +65,7 @@ public sealed partial class AgentToolAdmissionJournal {
         AgentToolProviderDispatchId dispatchId, AgentToolSemanticDigest requestDigest,
         AgentToolProtocolEnvelope response, IReadOnlyList<AgentToolPreparedCall> calls, CancellationToken cancellationToken)
         => MutateAsync(lease, true, journal => {
+            RequireLiveEffectOrigin(lease, journal);
             var dispatch = journal.ProviderDispatches.IsDefault ? null :
                 journal.ProviderDispatches.SingleOrDefault(item => item.Id == dispatchId);
             if (dispatch is null || dispatch.State != AgentToolProviderDispatchState.Started ||

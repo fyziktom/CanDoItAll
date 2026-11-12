@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -101,10 +102,11 @@ public sealed class ProviderCatalogProjectionFailureTests
                         Microsoft.Extensions.Options.Options.Create(new ProviderInitializationOptions())),
                     [],
                     [observer],
-                    logger);
+                    logger, dbContextFactory.Witness);
             var model = new AgentFrameworkProviderProfileEditorModel
             {
                 Id = providerId,
+                ExpectedConcurrencyToken = Guid.Empty,
                 Name = "Canonical scenario provider",
                 BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
                 DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
@@ -115,7 +117,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             };
 
             var upsertException = await Assert.ThrowsAsync<
-                ProviderCatalogProjectionException>(
+                ProviderMutationCommittedException>(
                 () => registry.SaveProviderAsync(model));
 
             AssertProjectionFailure(
@@ -142,9 +144,10 @@ public sealed class ProviderCatalogProjectionFailureTests
                 logger.LastMessage,
                 StringComparison.Ordinal);
 
+            var original = await registry.GetProviderEditorAsync(providerId);
             var deleteException = await Assert.ThrowsAsync<
-                ProviderCatalogProjectionException>(
-                () => registry.DeleteProviderAsync(providerId));
+                ProviderMutationCommittedException>(
+                () => registry.DeleteProviderAsync(providerId, original.ExpectedConcurrencyToken!.Value));
 
             AssertProjectionFailure(
                 deleteException,
@@ -637,11 +640,12 @@ public sealed class ProviderCatalogProjectionFailureTests
                 [],
                 [new RecordingCommitObserver()],
                 new RecordingLogger<
-                    DatabaseProviderProfileRegistry>());
+                    DatabaseProviderProfileRegistry>(), dbContextFactory.Witness);
         var providerId = Guid.NewGuid();
         var model = new AgentFrameworkProviderProfileEditorModel
         {
             Id = providerId,
+            ExpectedConcurrencyToken = Guid.Empty,
             Name = "Stale projected provider",
             BaseUrl = ScenarioHarnessProviderAdministrationConnector.BaseUrl,
             DefaultModel = ScenarioHarnessProviderAdministrationConnector.DefaultModel,
@@ -653,14 +657,13 @@ public sealed class ProviderCatalogProjectionFailureTests
 
         await registry.SaveProviderAsync(model);
         Assert.True(store.ContainsCatalogProvider(providerId));
+        var original = await registry.GetProviderEditorAsync(providerId);
         store.FailCatalogUpdates = true;
 
         var exception = await Assert.ThrowsAsync<
-            ProviderCatalogProjectionException>(
-            () => registry.DeleteProviderAsync(providerId));
-        Assert.Equal(
-            ProviderCatalogProjectionOperationKind.Delete,
-            exception.OperationKind);
+            ProviderMutationCommittedException>(
+            () => registry.DeleteProviderAsync(providerId, original.ExpectedConcurrencyToken!.Value));
+        AssertProjectionFailure(exception, providerId, ProviderCatalogProjectionOperationKind.Delete, "ReconcileAsync");
         await using (var dbContext =
             await dbContextFactory.CreateDbContextAsync())
         {
@@ -740,7 +743,7 @@ public sealed class ProviderCatalogProjectionFailureTests
             [],
             [new RecordingCommitObserver()],
             new RecordingLogger<
-                DatabaseProviderProfileRegistry>());
+                DatabaseProviderProfileRegistry>(), dbContextFactory.Witness);
         return new RegistryFixture(registry, dbContextFactory);
     }
 
@@ -754,11 +757,16 @@ public sealed class ProviderCatalogProjectionFailureTests
     }
 
     private static void AssertProjectionFailure(
-        ProviderCatalogProjectionException exception,
+        ProviderMutationCommittedException committed,
         Guid providerId,
         ProviderCatalogProjectionOperationKind operationKind,
         string repairOperation)
     {
+        Assert.True(committed.CanonicalCommitSucceeded);
+        Assert.Equal(providerId, committed.ProviderId);
+        Assert.Equal(operationKind, committed.OperationKind);
+        var warnings = Assert.IsType<AggregateException>(committed.InnerException);
+        var exception = Assert.IsType<ProviderCatalogProjectionException>(Assert.Single(warnings.InnerExceptions));
         Assert.Equal(providerId, exception.ProviderId);
         Assert.Equal(operationKind, exception.OperationKind);
         Assert.True(exception.CanonicalCommitSucceeded);
@@ -785,9 +793,11 @@ public sealed class ProviderCatalogProjectionFailureTests
                 .UseInMemoryDatabase(databaseName, databaseRoot).Options;
             ProvidersFactory = new OwnedDbContextFactory<ProvidersDbContext>(() => new(ProviderOptions));
             SecurityFactory = new OwnedDbContextFactory<SecurityDbContext>(() => new(securityOptions));
-            Transactions = CoordinatedDatabaseTransaction.ForProfile(new ResolvedDatabaseProfile(
+            var profile = new ResolvedDatabaseProfile(
                 new DatabaseProfileRecord { ProviderKind = DatabaseProviderKind.InMemory, SourceKind = DatabaseProfileSourceKind.InMemory },
-                DatabaseProfileResolutionSource.ExplicitOverride, databaseName));
+                DatabaseProfileResolutionSource.ExplicitOverride, databaseName);
+            Transactions = CoordinatedDatabaseTransaction.ForProfile(profile);
+            Witness = new(new EphemeralDataProtectionProvider(), new TestCanonicalDatabase(profile));
             SecretReferences = new(SecurityFactory, securityOptions, Transactions);
         }
 
@@ -796,6 +806,7 @@ public sealed class ProviderCatalogProjectionFailureTests
         public IDbContextFactory<SecurityDbContext> SecurityFactory { get; }
         public CoordinatedDatabaseTransaction Transactions { get; }
         public SecretReferenceQuery SecretReferences { get; }
+        public ProviderMutationWitness Witness { get; }
 
         public AppDbContext CreateDbContext() => new(options);
 
@@ -803,6 +814,11 @@ public sealed class ProviderCatalogProjectionFailureTests
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(CreateDbContext());
         }
+    }
+
+    private sealed class TestCanonicalDatabase(ResolvedDatabaseProfile profile) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile { get; } = profile;
+        public long Generation => 0;
     }
 
     private sealed class OwnedDbContextFactory<TContext>(Func<TContext> create) : IDbContextFactory<TContext>

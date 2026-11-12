@@ -1,9 +1,11 @@
 using CanDoItAll.AppComponents;
+using CanDoItAll.Application.UI.Profiles;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Web.Components.Layout;
 
@@ -29,15 +31,21 @@ public partial class MainLayout
     private bool databaseDialogOpen;
     private bool databaseDialogStartupMode;
     private bool databaseDialogBusy;
-    private string? databaseProfileMessage;
+    private DatabaseProfileMessage? databaseProfileMessage;
+    private Guid databaseDialogOpeningId = Guid.NewGuid();
+    private long databaseProfileReadGeneration;
+    private bool databaseActivationUncertain;
     private long lastObservedDatabaseSwitchGeneration;
     private string? databaseSwitchAlert;
     private int collaborationUnreadCount;
+    private long collaborationReadGeneration;
+    private bool collaborationDisposed;
+
+    [Inject]
+    private ILogger<MainLayout> CollaborationLogger { get; set; } = default!;
 
     [Inject]
     private IEnumerable<IShellNavigationContributor> ShellNavigationContributors { get; set; } = [];
-
-    private static readonly TimeSpan ShellMenuTooltipDelay = TimeSpan.FromSeconds(2);
 
     private string CurrentLocation => Navigation.ToBaseRelativePath(Navigation.Uri);
 
@@ -87,6 +95,7 @@ public partial class MainLayout
 
     private bool CanSwitchSelectedProfile
         => CanManageDatabases &&
+           !databaseActivationUncertain &&
            selectedDatabaseProfileId.HasValue &&
            !SelectedDialogProfileIsActive &&
            !SelectedDialogProfileIsPendingRestart;
@@ -95,51 +104,71 @@ public partial class MainLayout
 
     protected override void OnInitialized()
     {
+        originalProfile = LayoutProfileResolver.ResolveCurrentProfile();
         Navigation.LocationChanged += HandleLocationChanged;
         Workbench.Changed += HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed += HandleDatabaseSwitchChanged;
         CollaborationService.Changed += HandleCollaborationChanged;
         activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
-        _ = LoadCollaborationShellStateAsync();
+        _ = RunLayoutWorkAsync(nameof(LoadCollaborationShellStateAsync), LoadCollaborationShellStateAsync);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
+    protected override Task OnAfterRenderAsync(bool firstRender)
+        => firstRender ? RunLayoutWorkAsync(nameof(InitializeLayoutAsync), InitializeLayoutAsync) : Task.CompletedTask;
+
+    private async Task InitializeLayoutAsync() {
+        if (layoutInitializationBusy) {
             return;
         }
-
-        await Workbench.InitializeAsync(
-            [
-                new WorkbenchTabState(
-                    "route:dashboard",
-                    "Dashboard",
-                    "/",
-                    IsPinned: true,
-                    CanClose: false,
-                    TabKind: WorkbenchTabKinds.Page,
-                    ArtifactKey: "/",
-                    RestoreKey: "/",
-                    TabGroup: "Workspace")
-            ]);
-
-        await CloseDeletedProjectTabsAsync();
-        await ResolveAndTrackCurrentTabAsync();
-        databaseSwitchListenerReference = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("CanDoItAll.browserState.registerDatabaseSwitchListener", databaseSwitchListenerReference);
-        await RestoreDatabaseSwitchAlertAsync();
-        await LoadDatabaseProfileUiAsync(showStartupPrompt: true);
-        StateHasChanged();
+        layoutInitializationBusy = true;
+        layoutInitializationFailed = false;
+        try {
+            await Workbench.InitializeAsync(
+                [
+                    new WorkbenchTabState(
+                        "route:dashboard",
+                        "Dashboard",
+                        "/",
+                        IsPinned: true,
+                        CanClose: false,
+                        TabKind: WorkbenchTabKinds.Page,
+                        ArtifactKey: "/",
+                        RestoreKey: "/",
+                        TabGroup: "Workspace")
+                ], layoutLifetime.Token);
+            EnsureLayoutCurrent();
+            workbenchInitialized = true;
+            await TrackNavigationAsync(BeginNavigationRead(Navigation.HistoryEntryState), pruneDeletedTabs: true);
+            EnsureLayoutCurrent();
+            await RegisterDatabaseSwitchListenerAsync();
+            EnsureLayoutCurrent();
+            await RestoreDatabaseSwitchAlertAsync();
+            EnsureLayoutCurrent();
+            await LoadDatabaseProfileUiAsync(showStartupPrompt: true);
+            EnsureLayoutCurrent();
+            StateHasChanged();
+        } finally {
+            layoutInitializationBusy = false;
+        }
     }
 
     public void Dispose()
     {
+        if (collaborationDisposed) {
+            return;
+        }
+        collaborationDisposed = true;
+        layoutLifetime.Cancel();
+        navigationCancellation?.Cancel();
+        ++collaborationReadGeneration;
         Navigation.LocationChanged -= HandleLocationChanged;
         Workbench.Changed -= HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;
         CollaborationService.Changed -= HandleCollaborationChanged;
-        databaseSwitchListenerReference?.Dispose();
+        _ = ReleaseDatabaseSwitchListenerAsync();
+        if (pendingLayoutWork == 0) {
+            layoutLifetime.Dispose();
+        }
     }
 
 }

@@ -56,6 +56,44 @@ public partial class CrmHrAssignmentsPage : ICrmHrAssignmentsWorkspaceView
     int? ICrmHrAssignmentsWorkspaceView.StaffingRequestCount => StaffingRequestCount;
     string ICrmHrAssignmentsWorkspaceView.StaffingRequestBadgeText => StaffingRequestBadgeText;
     ProjectRecordQueryItem? ICrmHrAssignmentsWorkspaceView.SelectedProject => SelectedProject;
+    AssignmentComparisons ICrmHrAssignmentsWorkspaceView.Comparisons => editing.Drafts.Comparisons;
+    Task ICrmHrAssignmentsWorkspaceView.CompareAsync(AssignmentEditorKind editor) => editing.CompareAsync(editor, selectionLifetimeCancellation?.Token ?? default);
+    Task ICrmHrAssignmentsWorkspaceView.ApplyComparisonAsync() => editing.ApplyComparisonAsync(selectionLifetimeCancellation?.Token ?? default);
+    Task ICrmHrAssignmentsWorkspaceView.UndoComparisonAsync() => editing.UndoComparisonAsync(selectionLifetimeCancellation?.Token ?? default);
+    string? ICrmHrAssignmentsWorkspaceView.EditingMessage => editing.Message;
+    bool ICrmHrAssignmentsWorkspaceView.EditingRequiresAttention => editing.RequiresAttention;
+    bool ICrmHrAssignmentsWorkspaceView.RecordsChanged => recordsChanged;
+    bool ICrmHrAssignmentsWorkspaceView.RelationshipDirty => editing.Drafts.Relationship.IsDirty;
+    bool ICrmHrAssignmentsWorkspaceView.AllocationDirty => editing.Drafts.Allocation.IsDirty;
+    bool ICrmHrAssignmentsWorkspaceView.StaffingDirty => editing.Drafts.Staffing.IsDirty;
+    bool ICrmHrAssignmentsWorkspaceView.RelationshipSaveDisabled => !editing.HasAccess || editing.IsUnknown || editing.IsBusy || !editing.Drafts.Relationship.CanSave || !editing.Drafts.Comparisons.CanSave(AssignmentEditorKind.Relationship);
+    bool ICrmHrAssignmentsWorkspaceView.AllocationSaveDisabled => !editing.HasAccess || editing.IsUnknown || editing.IsBusy || !editing.Drafts.Allocation.CanSave || !editing.Drafts.Comparisons.CanSave(AssignmentEditorKind.Allocation);
+    bool ICrmHrAssignmentsWorkspaceView.StaffingSaveDisabled => !editing.HasAccess || editing.IsUnknown || editing.IsBusy || !editing.Drafts.Staffing.CanSave || !editing.Drafts.Comparisons.CanSave(AssignmentEditorKind.Staffing);
+    bool ICrmHrAssignmentsWorkspaceView.WritesDisabled => !editing.HasAccess || editing.IsUnknown || editing.IsBusy;
+    Task ICrmHrAssignmentsWorkspaceView.AssignmentInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input) {
+        inputRevision++;
+        editing.Drafts.Relationship.Input(input);
+        return Task.CompletedTask;
+    }
+    Task ICrmHrAssignmentsWorkspaceView.AllocationInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input) {
+        inputRevision++;
+        editing.Drafts.Allocation.Input(input);
+        return Task.CompletedTask;
+    }
+    Task ICrmHrAssignmentsWorkspaceView.StaffingInputChangedAsync(CanDoItAll.Editing.RecordInput<StaffingField> input) {
+        inputRevision++;
+        editing.Drafts.Staffing.Input(input);
+        return Task.CompletedTask;
+    }
+    Task<bool> ICrmHrAssignmentsWorkspaceView.ReviewRelationshipPrimaryAsync() => editing.ReviewPrimaryAsync(draftAssignment, selectionLifetimeCancellation?.Token ?? default);
+    Task<bool> ICrmHrAssignmentsWorkspaceView.ReviewAllocationPrimaryAsync() => editing.ReviewPrimaryAsync(allocationDraft, selectionLifetimeCancellation?.Token ?? default);
+    Task ICrmHrAssignmentsWorkspaceView.RefreshRecordsAsync() => ReviewUnknownRecordsAsync();
+    Task ICrmHrAssignmentsWorkspaceView.RefreshSkillCatalogAsync() => EnsureSelectionDataLoadedAsync(AssignmentSelectionData.SkillCatalog, force: true);
+    bool ICrmHrAssignmentsWorkspaceView.HasUnknownOperation => editing.IsUnknown;
+    bool ICrmHrAssignmentsWorkspaceView.CanDiscardReviewedUnknown => editing.CanDiscardReviewedUnknown;
+    Task ICrmHrAssignmentsWorkspaceView.DiscardReviewedUnknownAsync() => DiscardReviewedUnknownAsync();
+    Task<bool> ICrmHrAssignmentsWorkspaceView.RequestDiscardAsync(AssignmentEditorKind editor) => RequestDiscardAsync(editor);
+
     Task ICrmHrAssignmentsWorkspaceView.HandleProjectChanged(Guid? projectId) => HandleProjectChanged(projectId);
     Task ICrmHrAssignmentsWorkspaceView.HandleWorkspaceTabChangedAsync(int selectedIndex) => HandleWorkspaceTabChangedAsync(selectedIndex);
     Task<bool> ICrmHrAssignmentsWorkspaceView.PrepareRelationshipCreateAsync() => PrepareRelationshipCreateAsync();
@@ -82,10 +120,11 @@ public partial class CrmHrAssignmentsPage : ICrmHrAssignmentsWorkspaceView
     Task ICrmHrAssignmentsWorkspaceView.ResetAllocationAsync() => ResetAllocationAsync();
     Task ICrmHrAssignmentsWorkspaceView.ResetStaffingRequestAsync() => ResetStaffingRequestAsync();
     Task ICrmHrAssignmentsWorkspaceView.ResetCandidateFiltersAsync() => ResetCandidateFiltersAsync();
-    Task ICrmHrAssignmentsWorkspaceView.DeleteAssignmentAsync(Guid assignmentId) => DeleteAssignmentAsync(assignmentId);
-    Task ICrmHrAssignmentsWorkspaceView.DeleteAllocationAsync(Guid assignmentId) => DeleteAllocationAsync(assignmentId);
-    Task ICrmHrAssignmentsWorkspaceView.DeleteStaffingRequestAsync(Guid staffingRequestId) => DeleteStaffingRequestAsync(staffingRequestId);
+    Task ICrmHrAssignmentsWorkspaceView.DeleteAssignmentAsync(ProjectPartyAssignmentDetail assignment) => DeleteAssignmentAsync(assignment);
+    Task ICrmHrAssignmentsWorkspaceView.DeleteAllocationAsync(ProjectPartyAssignmentDetail assignment) => DeleteAllocationAsync(assignment);
+    Task ICrmHrAssignmentsWorkspaceView.DeleteStaffingRequestAsync(StaffingRequestItemModel request) => DeleteStaffingRequestAsync(request);
     bool ICrmHrAssignmentsWorkspaceView.IsLoading(AssignmentSelectionData data) => IsLoading(data);
+    bool ICrmHrAssignmentsWorkspaceView.HasDisplayed(AssignmentSelectionData data) => renderedSelectionData.HasFlag(data);
     Task<ProjectNodeDetails?> ICrmHrAssignmentsWorkspaceView.LoadTaskDetailsAsync(ProjectPartyAssignmentDetail assignment) => LoadTaskDetailsAsync(assignment);
     void ICrmHrAssignmentsWorkspaceView.HandleProjectPickerLoadFailed(Exception exception) => HandleProjectPickerLoadFailed(exception);
     Task ICrmHrAssignmentsWorkspaceView.OpenStructure(Guid projectId) => OpenStructure(projectId);

@@ -23,8 +23,10 @@ public sealed class ProviderUsageWindowPostgreSqlTests(ITestOutputHelper output)
         await using var database = LlmChatsPostgreSqlTestDatabase.CreateUnmigrated("usage-window-sql");
         await using var context = database.CreateDbContext();
         var migrations = context.Database.GetMigrations().ToArray();
-        Assert.EndsWith("AddInvocationCompletionUsageIndex", migrations[^1]);
-        await context.GetService<IMigrator>().MigrateAsync(migrations[^2]);
+        var indexMigration = Assert.Single(migrations, migration => migration.EndsWith("_AddInvocationCompletionUsageIndex", StringComparison.Ordinal));
+        var indexMigrationPosition = Array.IndexOf(migrations, indexMigration);
+        Assert.True(indexMigrationPosition > 0);
+        await context.GetService<IMigrator>().MigrateAsync(migrations[indexMigrationPosition - 1]);
         await using var connection = new NpgsqlConnection(database.ConnectionString);
         await connection.OpenAsync();
         const string indexName = "IX_LlmChats_InvocationRecords_CompletedAtUtc";

@@ -1,0 +1,15 @@
+.sharing-sandbox {
+    height: 100vh;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.sharing-sandbox-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+}

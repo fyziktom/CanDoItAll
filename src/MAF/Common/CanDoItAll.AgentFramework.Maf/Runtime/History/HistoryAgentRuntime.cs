@@ -6,6 +6,12 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal sealed class HistoryAgentRuntime(IAgentExecutionRuntime execution, IAgentContinuationRuntime continuation)
     : IAgentExecutionRuntime, IAgentContinuationRuntime {
+    public AgentSavedEffectDispatchSupport SavedEffectDispatchSupport => continuation.SavedEffectDispatchSupport;
+
+    public Task<AgentSavedEffectDispatchResult> DispatchSavedEffectAsync(AgentSavedEffectDispatchRequest request,
+        CancellationToken cancellationToken = default)
+        => continuation.DispatchSavedEffectAsync(request, cancellationToken);
+
     public Task<AgentRuntimeResponse> ExecuteAsync(AgentRuntimeExecutionRequest request, CancellationToken cancellationToken = default) {
         var options = MafRuntimeExecutionOptionsResolver.Normalize(request.StructuredOutput, request.ExecutionOptions);
         return ObserveAsync(options.History,
@@ -18,7 +24,7 @@ internal sealed class HistoryAgentRuntime(IAgentExecutionRuntime execution, IAge
             () => continuation.ContinueAsync(request with { ExecutionOptions = options }, cancellationToken));
     }
 
-    private static async Task<AgentRuntimeResponse> ObserveAsync(HistoryInvocationContext history, Func<Task<AgentRuntimeResponse>> invoke) {
+    internal static async Task<AgentRuntimeResponse> ObserveAsync(HistoryInvocationContext history, Func<Task<AgentRuntimeResponse>> invoke) {
         try {
             var response = await invoke();
             var evidence = HistoryCanonicalInvocation.Capture(history);

@@ -1,39 +1,63 @@
+@using CanDoItAll.AgentFramework.SharedProviders.UI
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Modules.AgentFramework.ProviderManagement
 @using CanDoItAll.SharedProviders.Abstractions
+@using CanDoItAll.Editing
 @inject ISharedProviderManagementService ManagementService
 @inject SharedProviderRecovery Recovery
+@inject ProviderEditingChanges Editing
 @implements IDisposable
+@implements IAsyncDisposable
+@implements ISharedProviderRefreshView
 
-<Stack GapScale="LayoutGap.Small">
-    <Cluster>
-        <Button Text="Refresh shared provider" Icon="sync" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
-                IsBusy="busy" Disabled="@(busy || Recovery.Source is not null)" Click="RefreshAsync" data-testid="shared-provider-refresh-capabilities" />
-        @if (PendingDeliveryAttempt is not null) {
-            <Button Text="Retry workspace delivery" Disabled="@busy" Click="RetryDeliveryAsync" data-testid="shared-provider-refresh-delivery" />
-        }
-    </Cluster>
-    @if (Recovery.Source is not null) {
-        <Alert AlertStyle="AlertStyle.Warning">Resolve the pending source attempt in Shared provider connections before another refresh.</Alert>
-    }
-    @if (message is not null) {
-        <Alert AlertStyle="@(failed ? AlertStyle.Danger : AlertStyle.Success)" data-testid="shared-provider-refresh-result">@message</Alert>
-    }
-</Stack>
+<SharedProviderRefreshSurface View="this" />
 
 @code {
     [Parameter] public Guid ProviderId { get; set; }
     [Parameter] public EventCallback<SharedProviderChangeDelivery> Refreshed { get; set; }
+    [Parameter] public ProviderEditingOpening? OriginalOpening { get; set; }
     private CancellationTokenSource owner = new();
     private Guid target;
     private long generation;
     private bool disposed;
     private bool busy;
     private bool failed;
+    private bool admitted;
+    private ProviderEditingOpening? opening;
     private string? message;
-    private SharedProviderSourceMutationAttempt? PendingDeliveryAttempt => Recovery.Source is { } attempt &&
+    private readonly Guid viewId = Guid.NewGuid();
+    private long activation;
+    private SharedProviderRefreshOrigin Origin => new(viewId, activation, target);
+    public SharedProviderRefreshPresentation Presentation => new(Origin, busy, !admitted || Recovery.Source is not null,
+        PendingDeliveryAttempt?.AttemptId, message, failed);
+    private SharedProviderSourceMutationAttempt? PendingDeliveryAttempt => admitted && Recovery.Source is { } attempt &&
         attempt.Before?.Imports.Any(import => import.ProviderProfileId == target) == true &&
         Recovery.PendingDelivery(attempt.AttemptId) is not null ? attempt : null;
+
+    protected override async Task OnInitializedAsync() {
+        if (!RendererInfo.IsInteractive) {
+            return;
+        }
+        opening = Editing.Open(viewId, () => !disposed, EditingOwner.SharedProviderSource, OriginalOpening);
+        try {
+            await opening.StartAsync(_ => Task.CompletedTask, () => {
+                RetireAccess();
+                return InvokeAsync(StateHasChanged);
+            });
+            Recovery.Bind(new(opening.Scope, opening.PrincipalStamp));
+            admitted = true;
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
+        }
+    }
+
+    private void RetireAccess() {
+        admitted = false;
+        opening?.Stop();
+        message = "Original source access has ended. Reopen the provider with current access.";
+        failed = true;
+        busy = false;
+    }
 
     protected override void OnParametersSet() {
         if (disposed) {
@@ -46,16 +70,17 @@
         owner.Dispose();
         owner = new();
         generation++;
+        activation++;
         target = ProviderId;
         busy = false;
         message = null;
     }
 
     private bool IsCurrent(long operation, CancellationToken token) =>
-        !disposed && operation == generation && !token.IsCancellationRequested;
+        !disposed && admitted && operation == generation && !token.IsCancellationRequested;
 
-    private async Task RefreshAsync() {
-        if (disposed || busy || Recovery.Source is not null) {
+    public async Task RefreshAsync(SharedProviderRefreshOrigin origin) {
+        if (origin != Origin || disposed || !admitted || busy || Recovery.Source is not null) {
             return;
         }
         var operation = ++generation;
@@ -66,7 +91,8 @@
         message = null;
         SharedProviderSourceMutationAttempt? attempt = null;
         try {
-            var sources = await ManagementService.ListSourcesAsync(token);
+            var original = opening ?? throw new UnauthorizedAccessException("Original source access is unavailable.");
+            var sources = await original.ReadAsync(ManagementService.ListSourcesAsync, token);
             if (!IsCurrent(operation, token)) {
                 return;
             }
@@ -75,9 +101,12 @@
             var selected = source.Imports.Where(import => import.SelectionState == SharedProviderSelectionState.Selected)
                 .Select(import => import.RemotePublicationId).ToHashSet();
             attempt = new(source.Source.Id, SharedProviderSourceMutationKind.Synchronize, source, selection: selected);
-            Recovery.BeginSource(attempt);
-            var result = await ManagementService.SynchronizeSourceAsync(source.Source.Id, selected, token);
+            var result = await original.WriteAsync(() => {
+                Recovery.BeginSource(attempt);
+                return ManagementService.SynchronizeSourceAsync(source.Source.Id, source.Observation, selected, token);
+            }, () => IsCurrent(operation, token), token);
             Recovery.RecordCommit(attempt.AttemptId, result.Change);
+            result = await original.ReadAsync(_ => Task.FromResult(result), token);
             if (!IsCurrent(operation, token)) {
                 return;
             }
@@ -91,7 +120,12 @@
                     ? result.Failure?.SanitizedMessage ?? "The shared source is unavailable."
                     : "Shared models and thinking settings refreshed. Your unsaved selections were preserved.");
             }
-        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (UnauthorizedAccessException) {
+            if (attempt is not null && Recovery.PendingDelivery(attempt.AttemptId) is null) {
+                Recovery.CompleteSource(attempt);
+            }
+            RetireAccess();
+        } catch (OperationCanceledException) when (token.IsCancellationRequested || !admitted) {
         } catch (SharedProviderCommittedException exception) {
             if (attempt is not null) {
                 Recovery.RecordCommit(attempt.AttemptId, exception.Change);
@@ -117,8 +151,8 @@
         }
     }
 
-    private async Task RetryDeliveryAsync() {
-        if (disposed || busy || PendingDeliveryAttempt is not { } attempt) {
+    public async Task RetryDeliveryAsync(SharedProviderRefreshOrigin origin, Guid attemptId) {
+        if (origin != Origin || disposed || busy || PendingDeliveryAttempt is not { } attempt || attempt.AttemptId != attemptId) {
             return;
         }
         var operation = ++generation;
@@ -126,10 +160,14 @@
         var token = request.Token;
         busy = true;
         try {
+            await (opening ?? throw new UnauthorizedAccessException("Original source access is unavailable."))
+                .ReadAsync(_ => Task.FromResult(true), token);
             if (await DeliverAsync(attempt, operation, token) && IsCurrent(operation, token)) {
                 failed = false;
                 message = "Workspace reconciliation completed without repeating synchronization.";
             }
+        } catch (UnauthorizedAccessException) {
+            RetireAccess();
         } finally {
             if (IsCurrent(operation, token)) {
                 busy = false;
@@ -152,7 +190,16 @@
             return;
         }
         disposed = true;
+        admitted = false;
+        opening?.Stop();
         owner.Cancel();
         owner.Dispose();
+    }
+
+    public async ValueTask DisposeAsync() {
+        Dispose();
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
     }
 }

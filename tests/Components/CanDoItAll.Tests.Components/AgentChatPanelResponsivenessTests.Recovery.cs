@@ -113,6 +113,7 @@ public sealed partial class AgentChatPanelResponsivenessTests {
         await using var fixture = await CreateRecoveryPanelAsync(floating);
         var cut = fixture.Cut;
         await ClickRecoveryAsync(fixture);
+        var observation = CaptureSubmittedOperation(cut.Instance);
         if (fixture.Coordinator is { } coordinator) {
             Assert.False(coordinator.TryBeginOperation(fixture.HandleId!.Value));
         }
@@ -136,6 +137,8 @@ public sealed partial class AgentChatPanelResponsivenessTests {
             await cut.InvokeAsync(() => RecoveryWorkspace(cut).DraftPromptChanged.InvokeAsync(expectedDraft));
         } else if (detach == RecoveryDetach.Dispose) {
             await cut.InvokeAsync(() => cut.Instance.DisposeAsync().AsTask());
+            await observation.WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.False(fixture.Orchestrator.RecoveryCompletion.Task.IsCompleted);
         } else if (detach == RecoveryDetach.ProfileDuringReadback) {
             fixture.Orchestrator.RecoveryCompletion.SetResult(RecoveryResult(fixture, ExecutionState.Completed));
             await fixture.Workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -150,7 +153,11 @@ public sealed partial class AgentChatPanelResponsivenessTests {
         if (detach != RecoveryDetach.ProfileDuringReadback) {
             fixture.Orchestrator.RecoveryCompletion.SetResult(RecoveryResult(fixture, ExecutionState.Completed));
         }
-        await fixture.Logger.Detached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        if (detach == RecoveryDetach.Dispose) {
+            await observation.WaitAsync(TimeSpan.FromSeconds(2));
+        } else {
+            await fixture.Logger.Detached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        }
         if (fixture.Coordinator is { } releasedCoordinator) {
             await cut.InvokeAsync(() => {
                 Assert.True(releasedCoordinator.TryBeginOperation(fixture.HandleId!.Value));
@@ -267,7 +274,8 @@ public sealed partial class AgentChatPanelResponsivenessTests {
     }
 
     private static ExecutionRunResult RecoveryResult(RecoveryPanelFixture fixture, ExecutionState state)
-        => new(fixture.Run.Id, fixture.Session.Id, "Recovered", null, CreateRunResult(fixture.Agent.Id, fixture.Session.Id).Metric) { State = state };
+        => new(fixture.Run.Id, fixture.Session.Id, "Recovered", null,
+            Assert.IsType<AgentRunMetric>(CreateRunResult(fixture.Agent.Id, fixture.Session.Id).Metric)) { State = state };
 
     private static ChatWorkspacePanel RecoveryWorkspace(IRenderedComponent<AgentChatPanel> cut)
         => cut.FindComponent<ChatWorkspacePanel>().Instance;

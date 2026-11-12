@@ -15,6 +15,7 @@ public sealed record SharedProviderSourceWriteResult(
     Guid Id,
     Guid ConcurrencyToken) {
     public SharedProviderChange? Change { get; init; }
+    public SharedProviderSourceSnapshot? AcceptedSource { get; init; }
     public IReadOnlySet<Guid> AffectedProviderProfileIds => Change?.AffectedProviderProfileIds ?? FrozenSet<Guid>.Empty;
 }
 
@@ -43,7 +44,10 @@ public sealed record SharedProviderPublicationWriteResult(
     bool IsPublished,
     Guid ConcurrencyToken) {
     public SharedProviderChange? Change { get; init; }
+    public SharedProviderPublicationAcceptance? Acceptance { get; init; }
 }
+
+public sealed record SharedProviderPublicationAcceptance(Guid ProviderConcurrencyToken, SharedProviderPublicationEligibility Eligibility);
 
 public enum SharedProviderSourceFailureKind
 {
@@ -72,7 +76,8 @@ public sealed record SharedProviderReconciliationRequest
         SharedProviderCatalogEntityTag entityTag,
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds,
         SharedProviderSelectionMode selectionMode = SharedProviderSelectionMode.AddOrReactivate,
-        Guid? expectedSourceConcurrencyToken = null)
+        Guid? expectedSourceConcurrencyToken = null,
+        SharedProviderSourceObservation? originalSelection = null)
     {
         if (sourceId == Guid.Empty)
         {
@@ -109,6 +114,7 @@ public sealed record SharedProviderReconciliationRequest
         SelectedPublicationIds = selectedPublicationIds.ToFrozenSet();
         SelectionMode = selectionMode;
         ExpectedSourceConcurrencyToken = expectedSourceConcurrencyToken;
+        OriginalSelection = originalSelection;
     }
 
     public Guid SourceId { get; }
@@ -122,6 +128,7 @@ public sealed record SharedProviderReconciliationRequest
     public SharedProviderSelectionMode SelectionMode { get; }
 
     public Guid? ExpectedSourceConcurrencyToken { get; }
+    public SharedProviderSourceObservation? OriginalSelection { get; }
 }
 
 public enum SharedProviderReconciliationOutcome
@@ -136,6 +143,7 @@ public sealed record SharedProviderReconciliationResult(
 {
     public IReadOnlyList<Guid> RetiredProviderProfileIds { get; init; } = [];
     public SharedProviderChange? Change { get; init; }
+    public SharedProviderSourceObservation? AcceptedObservation { get; init; }
 }
 
 public sealed record SharedProviderSourceTestReceipt(
@@ -179,6 +187,7 @@ public sealed record SharedProviderSourceOperationResult
     private readonly IReadOnlyList<Guid> affectedIds;
     private readonly IReadOnlyList<Guid> retiredIds;
     public SharedProviderChange? Change { get; init; }
+    public SharedProviderSourceObservation? AcceptedObservation { get; init; }
     public IReadOnlyList<Guid> AffectedProviderProfileIds => Change?.AffectedProviderProfileIds.Order().ToArray() ?? affectedIds;
     public IReadOnlyList<Guid> RetiredProviderProfileIds => Change?.RetiredProviderProfileIds.Order().ToArray() ?? retiredIds;
 

@@ -6,7 +6,7 @@
   "avatarImageUrl": "_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-05.jpg",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "gpt-5.4-mini",
+  "model": "gpt-6-luna",
   "workload": "Research",
   "chatHistoryMode": "ProviderManaged",
   "temperature": 0.2,

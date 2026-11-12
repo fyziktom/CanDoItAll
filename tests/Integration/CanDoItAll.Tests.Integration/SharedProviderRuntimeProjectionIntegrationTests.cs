@@ -1217,7 +1217,8 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         var seed = await SeedGraphAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<SharedProviderSourceService>();
-        var failure = await service.RecordFailureAsync(seed.SourceId,
+        var original = await service.GetAsync(seed.SourceId);
+        var failure = await service.RecordFailureAsync(seed.SourceId, original.ConcurrencyToken,
             new(SharedProviderSourceFailureKind.Connectivity, 503, "The source is unavailable."));
         Assert.Equal([seed.ProfileId], failure.AffectedProviderProfileIds);
         Assert.False((await LoadCanonicalAsync(seed.ProfileId)).Profile.IsEnabled);
@@ -1293,14 +1294,16 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             (IEnumerable<IProviderProfileCommitObserver>)[new SeamFailingObserver()]);
         var retired = await coordinator.ReconcileAsync(new(seed.SourceId, catalog,
             SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision), new HashSet<SharedProviderPublicationId>(),
-            SharedProviderSelectionMode.Replace, source.ConcurrencyToken));
+            SharedProviderSelectionMode.Replace, source.ConcurrencyToken,
+            await scope.ServiceProvider.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(seed.SourceId)));
         Assert.Equal([seed.ProfileId], retired.RetiredProviderProfileIds);
         Assert.NotNull(retired.Change!.Warning);
         source = await sourceService.GetAsync(seed.SourceId);
         var reactivated = await coordinator.ReconcileAsync(new(seed.SourceId, catalog,
             SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
             new HashSet<SharedProviderPublicationId> { seed.Publication.PublicationId },
-            SharedProviderSelectionMode.Replace, source.ConcurrencyToken));
+            SharedProviderSelectionMode.Replace, source.ConcurrencyToken,
+            await scope.ServiceProvider.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(seed.SourceId)));
         Assert.Equal([seed.ProfileId], reactivated.AffectedProviderProfileIds);
         Assert.Empty(reactivated.RetiredProviderProfileIds);
         Assert.NotNull(reactivated.Change!.Warning);

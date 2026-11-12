@@ -31,13 +31,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
     AgentToolAdmissionJournal? toolAdmissionJournal = null,
     IAgentExecutionAuthorityResolver? executionAuthorityResolver = null,
     IEnumerable<IAgentToolReceiptReconciliationProvider>? receiptReconciliationProviders = null,
-    AgentToolPolicyCatalog? toolPolicies = null) :
+    AgentToolPolicyCatalog? toolPolicies = null,
+    IAgentPlanningStepRuntime? planningRuntime = null,
+    IEnumerable<IAgentPlanningParticipant>? planningParticipants = null,
+    IEnumerable<IAgentInheritedPlanningParticipant>? inheritedPlanningParticipants = null) :
     IDisposable
 {
     private readonly IAgentOutputRepairService outputRepairService =
         outputRepairService ?? JsonObjectExtractionAgentOutputRepairService.Instance;
     private readonly IAgentExecutionCancellationRegistry executionCancellationRegistry =
-        executionCancellationRegistry ?? new AgentExecutionCancellationRegistry();
+        executionCancellationRegistry ?? new AgentExecutionCancellationRegistry(logger);
     // IEnumerable<T> (not IReadOnlyList<T>) so plain reflection-based DI activation (AddScoped<T>() with no
     // factory - the production AddAgentFrameworkCore/AddAgentFrameworkModule registration shape, and every test
     // host that re-registers this type the same way) auto-supplies every registered policy without requiring a
@@ -63,6 +66,16 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService(
         ?? throw new ArgumentNullException(nameof(workspaceProcessLeaseCleaner));
     private readonly AgentToolPolicyCatalog toolPolicies = toolPolicies ?? AgentToolPolicyCatalog.BuiltIn;
     private readonly ILogger logger = logger;
+    private readonly TimeProvider executionClock = toolAdmissionJournal?.Clock ?? TimeProvider.System;
+    private readonly AgentPlanningCoordinator? planning = toolAdmissionJournal is not null && planningRuntime is not null
+        ? new(toolAdmissionJournal, planningRuntime, planningParticipants ?? []) : null;
+    private readonly AgentInheritedPlanningCoordinator? inheritedPlanning = toolAdmissionJournal is not null && planningRuntime is not null &&
+        store is ISandboxWorkspaceExecutionRunStore runs ? new(runs, toolAdmissionJournal, planningRuntime, inheritedPlanningParticipants ?? []) : null;
+
+    private AgentPlanningCoordinator RequirePlanning() => planning
+        ?? throw new NotSupportedException("Planning requires the registered planning runtime and journal owner.");
+    private AgentInheritedPlanningCoordinator RequireInheritedPlanning() => inheritedPlanning
+        ?? throw new NotSupportedException("Inherited planning requires its registered runtime, original store and journal owner.");
     private static readonly AgentProviderUsageObservationAssembler UsageObservationAssembler = new();
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry> executionUpdatedDispatcher =
         CreateExecutionUpdatedDispatcher(logger);

@@ -87,6 +87,16 @@ public sealed class CrmHrActivityHistorySession : IDisposable
         return BeginRead(target, pageIndex, accepted);
     }
 
+    public Task RefreshAsync() {
+        if (disposed || Target is not { } target) {
+            return Task.CompletedTask;
+        }
+        if (activeRead is { } pending) {
+            return pending;
+        }
+        return BeginRead(target, Presentation.Accepted?.PageIndex ?? 0, Presentation.Accepted);
+    }
+
     // Reads the target's first page again after a failure. Duplicate admissions while a read is in flight and
     // retries without a failure are ignored; a retry never turns into an implicit refresh of an accepted history.
     public Task RetryAsync()

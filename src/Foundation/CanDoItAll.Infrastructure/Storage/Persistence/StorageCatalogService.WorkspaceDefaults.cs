@@ -1,35 +1,56 @@
+using CanDoItAll.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
 namespace CanDoItAll.Infrastructure.Storage;
 
 public sealed partial class StorageCatalogService {
+    private const string RoutingMutationKey = "storage-workspace-routing";
+
+    public Task ApplyDefaultPurposesAsync(Guid storageId, IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+        CancellationToken cancellationToken = default) => ApplyDefaultPurposesAsync(storageId, new StorageDefaultRoutingWrite(Guid.Empty, defaultPurposes), cancellationToken);
+
     public async Task ApplyDefaultPurposesAsync(
         Guid storageId,
-        IReadOnlyCollection<StorageUsagePurpose> defaultPurposes,
+        StorageDefaultRoutingWrite routing,
         CancellationToken cancellationToken = default) {
+        await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
+        await using var database = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(database, RoutingMutationKey, cancellationToken);
+        await StageDefaultPurposesAsync(database, storageId, routing, cancellationToken);
+        await database.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
+    }
+
+    private async Task<Guid> StageDefaultPurposesAsync(StorageDbContext database, Guid storageId, StorageDefaultRoutingWrite routing,
+        CancellationToken cancellationToken) {
         var trackedPurposes = StorageWorkspaceDefaults.TrackedPurposes;
-        var rules = await ListRoutingRuleRecordsAsync(cancellationToken);
+        var rules = await database.Set<StorageRoutingRule>().Where(rule => rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
+                trackedPurposes.Contains(rule.UsagePurpose))
+            .OrderByDescending(rule => rule.IsEnabled).ThenBy(rule => rule.Priority).ThenBy(rule => rule.Name).ThenBy(rule => rule.Id)
+            .ToListAsync(cancellationToken);
+        if (StorageWorkspaceDefaults.Observe(rules.Select(StorageCatalogMapping.ToSnapshot)) != routing.ExpectedRevision) {
+            throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.RoutingChanged);
+        }
 
         foreach (var purpose in trackedPurposes) {
-            var existing = rules.FirstOrDefault(rule =>
-                rule.ScopeKind == StorageRoutingScopeKind.Workspace &&
-                rule.UsagePurpose == purpose);
-            var selected = defaultPurposes.Contains(purpose);
+            var selected = routing.Purposes.Contains(purpose);
+            var existing = rules.FirstOrDefault(rule => rule.UsagePurpose == purpose);
 
-            if (!selected && existing?.PreferredStorageId != storageId) {
+            if (!selected && (existing is not { IsEnabled: true } || existing.PreferredStorageId != storageId)) {
                 continue;
             }
 
             if (!selected) {
-                if (existing is null) {
-                    continue;
-                }
-
-                existing.IsEnabled = false;
-                await SaveRuleCoreAsync(existing, cancellationToken);
+                existing!.IsEnabled = false;
+                existing.UpdatedAtUtc = NextRevision(existing.UpdatedAtUtc);
                 continue;
             }
-
             var previewRequired = RequiresPreviewCapability(purpose);
-            var rule = existing ?? new StorageRoutingRule();
+            var rule = existing ?? new StorageRoutingRule { CreatedAtUtc = clock.GetUtcNow() };
+            if (existing is null) {
+                database.Add(rule);
+                rules.Add(rule);
+            }
             rule.Name = $"{StoragePresentation.DescribeUsagePurpose(purpose)} default";
             rule.IsEnabled = true;
             rule.Priority = ResolvePriority(purpose);
@@ -39,7 +60,7 @@ public sealed partial class StorageCatalogService {
             rule.UsagePurpose = purpose;
             rule.ContentKind = StorageContentKind.Unknown;
             rule.MimePattern = string.Empty;
-            rule.EditIntent = purpose is StorageUsagePurpose.ProjectAsset or StorageUsagePurpose.PromptExport;
+            rule.EditIntent = purpose == StorageUsagePurpose.PromptExport;
             rule.PreviewRequired = previewRequired;
             rule.PublishIntent = purpose is StorageUsagePurpose.ReleasePackage or StorageUsagePurpose.DeploymentMirror;
             rule.RequiredCapabilities = StorageCapability.Write |
@@ -47,8 +68,9 @@ public sealed partial class StorageCatalogService {
             rule.PreferredStorageId = storageId;
             rule.AlternativeStorageIdsJson = "[]";
             rule.Reason = BuildRoutingReason(purpose);
-            await SaveRuleCoreAsync(rule, cancellationToken);
+            rule.UpdatedAtUtc = NextRevision(rule.UpdatedAtUtc);
         }
+        return StorageWorkspaceDefaults.Observe(rules.Select(StorageCatalogMapping.ToSnapshot));
     }
 
     private static bool RequiresPreviewCapability(StorageUsagePurpose purpose) {
@@ -74,7 +96,7 @@ public sealed partial class StorageCatalogService {
 
     private static string BuildRoutingReason(StorageUsagePurpose purpose) {
         return purpose switch {
-            StorageUsagePurpose.ProjectAsset => "Workspace default for editable project assets.",
+            StorageUsagePurpose.ProjectAsset => "Workspace default for project assets.",
             StorageUsagePurpose.PromptAttachment => "Workspace default for prompt attachments.",
             StorageUsagePurpose.PromptExport => "Workspace default for generated prompt exports.",
             StorageUsagePurpose.Evidence => "Workspace default for shareable evidence artifacts.",

@@ -152,6 +152,42 @@ public sealed class AgentExecutionActivityCoordinatorTests
     }
 
     [Fact]
+    public async Task Report_preserves_operation_identity_when_no_effect_publication_replans_for_review() {
+        var context = CreateContext();
+        var sessionId = Guid.NewGuid();
+        var runId = Guid.NewGuid();
+        using var operation = Admit(context, sessionId);
+        operation.BindExecutionRun(runId, sessionId);
+        operation.Report(AgentExecutionActivityPhase.UsingTool, "Publishing reviewed proposal.");
+        operation.Report(AgentExecutionActivityPhase.ResolvingPreparation, "Preparing bounded Replan after basis conflict.");
+        operation.Report(AgentExecutionActivityPhase.PreparingCapabilities, "Capabilities.");
+        operation.Report(AgentExecutionActivityPhase.PreparingRuntime, "Runtime.");
+        operation.Report(AgentExecutionActivityPhase.WaitingForProvider, "Waiting.");
+        operation.Report(AgentExecutionActivityPhase.AwaitingApproval, "New proposal requires approval.");
+        operation.Suspend("Review required.");
+
+        var events = await ReadEventsAsync(context);
+        Assert.Equal(new[] {
+            AgentExecutionActivityPhase.Accepted,
+            AgentExecutionActivityPhase.UsingTool,
+            AgentExecutionActivityPhase.ResolvingPreparation,
+            AgentExecutionActivityPhase.PreparingCapabilities,
+            AgentExecutionActivityPhase.PreparingRuntime,
+            AgentExecutionActivityPhase.WaitingForProvider,
+            AgentExecutionActivityPhase.AwaitingApproval,
+            AgentExecutionActivityPhase.AwaitingApproval
+        }, events.Select(item => item.Event.Phase));
+        Assert.All(events.Skip(1), item => {
+            Assert.Equal(context.AgentId, item.Event.AgentId);
+            Assert.Equal(sessionId, item.Event.ChatSessionId);
+            Assert.Equal(runId, item.Event.ExecutionRunId);
+        });
+        Assert.Equal(Enumerable.Range(1, events.Count).Select(value => (long)value),
+            events.Select(item => item.Sequence.Value));
+        Assert.Equal(AgentExecutionActivityTerminalOutcome.Suspended, events[^1].Event.TerminalOutcome);
+    }
+
+    [Fact]
     public async Task Report_allows_runtime_reentry_after_persisting_for_auto_approval()
     {
         var context = CreateContext();

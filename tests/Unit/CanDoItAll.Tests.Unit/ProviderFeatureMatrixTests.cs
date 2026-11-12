@@ -362,12 +362,7 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "SettingsPage.razor");
         var providerPanelMarkup = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "AgentProviderProfilesPanel.razor");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfilesSurface.razor");
         var providerExecutionSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -378,7 +373,8 @@ public sealed class ProviderFeatureMatrixTests
         Assert.DoesNotContain("ProviderAdministrationService", settingsPageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("providerModel", settingsPageSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Provider editor", settingsPageMarkup, StringComparison.Ordinal);
-        Assert.Contains("IWorkspaceProviderCatalog", settingsPageMarkup, StringComparison.Ordinal);
+        var settingsOwner = ReadRepositoryFile("src", "Modules", "CanDoItAll.Modules.Workspace", "Presentation", "WorkspaceDefaultsOwner.cs");
+        Assert.Contains("IWorkspaceProviderCatalog", settingsOwner, StringComparison.Ordinal);
         Assert.Contains("/agents?tab=providers", settingsPageSource, StringComparison.Ordinal);
         Assert.Contains("ProviderModelPricingEditor", providerPanelMarkup, StringComparison.Ordinal);
         Assert.Contains("ComfyUiWorkflowTemplateJson", providerExecutionSource, StringComparison.Ordinal);
@@ -418,12 +414,9 @@ public sealed class ProviderFeatureMatrixTests
             "Components",
             "WorkflowImageGenerationSettingsRenderer.razor");
         var treeNodeBuilderSource = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "ProviderProfileTreeNodeBuilder.cs");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfileTreeNodeBuilder.cs");
+        var workflowSettingsSource = ReadRepositoryFile(
+            "src", "UI", "CanDoItAll.AgentFramework.WorkflowAuthoring.UI", "WorkflowImageGenerationSettingsSurface.razor");
         var voiceSettingsSource = ReadRepositoryFile(
             "src",
             "Modules",
@@ -448,8 +441,9 @@ public sealed class ProviderFeatureMatrixTests
         Assert.Contains("No workspace connector plugin mapping exists for provider kind", metadataSource, StringComparison.Ordinal);
 
         Assert.Contains("option.Purpose == ProviderProfilePurpose.ImageGeneration", workflowRendererSource, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@(!provider.IsEnabled)\"", workflowRendererSource, StringComparison.Ordinal);
-        Assert.Contains("not an available image-generation provider", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("WorkflowImageGenerationSettingsSurface", workflowRendererSource, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!provider.IsEnabled)\"", workflowSettingsSource, StringComparison.Ordinal);
+        Assert.Contains("not an available image-generation provider", workflowSettingsSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProviderProfilePurpose.Chat", workflowRendererSource, StringComparison.Ordinal);
         Assert.Contains("ProviderKind.ComfyUi => \"image\"", treeNodeBuilderSource, StringComparison.Ordinal);
         Assert.Contains("ProviderAudioCapabilityPolicy.IsAvailable(provider)", voiceSettingsSource, StringComparison.Ordinal);
@@ -466,12 +460,7 @@ public sealed class ProviderFeatureMatrixTests
             "Pages",
             "SettingsPage.razor");
         var providerPanelMarkup = ReadRepositoryFile(
-            "src",
-            "Modules",
-            "CanDoItAll.Modules.AgentFramework",
-            "Pages",
-            "Components",
-            "AgentProviderProfilesPanel.razor");
+            "src", "UI", "CanDoItAll.AgentFramework.Providers.UI", "ProviderProfilesSurface.razor");
         var providerDispatchModels = ReadRepositoryFile(
             "src",
             "MAF",

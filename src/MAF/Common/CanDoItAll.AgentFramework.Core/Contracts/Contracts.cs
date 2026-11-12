@@ -4,6 +4,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public interface ISandboxWorkspaceCatalogStore
 {
+    Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, Action validateCurrentContext,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<AgentDecisionDataPolicySaveOutcome>(
+            new AgentDecisionDataPolicySaveOutcome.Rejected(AgentDecisionDataPolicyRejection.Unsupported));
     Task<SandboxWorkspaceCatalog> LoadCatalogAsync(CancellationToken cancellationToken = default);
     Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
         CancellationToken cancellationToken = default);
@@ -13,6 +18,11 @@ public interface ISandboxWorkspaceCatalogStore
     Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         CancellationToken cancellationToken = default);
+    Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
+        Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
+        Action<SandboxWorkspaceCatalog> validatePublication,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog owner does not support final prepared-publication validation.");
     Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         long expectedRevision,
@@ -45,6 +55,11 @@ public interface ISandboxWorkspaceExecutionRunStore
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default);
 
+    // Candidate reads may return a superset; the workspace query applies every filter and the limit.
+    Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunCandidatesAsync(
+        ExecutionRunQuery query, CancellationToken cancellationToken = default)
+        => ListExecutionRunsAsync(cancellationToken);
+
     Task<ExecutionRunRecord?> GetExecutionRunAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);
@@ -52,6 +67,12 @@ public interface ISandboxWorkspaceExecutionRunStore
     Task<ExecutionRunDetail?> GetExecutionRunDetailAsync(
         Guid executionRunId,
         CancellationToken cancellationToken = default);
+
+    async Task<ExecutionRunAdmissionSnapshot?> GetExecutionRunAdmissionSnapshotAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        var detail = await GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+        return detail is null ? null : new(detail.Run, detail.ChatSession);
+    }
 
     Task<ExecutionRunDetail> SaveExecutionRunDetailAsync(
         ExecutionRunDetail detail,
@@ -64,6 +85,12 @@ public interface ISandboxWorkspaceChatRunStartStore
         ChatBackedRunStartRequest request,
         Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
         CancellationToken cancellationToken = default);
+
+    Task<ChatBackedRunStartResult> BeginChatBackedRunWithAdmissionKnowledgeAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        CancellationToken cancellationToken = default)
+        => BeginChatBackedRunAsync(request, create, cancellationToken);
 }
 
 public sealed record ChatBackedRunStartRequest
@@ -151,6 +178,11 @@ public interface ISandboxWorkspaceExecutionRunMutationStore
         Func<ExecutionRunDetail, ExecutionRunDetail> update,
         CancellationToken cancellationToken = default);
 
+    Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task> requireCurrentAuthority,
+        CancellationToken cancellationToken)
+        => throw new NotSupportedException("This execution store cannot recheck authority after publication-key waits.");
+
     Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
@@ -182,6 +214,9 @@ public interface ISandboxWorkspaceAgentDeletionStore
     Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(
         Guid agentId,
         CancellationToken cancellationToken = default);
+    Task<AgentWorkspaceDeletionResult> DeleteAgentWorkspaceDataAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This owner does not support conditional agent deletion.");
 }
 
 public sealed record AgentWorkspaceDeletionResult(
@@ -251,8 +286,8 @@ public interface ISandboxWorkspaceChatSessionStore
         ChatSessionRecord session,
         CancellationToken cancellationToken = default);
 
-    Task<ChatSessionRecord> UpdateChatSessionAsync(
-        ChatSessionRecord session,
+    Task<ChatSessionRecord> RenameChatSessionAsync(
+        ChatSessionTitleChange change,
         CancellationToken cancellationToken = default);
 }
 
@@ -371,6 +406,13 @@ public interface IProviderProfileService
 
 public interface IProviderProfileRegistry
 {
+    Task<ProviderProfileObservation> GetProviderObservationAsync(Guid providerId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not expose coherent configuration observations.");
+
+    Task RecordProviderHealthAsync(ProviderProfileObservation observation, ProviderHealthResult result,
+        DateTimeOffset checkedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not support original-bound diagnostic metadata.");
+
     Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default);
 
     Task<ProviderProfile?> GetProviderAsync(
@@ -385,9 +427,15 @@ public interface IProviderProfileRegistry
         ProviderProfileEditorModel model,
         CancellationToken cancellationToken = default);
 
+    Task<ProviderProfileEditorModel> SaveProviderEditorAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not return an exact accepted configuration.");
+
     Task DeleteProviderAsync(
         Guid providerId,
         CancellationToken cancellationToken = default);
+
+    Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This provider owner does not support conditional deletion.");
 
     Task<ProviderProfile> UpdateProviderAsync(
         Guid providerId,
@@ -450,6 +498,10 @@ public interface IAgentExecutionHistoryReader
 {
     Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(ExecutionRunQuery query, CancellationToken cancellationToken = default);
     Task<ExecutionRunDetail> GetExecutionRunDetailAsync(Guid executionRunId, CancellationToken cancellationToken = default);
+
+    Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support historical receipt review.");
     Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExecutionWorkflowCheckpointRecord>> ListExecutionWorkflowCheckpointsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ToolExecutionReceiptRecord>> ListToolExecutionReceiptsAsync(Guid executionRunId, CancellationToken cancellationToken = default);
@@ -469,9 +521,23 @@ public interface IAgentFrameworkWorkspaceService :
     Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not expose coherent catalog snapshots.");
 
+    Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not expose Agent policy recovery context.");
+    Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not expose Agent policy authoring.");
+    Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support historical Agent policy receipt lookup.");
+    Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support dedicated Agent policy replacement.");
+
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
+    Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This agent owner does not return the exact accepted configuration.");
     Task GrantAgentProjectStructureAccessAsync(
         Guid agentId,
         Guid projectId,
@@ -505,11 +571,23 @@ public interface IAgentFrameworkWorkspaceService :
         throw new NotSupportedException("This workspace does not support project lifetime access revocation.");
     }
     Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
+    Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional agent deletion.");
     Task<IReadOnlyList<AgentTeamDefinition>> ListAgentTeamsAsync(CancellationToken cancellationToken = default);
     Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentTeamAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default);
+    Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace owner does not support team metadata editing.");
     Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default);
+    Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional team membership replacement.");
     Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
+    Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional team deletion.");
+    Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support an explicit team member addition.");
     Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default);
     Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default);
     Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
@@ -537,19 +615,25 @@ public interface IAgentFrameworkWorkspaceService :
     Task<ProviderProfileEditorModel> GetProviderEditorAsync(Guid? providerId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveProviderAsync(ProviderProfileEditorModel model, CancellationToken cancellationToken = default);
     Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
+    Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace owner does not support conditional provider deletion.");
     Task<ProviderHealthResult> TestProviderAsync(Guid providerId, CancellationToken cancellationToken = default);
     Task<ProviderTestChatResult> RunProviderTestChatAsync(Guid providerId, ProviderTestChatRequest request, CancellationToken cancellationToken = default);
     Task<ProviderModelMaintenanceEditorResult> CreateOrUpdateProviderModelAsync(Guid providerId, ProviderModelMaintenanceEditorRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CapabilityCatalogItem>> ListCapabilitiesAsync(CancellationToken cancellationToken = default);
     Task<CapabilityEditorModel> GetCapabilityEditorAsync(Guid? capabilityId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveCapabilityAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default);
+    Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not return accepted capability definitions.");
     Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default);
-    Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
+    Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support conditional capability deletion.");
+    Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default);
     Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default);
-    Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default);
-    Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default);
+    Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null);
+    Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default);
     Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default);
     Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
         ExecutionRunSourceKey source,
@@ -571,6 +655,10 @@ public interface IAgentFrameworkWorkspaceService :
         IReadOnlyList<PendingToolApprovalDecision> decisions,
         bool autoApprovePendingToolCalls = false,
         CancellationToken cancellationToken = default);
+    Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support saved planning actions.");
+
     Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
         AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("This workspace does not support pending-approval cancellation.");

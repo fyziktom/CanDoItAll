@@ -1,0 +1,28 @@
+@namespace CanDoItAll.Resources.UI
+
+@if (Workspace.Receipts.Count > 0) {
+    <details class="resource-mutation-history" open>
+    <summary>Resource mutation history</summary>
+    @foreach (var receipt in Workspace.Receipts.Reverse()) {
+    <Alert AlertStyle="@(receipt.State == ResourceEffectState.Committed ? AlertStyle.Success : AlertStyle.Info)" data-testid="resource-mutation-receipt">
+        <TextBlock TextStyle="TextStyle.Body2" Value="@($"{receipt.Kind}: {receipt.Name} · {receipt.ResourceId:D} · {receipt.State}")" />
+        <TextBlock TextStyle="TextStyle.Caption" Value="@receipt.Message" />
+        @if (receipt.State == ResourceEffectState.Unknown) {
+            <Button Text="Review stored identity" Disabled="@receipt.IsReviewing" Click="() => Workspace.ReviewAsync(receipt)" />
+        }
+        @if (receipt.Observation is ResourceMetadataReadResult.Found found) {
+            <TextBlock TextStyle="TextStyle.Caption" Value="@($"Observed: {found.Snapshot.Values.Name} · {found.Snapshot.Values.LocationOrIdentifier}")" />
+            <Button Text="Open observed resource" Click="() => Workspace.SelectAsync(receipt.ResourceId)" />
+        } else if (receipt.Observation is ResourceMetadataReadResult.MetadataOnly) {
+            <TextBlock TextStyle="TextStyle.Caption" Value="The current identity exists; its full metadata is unavailable for this editor." />
+        } else if (receipt.Observation is ResourceMetadataReadResult.Missing) {
+            <TextBlock TextStyle="TextStyle.Caption" Value="The identity is currently absent. This does not establish the earlier request's outcome." />
+        }
+    </Alert>
+    }
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired] public IResourceRegistryWorkspace Workspace { get; set; } = default!;
+}

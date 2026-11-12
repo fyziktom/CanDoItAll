@@ -35,4 +35,12 @@ internal static class MafChatClientAgentOptionsFactory
     {
         return configured || frameworkManagedHistory && hasApprovalTools;
     }
+
+    public static ChatClientAgentOptions CreatePlanning(ChatOptions chatOptions, string agentName) {
+        var options = Create(chatOptions);
+        options.Name = agentName;
+        options.UseProvidedChatClientAsIs = true;
+        options.ThrowOnChatHistoryProviderConflict = true;
+        return options;
+    }
 }

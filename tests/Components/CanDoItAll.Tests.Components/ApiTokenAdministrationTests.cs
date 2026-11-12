@@ -1,4 +1,7 @@
 using Bunit;
+using CanDoItAll.Components.BaseLib;
+using Microsoft.AspNetCore.Components;
+using CanDoItAll.Workspace.ApiAccess.UI;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Modules.Workspace.Pages.Components;
@@ -10,11 +13,11 @@ public sealed class ApiTokenAdministrationTests {
     [Fact]
     public async Task User_editor_saves_a_real_account_with_no_implicit_business_grants() {
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
-            services.AddSingleton<IApiTokenAdministrationAccess>(new TestTokenAdministrationAccess(true)));
-        var cut = harness.Context.Render<ApiUserAdministrationPanel>();
+            services.EnableUi().AddSingleton<IApiTokenAdministrationAccess>(new TestTokenAdministrationAccess(true)));
+        var cut = harness.Context.Render<WorkspaceApiAccessHost>();
         cut.WaitForElement("[data-testid='api-user-create']").Click();
-        cut.WaitForElement("[data-testid='api-user-name']").Change("component-user");
-        cut.Find("[data-testid='api-user-display-name']").Change("Component user");
+        cut.WaitForElement("[data-testid='api-user-name']").Input("component-user");
+        cut.Find("[data-testid='api-user-display-name']").Input("Component user");
         cut.Find("[data-testid='api-user-password']").Change(Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)));
         cut.Find("[data-testid='api-user-save']").Click();
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='api-user-dialog']")));
@@ -25,26 +28,30 @@ public sealed class ApiTokenAdministrationTests {
     }
 
     [Fact]
-    public void TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply() {
+    public async Task TOKEN_SCOPES_confirm_returns_exact_selection_and_cancel_does_not_apply() {
         using var context = new BunitContext();
+        context.Services.AddCanDoItAllBaseLib();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         string? confirmed = null;
         var closed = false;
         var cut = context.Render<ApiScopePickerDialog>(parameters => parameters
+            .Add(component => component.Definitions, ApiAdministrationTestSetup.Scopes)
             .Add(component => component.Value, ApiAccessScopeNames.Api)
             .Add(component => component.Confirmed, value => confirmed = value)
             .Add(component => component.OnClose, () => closed = true));
 
         Assert.Equal(ApiScopeCatalog.All.Count(scope => scope.MachineSelectable), cut.FindAll("[data-testid='api-scope-option']").Count);
-        cut.FindAll("button").Single(button => button.TextContent == "Clear").Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Clear").ClickAsync());
         Assert.True(cut.Find("[data-testid='api-scopes-confirm']").HasAttribute("disabled"));
-        cut.Find($"input[value='{ApiAccessScopeNames.ReadSharedProviderCatalog}']").Change(true);
-        cut.Find($"input[value='{ApiAccessScopeNames.InvokeSharedProviders}']").Change(true);
-        cut.Find("[data-testid='api-scopes-confirm']").Click();
+        await cut.InvokeAsync(() => cut.Find($"input[value='{ApiAccessScopeNames.ReadSharedProviderCatalog}']")
+            .ChangeAsync(new ChangeEventArgs { Value = true }));
+        await cut.InvokeAsync(() => cut.Find($"input[value='{ApiAccessScopeNames.InvokeSharedProviders}']")
+            .ChangeAsync(new ChangeEventArgs { Value = true }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='api-scopes-confirm']").ClickAsync());
         Assert.Equal($"{ApiAccessScopeNames.ReadSharedProviderCatalog} {ApiAccessScopeNames.InvokeSharedProviders}", confirmed);
 
         confirmed = null;
-        cut.FindAll("button").Single(button => button.TextContent == "Cancel").Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(button => button.TextContent == "Cancel").ClickAsync());
         Assert.True(closed);
         Assert.Null(confirmed);
     }
@@ -55,10 +62,9 @@ public sealed class ApiTokenAdministrationTests {
         var access = new TestTokenAdministrationAccess(true);
         await using var harness = await ComponentTestHarness.CreateAsync(services => {
             services.AddSingleton<IApiTokenRegistry>(registry);
-            services.AddSingleton<IApiTokenAdministrationAccess>(access);
+            services.EnableUi().AddSingleton<IApiTokenAdministrationAccess>(access);
         });
-        var status = harness.Context.Services.GetRequiredService<IApiTokenService>().GetStatus();
-        var cut = harness.Context.Render<ApiTokenAdministrationPanel>(parameters => parameters.Add(component => component.Status, status));
+        var cut = harness.Context.Render<WorkspaceApiAccessHost>();
         cut.WaitForElement("[data-testid='api-tokens-open']");
         Assert.Equal(0, registry.SearchCount);
         Assert.Empty(cut.FindAll("[data-testid='api-tokens-dialog']"));
@@ -86,10 +92,9 @@ public sealed class ApiTokenAdministrationTests {
         var access = new TestTokenAdministrationAccess(false);
         await using var harness = await ComponentTestHarness.CreateAsync(services => {
             services.AddSingleton<IApiTokenRegistry>(registry);
-            services.AddSingleton<IApiTokenAdministrationAccess>(access);
+            services.EnableUi().AddSingleton<IApiTokenAdministrationAccess>(access);
         });
-        var cut = harness.Context.Render<ApiTokenAdministrationPanel>(parameters => parameters
-            .Add(component => component.Status, harness.Context.Services.GetRequiredService<IApiTokenService>().GetStatus()));
+        var cut = harness.Context.Render<WorkspaceApiAccessHost>();
         cut.WaitForElement("[data-testid='api-token-access-denied']");
         Assert.Equal(0, registry.SearchCount);
         var administration = harness.Context.Services.GetRequiredService<ApiTokenAdministrationService>();
@@ -105,10 +110,9 @@ public sealed class ApiTokenAdministrationTests {
     [Fact]
     public async Task TOKEN_SCOPES_picker_uses_the_current_textbox_value() {
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
-            services.AddSingleton<IApiTokenAdministrationAccess>(new TestTokenAdministrationAccess(true)));
-        var cut = harness.Context.Render<ApiTokenAdministrationPanel>(parameters => parameters
-            .Add(component => component.Status, harness.Context.Services.GetRequiredService<IApiTokenService>().GetStatus()));
-        cut.WaitForElement("[data-testid='api-token-scopes']").Change(ApiAccessScopeNames.InvokeSharedProviders);
+            services.EnableUi().AddSingleton<IApiTokenAdministrationAccess>(new TestTokenAdministrationAccess(true)));
+        var cut = harness.Context.Render<WorkspaceApiAccessHost>();
+        cut.WaitForElement("[data-testid='api-token-scopes']").Input(ApiAccessScopeNames.InvokeSharedProviders);
         cut.Find("[data-testid='api-scopes-open']").Click();
         cut.WaitForAssertion(() => {
             Assert.Equal(ApiAccessScopeNames.InvokeSharedProviders, cut.FindComponent<ApiScopePickerDialog>().Instance.Value);
@@ -128,6 +132,9 @@ public sealed class ApiTokenAdministrationTests {
         public int SearchCount { get; private set; }
         public int RevokeCount { get; private set; }
         public int DeleteCount { get; private set; }
+        public Task PrepareCurrentReadAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<ApiTokenCurrentObservation> ObserveCurrentAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
         public void Register(ApiTokenRecord record) => token = record;
         public Task<ApiTokenRecord?> FindAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(token);
         public Task<ApiTokenPage> SearchAsync(ApiTokenQuery query, CancellationToken cancellationToken = default) {

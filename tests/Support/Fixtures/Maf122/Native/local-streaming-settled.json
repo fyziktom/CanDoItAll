@@ -1,0 +1,122 @@
+{
+  "mafVersion": "1.22.0.0",
+  "state": {
+    "stateBag": {
+      "InMemoryChatHistoryProvider": {
+        "messages": [
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "Request the guarded write."
+              }
+            ]
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "toolApprovalRequest",
+                "toolCall": {
+                  "$type": "functionCall",
+                  "name": "write_artifact",
+                  "arguments": {
+                    "path": "approved.txt"
+                  },
+                  "informationalOnly": true,
+                  "callId": "fixture-call"
+                },
+                "requiresConfirmation": true,
+                "requestId": "ficc_fixture-call"
+              }
+            ]
+          },
+          {
+            "role": "user",
+            "contents": [
+              {
+                "$type": "toolApprovalResponse",
+                "approved": true,
+                "toolCall": {
+                  "$type": "functionCall",
+                  "name": "write_artifact",
+                  "arguments": {
+                    "path": "approved.txt"
+                  },
+                  "informationalOnly": true,
+                  "callId": "fixture-call"
+                },
+                "requestId": "ficc_fixture-call"
+              }
+            ]
+          },
+          {
+            "createdAt": "2026-10-12T22:14:04.6100132\u002B00:00",
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "functionCall",
+                "name": "write_artifact",
+                "arguments": {
+                  "path": "approved.txt"
+                },
+                "informationalOnly": true,
+                "callId": "fixture-call"
+              }
+            ],
+            "messageId": "b3a86659c1b94984a598a4ada37b9c60",
+            "additionalProperties": {
+              "_attribution": {
+                "sourceType": {
+                  "value": "ChatHistory"
+                },
+                "sourceId": "Microsoft.Agents.AI.InMemoryChatHistoryProvider"
+              }
+            }
+          },
+          {
+            "createdAt": "2026-10-12T22:14:04.6104146\u002B00:00",
+            "role": "tool",
+            "contents": [
+              {
+                "$type": "functionResult",
+                "result": "written",
+                "callId": "fixture-call"
+              }
+            ],
+            "messageId": "51df18b95d6642019e70025ef16f8cd2"
+          },
+          {
+            "role": "assistant",
+            "contents": [
+              {
+                "$type": "text",
+                "text": "ordinary"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "approvals": []
+}

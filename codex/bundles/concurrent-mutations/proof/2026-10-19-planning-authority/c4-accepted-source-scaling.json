@@ -1,0 +1,1416 @@
+{
+  "candidate": "c4-accepted-source-scaling",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T12:27:18.9408571+00:00",
+      "State": "Completed",
+      "RunnerPid": 48804,
+      "ChildPid": 52604,
+      "ChildStartedUtc": "2026-10-20T12:27:18.9713403Z",
+      "ExitCode": 0,
+      "Seconds": 44.2417944,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 304606,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T12:29:05.7192676+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 5520,
+      "ChildStartedUtc": "2026-10-20T12:29:05.7249519Z",
+      "ExitCode": 0,
+      "Seconds": 0.1677664,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 2984,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-scaling-1",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests"
+      ],
+      "StartedUtc": "2026-10-20T12:28:15.9791031+00:00",
+      "State": "Completed",
+      "RunnerPid": 8396,
+      "ChildPid": 38580,
+      "ChildStartedUtc": "2026-10-20T12:28:16.0216570Z",
+      "ExitCode": 0,
+      "Seconds": 3.0549432,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1040,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-scaling-2",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests"
+      ],
+      "StartedUtc": "2026-10-20T12:28:19.1097720+00:00",
+      "State": "Completed",
+      "RunnerPid": 8396,
+      "ChildPid": 54780,
+      "ChildStartedUtc": "2026-10-20T12:28:19.1149929Z",
+      "ExitCode": 0,
+      "Seconds": 2.9616692,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1040,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-scaling-3",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests"
+      ],
+      "StartedUtc": "2026-10-20T12:28:22.0910454+00:00",
+      "State": "Completed",
+      "RunnerPid": 8396,
+      "ChildPid": 45140,
+      "ChildStartedUtc": "2026-10-20T12:28:22.0965083Z",
+      "ExitCode": 0,
+      "Seconds": 3.0466431,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1040,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T12:29:00.4755636+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 52672,
+      "ChildStartedUtc": "2026-10-20T12:29:00.4776856Z",
+      "ExitCode": 0,
+      "Seconds": 5.2263365,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-scaling-1",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests",
+        "--logger",
+        "trx;LogFileName=scaling-1.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-scaling"
+      ],
+      "StartedUtc": "2026-10-20T12:30:59.2483244+00:00",
+      "State": "Completed",
+      "RunnerPid": 36068,
+      "ChildPid": 10792,
+      "ChildStartedUtc": "2026-10-20T12:30:59.2822045Z",
+      "ExitCode": 0,
+      "Seconds": 7.2031625,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1753,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-scaling-2",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests",
+        "--logger",
+        "trx;LogFileName=scaling-2.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-scaling"
+      ],
+      "StartedUtc": "2026-10-20T12:31:06.4944063+00:00",
+      "State": "Completed",
+      "RunnerPid": 36068,
+      "ChildPid": 56544,
+      "ChildStartedUtc": "2026-10-20T12:31:06.4985166Z",
+      "ExitCode": 0,
+      "Seconds": 7.2786949,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1753,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-scaling-3",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessPreparedSourceScalingTests",
+        "--logger",
+        "trx;LogFileName=scaling-3.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-scaling"
+      ],
+      "StartedUtc": "2026-10-20T12:31:13.7852116+00:00",
+      "State": "Completed",
+      "RunnerPid": 36068,
+      "ChildPid": 31680,
+      "ChildStartedUtc": "2026-10-20T12:31:13.7972324Z",
+      "ExitCode": 0,
+      "Seconds": 7.1391541,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1753,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-scaling/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T12:30:37.6939157+00:00",
+      "State": "Completed",
+      "RunnerPid": 19560,
+      "ChildPid": 20732,
+      "ChildStartedUtc": "2026-10-20T12:30:37.7234694Z",
+      "ExitCode": 0,
+      "Seconds": 45.02096,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T12:27:29.4016081+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 40180,
+      "ChildStartedUtc": "2026-10-20T12:27:29.4366165Z",
+      "ExitCode": 0,
+      "Seconds": 0.1414102,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-scaling/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T12:29:00.0104182+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 37476,
+      "ChildStartedUtc": "2026-10-20T12:29:00.0124677Z",
+      "ExitCode": 0,
+      "Seconds": 0.4506843,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-scaling/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T12:27:32.7956831+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 51212,
+      "ChildStartedUtc": "2026-10-20T12:27:32.7991987Z",
+      "ExitCode": 0,
+      "Seconds": 87.1997329,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 430,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T12:27:29.6017163+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 42300,
+      "ChildStartedUtc": "2026-10-20T12:27:29.6049972Z",
+      "ExitCode": 0,
+      "Seconds": 0.4904636,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T12:27:30.2441366+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 52932,
+      "ChildStartedUtc": "2026-10-20T12:27:30.2472964Z",
+      "ExitCode": 0,
+      "Seconds": 2.5365013,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T12:27:30.1076483+00:00",
+      "State": "Completed",
+      "RunnerPid": 36088,
+      "ChildPid": 8476,
+      "ChildStartedUtc": "2026-10-20T12:27:30.1101710Z",
+      "ExitCode": 0,
+      "Seconds": 0.1221816,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "68945699-cdfe-4f44-a4c1-c127adc8fee2",
+      "testId": "1b4de0ee-6253-8635-470c-6d2f094989d5",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0095803",
+      "startTime": "2026-10-20T08:31:06.0180009-04:00",
+      "endTime": "2026-10-20T08:31:06.0268817-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "68945699-cdfe-4f44-a4c1-c127adc8fee2",
+      "trx": "scaling-1.trx"
+    },
+    {
+      "executionId": "66ebd9e8-07fc-46ca-8a53-670289f8cc5f",
+      "testId": "55d5c0a0-db1a-e38f-a9e2-3c7a45e6e2db",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1024, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.3105585",
+      "startTime": "2026-10-20T08:31:02.3951899-04:00",
+      "endTime": "2026-10-20T08:31:05.6920390-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "66ebd9e8-07fc-46ca-8a53-670289f8cc5f",
+      "trx": "scaling-1.trx"
+    },
+    {
+      "executionId": "854508c7-4c1c-4393-8d4f-f518808ea010",
+      "testId": "ffdaa1d8-f51b-e18e-7f6f-40674eb79120",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 256, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.3251155",
+      "startTime": "2026-10-20T08:31:05.7051232-04:00",
+      "endTime": "2026-10-20T08:31:06.0173629-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "854508c7-4c1c-4393-8d4f-f518808ea010",
+      "trx": "scaling-1.trx"
+    },
+    {
+      "executionId": "fde64512-2fe0-4ccf-8ca8-3b2dfe236704",
+      "testId": "ccfd4527-35ee-f071-5257-13639bc4e16b",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 1048576)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0674414",
+      "startTime": "2026-10-20T08:31:06.0270539-04:00",
+      "endTime": "2026-10-20T08:31:06.0943812-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "fde64512-2fe0-4ccf-8ca8-3b2dfe236704",
+      "trx": "scaling-1.trx"
+    },
+    {
+      "executionId": "ae824792-25e4-4ff8-b8d4-647e177b4f6f",
+      "testId": "8e07096c-857e-80df-b54b-77cf5f3e7310",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 64, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.2418377",
+      "startTime": "2026-10-20T08:31:06.0944877-04:00",
+      "endTime": "2026-10-20T08:31:06.3363060-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ae824792-25e4-4ff8-b8d4-647e177b4f6f",
+      "trx": "scaling-1.trx"
+    },
+    {
+      "executionId": "0c723eb5-d1bd-45ab-940b-952a396a37c4",
+      "testId": "ccfd4527-35ee-f071-5257-13639bc4e16b",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 1048576)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0624276",
+      "startTime": "2026-10-20T08:31:13.3560696-04:00",
+      "endTime": "2026-10-20T08:31:13.4183701-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0c723eb5-d1bd-45ab-940b-952a396a37c4",
+      "trx": "scaling-2.trx"
+    },
+    {
+      "executionId": "36ba5f0c-871b-488d-b66d-9891c01cbea8",
+      "testId": "1b4de0ee-6253-8635-470c-6d2f094989d5",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0091112",
+      "startTime": "2026-10-20T08:31:13.3474394-04:00",
+      "endTime": "2026-10-20T08:31:13.3558823-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "36ba5f0c-871b-488d-b66d-9891c01cbea8",
+      "trx": "scaling-2.trx"
+    },
+    {
+      "executionId": "8b31523b-90fc-4824-84e3-4dc64b20bd8d",
+      "testId": "55d5c0a0-db1a-e38f-a9e2-3c7a45e6e2db",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1024, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.4472616",
+      "startTime": "2026-10-20T08:31:09.6193238-04:00",
+      "endTime": "2026-10-20T08:31:13.0540090-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "8b31523b-90fc-4824-84e3-4dc64b20bd8d",
+      "trx": "scaling-2.trx"
+    },
+    {
+      "executionId": "f89b5fbb-8c24-409a-8cac-2a778cebd337",
+      "testId": "8e07096c-857e-80df-b54b-77cf5f3e7310",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 64, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.2341391",
+      "startTime": "2026-10-20T08:31:13.4184931-04:00",
+      "endTime": "2026-10-20T08:31:13.6528678-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f89b5fbb-8c24-409a-8cac-2a778cebd337",
+      "trx": "scaling-2.trx"
+    },
+    {
+      "executionId": "ab0e044c-09d5-4436-9a33-14c3feb443b0",
+      "testId": "ffdaa1d8-f51b-e18e-7f6f-40674eb79120",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 256, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.2926345",
+      "startTime": "2026-10-20T08:31:13.0763752-04:00",
+      "endTime": "2026-10-20T08:31:13.3468325-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ab0e044c-09d5-4436-9a33-14c3feb443b0",
+      "trx": "scaling-2.trx"
+    },
+    {
+      "executionId": "e72cb88e-3b7e-4d37-939a-65f28bd5397d",
+      "testId": "1b4de0ee-6253-8635-470c-6d2f094989d5",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0079565",
+      "startTime": "2026-10-20T08:31:20.4974452-04:00",
+      "endTime": "2026-10-20T08:31:20.5049068-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e72cb88e-3b7e-4d37-939a-65f28bd5397d",
+      "trx": "scaling-3.trx"
+    },
+    {
+      "executionId": "daff018b-06e7-4755-b65b-c0b5f8bfc36a",
+      "testId": "ffdaa1d8-f51b-e18e-7f6f-40674eb79120",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 256, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.3217044",
+      "startTime": "2026-10-20T08:31:20.1869899-04:00",
+      "endTime": "2026-10-20T08:31:20.4968986-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "daff018b-06e7-4755-b65b-c0b5f8bfc36a",
+      "trx": "scaling-3.trx"
+    },
+    {
+      "executionId": "60111b8b-2c7f-4c27-8885-6fc6136b8961",
+      "testId": "ccfd4527-35ee-f071-5257-13639bc4e16b",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1, promptCharacters: 1048576)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0691800",
+      "startTime": "2026-10-20T08:31:20.5051129-04:00",
+      "endTime": "2026-10-20T08:31:20.5741681-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "60111b8b-2c7f-4c27-8885-6fc6136b8961",
+      "trx": "scaling-3.trx"
+    },
+    {
+      "executionId": "ce9c20f7-3d70-4be4-bb12-9a9f8813bb41",
+      "testId": "55d5c0a0-db1a-e38f-a9e2-3c7a45e6e2db",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 1024, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.4012383",
+      "startTime": "2026-10-20T08:31:16.7864722-04:00",
+      "endTime": "2026-10-20T08:31:20.1749276-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ce9c20f7-3d70-4be4-bb12-9a9f8813bb41",
+      "trx": "scaling-3.trx"
+    },
+    {
+      "executionId": "196a9472-4b3c-431b-b869-d080c161ff90",
+      "testId": "8e07096c-857e-80df-b54b-77cf5f3e7310",
+      "testName": "CanDoItAll.Tests.Unit.ProcessPreparedSourceScalingTests.Exact_original_assignment_read_reports_width_payload_and_allocation_cost(steps: 64, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.2273683",
+      "startTime": "2026-10-20T08:31:20.5742725-04:00",
+      "endTime": "2026-10-20T08:31:20.8015341-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "196a9472-4b3c-431b-b869-d080c161ff90",
+      "trx": "scaling-3.trx"
+    }
+  ],
+  "evidence": {
+    "measurement-environment.json": {
+      "processor": {
+        "Name": "13th Gen Intel(R) Core(TM) i9-13900H",
+        "NumberOfCores": 14,
+        "NumberOfLogicalProcessors": 20
+      },
+      "os": "Windows-10-10.0.26300-SP0",
+      "sdk": "10.0.303",
+      "configuration": "Release",
+      "runtime": "net10.0",
+      "warmups": 5,
+      "roundsPerShape": 3,
+      "smallRepetitions": 32,
+      "largeRepetitions": 8,
+      "execution": "Three fresh test processes, serialized after builds and static scan; each shape verifies original exact assignment outside measurement. Process isolation does not imply an otherwise idle host."
+    },
+    "architecture-review.json": {
+      "productionChanges": false,
+      "scope": "One new opt-in test class in existing Unit project; uses existing pure support fixture and internal persistence codec. No project reference, runtime configuration, standalone probe or database changes.",
+      "referenceSnapshot": "snap-20261020114836-6de05ed1",
+      "productionSourceIdentityComparisonRequired": true,
+      "decision": "Measure width/payload allocation and time before choosing any source-read optimization. Keep all producer activation gates.",
+      "productionSourceIdentityComparisonPassed": true,
+      "validation": {
+        "executed": 15,
+        "passed": 15,
+        "measuredRounds": 45
+      },
+      "conclusion": "Measured whole-launch decoding cost warrants a persistence-owned original-source/assignment projection. Define versioning, atomic capture, legacy compatibility, corruption refusal and integrity semantics before production edits."
+    },
+    "discovery-review.json": {
+      "uniqueCases": 5,
+      "freshProcesses": 3,
+      "expectedExecutions": 15,
+      "confirmedPerLane": 5,
+      "filter": "FullyQualifiedName~ProcessPreparedSourceScalingTests",
+      "classification": "Opt-in LongRunning pure synchronous codec measurements; not a database or sustained-load benchmark."
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9645,
+      "runtimeFiles": 1484,
+      "sourceSha256": "DB55CE4C4BAC63DCB42AE98C6E870D2C603B8A792A7EDD307EAEAAD23C93527B",
+      "runtimeSha256": "0B299B8B6F1E7538A42D3147617268761091933172335DCDA3E75C98C277CD78"
+    },
+    "final-resource-reconciliation.json": {
+      "databaseNameDelta": [],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "recordedUtc": "2026-10-20T12:32:52.5036346+00:00",
+      "remainingObservedProcesses": [],
+      "outcome": "All five pure codec scaling shapes pass in each of three fresh processes. This qualifies baseline cost, not production capacity. No new database or host fixture was used. Historical cleanup denials remain unchanged.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\opyyewbl.opv",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\yehl32wt.3z0",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\fpafhni1.n1x",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_31680_20261020_083113_979.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\nqnem5iu.5wu",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_10792_20261020_083059_537.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\exdaowck.inr",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_56544_20261020_083106_688.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\5zcziz3h.d0z",
+          "family": "shared-temp-directory-entries"
+        }
+      ]
+    },
+    "production-bridge.json": {
+      "productionSourceUnchanged": true,
+      "productionSourceFiles": 5327,
+      "reference": "c4-inherited-product-source-final",
+      "meaning": "Measure unchanged production codec; only opt-in Unit measurement and maintained documentation added."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T12:30:37.6939157+00:00",
+      "observerSeconds": 45.02096,
+      "commands": [
+        {
+          "command": "execute-scaling-1",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T12:30:59.2483244+00:00",
+          "seconds": 7.2031625
+        },
+        {
+          "command": "execute-scaling-2",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T12:31:06.4944063+00:00",
+          "seconds": 7.2786949
+        },
+        {
+          "command": "execute-scaling-3",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T12:31:13.7852116+00:00",
+          "seconds": 7.1391541
+        }
+      ]
+    },
+    "portability-review.json": {
+      "reviewedFindings": 15647,
+      "baselineSha256": "E1C3650F55E8968C2921AC7E4A47D9246667E79CEBE2CC671D4691143FFE4702",
+      "intentionalDelta": 0,
+      "finalEnforcementWithoutWriteBaseline": true
+    },
+    "observer-start-confirmation.json": {
+      "confirmedUtc": "2026-10-20T12:30:58.7282077+00:00",
+      "observerPid": 20732,
+      "identityConfirmed": true,
+      "observerStartedUtc": "2026-10-20T12:30:37.7234694Z"
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\accepted-source-scaling.json",
+        "data": {
+          "rows": [
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.7044,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.826,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.3481,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 918.463,
+              "AllocatedBytesPerRead": 31489637
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 582.3652,
+              "AllocatedBytesPerRead": 31073808
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 356.9179,
+              "AllocatedBytesPerRead": 30899764
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 72.4982,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 65.041,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 102.3025,
+              "AllocatedBytesPerRead": 7750546
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 16.8094,
+              "AllocatedBytesPerRead": 5306454
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 15.2918,
+              "AllocatedBytesPerRead": 5831013
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 12.5507,
+              "AllocatedBytesPerRead": 5305808
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 89.4608,
+              "AllocatedBytesPerRead": 1962783
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 67.4167,
+              "AllocatedBytesPerRead": 1962483
+            },
+            {
+              "process": "scaling-1",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 70.1802,
+              "AllocatedBytesPerRead": 1962521
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 16.2091,
+              "AllocatedBytesPerRead": 5306703
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 13.2787,
+              "AllocatedBytesPerRead": 5305808
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 12.1865,
+              "AllocatedBytesPerRead": 5305808
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.6813,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.4239,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.4738,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 914.0266,
+              "AllocatedBytesPerRead": 31370029
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 553.9695,
+              "AllocatedBytesPerRead": 31073171
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 336.2567,
+              "AllocatedBytesPerRead": 30898937
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 88.8016,
+              "AllocatedBytesPerRead": 1962735
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 66.4077,
+              "AllocatedBytesPerRead": 1962483
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 64.6208,
+              "AllocatedBytesPerRead": 1962521
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 65.5237,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 68.2266,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-2",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 91.5788,
+              "AllocatedBytesPerRead": 7750703
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.2567,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.1238,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 9964,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 2.2247,
+              "AllocatedBytesPerRead": 64208
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 69.1665,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 70.0633,
+              "AllocatedBytesPerRead": 7749653
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 256,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 1116340,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 94.3601,
+              "AllocatedBytesPerRead": 7750703
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 15.6307,
+              "AllocatedBytesPerRead": 5831652
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 17.326,
+              "AllocatedBytesPerRead": 5305808
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1,
+              "PromptCharacters": 1048576,
+              "PayloadUtf8Bytes": 1058284,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 13.9566,
+              "AllocatedBytesPerRead": 5305808
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 0,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 908.2448,
+              "AllocatedBytesPerRead": 31341513
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 1,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 568.6007,
+              "AllocatedBytesPerRead": 31107735
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 1024,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 4449532,
+              "Round": 2,
+              "Repetitions": 8,
+              "ElapsedMilliseconds": 337.8858,
+              "AllocatedBytesPerRead": 30899764
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 0,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 85.5157,
+              "AllocatedBytesPerRead": 1962856
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 1,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 62.6377,
+              "AllocatedBytesPerRead": 1962483
+            },
+            {
+              "process": "scaling-3",
+              "Workload": "accepted-source-full-read",
+              "Steps": 64,
+              "PromptCharacters": 256,
+              "PayloadUtf8Bytes": 283168,
+              "Round": 2,
+              "Repetitions": 32,
+              "ElapsedMilliseconds": 66.3004,
+              "AllocatedBytesPerRead": 1962521
+            }
+          ],
+          "summary": [
+            {
+              "steps": 1,
+              "promptCharacters": 256,
+              "payloadUtf8Bytes": 9964,
+              "rounds": 9,
+              "millisecondsPerRead": {
+                "minimum": 0.06636875,
+                "median": 0.075746875,
+                "maximum": 0.0883125
+              },
+              "allocatedBytesPerRead": {
+                "minimum": 64208,
+                "median": 64208,
+                "maximum": 64208
+              }
+            },
+            {
+              "steps": 1,
+              "promptCharacters": 1048576,
+              "payloadUtf8Bytes": 1058284,
+              "rounds": 9,
+              "millisecondsPerRead": {
+                "minimum": 1.5233125,
+                "median": 1.911475,
+                "maximum": 2.16575
+              },
+              "allocatedBytesPerRead": {
+                "minimum": 5305808,
+                "median": 5305808,
+                "maximum": 5831652
+              }
+            },
+            {
+              "steps": 64,
+              "promptCharacters": 256,
+              "payloadUtf8Bytes": 283168,
+              "rounds": 9,
+              "millisecondsPerRead": {
+                "minimum": 1.957428125,
+                "median": 2.106771875,
+                "maximum": 2.79565
+              },
+              "allocatedBytesPerRead": {
+                "minimum": 1962483,
+                "median": 1962521,
+                "maximum": 1962856
+              }
+            },
+            {
+              "steps": 256,
+              "promptCharacters": 256,
+              "payloadUtf8Bytes": 1116340,
+              "rounds": 9,
+              "millisecondsPerRead": {
+                "minimum": 8.130125,
+                "median": 8.7579125,
+                "maximum": 12.7878125
+              },
+              "allocatedBytesPerRead": {
+                "minimum": 7749653,
+                "median": 7749653,
+                "maximum": 7750703
+              }
+            },
+            {
+              "steps": 1024,
+              "promptCharacters": 256,
+              "payloadUtf8Bytes": 4449532,
+              "rounds": 9,
+              "millisecondsPerRead": {
+                "minimum": 42.0320875,
+                "median": 71.0750875,
+                "maximum": 114.807875
+              },
+              "allocatedBytesPerRead": {
+                "minimum": 30898937,
+                "median": 31073808,
+                "maximum": 31489637
+              }
+            }
+          ],
+          "interpretation": "Whole-launch read scales materially in bytes, allocation and CPU. A 1024-step observation allocates about31MB. Design a narrow immutable original-source/assignment persistence record; hashing alone cannot remove full-graph decode. Timing is exploratory and excludes SQL/other source gates."
+        }
+      }
+    ]
+  }
+}

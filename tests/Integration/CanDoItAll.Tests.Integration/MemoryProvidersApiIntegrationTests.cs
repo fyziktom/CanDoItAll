@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Memory.Application;
 using CanDoItAll.Modules.Memory.Services;
@@ -14,6 +15,31 @@ namespace CanDoItAll.Tests.Integration.Memory;
 
 public sealed class MemoryProvidersApiIntegrationTests
 {
+    [Fact]
+    public async Task Provider_replacement_requires_the_observed_configuration_revision() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        const string route = "/api/memory-providers/provider.concurrent-api-test";
+        using var created = await host.Client.PutAsJsonAsync(route, CreateMockProfileRequest());
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        using var original = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var revision = original.RootElement.GetProperty("configurationRevision").GetGuid();
+        Assert.NotEqual(Guid.Empty, revision);
+
+        using var blind = await host.Client.PutAsJsonAsync(route, CreateMockProfileRequest());
+        Assert.Equal(HttpStatusCode.Conflict, blind.StatusCode);
+
+        JsonObject first = JsonSerializer.SerializeToNode(CreateMockProfileRequest())!.AsObject();
+        first["expectedRevision"] = revision;
+        first["displayName"] = "First editor";
+        using var changed = await host.Client.PutAsJsonAsync(route, first);
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        first["displayName"] = "Stale editor";
+        using var stale = await host.Client.PutAsJsonAsync(route, first);
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        using var current = JsonDocument.Parse(await host.Client.GetStringAsync(route));
+        Assert.Equal("First editor", current.RootElement.GetProperty("displayName").GetString());
+    }
+
     [Fact]
     public async Task Profile_routes_round_trip_safe_configuration_and_retired_cognitive_memory_route_is_absent()
     {
@@ -152,9 +178,11 @@ public sealed class MemoryProvidersApiIntegrationTests
         const string providerId = "provider.ui-preserved";
         await SeedProfileAsync(host, CreateUiProfile(providerId));
 
-        using var response = await host.Client.PutAsJsonAsync(
-            $"/api/memory-providers/{providerId}",
-            CreateMockProfileRequest());
+        var route = $"/api/memory-providers/{providerId}";
+        using var before = JsonDocument.Parse(await host.Client.GetStringAsync(route));
+        var request = JsonSerializer.SerializeToNode(CreateMockProfileRequest())!.AsObject();
+        request["expectedRevision"] = before.RootElement.GetProperty("configurationRevision").GetGuid();
+        using var response = await host.Client.PutAsJsonAsync(route, request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());

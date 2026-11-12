@@ -356,7 +356,8 @@ internal sealed class ToolInvocationTraceRecorder
         string failureCode = "",
         bool canRetryWithCorrectedInput = false,
         string? effectSourceKind = null,
-        string? effectSourceId = null)
+        string? effectSourceId = null,
+        ToolInvocationClassification? classification = null)
     {
         lock (gate)
         {
@@ -368,6 +369,7 @@ internal sealed class ToolInvocationTraceRecorder
 
             traces[index] = traces[index] with
             {
+                Classification = classification ?? traces[index].Classification,
                 CompletedAtUtc = DateTimeOffset.UtcNow,
                 Succeeded = succeeded,
                 FailureMessage = succeeded

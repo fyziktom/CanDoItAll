@@ -722,7 +722,8 @@ public enum ProcessDefinitionCatalogItemStatus
     TemplateDefault,
     Draft,
     Published,
-    RequiresReview
+    RequiresReview,
+    Archived
 }
 
 public enum ProcessDefinitionCatalogCommandKind
@@ -810,6 +811,7 @@ public enum ProcessDefinitionEditorLintSection
 [Description("Opaque catalog item key represented by its value member. Preserve the value; do not derive it from display text.")]
 public readonly record struct ProcessDefinitionCatalogItemKey
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionCatalogItemKey(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -846,6 +848,7 @@ public readonly record struct ProcessDefinitionCatalogRefreshToken
 [Description("Opaque version of the editor projection. This is an authoring concurrency token, not an authentication credential.")]
 public readonly record struct ProcessDefinitionEditorVersionToken
 {
+    [System.Text.Json.Serialization.JsonConstructor]
     public ProcessDefinitionEditorVersionToken(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -1008,7 +1011,26 @@ public sealed record ProcessDefinitionCatalogItemProjection(
     [property: Description("Last recorded definition update time in UTC.")]
     DateTimeOffset UpdatedAtUtc,
     [property: Description("Number of compatibility findings for this definition.")]
-    int CompatibilityIssueCount);
+    int CompatibilityIssueCount) {
+    [Description("Immutable publication retained by this catalog item's authored head, or null when no publication belongs to that head.")]
+    public Guid? PublishedId { get; init; }
+    [Description("Whether the current authored head is an unpublished draft; an earlier publication may remain launchable.")]
+    public bool HasDraft { get; init; }
+    [Description("Source selected for new launches independently of the editable draft.")]
+    public ProcessDefinitionExecutableSource ExecutableSource { get; init; } = ProcessDefinitionExecutableSource.TemplateDefault;
+    [Description("Revision of the publication selected for a new launch, including an inherited publication; null for a template default.")]
+    public long? ExecutableRevision { get; init; }
+    [Description("Whether the selected source admits a new launch; native admission checks remain authoritative.")]
+    public bool CanLaunch => Status != ProcessDefinitionCatalogItemStatus.Archived && ExecutableSource != ProcessDefinitionExecutableSource.Unavailable;
+}
+
+[Description("Selected executable source: distributed template, global publication, project publication, or unavailable. Numeric JSON values are listed by the OpenAPI schema.")]
+public enum ProcessDefinitionExecutableSource {
+    TemplateDefault,
+    GlobalPublication,
+    ProjectPublication,
+    Unavailable
+}
 
 public sealed record ProcessDefinitionCatalogCommandReceipt(
     Guid ReceiptId,
@@ -1142,11 +1164,15 @@ public sealed record ProcessDefinitionEditorCommand(
     ProcessDefinitionCatalogItemKey DefinitionKey,
     ProcessDefinitionEditorCommandKind CommandKind,
     ProcessDefinitionEditorVersionToken? ExpectedVersionToken,
-    ProcessDefinitionEditorDraftProjection Draft);
+    ProcessDefinitionEditorDraftProjection Draft) {
+    public Guid OperationId { get; init; } = Guid.NewGuid();
+}
 
 public sealed record ProcessDefinitionEditorCommandResult(
     ProcessDefinitionEditorCommandReceipt Receipt,
-    ProcessDefinitionEditorProjection Projection);
+    ProcessDefinitionEditorProjection Projection) {
+    public ProcessAuthoringReconciliation? Reconciliation { get; init; }
+}
 
 [Description("Current definition overview and optional role, step, canvas and template authoring projections. Read-only over this HTTP surface.")]
 public sealed record ProcessDefinitionEditorProjection(
@@ -1171,6 +1197,9 @@ public sealed record ProcessDefinitionEditorProjection(
     [property: Description("Most recent command receipt, or null when this snapshot has no command receipt.")]
     ProcessDefinitionEditorCommandReceipt? LastCommandReceipt)
 {
+    [Description("Authoritative scope, revision and effective content identity of this editor snapshot; null when the projection has no durable authoring observation.")]
+    public ProcessAuthoringObservation? Observation { get; init; }
+
     [Description("Optional role authoring projection associated with this definition.")]
     public ProcessDefinitionRoleEditorProjection? RoleEditor { get; init; }
 
@@ -1195,7 +1224,9 @@ public sealed record ProcessDefinitionCatalogProjection(
     IReadOnlyList<ProcessDefinitionCatalogItemProjection> Items,
     ProcessDefinitionCatalogItemProjection? SelectedItem,
     ProcessDefinitionEditorProjection? SelectedEditor,
-    ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt);
+    ProcessDefinitionCatalogCommandReceipt? LastCommandReceipt) {
+    public int TotalDefinitionCount => ScopeGroups.Sum(group => group.ScopeKind == ProcessDefinitionCatalogScopeKind.All ? group.Count : 0);
+}
 
 public sealed record ProcessLiveRunSummaryProjection(
     int ActiveRunCount,

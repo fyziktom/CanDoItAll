@@ -18,10 +18,12 @@ internal sealed class CapabilityTemplatePackLoader
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<CapabilityTemplatePack> pack;
+    private readonly Func<string, string> readText;
 
-    public CapabilityTemplatePackLoader(string? packRoot = null)
+    public CapabilityTemplatePackLoader(string? packRoot = null, Func<string, string>? readText = null)
     {
         configuredPackRoot = packRoot;
+        this.readText = readText ?? File.ReadAllText;
         pack = new Lazy<CapabilityTemplatePack>(LoadCore, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -335,12 +337,12 @@ internal sealed class CapabilityTemplatePackLoader
         }
     }
 
-    private static T ReadJson<T>(string path)
+    private T ReadJson<T>(string path)
         where T : class, new()
     {
         try
         {
-            return JsonFileLoader.ReadRequired<T>(path, JsonOptions);
+            return JsonSerializer.Deserialize<T>(readText(path), JsonOptions) ?? new T();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {

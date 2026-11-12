@@ -1,0 +1,74 @@
+@using CanDoItAll.Editing
+
+@if (State.IsOutdated || State.IsUnknown || Message is not null) {
+    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-relationship-freshness">
+        <TextBlock Value="@(Message ?? (State.IsUnknown ? "The relationship save outcome is unknown. Your submission and draft are retained; resubmission is blocked." : "Saved relationships changed. Review their current values before saving."))" />
+        <Button Text="Review relationships" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-relationship-review-open" />
+    </Alert>
+}
+@if (State.CanUndo) {
+    <Button Text="Undo relationship merge" ButtonStyle="ButtonStyle.Light" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
+}
+<Dialog IsOpen="@(State.Review is not null)" Title="Review party relationships" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-relationship-review-dialog">
+    <ChildContent>
+        @if (State.Review is { } review) {
+            <Stack GapScale="LayoutGap.Medium">
+                <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Choose the intended result for each relationship. Apply changes your draft; Save remains separate. Rows removed by another operation stay removed." /></Alert>
+                @if (State.ReviewIsStale) {
+                    <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-relationship-review-stale"><TextBlock Value="Saved relationships changed again. Refresh this comparison; your choices are retained." /></Alert>
+                }
+                @if (review.GroupError is { } error) {
+                    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
+                }
+                <Button Text="@(showAll ? "Show changed relationships" : "Show all relationships")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                <PartyMergeRows TRow="PartyRelationshipEditorModel" Title="Party relationships" Rows="review.Rows" WholeCollection="review.WholeCollection" Format="FormatRow" ShowUnchanged="@showAll" Changed="Changed">
+                    <ResultActions Context="row">
+                        @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
+                            <FormField Text="Primary in my merged draft">
+                                <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@((bool primary) => SetPrimaryAsync(row, value, primary))" />
+                            </FormField>
+                            <FormField Text="Merged relationship notes">
+                                <TextArea Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetNotesAsync(row, value, text))" aria-label="Merged relationship notes" />
+                            </FormField>
+                        }
+                    </ResultActions>
+                </PartyMergeRows>
+            </Stack>
+        }
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-relationship-review-refresh" />
+                <Button Text="Apply to my draft" Disabled="@(Reading || State.IsSaving || State.IsUnknown || State.ReviewIsStale || State.Review?.CanApply != true)" Click="ApplyRequested" data-testid="crmhr-relationship-review-apply" />
+            </Cluster>
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private bool showAll;
+    [Parameter, EditorRequired] public RelationshipReconciliation State { get; set; } = default!;
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool Reading { get; set; }
+    [Parameter] public EventCallback ReviewRequested { get; set; }
+    [Parameter] public EventCallback ApplyRequested { get; set; }
+    [Parameter] public EventCallback UndoRequested { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+    private static string FormatRow(PartyRelationshipEditorModel row) =>
+        $"Related party: {row.RelatedPartyDisplayName}\nDirection: {(row.IsOutgoing ? "This party to related party" : "Related party to this party")}\nKind: {row.RelationshipKind}\nPrimary: {row.IsPrimary}\nFrom: {row.StartDateUtc:u}\nTo: {row.EndDateUtc:u}\nNotes: {row.Notes}";
+    private async Task SetPrimaryAsync(KeyedMergeRow<Guid, PartyRelationshipEditorModel> row, PartyRelationshipEditorModel value, bool primary) {
+        var result = value.Snapshot();
+        result.IsPrimary = primary;
+        row.Field.SetResult(MergeEntry<PartyRelationshipEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+    private async Task SetNotesAsync(KeyedMergeRow<Guid, PartyRelationshipEditorModel> row, PartyRelationshipEditorModel value, string? text) {
+        var result = value.Snapshot();
+        result.Notes = text ?? string.Empty;
+        row.Field.SetResult(MergeEntry<PartyRelationshipEditorModel>.Present(result));
+        await Changed.InvokeAsync();
+    }
+}

@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/ui_validation_architecture",
+  "sourceOnly": true,
+  "inputs": [
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+      "bytes": 21248,
+      "sha256": "CD54E774D23961AA3079696BAEFAD8CA5BA0CF33283B5519C7F03056F05D4319"
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "bytes": 13315,
+      "sha256": "B147BD9F084E5EA5213A7C37FA30F1BBA951E9CB17F885264F376C4B32F4829A"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-data-sources-active-source-fixture.md",
+      "bytes": 4643,
+      "sha256": "F1EE7FFE9DA74E280FF9DDD2C1554C94CA85D6AB4210018B9DBF15578F1AC3E5"
+    }
+  ],
+  "mainPredecessors": [
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+      "bytes": 18008,
+      "sha256": "B771EC7B3EFF2EFBB9D6237FC6C76124183323E66CB6321E46EADD5B5D41FF94"
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "bytes": 13228,
+      "sha256": "EAC9248FD670C79627CB0CF80D082087B0A7D7B8935133E45E0658B64F01E4DF"
+    }
+  ],
+  "preservedPredecessors": [
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source\\DataSourcesBrowserHost.cs.before.txt",
+      "bytes": 13228,
+      "sha256": "EAC9248FD670C79627CB0CF80D082087B0A7D7B8935133E45E0658B64F01E4DF"
+    },
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source\\DataSourcesBrowserTests.before-selected-root-assertion.cs.txt",
+      "bytes": 21002,
+      "sha256": "4F979184D3B28BFA2DFEDD46E63DFAA5A65C8610FE19A79C8F0825AFCC36E04A"
+    },
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source\\DataSourcesBrowserTests.cs.before.txt",
+      "bytes": 18008,
+      "sha256": "B771EC7B3EFF2EFBB9D6237FC6C76124183323E66CB6321E46EADD5B5D41FF94"
+    },
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source\\P05-R1-data-sources-partial-transfer-fixture.md.before.txt",
+      "bytes": 3161,
+      "sha256": "4BD838506B5CA5EA34FEB0EC5CCB16A957A56323D7DAAB3EB57A6DD978BF7DCF"
+    },
+    {
+      "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source\\P05-R1-data-sources-partial-transfer-source-overlay.json.before.txt",
+      "bytes": 3820,
+      "sha256": "1786A3F3A577B8A6075A62FAD574108FF7CDA70FF420F73C054F84762B9421B8"
+    }
+  ],
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-active-source-repair-source.ownership.json",
+    "bytes": 466,
+    "sha256": "230483DD74376BC7BF17536A9AEC679A6CB7E3F97A4659B8959ACD065F7E1ACC"
+  },
+  "dependencies": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceDefaultProviderDatabaseTransferHandler.cs",
+      "bytes": 4240,
+      "sha256": "AFB2843E67D33598AB70B2EDA4B3CF27191BEA6AA564DFB9E8117B38F4B76F7B",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceSettingsMutationContracts.cs",
+      "bytes": 8015,
+      "sha256": "4462EF8B4309DF00796DE02DDD71BF838E140591D98DDC8677F9CFAB9086BA67",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "bytes": 4330,
+      "sha256": "BC9AC18180E64D06D4BBC0D797D65A62ECC1E56E2197A7F7B4A112B5AB520E6E",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceSettingsWriter.cs",
+      "bytes": 9563,
+      "sha256": "D1F1545DCC38990A3F43EE596233295360F0BDEB65BEAB9C709D1FE8D9D72FF6",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Persistence/WorkspaceSettingsHeadStore.cs",
+      "bytes": 4080,
+      "sha256": "6B161EFA6900397059907B0D35F238276D41EE6C8928A640F7A8CA6BE9A04FC7",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Persistence/WorkspaceSettingsDbContext.cs",
+      "bytes": 940,
+      "sha256": "CCAEC232CC097BDEC6631A7322A733E46F2EA772762E9990DD838A9CCC34F576",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceModuleServiceCollectionExtensions.cs",
+      "bytes": 3610,
+      "sha256": "DEEAF1EB4CB5B28A14CA147457034FE35997B1E24586588AA539185E5ECA697C",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "bytes": 13310,
+      "sha256": "9B7C5C82DE0EFB251EF8DA3556446D9310E0FBA8594FDE37DF5B8B8FB60356D2",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/CanonicalRuntimeDatabase.cs",
+      "bytes": 1928,
+      "sha256": "95774A0DE4D0A6CF089944C5008CAFCDBDA89460E10DBCE2FFCF764CFA6C26A8",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatabaseProfileControlPlaneService.cs",
+      "bytes": 54005,
+      "sha256": "4D4849A9187F6312E5F84CA723A32945D5D37CEC8D9CA2BFAB7CC872D240FF41",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "bytes": 21581,
+      "sha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "bytes": 18966,
+      "sha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/TestApplicationBootstrap.cs",
+      "bytes": 6319,
+      "sha256": "6F2C813F44CCE2104C2A27A8BE846C5636053CF0B129CE57A7AEBA57783597A6",
+      "sourceRoot": "main"
+    }
+  ],
+  "failureEvidence": [
+    {
+      "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\resource-browser-partial-transfer-validation\\execute-resource-browser-data-sources.stdout.log",
+      "bytes": 6439,
+      "sha256": "24D9D2D75B1F8DEA962C10EA13061873BEEACFDA2F11665AE7F44B810D37D4B1"
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\resource-browser-partial-transfer-validation\\resource-browser-data-sources.trx",
+      "bytes": 9249,
+      "sha256": "9AA3BE5E6829EDCF9B46855CA4FCB1CAFEF70B6E304EB1721AFA055081A937D3"
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\resource-browser-partial-transfer-validation\\resource-browser-data-sources.result.json",
+      "bytes": 3392,
+      "sha256": "1E02B2C0F612C96A10308D1B707D18A7555DB5BF60A4F02DD070072B61C7750D"
+    }
+  ],
+  "retainedPriorOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-data-sources-partial-transfer-source-overlay.json",
+    "bytes": 3820,
+    "sha256": "1786A3F3A577B8A6075A62FAD574108FF7CDA70FF420F73C054F84762B9421B8"
+  },
+  "testClass": "CanDoItAll.Tests.Playwright.DataSourcesBrowserTests",
+  "testMethod": "Unlocked_UI_creates_transfers_and_activates_only_after_restart_with_real_partial_group_progress",
+  "facts": 1,
+  "theories": 0,
+  "attributes": [
+    "Playwright",
+    "HostPlatform"
+  ],
+  "browserSelectionRows": 4,
+  "ordinarySelectionRows": 346,
+  "productionChanged": false,
+  "mainChanged": false,
+  "executionPerformed": false,
+  "buildStaticAndFreshBrowserProofRequired": true,
+  "peerReview": "Requested against exact current source; no runtime claim."
+}

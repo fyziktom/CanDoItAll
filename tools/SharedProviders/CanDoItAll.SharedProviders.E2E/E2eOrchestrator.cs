@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
@@ -20,8 +21,7 @@ internal sealed class E2eOrchestrator(
     IProviderAdministrationService providerAdministrationService,
     SecretService secretService,
     SharedProviderServiceIdentityStore identityStore,
-    SharedProviderPublicationStore publicationStore,
-    SharedProviderPublicationApplicationService publicationApplicationService,
+    ISharedProviderManagementService sharing,
     IApiTokenService apiTokenService,
     SharedProviderSourceService sourceService,
     SharedProviderSourceSyncService sourceSyncService)
@@ -40,6 +40,7 @@ internal sealed class E2eOrchestrator(
             E2eCommand.SeedClientA => SeedClientAAsync(cancellationToken),
             E2eCommand.SeedClientB => SeedClientBAsync(cancellationToken),
             E2eCommand.Snapshot => WriteSnapshotAsync(role, cancellationToken),
+            E2eCommand.InitializeUsageIndex => InitializeUsageIndexAsync(cancellationToken),
             E2eCommand.UnpublishText => SetTextPublicationAsync(
                 SharedProviderPublicationAction.Unpublish,
                 cancellationToken),
@@ -66,6 +67,15 @@ internal sealed class E2eOrchestrator(
             E2eCommand.RestoreClientASource => RestoreClientASourceAsync(cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(command), command, null)
         });
+    }
+
+    private async Task InitializeUsageIndexAsync(CancellationToken cancellationToken) {
+        var maintenance = new FileProviderUsageIndexMaintenance(
+            workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
+        FileUsageIndexProgress progress;
+        do {
+            progress = await maintenance.ProcessAsync(cancellationToken: cancellationToken);
+        } while (!progress.Complete);
     }
 
     private async Task SeedCentralAsync(CancellationToken cancellationToken)
@@ -108,7 +118,8 @@ internal sealed class E2eOrchestrator(
             "shared-providers-e2e-client-a",
             "Shared providers E2E client A",
             ApiAccessScopeNames.ReadSharedProviderCatalog,
-            ApiAccessScopeNames.InvokeSharedProviders);
+            ApiAccessScopeNames.InvokeSharedProviders,
+            ApiAccessScopeNames.ExecuteAgents);
         await artifacts.WriteCredentialAsync(
             E2eFixtures.ClientAAccessCredentialFileName,
             clientToken.Token,
@@ -142,7 +153,8 @@ internal sealed class E2eOrchestrator(
             "shared-providers-e2e-client-b",
             "Shared providers E2E client B",
             ApiAccessScopeNames.ReadSharedProviderCatalog,
-            ApiAccessScopeNames.InvokeSharedProviders);
+            ApiAccessScopeNames.InvokeSharedProviders,
+            ApiAccessScopeNames.ExecuteAgents);
         await artifacts.WriteCredentialAsync(
             E2eFixtures.ClientBAccessCredentialFileName,
             token.Token,
@@ -175,12 +187,7 @@ internal sealed class E2eOrchestrator(
         IReadOnlyList<string> fixtureIds,
         CancellationToken cancellationToken)
     {
-        var source = await GetCentralSourceAsync(cancellationToken);
-        var selection = await ResolveSelectionAsync(fixtureIds, cancellationToken);
-        var result = await sourceSyncService.SynchronizeAsync(
-            source.Id,
-            selection,
-            cancellationToken);
+        var result = await SynchronizeFixturesAsync(fixtureIds, cancellationToken);
         if (result.Outcome is not (
             SharedProviderSourceOperationOutcome.Succeeded or
             SharedProviderSourceOperationOutcome.NotModified))
@@ -231,12 +238,7 @@ internal sealed class E2eOrchestrator(
         IReadOnlyList<string> fixtureIds,
         CancellationToken cancellationToken)
     {
-        var source = await GetCentralSourceAsync(cancellationToken);
-        var selection = await ResolveSelectionAsync(fixtureIds, cancellationToken);
-        var result = await sourceSyncService.SynchronizeAsync(
-            source.Id,
-            selection,
-            cancellationToken);
+        var result = await SynchronizeFixturesAsync(fixtureIds, cancellationToken);
         if (result.Outcome != SharedProviderSourceOperationOutcome.Failed ||
             result.Failure is not
             {
@@ -250,6 +252,15 @@ internal sealed class E2eOrchestrator(
         }
 
         await WriteSnapshotAsync(role, cancellationToken);
+    }
+
+    private async Task<SharedProviderSourceOperationResult> SynchronizeFixturesAsync(
+        IReadOnlyList<string> fixtureIds,
+        CancellationToken cancellationToken) {
+        var source = await GetCentralSourceAsync(cancellationToken);
+        var original = await sourceSyncService.ObserveAsync(source.Id, cancellationToken);
+        var selection = await ResolveSelectionAsync(fixtureIds, cancellationToken);
+        return await sourceSyncService.SynchronizeAsync(source.Id, original, selection, cancellationToken);
     }
 
     private async Task RestoreClientASourceAsync(CancellationToken cancellationToken)
@@ -366,10 +377,12 @@ internal sealed class E2eOrchestrator(
     {
         var providers = await workspace.ListProvidersAsync(cancellationToken);
         var existing = FindProvider(providers, fixture.Name);
+        var original = existing is null ? null : await workspace.GetProviderEditorAsync(existing.Id, cancellationToken);
         var isChat = fixture.Purpose == ProviderProfilePurpose.Chat;
         var editor = new AgentProviderEditor
         {
             Id = existing?.Id,
+            ExpectedConcurrencyToken = original?.ExpectedConcurrencyToken,
             Name = fixture.Name,
             Kind = fixture.Kind,
             BaseUrl = baseUri.AbsoluteUri.TrimEnd('/'),
@@ -443,16 +456,17 @@ internal sealed class E2eOrchestrator(
     private async Task SetPublicationAsync(
         Guid providerId,
         SharedProviderPublicationAction action,
-        CancellationToken cancellationToken)
-    {
-        var publication = await publicationStore.GetOrCreateAsync(
-            providerId,
-            cancellationToken);
-        await publicationApplicationService.ChangeAsync(
-            new SharedProviderPublicationChangeRequest(
-                providerId,
-                action,
-                publication.ConcurrencyToken),
+        CancellationToken cancellationToken) {
+        var snapshot = await sharing.GetProfileSharingAsync(providerId, cancellationToken);
+        if (snapshot.Ownership != SharedProviderProfileOwnership.Local ||
+            snapshot.ProviderConcurrencyToken is not { } providerRevision || providerRevision == Guid.Empty) {
+            throw new E2eSafeException("The E2E provider fixture has no current local publication authority.");
+        }
+        if (action == SharedProviderPublicationAction.Unpublish && snapshot.Publication is null) {
+            return;
+        }
+        await sharing.SetPublicationAsync(
+            providerId, action, snapshot.Publication?.ConcurrencyToken, providerRevision,
             cancellationToken);
     }
 
@@ -470,10 +484,12 @@ internal sealed class E2eOrchestrator(
             throw new E2eSafeException("The role database contains duplicate E2E secret records.");
         }
 
+        var original = existing.SingleOrDefault();
         var result = await secretService.SaveAsync(
             new SecretEditorModel
             {
-                Id = existing.SingleOrDefault()?.Id,
+                Id = original?.Id,
+                ExpectedUpdatedAtUtc = original?.UpdatedAtUtc,
                 Name = name,
                 Kind = kind,
                 SecretValue = value,

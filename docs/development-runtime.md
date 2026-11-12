@@ -93,6 +93,10 @@ For a watch process:
 & .\tools\dev\Start-TailwindWatch.ps1
 ```
 
+The local Manager in `tools/App/CanDoItAll.Manager` runs the same `npm run watch` script
+when it starts `dotnet watch` and reports its health on `/api/tailwind/status`; see its
+[README](../tools/App/CanDoItAll.Manager/README.md#tailwind-watch).
+
 ## Shutdown
 
 Stop the application with `Ctrl+C`. Stop the database without deleting its volume:

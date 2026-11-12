@@ -1,0 +1,1459 @@
+{
+  "candidate": "c4-accepted-source-sql-final",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-corrected",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--verbosity",
+        "minimal"
+      ],
+      "StartedUtc": "2026-10-20T14:20:58.8555709+00:00",
+      "State": "Completed",
+      "RunnerPid": 37804,
+      "ChildPid": 57660,
+      "ChildStartedUtc": "2026-10-20T14:20:58.8923018Z",
+      "ExitCode": 0,
+      "Seconds": 107.3309798,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 178965,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-corrected",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T14:23:44.3315035+00:00",
+      "State": "Completed",
+      "RunnerPid": 2148,
+      "ChildPid": 17684,
+      "ChildStartedUtc": "2026-10-20T14:23:44.3385996Z",
+      "ExitCode": 0,
+      "Seconds": 0.1385364,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 2984,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-history",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessHistoryTests"
+      ],
+      "StartedUtc": "2026-10-20T14:22:27.7116706+00:00",
+      "State": "Completed",
+      "RunnerPid": 25708,
+      "ChildPid": 18832,
+      "ChildStartedUtc": "2026-10-20T14:22:27.7194294Z",
+      "ExitCode": 0,
+      "Seconds": 2.6250156,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3459,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-sql-scaling",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessAcceptedSourceSqlScalingTests"
+      ],
+      "StartedUtc": "2026-10-20T14:22:24.9580757+00:00",
+      "State": "Completed",
+      "RunnerPid": 25708,
+      "ChildPid": 32472,
+      "ChildStartedUtc": "2026-10-20T14:22:25.0033208Z",
+      "ExitCode": 0,
+      "Seconds": 2.6375402,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1236,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-history",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanProcessHistoryTests",
+        "--logger",
+        "trx;LogFileName=history.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-sql-final"
+      ],
+      "StartedUtc": "2026-10-20T14:27:36.3587189+00:00",
+      "State": "Completed",
+      "RunnerPid": 47912,
+      "ChildPid": 54824,
+      "ChildStartedUtc": "2026-10-20T14:27:36.3774786Z",
+      "ExitCode": 0,
+      "Seconds": 279.6846081,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 4452,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-sql-scaling",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessAcceptedSourceSqlScalingTests",
+        "--logger",
+        "trx;LogFileName=sql-scaling.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-sql-final"
+      ],
+      "StartedUtc": "2026-10-20T14:26:40.0315916+00:00",
+      "State": "Completed",
+      "RunnerPid": 47912,
+      "ChildPid": 59440,
+      "ChildStartedUtc": "2026-10-20T14:26:40.0753622Z",
+      "ExitCode": 0,
+      "Seconds": 56.2570016,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 1975,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-sql-final/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T14:26:33.1773375+00:00",
+      "State": "Completed",
+      "RunnerPid": 31272,
+      "ChildPid": 58300,
+      "ChildStartedUtc": "2026-10-20T14:26:33.2102464Z",
+      "ExitCode": 0,
+      "Seconds": 345.3809842,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 55,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-corrected",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-sql-final/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T14:23:43.8617354+00:00",
+      "State": "Completed",
+      "RunnerPid": 2148,
+      "ChildPid": 58384,
+      "ChildStartedUtc": "2026-10-20T14:23:43.8662851Z",
+      "ExitCode": 0,
+      "Seconds": 0.4464497,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-corrected",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-accepted-source-sql-final/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T14:21:09.0508726+00:00",
+      "State": "Completed",
+      "RunnerPid": 2148,
+      "ChildPid": 29628,
+      "ChildStartedUtc": "2026-10-20T14:21:09.0802568Z",
+      "ExitCode": 0,
+      "Seconds": 154.7382032,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 436,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "1706a209-fe58-40c9-9845-21ae1bc433b6",
+      "testId": "79509cdc-0021-11df-2ba5-f32ac70934c3",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Historical_source_policy_refuses_unregistered_contract_or_unknown_parent_format(changeFormat: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.9111406",
+      "startTime": "2026-10-20T10:29:33.8471338-04:00",
+      "endTime": "2026-10-20T10:29:44.7580834-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1706a209-fe58-40c9-9845-21ae1bc433b6",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "0a3e7086-8094-4a57-b9c7-44f0eb538a95",
+      "testId": "e6049cf9-3e35-b747-7ad2-3d33b8a17672",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Receipt_outage_is_unavailable_and_does_not_turn_into_absence_or_new_work",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.9700883",
+      "startTime": "2026-10-20T10:31:38.5627182-04:00",
+      "endTime": "2026-10-20T10:31:51.5321385-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "0a3e7086-8094-4a57-b9c7-44f0eb538a95",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "f440f300-a228-4a66-ad69-d971b5ef1f70",
+      "testId": "49bb712a-a561-dfb9-277a-3c5f8dc99ed5",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Catalog_change_during_original_receipt_lookup_discards_the_whole_page",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.3888464",
+      "startTime": "2026-10-20T10:29:20.4577931-04:00",
+      "endTime": "2026-10-20T10:29:33.8463045-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f440f300-a228-4a66-ad69-d971b5ef1f70",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "1b38fff3-4ef9-4468-9232-fb623f51e69a",
+      "testId": "af273d91-07dc-6bbd-7f14-3b0e9462379f",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Original_executor_must_remain_active_and_non_template_for_history(template: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.1779278",
+      "startTime": "2026-10-20T10:29:55.5158049-04:00",
+      "endTime": "2026-10-20T10:30:07.6933681-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1b38fff3-4ef9-4468-9232-fb623f51e69a",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "11fa6f50-4ef2-4c74-967f-9a6cdd530575",
+      "testId": "70131c95-a948-6f9c-58fc-085d446d79cf",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Original_launcher_read_revocation_denies_the_whole_page(change: Missing)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.3421384",
+      "startTime": "2026-10-20T10:29:07.1146548-04:00",
+      "endTime": "2026-10-20T10:29:20.4563056-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "11fa6f50-4ef2-4c74-967f-9a6cdd530575",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "62a991d9-bb13-468e-8976-38ac99303cda",
+      "testId": "771f1ff0-9486-3b41-3dbd-5be536399aff",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_receipt_history_keeps_original_source_after_assignment_repair_or_child_close(change: Readiness)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.7385765",
+      "startTime": "2026-10-20T10:30:44.3037480-04:00",
+      "endTime": "2026-10-20T10:30:57.0421143-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "62a991d9-bb13-468e-8976-38ac99303cda",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "9ad05046-0510-44a6-acb5-e71b508a8a93",
+      "testId": "e41cd7ad-1698-9fe6-377d-185b1aff860a",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_history_reads_original_inherited_receipt_after_expiry_without_locks_or_writes(agentSource: True, sameExecutor: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:14.0300794",
+      "startTime": "2026-10-20T10:28:26.6947495-04:00",
+      "endTime": "2026-10-20T10:28:40.7218782-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9ad05046-0510-44a6-acb5-e71b508a8a93",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "9a84fff7-8b36-4c04-955e-69f49e23a592",
+      "testId": "20d93870-2455-c6a0-0b4c-606ecb256e8c",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Original_executor_must_remain_active_and_non_template_for_history(template: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.1968078",
+      "startTime": "2026-10-20T10:30:07.6947261-04:00",
+      "endTime": "2026-10-20T10:30:19.8906436-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9a84fff7-8b36-4c04-955e-69f49e23a592",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "567e7453-a549-496a-bd41-f3cedc91f135",
+      "testId": "6832fcfa-a498-fc84-4d18-61332244cf27",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_receipt_history_keeps_original_source_after_assignment_repair_or_child_close(change: Executor)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:11.7859778",
+      "startTime": "2026-10-20T10:30:57.0428357-04:00",
+      "endTime": "2026-10-20T10:31:08.8286319-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "567e7453-a549-496a-bd41-f3cedc91f135",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "9756862a-fa8b-42d3-942c-47d186bdf7d3",
+      "testId": "0a58ad9d-36f1-181e-33d9-e84dc3fd6c14",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Retired_or_recreated_project_cannot_disclose_the_original_inherited_receipt(recreate: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:14.4742480",
+      "startTime": "2026-10-20T10:31:08.8293042-04:00",
+      "endTime": "2026-10-20T10:31:23.3034156-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9756862a-fa8b-42d3-942c-47d186bdf7d3",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "eca02d23-672d-457a-a535-909fec548b4b",
+      "testId": "11711540-2649-0560-7dbb-55bd179128b9",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_history_reads_original_inherited_receipt_after_expiry_without_locks_or_writes(agentSource: False, sameExecutor: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:32.8991367",
+      "startTime": "2026-10-20T10:27:39.1050513-04:00",
+      "endTime": "2026-10-20T10:28:11.9930610-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "eca02d23-672d-457a-a535-909fec548b4b",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "d4c3db21-0879-4c57-9e6a-637e2e646bbb",
+      "testId": "b7bc5c12-f5fa-66f4-ce66-beeae7a7166b",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Retired_or_recreated_project_cannot_disclose_the_original_inherited_receipt(recreate: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:15.2574889",
+      "startTime": "2026-10-20T10:31:23.3042470-04:00",
+      "endTime": "2026-10-20T10:31:38.5614783-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d4c3db21-0879-4c57-9e6a-637e2e646bbb",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "3ce2a25d-d58b-45a1-ba15-b46a44200f4f",
+      "testId": "2c374a33-744e-9c55-5b51-ead56dc10a64",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Original_launcher_read_revocation_denies_the_whole_page(change: Read)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.9801179",
+      "startTime": "2026-10-20T10:28:54.1339226-04:00",
+      "endTime": "2026-10-20T10:29:07.1135726-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3ce2a25d-d58b-45a1-ba15-b46a44200f4f",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "10f80b08-461a-4422-9d9c-af65d25ebb01",
+      "testId": "cf3837ce-7ccc-bc39-11e6-1f0e45e79504",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Historical_source_policy_refuses_unregistered_contract_or_unknown_parent_format(changeFormat: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:10.7562538",
+      "startTime": "2026-10-20T10:29:44.7589268-04:00",
+      "endTime": "2026-10-20T10:29:55.5148921-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "10f80b08-461a-4422-9d9c-af65d25ebb01",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "e6823afb-a152-4921-9471-b5238809d6eb",
+      "testId": "6207d3e6-cc4b-1421-7192-31325e28aae8",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Lost_acknowledgement_history_finds_original_receipt_without_reopening_work",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.2008349",
+      "startTime": "2026-10-20T10:31:51.5329847-04:00",
+      "endTime": "2026-10-20T10:32:03.7335401-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "e6823afb-a152-4921-9471-b5238809d6eb",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "1b31c7d1-a0e4-4dd8-92a4-a09d62b77a22",
+      "testId": "07709420-c625-0d6f-b93c-a8ee86cd5876",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_history_reads_original_inherited_receipt_after_expiry_without_locks_or_writes(agentSource: True, sameExecutor: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:14.6947826",
+      "startTime": "2026-10-20T10:28:12.0188615-04:00",
+      "endTime": "2026-10-20T10:28:26.6915810-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1b31c7d1-a0e4-4dd8-92a4-a09d62b77a22",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "55fa54a5-466b-44d5-ac74-ef6f9149035b",
+      "testId": "7f3908a9-3d04-42f4-ffc3-a6d71faeb00c",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_receipt_history_keeps_original_source_after_assignment_repair_or_child_close(change: Policy)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:11.9362016",
+      "startTime": "2026-10-20T10:30:19.8914294-04:00",
+      "endTime": "2026-10-20T10:30:31.8274045-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "55fa54a5-466b-44d5-ac74-ef6f9149035b",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "3ea4aa12-a2c5-4729-a646-c102d2315d35",
+      "testId": "10838e4c-32e2-063a-eb72-c3f904788695",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Profile_generation_change_during_receipt_lookup_discards_the_whole_page",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.0179474",
+      "startTime": "2026-10-20T10:32:03.7342944-04:00",
+      "endTime": "2026-10-20T10:32:15.7521538-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "3ea4aa12-a2c5-4729-a646-c102d2315d35",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "dad0bddf-2b69-4353-b507-5de9aa8f987a",
+      "testId": "5eb7e6e7-022e-0b8d-8222-14629c8c4347",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Registered_receipt_history_keeps_original_source_after_assignment_repair_or_child_close(change: Closed)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.4750567",
+      "startTime": "2026-10-20T10:30:31.8281658-04:00",
+      "endTime": "2026-10-20T10:30:44.3028074-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "dad0bddf-2b69-4353-b507-5de9aa8f987a",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "4af2c89a-fbce-4c69-bb7c-71ad79241f8b",
+      "testId": "c0af7ccd-acca-b6ef-c0de-98fa95f17a5b",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanProcessHistoryTests.Original_launcher_read_revocation_denies_the_whole_page(change: Tools)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.4078195",
+      "startTime": "2026-10-20T10:28:40.7262116-04:00",
+      "endTime": "2026-10-20T10:28:54.1329109-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4af2c89a-fbce-4c69-bb7c-71ad79241f8b",
+      "trx": "history.trx"
+    },
+    {
+      "executionId": "bcc1ac89-cb32-4b01-9c53-3dc0dfacda4c",
+      "testId": "25944e80-ac35-0246-ba80-c0bcec08cc8b",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:14.1312008",
+      "startTime": "2026-10-20T10:27:06.4543664-04:00",
+      "endTime": "2026-10-20T10:27:20.5580739-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bcc1ac89-cb32-4b01-9c53-3dc0dfacda4c",
+      "trx": "sql-scaling.trx"
+    },
+    {
+      "executionId": "ffb36e45-bd83-4ce5-b6f4-eeab6c1836f1",
+      "testId": "e0689aa6-1172-819d-1da2-11ab12098210",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.1504589",
+      "startTime": "2026-10-20T10:27:30.9233778-04:00",
+      "endTime": "2026-10-20T10:27:36.0728846-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ffb36e45-bd83-4ce5-b6f4-eeab6c1836f1",
+      "trx": "sql-scaling.trx"
+    },
+    {
+      "executionId": "193a04ac-4579-4533-b308-d08350132fd5",
+      "testId": "7e7e66f6-9eac-f59e-bbfa-18895b067403",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.6734093",
+      "startTime": "2026-10-20T10:27:20.5609219-04:00",
+      "endTime": "2026-10-20T10:27:25.2319992-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "193a04ac-4579-4533-b308-d08350132fd5",
+      "trx": "sql-scaling.trx"
+    },
+    {
+      "executionId": "4c29a379-769a-4399-8e69-1f28170bc3f0",
+      "testId": "4a3b5a82-e87f-8f77-50e9-c38c7695d138",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:05.6895257",
+      "startTime": "2026-10-20T10:27:25.2329085-04:00",
+      "endTime": "2026-10-20T10:27:30.9219434-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4c29a379-769a-4399-8e69-1f28170bc3f0",
+      "trx": "sql-scaling.trx"
+    },
+    {
+      "executionId": "f4026ffc-c3f2-48b6-8a99-000af4581ded",
+      "testId": "6b3626f7-600b-f3c0-655b-1229d77b4867",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:22.8806862",
+      "startTime": "2026-10-20T10:26:43.5575476-04:00",
+      "endTime": "2026-10-20T10:27:06.4224613-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "f4026ffc-c3f2-48b6-8a99-000af4581ded",
+      "trx": "sql-scaling.trx"
+    }
+  ],
+  "evidence": {
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9661,
+      "runtimeFiles": 4166,
+      "sourceSha256": "286E88C501E48A731416B41E277EEB0C8DDE4CF21A6D012DD2DBBEB99A67E3DA",
+      "runtimeSha256": "226BA1BF1E4A349B09CD608948B86AECC420BF189490FBC2904BC2B68977AE1B"
+    },
+    "final-resource-reconciliation.json": {
+      "remainingObservedProcesses": [],
+      "outcome": "All25 selected cases pass:5 actual SQL scaling and20 original Process receipt history. Exact one-test-file correction bridge; source stays frozen for remaining authority/dispatch groups. The prior unattributed isolated database remains preserved.",
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\y5cw452z.awj",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\xo2gimbm.doe",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ondwulaw.dyw",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\4u54yuvo.xdc",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_54824_20261020_102736_582.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_20672_20261020_103125_149_bd15d7b4e0a5815b8b73caccf68164c0-x64_AdminInstall.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\gu3sz1dh.1nt",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\zpoi13ms.okl",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_20672_20261020_103125_149.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_59440_20261020_102640_428.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\MSBuildTempaoprfgfm.stf",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\rnwpx1jc.sxk",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_36188_20261020_103146_034.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\7cd62250-c0c4-4785-b4f0-2bfcbc7573c8.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\p2lg11cf.iay",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "postgres": [
+        "cditall_primary_3c41089b37074f30b5d6889519d95021|0",
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T14:33:14.1312916+00:00"
+    },
+    "production-bridge.json": {
+      "originalCandidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-persistence-final",
+      "allSourceUnchangedExcept": [
+        "tests/integration/candoitall.tests.integration/processacceptedsourcesqlscalingtests.cs"
+      ],
+      "before": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProcessAcceptedSourceSqlScalingTests.cs",
+        true,
+        "811292760DB6F9B0E6B4945BBD2BAA82C57D5DCB8602D7BCCEA4EBC9C5808A25"
+      ],
+      "after": [
+        "tests/Integration/CanDoItAll.Tests.Integration/ProcessAcceptedSourceSqlScalingTests.cs",
+        true,
+        "E3C06A6D28AAA96F04760916379A543F3ADB77D5B5FE9A02354C3AB65D51558A"
+      ],
+      "runtimeChanges": [
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.dll",
+        "tests/integration/candoitall.tests.integration/bin/release/net10.0/candoitall.tests.integration.pdb"
+      ],
+      "allProductionAndOtherTestInputsUnchanged": true,
+      "reason": "EXPLAIN JSON Actual Rows is decimal1.0; numeric comparison replaces integer parser. No production edit."
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T14:26:33.1773375+00:00",
+      "observerSeconds": 345.3809842,
+      "commands": [
+        {
+          "command": "execute-history",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T14:27:36.3587189+00:00",
+          "seconds": 279.6846081
+        },
+        {
+          "command": "execute-sql-scaling",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T14:26:40.0315916+00:00",
+          "seconds": 56.2570016
+        }
+      ]
+    },
+    "observer-start-confirmation.json": {
+      "confirmedUtc": "2026-10-20T14:26:39.1563535+00:00",
+      "identityConfirmed": true,
+      "observerPid": 58300,
+      "observerStartedUtc": "2026-10-20T14:26:33.2102464Z"
+    },
+    "prerequisite-reference.json": {
+      "candidate": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-persistence-final",
+      "correctedPrerequisites": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-accepted-source-sql-final",
+      "prerequisiteSourceSha256": "1135B0F97A9EE9D0AB39B732FA3C1EB1251B1DA846F3446D8752735F09154FE8",
+      "prerequisiteRuntimeSha256": "70BB2AAD72F28127549EBB0D3837EB57CC1D0311D77CE98AA857F495D02FBDB4",
+      "review": "Uses actual prior build/model/documentation records and fresh corrected Integration build/full portability enforcement. Other51 successful cases retain exact production and test inputs through the one-file bridge."
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\actual-sql.json",
+        "data": {
+          "completedScalingProof": true,
+          "records": [
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 2593.3105,
+                "TransactionMilliseconds": 2243.0626
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1024,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.022,\n      \"Actual Total Time\": 0.023,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 5,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.022,\n          \"Actual Total Time\": 0.023,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 5,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.011,\n              \"Actual Total Time\": 0.011,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '5ceef000-700f-41b0-b5a7-5c696ae200cd'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.008,\n              \"Actual Total Time\": 0.008,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '5ceef000-700f-41b0-b5a7-5c696ae200cd'::uuid) AND (p0.\\\"StepInstanceId\\\" = '56b5da85-7c81-40e9-9ccb-77b570980d1d'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 3,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.082,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.059\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 21.3039,
+                "SourcePayloadUtf8Bytes": 2319,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 23.2323,
+                "SourcePayloadUtf8Bytes": 2319,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 140.8083,
+                "SourcePayloadUtf8Bytes": 2319,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1024,
+                "Version": "LegacyPreparedLaunch",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.039,\n      \"Actual Total Time\": 0.040,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.038,\n          \"Actual Total Time\": 0.039,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.023,\n              \"Actual Total Time\": 0.024,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '5ceef000-700f-41b0-b5a7-5c696ae200cd'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.012,\n              \"Actual Total Time\": 0.012,\n              \"Actual Rows\": 0.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '5ceef000-700f-41b0-b5a7-5c696ae200cd'::uuid) AND (p0.\\\"StepInstanceId\\\" = '56b5da85-7c81-40e9-9ccb-77b570980d1d'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.123,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.089\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 1411.7148,
+                "SourcePayloadUtf8Bytes": 4449292,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 1079.8848,
+                "SourcePayloadUtf8Bytes": 4449292,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1024, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1024,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 1096.4349,
+                "SourcePayloadUtf8Bytes": 4449292,
+                "ProjectedStorageUtf8Bytes": 1825218
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "CommitMilliseconds": 90.2837,
+                "TransactionMilliseconds": 72.9796
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.030,\n      \"Actual Total Time\": 0.032,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.030,\n          \"Actual Total Time\": 0.031,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.013,\n              \"Actual Total Time\": 0.014,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '477897f7-8055-44df-9c5b-93e9daab124a'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.013,\n              \"Actual Total Time\": 0.013,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '477897f7-8055-44df-9c5b-93e9daab124a'::uuid) AND (p0.\\\"StepInstanceId\\\" = 'b1f3b0e6-0cfa-4dfb-84aa-00052fc2441c'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.093,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.079\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "OriginalProjection",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 11.8346,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "OriginalProjection",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 13.1233,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "OriginalProjection",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 19.7413,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "LegacyPreparedLaunch",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.041,\n      \"Actual Total Time\": 0.042,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 3,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.040,\n          \"Actual Total Time\": 0.041,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 3,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.022,\n              \"Actual Total Time\": 0.022,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '477897f7-8055-44df-9c5b-93e9daab124a'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.015,\n              \"Actual Total Time\": 0.015,\n              \"Actual Rows\": 0.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '477897f7-8055-44df-9c5b-93e9daab124a'::uuid) AND (p0.\\\"StepInstanceId\\\" = 'b1f3b0e6-0cfa-4dfb-84aa-00052fc2441c'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 1,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.133,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.105\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 102.2144,
+                "SourcePayloadUtf8Bytes": 1058044,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 109.9953,
+                "SourcePayloadUtf8Bytes": 1058044,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 1048576)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 1048576,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 107.1291,
+                "SourcePayloadUtf8Bytes": 1058044,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 38.8741,
+                "TransactionMilliseconds": 35.3043
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.022,\n      \"Actual Total Time\": 0.023,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.021,\n          \"Actual Total Time\": 0.022,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.014,\n              \"Actual Total Time\": 0.014,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '644ead00-1327-4ae1-a667-1cda8854d059'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.005,\n              \"Actual Total Time\": 0.005,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '644ead00-1327-4ae1-a667-1cda8854d059'::uuid) AND (p0.\\\"StepInstanceId\\\" = '98db968d-a72d-4d04-a069-efe651e1f43a'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.069,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.058\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 58.3964,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 13.3225,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 16.4894,
+                "SourcePayloadUtf8Bytes": 2316,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 1,
+                "Version": "LegacyPreparedLaunch",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.026,\n      \"Actual Total Time\": 0.026,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 3,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.025,\n          \"Actual Total Time\": 0.026,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 3,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.017,\n              \"Actual Total Time\": 0.017,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = '644ead00-1327-4ae1-a667-1cda8854d059'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.006,\n              \"Actual Total Time\": 0.006,\n              \"Actual Rows\": 0.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = '644ead00-1327-4ae1-a667-1cda8854d059'::uuid) AND (p0.\\\"StepInstanceId\\\" = '98db968d-a72d-4d04-a069-efe651e1f43a'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 1,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.084,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.071\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 37.4545,
+                "SourcePayloadUtf8Bytes": 9724,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 27.6812,
+                "SourcePayloadUtf8Bytes": 9724,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 1, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 1,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 25.3043,
+                "SourcePayloadUtf8Bytes": 9724,
+                "ProjectedStorageUtf8Bytes": 2316
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 384.0137,
+                "TransactionMilliseconds": 323.5849
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 256,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.017,\n      \"Actual Total Time\": 0.017,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 5,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.016,\n          \"Actual Total Time\": 0.017,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 5,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.009,\n              \"Actual Total Time\": 0.009,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = 'c14f0fb6-8db4-45a4-9748-7f816f7383e3'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.006,\n              \"Actual Total Time\": 0.006,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = 'c14f0fb6-8db4-45a4-9748-7f816f7383e3'::uuid) AND (p0.\\\"StepInstanceId\\\" = '31317c2c-b959-4544-a9f4-46d99c3851d1'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 3,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.058,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.047\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 11.0013,
+                "SourcePayloadUtf8Bytes": 2318,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 9.7592,
+                "SourcePayloadUtf8Bytes": 2318,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 9.5808,
+                "SourcePayloadUtf8Bytes": 2318,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.42,\n      \"Total Cost\": 16.47,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.032,\n      \"Actual Total Time\": 0.033,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.42,\n          \"Total Cost\": 16.47,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.031,\n          \"Actual Total Time\": 0.032,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.020,\n              \"Actual Total Time\": 0.021,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = 'c14f0fb6-8db4-45a4-9748-7f816f7383e3'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.28,\n              \"Total Cost\": 8.30,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.008,\n              \"Actual Total Time\": 0.008,\n              \"Actual Rows\": 0.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = 'c14f0fb6-8db4-45a4-9748-7f816f7383e3'::uuid) AND (p0.\\\"StepInstanceId\\\" = '31317c2c-b959-4544-a9f4-46d99c3851d1'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.118,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.085\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 196.1259,
+                "SourcePayloadUtf8Bytes": 1116100,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 255.0345,
+                "SourcePayloadUtf8Bytes": 1116100,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 256, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 256,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 245.5573,
+                "SourcePayloadUtf8Bytes": 1116100,
+                "ProjectedStorageUtf8Bytes": 456618
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-acceptance",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "CommitMilliseconds": 1150.1925,
+                "TransactionMilliseconds": 1084.4194
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 64,
+                "Version": "OriginalProjection",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.023,\n      \"Actual Total Time\": 0.024,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 4,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.022,\n          \"Actual Total Time\": 0.023,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 4,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.013,\n              \"Actual Total Time\": 0.013,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = 'f01bd8f0-7e42-4852-8e08-46e0b95c8818'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.007,\n              \"Actual Total Time\": 0.007,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = 'f01bd8f0-7e42-4852-8e08-46e0b95c8818'::uuid) AND (p0.\\\"StepInstanceId\\\" = '9dbd353c-5aa8-4cb9-a7b4-ed3423e3b6d3'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.099,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.061\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 20.2987,
+                "SourcePayloadUtf8Bytes": 2317,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 24.2086,
+                "SourcePayloadUtf8Bytes": 2317,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "OriginalProjection",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 21.146,
+                "SourcePayloadUtf8Bytes": 2317,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-sql-plan",
+                "Steps": 64,
+                "Version": "LegacyPreparedLaunch",
+                "Sql": "SELECT p.\"Id\", p.\"RunId\", p.\"PlanId\", p.\"CallerIntentId\", p.\"AdmissionSequence\", p.\"RequestFingerprint\", p.\"PreparationFingerprint\", p.\"PreparedAtUtc\", p.\"AcceptedAtUtc\", p.\"Execute\", p.\"State\", p.\"LinkDeliveryState\", p.\"DeliveredLinkId\", p.\"LinkConflictReason\", p.\"PublicFailure\", p.\"AcceptedSourceVersion\", p.\"AcceptedSourceHeaderJson\", p.\"AcceptedSourceHeaderFingerprint\", CASE\r\n    WHEN p.\"AcceptedSourceVersion\" = 0 THEN p.\"PayloadJson\"\r\n    ELSE ''\r\nEND, p1.\"AdmissionId\" IS NULL OR p1.\"StepInstanceId\" IS NULL, p1.\"PayloadJson\", p1.\"Fingerprint\"\r\nFROM process_prepared_launches AS p\r\nLEFT JOIN (\r\n    SELECT p0.\"AdmissionId\", p0.\"StepInstanceId\", p0.\"Fingerprint\", p0.\"PayloadJson\"\r\n    FROM process_accepted_assignment_sources AS p0\r\n    WHERE p0.\"StepInstanceId\" = @stepId_Value\r\n) AS p1 ON p.\"Id\" = p1.\"AdmissionId\"\r\nWHERE p.\"Id\" = @admissionId\r\nLIMIT 2",
+                "Plan": "[\n  {\n    \"Plan\": {\n      \"Node Type\": \"Limit\",\n      \"Parallel Aware\": false,\n      \"Async Capable\": false,\n      \"Startup Cost\": 0.29,\n      \"Total Cost\": 16.34,\n      \"Plan Rows\": 1,\n      \"Plan Width\": 1608,\n      \"Actual Startup Time\": 0.028,\n      \"Actual Total Time\": 0.029,\n      \"Actual Rows\": 1.00,\n      \"Actual Loops\": 1,\n      \"Disabled\": false,\n      \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"(CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END)\", \"(((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL)))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n      \"Shared Hit Blocks\": 3,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0,\n      \"Plans\": [\n        {\n          \"Node Type\": \"Nested Loop\",\n          \"Parent Relationship\": \"Outer\",\n          \"Parallel Aware\": false,\n          \"Async Capable\": false,\n          \"Join Type\": \"Left\",\n          \"Startup Cost\": 0.29,\n          \"Total Cost\": 16.34,\n          \"Plan Rows\": 1,\n          \"Plan Width\": 1608,\n          \"Actual Startup Time\": 0.028,\n          \"Actual Total Time\": 0.028,\n          \"Actual Rows\": 1.00,\n          \"Actual Loops\": 1,\n          \"Disabled\": false,\n          \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"CASE WHEN (p.\\\"AcceptedSourceVersion\\\" = 0) THEN p.\\\"PayloadJson\\\" ELSE ''::text END\", \"((p0.\\\"AdmissionId\\\" IS NULL) OR (p0.\\\"StepInstanceId\\\" IS NULL))\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n          \"Inner Unique\": true,\n          \"Shared Hit Blocks\": 3,\n          \"Shared Read Blocks\": 0,\n          \"Shared Dirtied Blocks\": 0,\n          \"Shared Written Blocks\": 0,\n          \"Local Hit Blocks\": 0,\n          \"Local Read Blocks\": 0,\n          \"Local Dirtied Blocks\": 0,\n          \"Local Written Blocks\": 0,\n          \"Temp Read Blocks\": 0,\n          \"Temp Written Blocks\": 0,\n          \"Plans\": [\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Outer\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_prepared_launches\",\n              \"Relation Name\": \"process_prepared_launches\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p\",\n              \"Startup Cost\": 0.14,\n              \"Total Cost\": 8.16,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 1415,\n              \"Actual Startup Time\": 0.019,\n              \"Actual Total Time\": 0.020,\n              \"Actual Rows\": 1.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p.\\\"Id\\\"\", \"p.\\\"RunId\\\"\", \"p.\\\"PlanId\\\"\", \"p.\\\"CallerIntentId\\\"\", \"p.\\\"AdmissionSequence\\\"\", \"p.\\\"RequestFingerprint\\\"\", \"p.\\\"PreparationFingerprint\\\"\", \"p.\\\"PreparedAtUtc\\\"\", \"p.\\\"AcceptedAtUtc\\\"\", \"p.\\\"Execute\\\"\", \"p.\\\"State\\\"\", \"p.\\\"LinkDeliveryState\\\"\", \"p.\\\"DeliveredLinkId\\\"\", \"p.\\\"LinkConflictReason\\\"\", \"p.\\\"PublicFailure\\\"\", \"p.\\\"AcceptedSourceVersion\\\"\", \"p.\\\"AcceptedSourceHeaderJson\\\"\", \"p.\\\"AcceptedSourceHeaderFingerprint\\\"\", \"p.\\\"PayloadJson\\\"\"],\n              \"Index Cond\": \"(p.\\\"Id\\\" = 'f01bd8f0-7e42-4852-8e08-46e0b95c8818'::uuid)\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 2,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            },\n            {\n              \"Node Type\": \"Index Scan\",\n              \"Parent Relationship\": \"Inner\",\n              \"Parallel Aware\": false,\n              \"Async Capable\": false,\n              \"Scan Direction\": \"Forward\",\n              \"Index Name\": \"PK_process_accepted_assignment_sources\",\n              \"Relation Name\": \"process_accepted_assignment_sources\",\n              \"Schema\": \"public\",\n              \"Alias\": \"p0\",\n              \"Startup Cost\": 0.15,\n              \"Total Cost\": 8.17,\n              \"Plan Rows\": 1,\n              \"Plan Width\": 224,\n              \"Actual Startup Time\": 0.006,\n              \"Actual Total Time\": 0.006,\n              \"Actual Rows\": 0.00,\n              \"Actual Loops\": 1,\n              \"Disabled\": false,\n              \"Output\": [\"p0.\\\"AdmissionId\\\"\", \"p0.\\\"StepInstanceId\\\"\", \"p0.\\\"PayloadJson\\\"\", \"p0.\\\"Fingerprint\\\"\"],\n              \"Index Cond\": \"((p0.\\\"AdmissionId\\\" = 'f01bd8f0-7e42-4852-8e08-46e0b95c8818'::uuid) AND (p0.\\\"StepInstanceId\\\" = '9dbd353c-5aa8-4cb9-a7b4-ed3423e3b6d3'::uuid))\",\n              \"Rows Removed by Index Recheck\": 0,\n              \"Index Searches\": 1,\n              \"Shared Hit Blocks\": 1,\n              \"Shared Read Blocks\": 0,\n              \"Shared Dirtied Blocks\": 0,\n              \"Shared Written Blocks\": 0,\n              \"Local Hit Blocks\": 0,\n              \"Local Read Blocks\": 0,\n              \"Local Dirtied Blocks\": 0,\n              \"Local Written Blocks\": 0,\n              \"Temp Read Blocks\": 0,\n              \"Temp Written Blocks\": 0\n            }\n          ]\n        }\n      ]\n    },\n    \"Planning\": {\n      \"Shared Hit Blocks\": 0,\n      \"Shared Read Blocks\": 0,\n      \"Shared Dirtied Blocks\": 0,\n      \"Shared Written Blocks\": 0,\n      \"Local Hit Blocks\": 0,\n      \"Local Read Blocks\": 0,\n      \"Local Dirtied Blocks\": 0,\n      \"Local Written Blocks\": 0,\n      \"Temp Read Blocks\": 0,\n      \"Temp Written Blocks\": 0\n    },\n    \"Planning Time\": 0.114,\n    \"Triggers\": [\n    ],\n    \"Execution Time\": 0.071\n  }\n]"
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 0,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 174.1297,
+                "SourcePayloadUtf8Bytes": 282928,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 1,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 318.7245,
+                "SourcePayloadUtf8Bytes": 282928,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            },
+            {
+              "test": "CanDoItAll.Tests.Integration.Processes.ProcessAcceptedSourceSqlScalingTests.Actual_source_query_keeps_selected_bytes_bounded_and_reports_acceptance_and_legacy_cost(steps: 64, promptCharacters: 256)",
+              "data": {
+                "Workload": "accepted-source-actual-read",
+                "Steps": 64,
+                "PromptCharacters": 256,
+                "Version": "LegacyPreparedLaunch",
+                "Round": 2,
+                "Repetitions": 8,
+                "ElapsedMilliseconds": 145.1872,
+                "SourcePayloadUtf8Bytes": 282928,
+                "ProjectedStorageUtf8Bytes": 114510
+              }
+            }
+          ]
+        }
+      },
+      {
+        "path": "measurements\\summary.json",
+        "data": [
+          {
+            "steps": 1,
+            "prompt": 256,
+            "acceptanceMs": 38.8741,
+            "transactionMs": 35.3043,
+            "OriginalProjection": {
+              "bytes": 2316,
+              "medianMs": 2.061175,
+              "minMs": 1.6653125,
+              "maxMs": 7.29955,
+              "projectionStorageBytes": 2316
+            },
+            "LegacyPreparedLaunch": {
+              "bytes": 9724,
+              "medianMs": 3.46015,
+              "minMs": 3.1630375,
+              "maxMs": 4.6818125,
+              "projectionStorageBytes": 2316
+            }
+          },
+          {
+            "steps": 64,
+            "prompt": 256,
+            "acceptanceMs": 1150.1925,
+            "transactionMs": 1084.4194,
+            "OriginalProjection": {
+              "bytes": 2317,
+              "medianMs": 2.64325,
+              "minMs": 2.5373375,
+              "maxMs": 3.026075,
+              "projectionStorageBytes": 114510
+            },
+            "LegacyPreparedLaunch": {
+              "bytes": 282928,
+              "medianMs": 21.7662125,
+              "minMs": 18.1484,
+              "maxMs": 39.8405625,
+              "projectionStorageBytes": 114510
+            }
+          },
+          {
+            "steps": 256,
+            "prompt": 256,
+            "acceptanceMs": 384.0137,
+            "transactionMs": 323.5849,
+            "OriginalProjection": {
+              "bytes": 2318,
+              "medianMs": 1.2199,
+              "minMs": 1.1976,
+              "maxMs": 1.3751625,
+              "projectionStorageBytes": 456618
+            },
+            "LegacyPreparedLaunch": {
+              "bytes": 1116100,
+              "medianMs": 30.6946625,
+              "minMs": 24.5157375,
+              "maxMs": 31.8793125,
+              "projectionStorageBytes": 456618
+            }
+          },
+          {
+            "steps": 1024,
+            "prompt": 256,
+            "acceptanceMs": 2593.3105,
+            "transactionMs": 2243.0626,
+            "OriginalProjection": {
+              "bytes": 2319,
+              "medianMs": 2.9040375,
+              "minMs": 2.6629875,
+              "maxMs": 17.6010375,
+              "projectionStorageBytes": 1825218
+            },
+            "LegacyPreparedLaunch": {
+              "bytes": 4449292,
+              "medianMs": 137.0543625,
+              "minMs": 134.9856,
+              "maxMs": 176.46435,
+              "projectionStorageBytes": 1825218
+            }
+          },
+          {
+            "steps": 1,
+            "prompt": 1048576,
+            "acceptanceMs": 90.2837,
+            "transactionMs": 72.9796,
+            "OriginalProjection": {
+              "bytes": 2316,
+              "medianMs": 1.6404125,
+              "minMs": 1.479325,
+              "maxMs": 2.4676625,
+              "projectionStorageBytes": 2316
+            },
+            "LegacyPreparedLaunch": {
+              "bytes": 1058044,
+              "medianMs": 13.3911375,
+              "minMs": 12.7768,
+              "maxMs": 13.7494125,
+              "projectionStorageBytes": 2316
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

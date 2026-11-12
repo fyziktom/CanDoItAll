@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "sourceOnly": true,
+  "mergePolicy": "Replace these three existing Resource rows only; preserve parent historical metadata successors and all other rows.",
+  "rows": [
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+      "predecessorSha256Lf": "24910e3b8918d8c26c20ac051e69979f4a9d9f20a9565b344053eb28fcea0f4e",
+      "entry": {
+        "identity": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+        "sha256_lf": "6d5db33de220c88a4f46cf82a3d6e05c45856e5ce1d17ae4e7ebc9a40b8b0335",
+        "kind": "RAZOR",
+        "role": "PRODUCT",
+        "type": "CanDoItAll.Resources.UI.ResourceBrowseHistory",
+        "project": "src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj",
+        "classification": "EXTRACTED_RENDERER",
+        "caller": [
+          "src/UI/CanDoItAll.Resources.UI/ResourceFileBrowsePane.razor"
+        ],
+        "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+        "visual_owner": "CanDoItAll.Resources.UI",
+        "descendants": [],
+        "assets": "CanDoItAll.Resources.UI",
+        "scenario": "CanDoItAll.Resources.UI",
+        "evidence": "CanDoItAll.Resources.UI",
+        "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      }
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+      "predecessorSha256Lf": "9f9e0d09b4baad54a8bc510d2abf941007bec3d9bd019db92e8dde5a192bc15b",
+      "entry": {
+        "identity": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+        "sha256_lf": "f12bfb7580fd11e1bb7ad29b89d27ea17c6db8750228268b5ea67e79c9742850",
+        "kind": "RAZOR",
+        "role": "PRODUCT",
+        "type": "CanDoItAll.Resources.UI.ResourceMutationHistory",
+        "project": "src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj",
+        "classification": "EXTRACTED_RENDERER",
+        "caller": [
+          "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor"
+        ],
+        "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+        "visual_owner": "CanDoItAll.Resources.UI",
+        "descendants": [],
+        "assets": "CanDoItAll.Resources.UI",
+        "scenario": "CanDoItAll.Resources.UI",
+        "evidence": "CanDoItAll.Resources.UI",
+        "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      }
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+      "predecessorSha256Lf": "d320f398f3da134997f0150dad8a9a1cc525a1cad177e6a1048489c2e679e3a5",
+      "entry": {
+        "identity": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+        "sha256_lf": "71908d6049e773cb67b99cf71a92579da93493f84bdb79950b39322fadd72dc4",
+        "kind": "RAZOR",
+        "role": "PRODUCT",
+        "type": "CanDoItAll.Resources.UI.ResourcesWorkspaceSurface",
+        "project": "src/UI/CanDoItAll.Resources.UI/CanDoItAll.Resources.UI.csproj",
+        "classification": "EXTRACTED_RENDERER",
+        "caller": [
+          "src/Modules/CanDoItAll.Modules.Resources/Pages/ResourcesPage.razor",
+          "src/Sandboxes/CanDoItAll.Resources.UiSandbox/Components/Workspace.razor"
+        ],
+        "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
+        "visual_owner": "CanDoItAll.Resources.UI",
+        "descendants": [
+          "ConnectorConfigFieldEditor",
+          "ResourceFileBrowsePane",
+          "ResourceMutationHistory"
+        ],
+        "assets": "CanDoItAll.Resources.UI",
+        "scenario": "CanDoItAll.Resources.UI",
+        "evidence": "CanDoItAll.Resources.UI",
+        "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <CopyRepositoryTemplatesToOutput>false</CopyRepositoryTemplatesToOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/CanDoItAll.Security.Abstractions/CanDoItAll.Security.Abstractions.csproj" />
+    <ProjectReference Include="../../Foundation/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

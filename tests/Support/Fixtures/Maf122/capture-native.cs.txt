@@ -1,0 +1,85 @@
+#:package Microsoft.Agents.AI@1.22.0
+#:package Microsoft.Extensions.AI@10.10.0
+#:property PublishAot=false
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
+
+if (typeof(AIAgent).Assembly.GetName().Version != new Version(1, 22, 0, 0)) {
+    throw new InvalidOperationException("Capture requires the actual 1.22 writer.");
+}
+var destination = Path.GetFullPath(args.Single());
+Directory.CreateDirectory(destination);
+foreach (var serviceManaged in new[] { false, true }) {
+    foreach (var streaming in new[] { false, true }) {
+        var effects = 0;
+        using var client = new CaptureClient(serviceManaged);
+        var agent = new ChatClientAgent(client, new ChatClientAgentOptions {
+            ChatOptions = new() {
+                Tools = [new ApprovalRequiredAIFunction(AIFunctionFactory.Create((string path) => {
+                    if (path != "approved.txt") {
+                        throw new InvalidOperationException("Unexpected effect.");
+                    }
+                    effects++;
+                    return "written";
+                }, "write_artifact", "Write the approved fixture artifact."))]
+            },
+            DisableApprovalResponseBinding = false,
+            DisableApprovalNotRequiredFunctionBypassing = true
+        });
+        var session = await agent.CreateSessionAsync();
+        Task<AgentResponse> Run(IEnumerable<ChatMessage> messages) => streaming
+            ? agent.RunStreamingAsync(messages, session).ToAgentResponseAsync()
+            : agent.RunAsync(messages, session);
+        await Run([new(ChatRole.User, "ordinary")]);
+        await Save("ordinary", Array.Empty<object>());
+        client.RequestTool = true;
+        var response = await Run([new(ChatRole.User, "Request the guarded write.")]);
+        var approval = response.Messages.SelectMany(message => message.Contents).OfType<ToolApprovalRequestContent>().Single();
+        if (effects != 0) {
+            throw new InvalidOperationException("Unapproved effect.");
+        }
+        var call = (FunctionCallContent)approval.ToolCall;
+        var approvals = new[] { new { approval.RequestId, call.CallId, call.Name, call.Arguments } };
+        await Save("pending", approvals);
+        client.RequestTool = false;
+        await Run([new(ChatRole.User, [approval.CreateResponse(true)])]);
+        if (effects != 1) {
+            throw new InvalidOperationException("Approval must execute exactly once.");
+        }
+        await Save("settled", Array.Empty<object>());
+
+        async Task Save(string stage, object approvals) {
+            var state = await agent.SerializeSessionAsync(session);
+            var name = $"{(serviceManaged ? "service" : "local")}-{(streaming ? "streaming" : "blocking")}-{stage}.json";
+            await File.WriteAllTextAsync(Path.Combine(destination, name), JsonSerializer.Serialize(new {
+                MafVersion = typeof(AIAgent).Assembly.GetName().Version!.ToString(), State = state, Approvals = approvals
+            }, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }));
+            Console.WriteLine($"Captured {name}: effects={effects}");
+        }
+    }
+}
+
+sealed class CaptureClient(bool serviceManaged) : IChatClient {
+    public bool RequestTool { get; set; }
+    public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
+        CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        AIContent content = RequestTool
+            ? new FunctionCallContent("fixture-call", "write_artifact", new Dictionary<string, object?> { ["path"] = "approved.txt" })
+            : new TextContent("ordinary");
+        return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, [content])) {
+            ConversationId = serviceManaged ? "fixture-provider-conversation" : null
+        });
+    }
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        foreach (var update in (await GetResponseAsync(messages, options, cancellationToken)).ToChatResponseUpdates()) {
+            yield return update;
+        }
+    }
+    public object? GetService(Type serviceType, object? serviceKey = null) =>
+        serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
+    public void Dispose() { }
+}

@@ -16,13 +16,17 @@ internal sealed class DatabaseTransferOwnerSession : IDisposable {
     private readonly IDisposable? participation;
     private bool disposed;
 
-    public DatabaseTransferOwnerSession(ResolvedDatabaseProfile profile, DbContext maintenance) {
+    private readonly IReadOnlySet<DatabaseTransferTable>? admittedTables;
+
+    public DatabaseTransferOwnerSession(ResolvedDatabaseProfile profile, DbContext maintenance,
+        IReadOnlySet<DatabaseTransferTable>? admittedTables = null) {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(maintenance);
         if (profile.Profile.Id == Guid.Empty) {
             throw new ArgumentException("A transfer session requires an explicit database profile.", nameof(profile));
         }
         this.maintenance = maintenance;
+        this.admittedTables = admittedTables;
         options = maintenance.GetService<IDbContextOptions>().Extensions.ToDictionary(extension => extension.GetType());
         if (options.Values.OfType<CoreOptionsExtension>().SingleOrDefault()?.Model is not null) {
             throw new InvalidOperationException("Transfer owner sessions cannot use a supplied global model.");
@@ -56,6 +60,7 @@ internal sealed class DatabaseTransferOwnerSession : IDisposable {
             : create(builder.Options);
         try {
             RequireActive();
+            RequireAdmittedModel(context);
             return context;
         } catch {
             await context.DisposeAsync();
@@ -81,37 +86,47 @@ internal sealed class DatabaseTransferOwnerSession : IDisposable {
         }
     }
 
+    private void RequireAdmittedModel(DbContext context) {
+        if (admittedTables is not null && context.Model.GetEntityTypes().Where(type => type.GetTableName() is not null)
+                .Select(DatabaseTransferTable.From).Any(table => !admittedTables.Contains(table))) {
+            throw new InvalidOperationException("The target owner model is outside the complete admitted transfer table plan.");
+        }
+    }
+
     private sealed class SessionGuard(DatabaseTransferOwnerSession session) : DbCommandInterceptor, ISaveChangesInterceptor {
         public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command,
-            CommandEventData eventData, InterceptionResult<DbDataReader> result) => RequireActive(result);
+            CommandEventData eventData, InterceptionResult<DbDataReader> result) => RequireActive(eventData.Context, result);
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(RequireActive(result));
+            => ValueTask.FromResult(RequireActive(eventData.Context, result));
 
         public override InterceptionResult<int> NonQueryExecuting(DbCommand command,
-            CommandEventData eventData, InterceptionResult<int> result) => RequireActive(result);
+            CommandEventData eventData, InterceptionResult<int> result) => RequireActive(eventData.Context, result);
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(RequireActive(result));
+            => ValueTask.FromResult(RequireActive(eventData.Context, result));
 
         public override InterceptionResult<object> ScalarExecuting(DbCommand command,
-            CommandEventData eventData, InterceptionResult<object> result) => RequireActive(result);
+            CommandEventData eventData, InterceptionResult<object> result) => RequireActive(eventData.Context, result);
 
         public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand command,
             CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(RequireActive(result));
+            => ValueTask.FromResult(RequireActive(eventData.Context, result));
 
         public InterceptionResult<int> SavingChanges(DbContextEventData eventData,
-            InterceptionResult<int> result) => RequireActive(result);
+            InterceptionResult<int> result) => RequireActive(eventData.Context, result);
 
         public ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
             InterceptionResult<int> result, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(RequireActive(result));
+            => ValueTask.FromResult(RequireActive(eventData.Context, result));
 
-        private InterceptionResult<T> RequireActive<T>(InterceptionResult<T> result) {
+        private InterceptionResult<T> RequireActive<T>(DbContext? context, InterceptionResult<T> result) {
             session.RequireActive();
+            if (context is not null) {
+                session.RequireAdmittedModel(context);
+            }
             return result;
         }
     }

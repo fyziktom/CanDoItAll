@@ -21,12 +21,23 @@ public interface ICrmHrAgentsWorkspaceView : ICrmHrWorkspaceView
     AiAgentWorkspaceModel? SelectedWorkspace { get; }
     bool IsWorkspaceLoading { get; }
     bool IsRecordDialogOpen { get; }
+    bool IsRecordOutdated { get; }
+    long CatalogRefreshVersion { get; }
+    void RefreshCatalog();
+    Task RefreshRecordAsync();
+    // The section of the open agent record.
+    CrmHrAgentRecordSection RecordSection { get; }
     PagedRecordSelection<Guid>? AgentSelection { get; }
+    // The agent catalog's committed query when the host keeps it; null lets the catalog keep its own.
+    PagedRecordQueryState<AiAgentValidationFilter>? CatalogQuery { get; }
     bool ShouldShowListLoadingState { get; }
     Task<PagedRecordPage<Guid>> LoadAgentPageAsync(PagedRecordRequest<AiAgentValidationFilter> request, CancellationToken cancellationToken);
     void HandleAgentDirectoryLoadFailed(Exception _);
     AiAgentDirectoryItemModel GetCurrentPageItem(Guid partyId);
     Task SelectPartyAsync(Guid partyId);
+    // A committed catalog change: a debounced search, a validation filter, reset, a page, or a corrected page.
+    Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<AiAgentValidationFilter> change);
+    Task SelectRecordSectionAsync(CrmHrAgentRecordSection section);
     Task CloseRecordDialogAsync();
     void OpenTechnicalCatalog();
     void OpenTechnicalRecord();

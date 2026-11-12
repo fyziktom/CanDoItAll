@@ -38,39 +38,11 @@ public static class CapabilityProofDisplayAdapter
     }
 }
 
-public static class ProviderProfileDisplayAdapter
-{
-    public static AgentFrameworkStatusBadge BuildEnabledBadge(ProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        return provider.IsEnabled
-            ? new AgentFrameworkStatusBadge("Enabled", "success")
-            : new AgentFrameworkStatusBadge("Disabled", "warning");
+public static class ProviderProfileDisplayAdapter {
+    public static AgentFrameworkStatusBadge BuildEnabledBadge(ProviderProfile provider) {
+        var badge = CanDoItAll.AgentFramework.Providers.UI.ProviderProfilePresentation.BuildEnabledBadge(provider);
+        return new(badge.Text, badge.Tone);
     }
-
-    public static string BuildStatusText(ProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        var checkedAt = provider.LastCheckedAtUtc.HasValue
-            ? $" Last checked {CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(provider.LastCheckedAtUtc.Value)}."
-            : " Health has not been checked.";
-        return $"{provider.Kind} / {provider.Transport} / {NormalizeHealthStatus(provider.HealthStatus)}.{checkedAt}";
-    }
-
-    public static string BuildTreeTooltip(ProviderProfile provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        var enabled = BuildEnabledBadge(provider).Text;
-        return $"{provider.Name}. {provider.Kind}, {provider.Transport}, {provider.DefaultModel}. {enabled}. {NormalizeHealthStatus(provider.HealthStatus)}.";
-    }
-
-    private static string NormalizeHealthStatus(string value)
-    {
-        return string.IsNullOrWhiteSpace(value)
-            ? "Not checked"
-            : value.Trim();
-    }
+    public static string BuildStatusText(ProviderProfile provider) => CanDoItAll.AgentFramework.Providers.UI.ProviderProfilePresentation.BuildStatusText(provider);
+    public static string BuildTreeTooltip(ProviderProfile provider) => CanDoItAll.AgentFramework.Providers.UI.ProviderProfilePresentation.BuildTreeTooltip(provider);
 }

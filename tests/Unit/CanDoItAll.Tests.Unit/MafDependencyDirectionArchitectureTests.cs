@@ -122,19 +122,36 @@ public sealed class MafDependencyDirectionArchitectureTests
     }
 
     [Fact]
-    public void Security_abstractions_sources_do_not_reference_product_modules()
-    {
+    public void Security_abstractions_sources_do_not_reference_product_modules() {
         var abstractionsRoot = Path.GetDirectoryName(SecurityAbstractionsProjectPath())!;
 
         var violations = Directory.EnumerateFiles(abstractionsRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsBuildArtifactPath(path))
-            .Where(path => File.ReadAllText(path).Contains("CanDoItAll.Modules.", StringComparison.Ordinal))
+            .Where(path => UsesProductModuleReference(File.ReadAllText(path)))
             .Select(path => Path.GetRelativePath(abstractionsRoot, path))
             .OrderBy(item => item, StringComparer.Ordinal)
             .ToList();
 
         Assert.Empty(violations);
+        var contracts = typeof(CanDoItAll.Modules.Security.SecretEditorModel).Assembly;
+        Assert.Equal("CanDoItAll.Security.Abstractions", contracts.GetName().Name);
+        Assert.DoesNotContain(contracts.GetReferencedAssemblies(), reference =>
+            reference.Name?.StartsWith("CanDoItAll.Modules.", StringComparison.Ordinal) == true);
     }
+
+    [Theory]
+    [InlineData("namespace CanDoItAll.Modules.Security; public sealed class Editor { }", false)]
+    [InlineData("namespace CanDoItAll.Modules.Security { public sealed class Editor { } }", false)]
+    [InlineData("using CanDoItAll.Modules.Security;", true)]
+    [InlineData("global using Owner = CanDoItAll.Modules.Security.SecretService;", true)]
+    [InlineData("namespace CanDoItAll.Modules.Security; public class Editor { CanDoItAll.Modules.Workspace.WorkspaceService owner; }", true)]
+    public void Security_namespace_check_distinguishes_declarations_from_dependencies(string source, bool referencesModule) {
+        Assert.Equal(referencesModule, UsesProductModuleReference(source));
+    }
+
+    private static bool UsesProductModuleReference(string source) => Regex.Replace(
+        source, @"(?m)^\s*namespace\s+[\w.]+\s*[;{]", string.Empty)
+        .Contains("CanDoItAll.Modules.", StringComparison.Ordinal);
 
     private static string MafProjectPath()
         => Path.Combine(

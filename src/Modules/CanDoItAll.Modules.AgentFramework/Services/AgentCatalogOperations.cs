@@ -13,14 +13,23 @@ public sealed record AgentCatalogLoadRequest(
 
 public interface IAgentCatalogOperations {
     Task<AgentCatalogSnapshot> LoadAsync(AgentCatalogLoadRequest request, CancellationToken cancellationToken = default);
+    Task<AgentTeamDefinition> ReadTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog owner does not support a current Team authoring read.");
     Task DeleteTeamAsync(Guid teamId, CancellationToken cancellationToken = default);
     Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default);
+    Task DeleteTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog owner does not support conditional team deletion.");
+    Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This catalog owner does not support conditional membership replacement.");
 }
 
 public sealed class AgentCatalogOperations(
     IAgentFrameworkWorkspaceService workspace,
     IProviderRuntimeAdministrationService providers,
     IAgentFrameworkOrganizationCatalogRepairService repair) : IAgentCatalogOperations {
+    public async Task<AgentTeamDefinition> ReadTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+        => (await workspace.ListAgentTeamsAsync(cancellationToken)).Single(team => team.Id == teamId);
+
     public async Task<AgentCatalogSnapshot> LoadAsync(AgentCatalogLoadRequest request, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
         if (request.Repair) {
@@ -45,4 +54,10 @@ public sealed class AgentCatalogOperations(
 
     public Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
         => workspace.UpdateAgentTeamMembersAsync(teamId, agentIds, cancellationToken);
+
+    public Task DeleteTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => workspace.DeleteAgentTeamAsync(teamId, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task UpdateMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => workspace.UpdateAgentTeamMembersAsync(teamId, agentIds, expectedUpdatedAtUtc, cancellationToken);
 }

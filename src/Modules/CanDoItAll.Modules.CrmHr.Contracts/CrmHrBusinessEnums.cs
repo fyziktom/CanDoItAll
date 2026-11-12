@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.Modules.Projects;
 
 namespace CanDoItAll.Modules.CrmHr;
@@ -201,6 +202,7 @@ public enum AiExecutionMode
     ThirdParty
 }
 
+[Description("Business stewardship review state serialized as a JSON integer: 0 Draft, 1 ReviewRequired, 2 Approved, 3 Suspended. It is not a runtime execution permission.")]
 public enum AiValidationStatus
 {
     Draft,

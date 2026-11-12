@@ -1,0 +1,114 @@
+@using CanDoItAll.AgentFramework.Workflows.Definitions
+@using static CanDoItAll.AgentFramework.WorkflowAuthoring.UI.WorkflowRouteEditing
+@implements IHandleEvent
+
+<div class="workflow-canvas-route-builder">
+    <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+        <label class="workflow-canvas-field">
+            <span>Route mode</span>
+            <select class="cda-input"
+                    value="@State.Kind"
+                    @onchange="KindChanged"
+                    data-testid="@(TestIdPrefix + "-kind")">
+                @foreach (var kind in Enum.GetValues<WorkflowRouteKind>().Where(kind => AllowAlways || kind != WorkflowRouteKind.Always))
+                {
+                    <option value="@kind">@WorkflowCanvasDefinitionMapper.ResolveRouteModeLabel(kind)</option>
+                }
+            </select>
+        </label>
+        <label class="workflow-canvas-field">
+            <span>Route label</span>
+            <input class="cda-input"
+                   @bind="State.Label"
+                   data-testid="@(TestIdPrefix + "-label")" />
+        </label>
+    </Grid>
+
+    @if (IsPredicateRoute(State.Kind))
+    {
+        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+            <label class="workflow-canvas-field">
+                <span>JSON path</span>
+                <input class="cda-input"
+                       @bind="State.JsonPath"
+                       placeholder="$.status"
+                       data-testid="@(TestIdPrefix + "-json-path")" />
+            </label>
+            @if (ShowsOperator(State.Kind))
+            {
+                <label class="workflow-canvas-field">
+                    <span>Operator</span>
+                    <select class="cda-input"
+                            @bind="State.Operator"
+                            data-testid="@(TestIdPrefix + "-operator")">
+                        @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
+                        {
+                            <option value="@routeOperator">@WorkflowRoutingValidation.FormatOperator(routeOperator)</option>
+                        }
+                    </select>
+                </label>
+            }
+        </Grid>
+    }
+
+    @if (ShowsExpectedValue(State.Kind, State.Operator))
+    {
+        <Grid Gap="LayoutGap.Small" ColumnsLg="2">
+            <label class="workflow-canvas-field">
+                <span>Value kind</span>
+                <select class="cda-input"
+                        @bind="State.ValueKind"
+                        data-testid="@(TestIdPrefix + "-value-kind")">
+                    @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
+                    {
+                        <option value="@valueKind">@valueKind</option>
+                    }
+                </select>
+            </label>
+            <label class="workflow-canvas-field">
+                <span>Expected value</span>
+                <input class="cda-input"
+                       @bind="State.ExpectedValue"
+                       data-testid="@(TestIdPrefix + "-expected-value")" />
+            </label>
+        </Grid>
+    }
+
+    @if (State.Kind == WorkflowRouteKind.FanOutSelector)
+    {
+        <label class="workflow-canvas-field">
+            <span>Fan-out target index</span>
+            <input class="cda-input"
+                   inputmode="numeric"
+                   @bind="State.FanOutIndexText"
+                   data-testid="@(TestIdPrefix + "-fanout-index")" />
+        </label>
+    }
+
+    @if (ShowsCaseSensitivity(State.Kind, State.Operator))
+    {
+        <label class="workflow-canvas-check-field">
+            <input type="checkbox"
+                   @bind="State.CaseSensitive"
+                   data-testid="@(TestIdPrefix + "-case-sensitive")" />
+            Case-sensitive comparison
+        </label>
+    }
+</div>
+@if (State.HasInvalidFanOutIndex) {
+    <Alert AlertStyle="AlertStyle.Warning">@WorkflowRouteDraft.InvalidIndexMessage</Alert>
+}
+
+@code {
+    [Parameter, EditorRequired] public WorkflowRouteDraft State { get; set; } = default!;
+    [Parameter] public bool AllowAlways { get; set; } = true;
+    [Parameter] public string TestIdPrefix { get; set; } = "workflow-route";
+    [Parameter] public EventCallback<ChangeEventArgs> KindChanged { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    async Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? argument) {
+        await callback.InvokeAsync(argument);
+        await Changed.InvokeAsync();
+        StateHasChanged();
+    }
+}

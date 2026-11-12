@@ -1,0 +1,65 @@
+@page "/historical-receipts"
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.AgentFramework.UI.Chat
+
+<PageTitle>Saved receipt review sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Medium" Class="p-6">
+    <PageHeader Title="Saved receipt review" Description="Owned sample pages. Actions perform no owner reads, checkpoints or dispatch." Compact="true" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Reset sample" Click="Reset" data-testid="historical-sample-reset" />
+        <Button Text="Saved snapshot changed" Click="@(() => Stop(AgentHistoricalReceiptReviewStop.SnapshotChanged))" data-testid="historical-sample-changed" />
+        <Button Text="Read denied" Click="@(() => Stop(AgentHistoricalReceiptReviewStop.ReadDenied))" data-testid="historical-sample-denied" />
+    </Cluster>
+    <AgentChatRecoverySurface State="state" Intent="ReadPage" />
+    <TextBlock Value="@notice" data-testid="historical-sample-intent" />
+</Stack>
+
+@code {
+    private static readonly Guid runId = new("ac100000-0000-4000-8000-000000000041");
+    private static readonly Guid sessionId = new("ac100000-0000-4000-8000-000000000042");
+    private static readonly Guid agentId = new("ac100000-0000-4000-8000-000000000043");
+    private static readonly AgentHistoricalReceiptReadContext context = new(new("ac100000-0000-4000-8000-000000000044"), new(3), WorkspaceScopeDescriptor.Sandbox);
+    private static readonly AgentHistoricalReceiptReviewRequest target = new(runId, sessionId, agentId, DateTimeOffset.UnixEpoch);
+    private AgentChatActionState state = Initial();
+    private string notice = "No sample read yet. Release and activity warnings remain independent of receipt pages.";
+
+    private static AgentChatActionState Initial() => new(new(1, agentId, sessionId, runId), null, false, true, false, false, false, false, false) {
+        EffectLeaseReleaseUnconfirmed = true,
+        EffectActivityFinalizationFailed = true,
+        HistoricalReceipts = new(target, null, false, true, null)
+    };
+
+    private void Reset() {
+        state = Initial();
+        notice = "Sample reset; no owner state changed.";
+    }
+
+    private void ReadPage(AgentChatActionIntent intent) {
+        if (intent.Origin != state.Origin || intent.Action is not (AgentChatAction.ReviewSavedReceipts or AgentChatAction.ReadNextSavedReceipts)) {
+            return;
+        }
+        var next = intent.Action == AgentChatAction.ReadNextSavedReceipts;
+        var request = intent.HistoricalRequest;
+        var expected = new AgentHistoricalReceiptReviewRequest(runId, sessionId, agentId, target.ExecutionCreatedAtUtc,
+            next ? state.HistoricalReceipts?.Page?.NextCursor : null);
+        if (request != expected || next && request?.Cursor is null) {
+            return;
+        }
+        var digest = AgentToolProtocolEnvelope.Create("owned-sample", 1, "{}").Digest;
+        AgentHistoricalReceiptObservation Observation(AgentHistoricalReceiptKnowledge knowledge) =>
+            new(new(new(Guid.NewGuid()), new(Guid.NewGuid()), 1, digest), knowledge);
+        var page = new AgentHistoricalReceiptReview(expected, context, 8, 5,
+            next ? AgentHistoricalReceiptReviewStop.ExhaustedSnapshot : AgentHistoricalReceiptReviewStop.LookupLimit,
+            next ? [Observation(AgentHistoricalReceiptKnowledge.NotObserved)] : [Observation(AgentHistoricalReceiptKnowledge.Accepted),
+                Observation(AgentHistoricalReceiptKnowledge.AcceptedDetailDenied), Observation(AgentHistoricalReceiptKnowledge.ClosedAbsent),
+                Observation(AgentHistoricalReceiptKnowledge.Expired)],
+            next ? null : new(runId, 8, 5, 4, context));
+        state = state with { HistoricalReceipts = new(target, page, false, true, null) };
+        notice = next ? "Next sample page replaced the first; no result aggregation or dispatch." : "Four sample observations; another page remains.";
+    }
+
+    private void Stop(AgentHistoricalReceiptReviewStop stop) {
+        state = state with { HistoricalReceipts = new(target, new(target, context, null, null, stop, []), false, true, null) };
+        notice = "Sample page cleared. No acceptance or absence was inferred from this refusal.";
+    }
+}

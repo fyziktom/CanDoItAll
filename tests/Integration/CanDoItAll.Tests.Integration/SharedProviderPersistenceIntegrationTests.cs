@@ -203,7 +203,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database, sourceService);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalogWithTwoPublications(), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalogWithTwoPublications(), selectPublication: true));
         Dictionary<Guid, (string Name, bool IsEnabled)> localIntent;
         await using (var setupContext = database.Factory.CreateDbContext())
         {
@@ -248,15 +248,16 @@ public sealed class SharedProviderPersistenceIntegrationTests
     }
 
     [Fact]
-    public async Task Reconciliation_creates_import_and_profile_once_and_is_idempotent()
+    public async Task Reconciliation_preserves_identity_with_fresh_originals_and_rejects_a_reused_original()
     {
         await using var database = await SharedProviderTestDatabase.CreateAsync("sharedprovider-idempotent");
         var source = await CreateSourceAsync(database);
         var reconciliation = CreateReconciliation(database);
-        var request = CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true);
+        var request = await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true);
 
         var first = await reconciliation.ReconcileAsync(request);
-        var second = await reconciliation.ReconcileAsync(request);
+        await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => reconciliation.ReconcileAsync(request));
+        var second = await reconciliation.ReconcileAsync(await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true));
 
         await using var dbContext = database.Factory.CreateDbContext();
         Assert.Equal(SharedProviderReconciliationOutcome.Applied, first.Outcome);
@@ -310,7 +311,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog("Remote original"), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog("Remote original"), selectPublication: true));
         Guid profileId;
         await using (var dbContext = database.Factory.CreateDbContext())
         {
@@ -322,7 +323,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
         }
 
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog("Remote renamed"), selectPublication: false));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog("Remote renamed"), selectPublication: false));
 
         await using var verification = database.Factory.CreateDbContext();
         var actual = await verification.Set<ProviderProfile>().SingleAsync();
@@ -340,10 +341,10 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true));
 
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateEmptyCatalog(), selectPublication: false));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateEmptyCatalog(), selectPublication: false));
 
         await using var dbContext = database.Factory.CreateDbContext();
         var import = await dbContext.Set<SharedProviderImport>().SingleAsync();
@@ -359,10 +360,11 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database, sourceService);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true));
 
         await sourceService.RecordFailureAsync(
             source.Id,
+            (await sourceService.GetAsync(source.Id)).ConcurrencyToken,
             new SharedProviderSourceFailure(
                 SharedProviderSourceFailureKind.Connectivity,
                 StatusCode: 503,
@@ -382,13 +384,13 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true));
         var ids = await LoadImportIdentityAsync(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateEmptyCatalog(), selectPublication: false));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateEmptyCatalog(), selectPublication: false));
 
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog("Returned"), selectPublication: false));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog("Returned"), selectPublication: false));
 
         var actual = await LoadImportIdentityAsync(database);
         Assert.Equal(ids, actual);
@@ -405,13 +407,13 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var source = await CreateSourceAsync(database);
         var reconciliation = CreateReconciliation(database);
         await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog("Trusted"), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog("Trusted"), selectPublication: true));
         var mismatchedCatalog = CreateCatalog(
             "Untrusted replacement",
             sourceInstanceId: new SharedProviderSourceInstanceId(Guid.Parse("99999999-9999-4999-8999-999999999999")));
 
         var result = await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, mismatchedCatalog, selectPublication: false));
+            await CreateReconciliationRequestAsync(database, source.Id, mismatchedCatalog, selectPublication: false));
 
         Assert.Equal(SharedProviderReconciliationOutcome.SourceIdentityMismatch, result.Outcome);
         await using var dbContext = database.Factory.CreateDbContext();
@@ -774,7 +776,7 @@ public sealed class SharedProviderPersistenceIntegrationTests
             database.Transactions);
 
         var result = await reconciliation.ReconcileAsync(
-            CreateReconciliationRequest(source.Id, CreateCatalog(), selectPublication: true));
+            await CreateReconciliationRequestAsync(database, source.Id, CreateCatalog(), selectPublication: true));
 
         Assert.Single(result.AffectedProviderProfileIds);
         Assert.Equal(result.AffectedProviderProfileIds, observer.SavedProviderIds);
@@ -821,7 +823,8 @@ public sealed class SharedProviderPersistenceIntegrationTests
             AllowInsecurePrivateNetwork: false));
     }
 
-    private static SharedProviderReconciliationRequest CreateReconciliationRequest(
+    private static async Task<SharedProviderReconciliationRequest> CreateReconciliationRequestAsync(
+        SharedProviderTestDatabase database,
         Guid sourceId,
         SharedProviderCatalogDocument catalog,
         bool selectPublication)
@@ -829,11 +832,15 @@ public sealed class SharedProviderPersistenceIntegrationTests
         var selected = selectPublication
             ? catalog.Providers.Select(publication => publication.PublicationId).ToHashSet()
             : [];
+        var source = await CreateSourceService(database).GetAsync(sourceId);
+        await using var db = database.ProvidersFactory.CreateDbContext();
+        var imports = await db.Set<SharedProviderImport>().AsNoTracking().Where(import => import.SourceId == sourceId).ToArrayAsync();
         return new SharedProviderReconciliationRequest(
             sourceId,
             catalog,
             SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
-            selected);
+            selected, expectedSourceConcurrencyToken: source.ConcurrencyToken,
+            originalSelection: new(source.ConcurrencyToken, imports.Select(import => KeyValuePair.Create(import.Id, import.ConcurrencyToken))));
     }
 
     private static SharedProviderCatalogDocument CreateCatalog(

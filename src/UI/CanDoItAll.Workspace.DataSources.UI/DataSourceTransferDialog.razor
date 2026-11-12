@@ -1,0 +1,198 @@
+@using static CanDoItAll.Workspace.DataSources.UI.DataSourcesText
+
+<Dialog IsOpen="true"
+        Title="Transfer database settings"
+        Eyebrow="Data sources"
+        Subtitle="Copy selected groups into the original target database."
+        Size="ModalSize.Wide"
+        TestId="database-transfer-dialog"
+        OnClose="OnClose">
+    <ChildContent>
+        @if (Session.Result is { } result) {
+            <Alert AlertStyle="AlertStyle.Info" data-testid="database-transfer-result">@result.Message</Alert>
+        }
+        <DataSourceReceipts Operations="Operations" />
+        <Stack GapScale="LayoutGap.Large">
+            @if (!string.IsNullOrWhiteSpace(Session.Message)) {
+                <div class="rounded-xl border border-amber-300 p-3"
+                     data-testid="database-transfer-message">
+                    @Session.Message
+                </div>
+            }
+
+            @if (Session.TargetHealth is { RequiresAction: true } targetSchemaHealth) {
+                <Alert AlertStyle="@ResolveSchemaAlertStyle(targetSchemaHealth)"
+                       Variant="Variant.Outlined"
+                       data-testid="database-transfer-target-schema-alert">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="font-semibold">Target database schema needs attention</p>
+                            <p>@targetSchemaHealth.Summary</p>
+                            @if (HasSchemaDetails(targetSchemaHealth)) {
+                                <p class="text-xs opacity-80">@DescribeSchemaDetails(targetSchemaHealth)</p>
+                            }
+                        </Stack>
+
+                        @if (targetSchemaHealth.CanApplySchema) {
+                            <Button Text="Apply target schema"
+                                    Icon="database"
+                                    ButtonStyle="ButtonStyle.Warning"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(Busy || !Operations.CanDispatch)"
+                                    IsBusy="@(Operations.IsBusy)"
+                                    Click="ApplyTarget"
+                                    data-testid="database-transfer-target-apply-schema" />
+                        }
+                    </Split>
+                </Alert>
+            }
+
+            @if (Session.SourceHealth is { RequiresAction: true } sourceSchemaHealth) {
+                <Alert AlertStyle="@ResolveSchemaAlertStyle(sourceSchemaHealth)"
+                       Variant="Variant.Outlined"
+                       data-testid="database-transfer-source-schema-alert">
+                    <Split Breakpoint="LayoutBreakpoint.None"
+                           Gap="LayoutGap.Medium"
+                           AlignItems="AlignItems.Start"
+                           JustifyContent="JustifyContent.SpaceBetween"
+                           Wrap="FlexWrap.Wrap">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                            <p class="font-semibold">Source database schema needs attention</p>
+                            <p>@sourceSchemaHealth.Summary</p>
+                            @if (HasSchemaDetails(sourceSchemaHealth)) {
+                                <p class="text-xs opacity-80">@DescribeSchemaDetails(sourceSchemaHealth)</p>
+                            }
+                        </Stack>
+
+                        @if (sourceSchemaHealth.CanApplySchema && Session.SourceId.HasValue) {
+                            <Button Text="Apply source schema"
+                                    Icon="database"
+                                    ButtonStyle="ButtonStyle.Warning"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@(Busy || !Operations.CanDispatch)"
+                                    IsBusy="@(Operations.IsBusy)"
+                                    Click="ApplySource"
+                                    data-testid="database-transfer-source-apply-schema" />
+                        }
+                    </Split>
+                </Alert>
+            }
+
+            <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
+                     data-testid="database-transfer-target-summary">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Target database</p>
+                        <p class="text-base font-semibold text-slate-950">@Session.Target.DisplayName</p>
+                        <p class="text-sm leading-6 text-slate-600 break-all">@Session.Target.Descriptor</p>
+                    </Stack>
+                </div>
+
+                <div>
+                    <label class="cda-field-label">Copy settings from</label>
+                    <select class="cda-input"
+                            value="@Session.SourceId?.ToString()"
+                            disabled="@(Busy || Session.Sources.Count == 0)"
+                            @onchange="ChangeTransferSourceAsync"
+                            data-testid="database-transfer-source-select">
+                        <option value="">Select source database</option>
+                        @foreach (var source in Session.Sources) {
+                            <option value="@source.ProfileId">@source.DisplayName (@source.Descriptor)</option>
+                        }
+                    </select>
+                    @if (Session.Sources.Count == 0) {
+                        <p class="mt-2 text-sm leading-6 text-slate-600">No other saved database profiles are available as a source.</p>
+                    }
+                </div>
+            </Grid>
+
+            @if (Session.Items.Count > 0) {
+                <Stack GapScale="LayoutGap.Small" data-testid="database-transfer-items">
+                    @foreach (var item in Session.Items) {
+                        <label class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                               data-testid="@($"database-transfer-item-{item.Descriptor.Key}")">
+                            <Split Breakpoint="LayoutBreakpoint.None"
+                                   Gap="LayoutGap.Medium"
+                                   AlignItems="AlignItems.Start"
+                                   JustifyContent="JustifyContent.SpaceBetween"
+                                   Wrap="FlexWrap.Wrap">
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" AlignItems="AlignItems.Start">
+                                    <input type="checkbox"
+                                           class="mt-1 h-4 w-4 rounded border-slate-300"
+                                           checked="@Session.IsSelected(item.Descriptor.Key)"
+                                           disabled="@(Busy || !item.IsAvailable)"
+                                           @onchange="@((args) => ToggleTransferItem(item.Descriptor.Key, args))" />
+                                    <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
+                                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                            <span class="font-semibold text-slate-950">@item.Descriptor.Label</span>
+                                            @if (item.Descriptor.IsSensitive) {
+                                                <StatusBadge Tone="warning" Text="Encrypted" />
+                                            }
+                                            @if (!item.IsAvailable) {
+                                                <StatusBadge Tone="neutral" Text="Unavailable" />
+                                            }
+                                        </Cluster>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Descriptor.Description</p>
+                                        <p class="text-sm leading-6 text-slate-600">@item.Summary</p>
+                                        @if (!string.IsNullOrWhiteSpace(item.Warning)) {
+                                            <p class="text-sm leading-6 text-amber-700">@item.Warning</p>
+                                        }
+                                    </Stack>
+                                </Cluster>
+
+                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-slate-500">
+                                    <span>Source: @item.SourceRecordCount</span>
+                                    <span>Target: @item.TargetRecordCount</span>
+                                </Stack>
+                            </Split>
+                        </label>
+                    }
+                </Stack>
+            }
+            else if (Session.SourceId.HasValue && !Busy && Session.SchemaCurrent) {
+                <EmptyState Eyebrow="No transfer items"
+                            Title="No settings groups are available"
+                            Description="The selected source database did not return transferable settings." />
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Stack GapScale="LayoutGap.Small">
+            <label><input type="checkbox" @bind="Session.ReplaceExisting" disabled="@Busy" data-testid="database-transfer-replace" /> Replace existing records where the group owner permits it</label>
+            <Button Text="Refresh preview" Click="Session.RefreshAsync" Disabled="@Busy" data-testid="database-transfer-refresh" />
+        <Split Breakpoint="LayoutBreakpoint.None"
+               Gap="LayoutGap.Medium"
+               AlignItems="AlignItems.Center"
+               JustifyContent="JustifyContent.SpaceBetween"
+               Wrap="FlexWrap.Wrap">
+            <p class="text-sm leading-6 text-slate-600">Encrypted values are copied as protected payloads and are not shown here.</p>
+            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                <Button Text="Close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Click="OnClose" />
+                <Button Text="Transfer selected"
+                        ButtonStyle="ButtonStyle.Info"
+                        Disabled="@(!Session.CanTransfer)"
+                        Click="Session.TransferAsync"
+                        data-testid="database-transfer-apply" />
+            </Cluster>
+        </Split>
+        </Stack>
+    </Footer>
+</Dialog>
+
+
+@code {
+    [Parameter, EditorRequired] public DataSourceTransferSession Session { get; set; } = null!;
+    [Parameter, EditorRequired] public DataSourceOperationLedger Operations { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    private bool Busy => Session.Loading || Operations.IsBusy;
+    private Task ChangeTransferSourceAsync(ChangeEventArgs args) => Session.SelectSourceAsync(Guid.TryParse(args.Value?.ToString(), out var id) ? id : null);
+    private Task ApplyTarget() => Session.ApplySchemaAsync(source: false);
+    private Task ApplySource() => Session.ApplySchemaAsync(source: true);
+    private void ToggleTransferItem(TransferGroupKey key, ChangeEventArgs args) => Session.Select(key, args.Value is true);
+}

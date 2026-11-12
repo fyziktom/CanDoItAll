@@ -1,0 +1,1514 @@
+{
+  "formatVersion": 1,
+  "status": "Source-derived selection only; no builds, discovery, execution or static scan performed",
+  "createdAtUtc": "2026-10-17T06:23:11.1134343+00:00",
+  "owner": "/root/agent_process_architecture",
+  "mainRoot": "C:\\repositories\\CanDoItAll",
+  "managedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "d1Inventory": "codex/bundles/concurrent-mutations/reviews/R1d-D1-dormant-source-inventory.json",
+  "d1InventorySha256": "695F5E78186BC56F93867174209B56487A4A34A52BDB86A0A10E4FD81BCB2D07",
+  "unitRows": 112,
+  "existingIntegrationRows": 129,
+  "newD1IntegrationRows": 6,
+  "totalRows": 247,
+  "dynamicRows": 0,
+  "skippedRows": 0,
+  "canonicalStableExclusions": "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+  "validation": [
+    "Recheck all sources after C3 and stage1 release; this is not transfer permission or a whole-tree freeze.",
+    "Require build-backed exact discovery and runtime against identical sources/binaries.",
+    "D1 six precede the separately inventoried C4 probe. D2 provider/API/native activation and C4 production remain held.",
+    "The existing maximum-journal Fact is correctness/characterization, not numerical capacity qualification.",
+    "No new Components/Playwright/LiveProcess/performance lane is introduced for this dormant owner ABI.",
+    "Full repository static procedure including untracked protected files and final no-write enforcement remains required."
+  ],
+  "lanes": [
+    {
+      "id": "d1-existing-schema-authority-unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "assembly": "CanDoItAll.Tests.Unit",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentToolBackgroundSourceSerializationTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.Runtime.AgentToolDisclosureEvidenceTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 51.0,
+      "expectedExecution": 51.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.Cancellation_rejects_genuine_pending_proposals_without_rewriting_native_history",
+          "kind": "Theory",
+          "rows": 6,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.A_continuation_or_terminal_transition_that_already_won_is_not_overwritten",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.Changed_pending_arguments_cannot_be_cancelled_using_a_stale_selection",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.Changed_run_identity_or_authority_is_rejected",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentPendingApprovalCancellationTests.Process_owned_or_legacy_runs_require_their_owner_cancellation_path",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Wire_equality_preserves_default_json_for_all_supported_journal_versions",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Wire_equality_preserves_conditional_members_and_exact_capture_offsets",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Wire_equality_preserves_encoding_replacement_and_large_single_tokens",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Wire_equality_checks_chunk_content_length_and_maximum_cardinality_trailing_fields",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Wire_comparison_preserves_late_serializer_failures_and_validation_order",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Counted_json_size_matches_default_wire_for_all_supported_journal_versions",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Counted_json_size_preserves_default_escaping_and_large_single_tokens",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Whole_journal_encoded_boundary_remains_exact_at_limit_minus_equal_and_plus_one",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Json_count_preserves_serialization_failures_and_invalid_copies_never_become_valid",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Json_count_covers_every_proposal_and_trailing_fields_at_maximum_batch_cardinality",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Legacy_journals_preserve_wire_shape_and_restart_semantics",
+          "kind": "Theory",
+          "rows": 4,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Legacy_schema_refuses_effect_only_fields_and_owner_receipt_terminal",
+          "kind": "Theory",
+          "rows": 4,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Effects_only_checkpoint_accepts_only_the_live_origin_and_no_provider_envelopes",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Effects_only_saved_approval_requires_exact_existing_proposal_binding",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Owner_receipt_confirmation_roundtrips_without_a_provider_result",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Owner_receipt_confirmation_preserves_an_existing_unknown_result_and_disclosure",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Owner_receipt_confirmation_requires_original_approved_dispatched_owner_receipt_effect",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Owner_receipt_and_prior_result_are_immutable_after_confirmation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Effect_segment_kind_origin_response_source_and_binding_are_append_only",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Receipt_confirmation_cannot_resurrect_rejected_completed_or_cancelled_proposals",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Missing_restart_checkpoint_does_not_bypass_whole_journal_bounds",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolJournalSchemaFiveTests.Schema_five_provider_dispatches_keep_native_uncertainty_and_response_fences",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.Runtime.AgentToolDisclosureEvidenceTests.Nested_async_invocations_keep_their_original_owner_evidence_separate",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolDisclosureEvidenceTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.Runtime.AgentToolDisclosureEvidenceTests.Repeated_capture_accepts_only_the_same_immutable_evidence",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolDisclosureEvidenceTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.Runtime.AgentToolDisclosureEvidenceTests.An_owner_call_without_an_invocation_scope_does_not_seed_the_next_invocation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolDisclosureEvidenceTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.Runtime.AgentToolDisclosureEvidenceTests.Legacy_proposal_json_keeps_its_exact_shape_when_evidence_is_absent",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolDisclosureEvidenceTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolBackgroundSourceSerializationTests.Interactive_reference_retains_its_three_original_serialized_fields_and_nonempty_identifiers",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolBackgroundSourceSerializationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolBackgroundSourceSerializationTests.Background_reference_round_trips_exact_source_with_no_interactive_identity",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolBackgroundSourceSerializationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolBackgroundSourceSerializationTests.Background_reference_rejects_mixed_interactive_authority_or_chat",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolBackgroundSourceSerializationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentToolBackgroundSourceSerializationTests.Background_input_cannot_replace_an_interactive_message_or_be_used_as_a_message_id",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolBackgroundSourceSerializationTests.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-existing-receipt-result-unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "assembly": "CanDoItAll.Tests.Unit",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentEffectContinuationResultTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentRuntimeToolRecoveryPolicyTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 21.0,
+      "expectedExecution": 21.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationResultTests.Normal_results_reject_missing_metric_or_chat_message",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationResultTests.Effect_factory_requires_typed_waiting_and_never_provider_output",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationResultTests.Legacy_result_and_activity_serialization_remain_compatible",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationResultTests.Awaiting_continuation_phase_roundtrips_and_rejects_invalid_terminal_pairs",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.Chat_mapper_preserves_the_original_effect_checkpoint_without_fabricating_a_message_or_usage",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.Process_recovery_retains_the_original_run_and_refuses_a_transient_replacement_dispatch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.Narrative_generation_defers_the_same_source_instead_of_parsing_saved_effects_as_provider_output",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.Recovery_orchestrator_suspends_original_activity_without_publishing_context_completion",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentEffectContinuationConsumerTests.Prepared_only_readback_keeps_the_original_intent_and_does_not_request_provider_input_or_dispatch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_preserves_runtime_provider_receipts",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_projects_completed_unreceipted_tool_traces",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_skips_trace_with_same_run_direct_receipt",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_does_not_trust_direct_receipt_from_another_run",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_skips_incomplete_and_unclassified_traces",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.CreateToolInvocationTraceReceipts_distinguishes_repeated_invocations_across_runtime_turns",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.AggregateToolInvocationTraces_preserves_prior_turns_and_rebases_continuation_sequences",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkRuntimeToolReceiptTests.ResolveFailureToolInvocationTraces_preserves_prior_continuation_and_provider_failure_traces",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentRuntimeToolRecoveryPolicyTests.Recovery_metadata_rejects_unknown_policies",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentRuntimeToolRecoveryPolicyTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentRuntimeToolRecoveryPolicyTests.Default_metadata_preserves_its_legacy_serialized_shape",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentRuntimeToolRecoveryPolicyTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentRuntimeToolRecoveryPolicyTests.Image_analysis_alone_tightens_generic_recovery_without_changing_the_owner_policy_vector",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentRuntimeToolRecoveryPolicyTests.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-existing-activity-unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "assembly": "CanDoItAll.Tests.Unit",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkWorkspaceActivityAdmissionTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 40.0,
+      "expectedExecution": 40.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Recovery_uses_original_identity_in_a_new_operation_without_send_context_capture_or_approval",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Recovery_refuses_a_different_profile_scope_or_profile_lifetime_before_owner_dispatch",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Recovery_failure_or_cancellation_terminalizes_its_own_activity",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Recovery_cannot_leave_an_unfinished_activity_after_returning_a_result",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Recovery_requires_the_original_agent_thread_and_run_identifiers",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.StartSendMessage_returns_before_context_capture_and_exposes_initial_activity",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.SendMessageAsync_returns_the_started_operation_completion",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Typed_send_request_preserves_execution_behavior_and_freezes_attachments",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Context_capture_failure_terminalizes_the_activity_as_failed",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentChatExecutionActivityOrchestratorTests.Approval_continuation_uses_a_distinct_operation_bound_to_the_same_run",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Admit_operation_publishes_accepted_as_first_sequenced_event",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Operation_binds_agent_and_typed_context_after_unknown_acceptance",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Overlong_accepted_message_is_rejected_before_stream_admission",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Report_allows_forward_progress_and_streaming_tool_cycles",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Report_allows_runtime_reentry_after_persisting_for_auto_approval",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Report_allows_runtime_reentry_after_awaiting_approval_for_auto_approval",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Report_allows_native_approval_wait_after_session_persistence",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Report_rejects_backward_transition_without_appending_it",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Binding_is_single_assignment_and_rejects_session_mismatch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Terminalization_rejects_duplicate_and_keeps_first_terminal_event",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Dispose_cancels_unterminated_operation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Suspend_maps_to_terminal_awaiting_approval",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Fail_preserves_typed_error_code",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentExecutionActivityCoordinatorTests.Terminal_partition_replays_events_then_reports_completion",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkWorkspaceActivityAdmissionTests.Raw_core_send_admits_before_execution_and_publishes_one_success_terminal",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkWorkspaceActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentFrameworkWorkspaceActivityAdmissionTests.Operation_bound_send_rejects_foreign_workspace_scope_before_dependency_access",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkWorkspaceActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.Direct_workspace_send_admits_caller_operation_and_publishes_one_terminal_event",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.Direct_workspace_pre_io_failure_remains_observable_as_failed_terminal_activity",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.Direct_execution_entry_admits_before_cold_workspace_resolution_and_disposes_failed_operation",
+          "kind": "Theory",
+          "rows": 5,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.Operation_bound_dispatch_uses_service_pinned_before_profile_switch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CurrentProfileAgentExecutionActivityAdmissionTests.Blocked_compatibility_subscriber_does_not_delay_send_or_activity_terminal",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-existing-admission-cancellation-integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "assembly": "CanDoItAll.Tests.Integration",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolCancelledReadRecoveryIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolEffectOnlyActivationBoundaryTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 82.0,
+      "expectedExecution": 82.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Actual_same_source_retry_recovers_the_failed_execution_and_original_input_after_restart",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Independent_workspace_instances_reserve_exactly_one_execution_for_the_same_claim",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Lost_new_execution_ack_preserves_the_exact_background_identity",
+          "kind": "Theory",
+          "rows": 6,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Changed_claim_cannot_replace_a_completed_effect_before_its_exact_Process_outcome_is_acknowledged",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Exact_acknowledged_terminal_journal_allows_authorized_rework_with_new_dynamic_proposal_identity",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Acknowledged_result_does_not_erase_an_unresolved_prior_proposal",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Duplicate_preexisting_claim_journals_require_reconciliation_instead_of_timestamp_selection",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Acknowledged_successful_legacy_execution_can_be_intentionally_reworked_without_retrofitting_a_journal",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Saved_generic_success_can_be_intentionally_reworked_without_claiming_an_atomic_owner_commit",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Uncertain_hosted_provider_request_blocks_both_same_claim_recovery_and_later_claim_replacement",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Acknowledged_native_response_allows_explicit_rework_while_retaining_its_unknown_owner_commit_classification",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Actual_non_chat_entry_and_restart_recovery_keep_original_input_source_and_execution",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Identical_dynamic_proposals_have_distinct_intents_and_keep_serial_order",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Lost_checkpoint_ack_keeps_exact_background_batch_identity",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Restart_keeps_proposal_identity_and_does_not_redispatch_unknown_non_idempotent_effects",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Saved_background_approval_keeps_exact_digest_and_cannot_approve_changed_arguments",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Revocation_after_commit_does_not_erase_outcome_but_blocks_new_dispatch_and_disclosure_when_read_is_denied",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Missing_source_policy_or_changed_original_owner_fingerprint_blocks_reentry",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Already_saved_legacy_execution_cannot_be_given_a_new_tool_identity",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolBackgroundJournalIntegrationTests.Cancellation_retains_original_intent_and_checks_current_owner_read_before_disclosure",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.Request_scoped_input_keeps_session_authorization_but_cannot_admit_durable_effects_or_change_its_support",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.Independent_stores_serialize_dispatch_without_blocking_the_short_checkpoint_lock",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.One_assistant_batch_allocates_distinct_durable_intents_for_identical_legitimate_creates",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.Lost_file_commit_ack_recovers_the_original_batch_and_intent",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.A_stale_detail_or_whole_workspace_cannot_clear_a_current_batch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.Reentry_preserves_server_intent_and_requires_reconciliation_for_uncertain_non_idempotent_effects",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.Approval_checkpoint_and_exact_digest_survive_restart_and_reject_changed_payload",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolAdmissionJournalIntegrationTests.A_released_or_foreign_runtime_lease_cannot_verify_an_invocation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolCancelledReadRecoveryIntegrationTests.Cancelled_dispatched_read_preserves_the_original_recovery_contract_across_independent_stores",
+          "kind": "Theory",
+          "rows": 6,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolCancelledReadRecoveryIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolCancelledReadRecoveryIntegrationTests.Cancellation_before_dispatch_does_not_fabricate_metered_read_uncertainty",
+          "kind": "Theory",
+          "rows": 3,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolCancelledReadRecoveryIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.Higher_revision_owner_update_cannot_replace_any_original_attachment_value",
+          "kind": "Theory",
+          "rows": 19,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentTypedContextJournalImmutabilityIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.Detail_and_whole_execution_replacement_cannot_bypass_attachment_immutability",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentTypedContextJournalImmutabilityIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.Detached_JSON_roundtrip_can_advance_the_real_journal_without_changing_order_or_payload",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentTypedContextJournalImmutabilityIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentTypedContextJournalImmutabilityIntegrationTests.Attachment_free_legacy_context_keeps_default_and_empty_arrays_compatible",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentTypedContextJournalImmutabilityIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectOnlyActivationBoundaryTests.Effects_only_execute_and_continuation_refuse_before_provider_construction_or_effect_admission",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectOnlyActivationBoundaryTests.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-existing-origin-receipt-integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "assembly": "CanDoItAll.Tests.Integration",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Expired_process_dispatch_can_read_original_receipt_through_application_without_new_effect|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Expired_write_source_with_current_read_can_confirm_an_original_effect|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 31.0,
+      "expectedExecution": 31.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_pages_preserve_original_generation_and_reach_later_intents_without_workspace_coordination_or_writes",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cursor_and_current_read_failures_disclose_no_snapshot_or_successor",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_final_witness_refuses_owner_changes_including_same_revision_byte_replacement",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cancellation_drains_owner_reads_and_distinguishes_owner_outage_from_read_policy_failure",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_storage_refuses_pending_incomplete_and_oversized_files_without_recovery_or_initialization",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_chat_projection_scans_long_history_without_materializing_messages_and_refuses_oversized_tokens",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Cancelled_reconciliation_preserves_cancelled_disposition_and_never_dispatches",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Prepared_work_is_a_receipt_noop_while_native_uncertainty_requires_reconciliation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Readonly_lease_rejects_every_dispatch_batch_provider_and_approval_entrypoint",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Interrupted_reconciliation_requires_exact_nonterminal_effect_session",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Independent_journals_serialize_reconciliation_and_preserve_original_intent",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Reconciliation_slice_counts_misses_and_missing_readers_with_a_four_candidate_limit",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Durable_cursor_wraps_without_starvation_and_survives_append_restart_and_old_schema_five",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Single_checkpoint_rejects_cancellation_state_approval_and_journal_races_without_dispatch",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Partial_failure_or_cancel_preserves_observed_commitment_and_only_persisted_cursor_progress",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Pinned_claims_and_batched_checkpoint_bound_full_run_decodes_independent_of_candidate_count",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Maximum_journal_slice_bounds_evidence_response_bytes_and_records_real_store_cost",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim",
+          "kind": "Theory",
+          "rows": 2,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Confirmed_receipt_is_terminal_and_summary_never_discloses_cached_detail",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Receipt_miss_including_closed_absence_never_authorizes_retry_or_clears_uncertainty",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Missing_duplicate_malformed_and_failing_receipt_owners_fail_without_invented_acceptance",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Current_read_revocation_before_or_during_lookup_denies_historical_disclosure",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Reconciliation_cannot_change_original_binding_after_owner_observation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Journal_commit_ack_loss_or_capacity_failure_preserves_exact_intent_and_known_commitment",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_origin_segment_is_idempotent_and_only_original_live_lease_can_append",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_approvals_bind_original_proposal_without_any_sdk_checkpoint",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_provider_dispatch_preserves_schema_five_and_exact_native_response_fences",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Expired_write_source_with_current_read_can_confirm_an_original_effect",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectReconciliation.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Expired_process_dispatch_can_read_original_receipt_through_application_without_new_effect",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectApplication.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-existing-application-activity-integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "assembly": "CanDoItAll.Tests.Integration",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryActivityFailureTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 16.0,
+      "expectedExecution": 16.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Recovery_precedes_attachment_provider_and_checkpoint_access",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Interactive_write_revocation_allows_current_read_without_replacing_original_authority",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Current_read_revocation_before_or_during_lookup_blocks_disclosure",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Changed_agent_profile_or_generation_cannot_rebind_original_intent",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Confirmed_summary_stays_known_committed_without_querying_expired_detail",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Checkpoint_failure_preserves_exact_intent_and_reports_no_durable_waiting_promotion",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Prepared_receipt_noop_and_unsupported_approval_dispatch_preserve_decisions",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Cancelled_runs_remain_on_separate_no_dispatch_reconciliation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryApplicationTests.Startup_preserves_valid_effect_journal_including_zero_segments_without_sdk_work",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.Rest_recovery_returns_typed_waiting_without_metric_or_assistant",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.Run_detail_reconstructs_sanitized_continuation_without_journal_payload",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.Rest_recovery_and_existing_activity_stream_preserve_truthful_waiting",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.Denied_or_unavailable_receipt_response_cannot_disclose_cached_bytes_or_offer_retry",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentFramework.AgentEffectRecoveryApiTests.Disconnected_recovery_does_not_erase_confirmed_effect_or_publish_task_completion",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryActivityFailureTests.Confirmed_checkpoint_and_file_lease_knowledge_survive_activity_publication_and_owned_disposal_faults",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryActivityFailureTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentEffectRecoveryActivityFailureTests.Incomplete_denied_unavailable_cancelled_and_refused_recovery_keep_exact_knowledge_when_activity_finalization_also_fails",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryActivityFailureTests.cs"
+        }
+      ]
+    },
+    {
+      "id": "d1-new-owner-integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "assembly": "CanDoItAll.Tests.Integration",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.)&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 6.0,
+      "expectedExecution": 6.0,
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Full_exact_decisions_select_after_rejection_and_preserve_original_checkpoint_on_conflict",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Saved_lease_claims_one_exact_restored_effect_and_cannot_resume_the_original_provider_origin",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Competing_exact_commands_and_cancellation_cannot_replace_an_entered_effect_outcome",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Prepared_receipt_inconsistency_refuses_without_fabricated_claim_while_entered_effect_uses_existing_reconciliation",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Real_journal_publication_faults_and_lease_cleanup_preserve_exact_decisions_and_outcome",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentSavedEffectDispatchTests.Dormant_defaults_and_historical_journal_schemas_do_not_acquire_saved_effect_authority",
+          "kind": "Fact",
+          "rows": 1,
+          "source": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs"
+        }
+      ]
+    }
+  ],
+  "sourceIdentities": [
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentPendingApprovalCancellationTests.cs",
+      "sha256": "F19A63B07DDCD3802063CEBFDEE656F9B7997AD813DDBE294520A8D361A78301",
+      "bytes": 5643,
+      "facts": 2,
+      "theories": 3,
+      "inlineRows": 11,
+      "rows": 13,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.WireEquality.cs",
+      "sha256": "AE296D5CA1FDE6896DD2040012093EB539079F0344B07EAE75CFAFC6D92AC9B9",
+      "bytes": 9972,
+      "facts": 5,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.JsonSize.cs",
+      "sha256": "09194532BDC433DB1C082E6D05801D122313D9DB559042E4715EB0DE913C96CE",
+      "bytes": 8196,
+      "facts": 5,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolJournalSchemaFiveTests.cs",
+      "sha256": "F2FE1DA33C0E2B600CCF0434048BA096AF5044B09D572B48C8F3CA6F3E1B38BF",
+      "bytes": 23023,
+      "facts": 10,
+      "theories": 2,
+      "inlineRows": 8,
+      "rows": 18,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolDisclosureEvidenceTests.cs",
+      "sha256": "9A94B60BEF1DAAE65CA611CBDDB91FBE0566C81554201C9041C418A8EDA43F11",
+      "bytes": 3614,
+      "facts": 3,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentToolBackgroundSourceSerializationTests.cs",
+      "sha256": "5B113430754E7B48E8B7328B5C0059CA469C29C13C191AC1C3447CC0F4815282",
+      "bytes": 3213,
+      "facts": 3,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationResultTests.cs",
+      "sha256": "6225041D94500374687B7033E11BEC68E51A30B79C4B3E447DBFC953CE10D577",
+      "bytes": 8198,
+      "facts": 4,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 4,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentEffectContinuationConsumerTests.cs",
+      "sha256": "ABF13B3C1DB808FD1B28061A6843B5161ECA96725A85725706B322EDD7A68C40",
+      "bytes": 33797,
+      "facts": 5,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkRuntimeToolReceiptTests.cs",
+      "sha256": "84295B7159070448B4D2F0CC738730E61DC5ECC0F3C9BB5C24F8FB225000BD60",
+      "bytes": 16282,
+      "facts": 8,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 8,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentRuntimeToolRecoveryPolicyTests.cs",
+      "sha256": "C890C61502BFCEC507C24AAF74FF6C3B4CBFD970D52D91D93D5B499537E43DEA",
+      "bytes": 3261,
+      "facts": 2,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 4,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.Recovery.cs",
+      "sha256": "5959B81ECA599F96C2E57B992B87F378D78E87935FD26E038ADD440A939E3B46",
+      "bytes": 6612,
+      "facts": 2,
+      "theories": 3,
+      "inlineRows": 8,
+      "rows": 10,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentChatExecutionActivityOrchestratorTests.cs",
+      "sha256": "2E703F5FA270D4E1E405041266A64BBD750459C639AC210689FC437A439DA94D",
+      "bytes": 25922,
+      "facts": 5,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 5,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentExecutionActivityCoordinatorTests.cs",
+      "sha256": "4631F532AF1AD819CEE9A3AACC5AEC7D4AE82E34182D9C52D5FA269306414F73",
+      "bytes": 19237,
+      "facts": 14,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 14,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentFrameworkWorkspaceActivityAdmissionTests.cs",
+      "sha256": "80266B683FADD11D778850645AEEBFD987B94133D955510EBC0A8236802ECFC4",
+      "bytes": 13842,
+      "facts": 2,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 2,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CurrentProfileAgentExecutionActivityAdmissionTests.cs",
+      "sha256": "7E33680E89C97D924F723E6295F4DE542A7B36FCC92F0EE4CA2AFAB22CAC1DC2",
+      "bytes": 31746,
+      "facts": 4,
+      "theories": 1,
+      "inlineRows": 5,
+      "rows": 9,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.Reservation.cs",
+      "sha256": "E363AC22BE1F10FD96396449A45097E7EBBD5558FDC48138DA6531F89FAB1CB5",
+      "bytes": 24364,
+      "facts": 7,
+      "theories": 4,
+      "inlineRows": 12,
+      "rows": 19,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolBackgroundJournalIntegrationTests.cs",
+      "sha256": "D3760E0EFFB7D87C13AAC3ACA3AFE496ABC31E0DB68862C754F73D2F50930797",
+      "bytes": 26665,
+      "facts": 5,
+      "theories": 4,
+      "inlineRows": 10,
+      "rows": 15,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalIntegrationTests.cs",
+      "sha256": "2D6310A013C9EBFBCDC66F19741B8BC21BB09307130B0DB70C71165EBA4F30F1",
+      "bytes": 12497,
+      "facts": 4,
+      "theories": 4,
+      "inlineRows": 10,
+      "rows": 14,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolCancelledReadRecoveryIntegrationTests.cs",
+      "sha256": "3FDBD443BF12333A9705F78BBC3BCC3C82470030EACDAD2A5336F48CA1232FC1",
+      "bytes": 6707,
+      "facts": 0,
+      "theories": 2,
+      "inlineRows": 9,
+      "rows": 9,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentTypedContextJournalImmutabilityIntegrationTests.cs",
+      "sha256": "A04A204D1ACAF7FA8AAA78EDAA70B23FEB9B757B781E8BC7A314FC7D00B24916",
+      "bytes": 11846,
+      "facts": 2,
+      "theories": 2,
+      "inlineRows": 21,
+      "rows": 23,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectOnlyActivationBoundaryTests.cs",
+      "sha256": "F536E41F8FBD613C0A58C25C46924A8C73D1E7392EE08F2C8D9C5228BFFEE51A",
+      "bytes": 7196,
+      "facts": 0,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 2,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+      "sha256": "3CD0723A1E0F263C8465F9FCCA2C2868F294601413BD73D616D6F609F375A49F",
+      "bytes": 21509,
+      "facts": 6,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 6,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs",
+      "sha256": "B0A245C3D9B7ED700BB98711BCCE0472833803FA08147EB27B0CA7077F50ECCD",
+      "bytes": 5579,
+      "facts": 2,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 2,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs",
+      "sha256": "5E66B240547BC771440E9B75E9F7762E5E3311637CD59EB5D00EEB4D51FC4268",
+      "bytes": 18231,
+      "facts": 2,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 4,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+      "sha256": "5722A65EFC0D748EB206DFA0A1FF3814DDD5931539ACB39F05F8B008309B6828",
+      "bytes": 17854,
+      "facts": 6,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 6,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs",
+      "sha256": "5E753C493262FA8B9EB51870D07A525CDD7A10F918A51077059BAC2C814AD5DA",
+      "bytes": 19560,
+      "facts": 6,
+      "theories": 1,
+      "inlineRows": 2,
+      "rows": 8,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs",
+      "sha256": "995127AC4101027BF6D42323FEF791AD3722993187669E690BE2ED57DEE8890A",
+      "bytes": 10208,
+      "facts": 3,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 3,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectReconciliation.cs",
+      "sha256": "82B818E04A3050DAC4E1D94AFEA6485B6AEE6C9B6BE86DC1CFAFFE71B20E7E40",
+      "bytes": 9964,
+      "facts": 1,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 1,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.EffectApplication.cs",
+      "sha256": "A14728C4B7E94E5D52775376D959C1F20C0082E32E45919EFD0AB424EB7CF212",
+      "bytes": 10174,
+      "facts": 1,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 1,
+      "traits": []
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApplicationTests.cs",
+      "sha256": "BCC9B62B8A00F795403B32039984C5090B91EF3F146D723F7DD959AFC015D87B",
+      "bytes": 21009,
+      "facts": 9,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 9,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryApiTests.cs",
+      "sha256": "07016E936C32FD0CCC4CCA391FCD68BC7DE9E4DF8CF5273B6F721709E862541F",
+      "bytes": 21837,
+      "facts": 5,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 5,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "main-current",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentEffectRecoveryActivityFailureTests.cs",
+      "sha256": "42528B64F9B8019E9FD12A14D45E7E08B33183E9B0DE56A92680C435AC92703D",
+      "bytes": 14617,
+      "facts": 2,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 2,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    },
+    {
+      "root": "managed-frozen-D1",
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentSavedEffectDispatchTests.cs",
+      "sha256": "61FEC6FA4F46504729C0FADCE19F94BE504A62434BB023F520AEA03103D00EC1",
+      "bytes": 28120,
+      "facts": 6,
+      "theories": 0,
+      "inlineRows": 0,
+      "rows": 6,
+      "traits": [
+        "[Trait(\"Category\", \"FileSystemPortability\")]"
+      ]
+    }
+  ]
+}

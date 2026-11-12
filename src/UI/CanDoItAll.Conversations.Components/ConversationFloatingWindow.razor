@@ -1,25 +1,43 @@
-<div class="conversation-floating-window">
-    <OverlayWindow WindowId="@WindowId"
-                   TestId="@TestId"
-                   AriaLabel="@AriaLabel"
-                   Kicker="@Kicker"
-                   Title="@Title"
-                   Summary="@Summary"
-                   BodyClass="conversation-floating-window__body"
-                   DefaultPlacement="@DefaultPlacement"
-                   DefaultWidth="@DefaultWidth"
-                   DefaultHeight="@DefaultHeight"
-                   MinWidth="@MinWidth"
-                   MinHeight="@MinHeight"
-                   MaxWidth="@MaxWidth"
-                   MaxHeight="@MaxHeight"
-                   State="@State"
-                   StateChanged="@StateChanged">
-        @ChildContent
-    </OverlayWindow>
+@using Microsoft.AspNetCore.Components.Sections
+@using CanDoItAll.Conversations.Components.Presentation
+
+<div class="conversation-floating-window" hidden="@(!State.IsVisible)">
+    <CascadingValue Value="headerSlots" IsFixed="true">
+        <OverlayWindow WindowId="@WindowId"
+                       TestId="@TestId"
+                       AriaLabel="@AriaLabel"
+                       Kicker="@Kicker"
+                       Title="@Title"
+                       Summary="@Summary"
+                       BodyClass="conversation-floating-window__body"
+                       KeepContentMountedWhenMinimized="true"
+                       DefaultPlacement="@DefaultPlacement"
+                       DefaultWidth="@DefaultWidth"
+                       DefaultHeight="@DefaultHeight"
+                       MinWidth="@MinWidth"
+                       MinHeight="@MinHeight"
+                       MaxWidth="@MaxWidth"
+                       MaxHeight="@MaxHeight"
+                       State="@State"
+                       StateChanged="@StateChanged">
+            <HeaderLeading>
+                @if (Avatar is not null) {
+                    <Avatar Alt="@Avatar.Alt" ImageUrl="@Avatar.ImageUrl" FallbackText="@Avatar.FallbackText"
+                            DefaultImageSeed="@Avatar.Seed" Size="AvatarSize.Small" Shape="AvatarShape.Rounded" />
+                }
+            </HeaderLeading>
+            <HeaderStatus><SectionOutlet SectionId="headerSlots.Status" /></HeaderStatus>
+            <ChildContent>@ChildContent</ChildContent>
+        </OverlayWindow>
+    </CascadingValue>
 </div>
 
 @code {
+    private readonly ConversationWindowHeaderSlots headerSlots = new();
+
+    [Parameter]
+    public ConversationAvatarPresentation? Avatar { get; set; }
+
     [Parameter, EditorRequired]
     public string WindowId { get; set; } = string.Empty;
 

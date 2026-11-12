@@ -1002,7 +1002,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
                 catalog,
                 SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
                 Selection(publication.PublicationId),
-                SharedProviderSelectionMode.Replace));
+                SharedProviderSelectionMode.Replace, source.ConcurrencyToken, new(source.ConcurrencyToken, [])));
         Assert.Equal(SharedProviderReconciliationOutcome.Applied, reconciliation.Outcome);
 
         await using var editContext = await dbContextFactory.CreateDbContextAsync();
@@ -1076,6 +1076,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         IReadOnlySet<SharedProviderPublicationId> selectedPublicationIds)
     {
         await using var scope = application.Services.CreateAsyncScope();
+        var original = await scope.ServiceProvider.GetRequiredService<SharedProviderSourceSyncService>().ObserveAsync(sourceId);
         return await scope.ServiceProvider
             .GetRequiredService<SharedProviderReconciliationCoordinator>()
             .ReconcileAsync(new SharedProviderReconciliationRequest(
@@ -1083,7 +1084,7 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
                 catalog,
                 SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
                 selectedPublicationIds,
-                SharedProviderSelectionMode.AddOrReactivate));
+                SharedProviderSelectionMode.AddOrReactivate, original.ConcurrencyToken, original));
     }
 
     private static async Task<PersistedSharedIdentity> LoadSharedIdentityAsync(
@@ -1132,10 +1133,10 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
         var factory = scope.ServiceProvider
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
-        var settings = await dbContext.Set<WorkspaceSettings>().FirstOrDefaultAsync();
+        var settings = await dbContext.Set<WorkspaceSettings>().SingleOrDefaultAsync(item => item.IsCurrent);
         if (settings is null)
         {
-            settings = new WorkspaceSettings();
+            settings = new WorkspaceSettings { IsCurrent = true };
             dbContext.Add(settings);
         }
 
@@ -1151,9 +1152,9 @@ public sealed class SharedProviderBackendCheckpointIntegrationTests
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await factory.CreateDbContextAsync();
         return await dbContext.Set<WorkspaceSettings>()
-            .OrderByDescending(item => item.UpdatedAtUtc)
+            .Where(item => item.IsCurrent)
             .Select(item => item.DefaultProviderProfileId)
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
     }
 
     private static async Task MarkSourceUnavailableAsync(

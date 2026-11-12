@@ -39,7 +39,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         Assert.Equal(eligibleId, oldLifetime.ProjectId);
         Assert.Equal(3, bound.AllowedProjectIds.Count);
         Assert.True((await projects.CreateAsync(missingId, new() { Name = "Previously missing" })).IsSuccess);
-        await projects.DeleteAsync(eligibleId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(eligibleId);
         Assert.True((await projects.CreateAsync(eligibleId, new() { Name = "New lifetime with old id" })).IsSuccess);
         var after = ReadAccess(await CreateGuardedStore(services, environment.RootPath).LoadCatalogAsync(), agent.Id);
         Assert.Equal(oldLifetime, Assert.Single(after.AllowedProjectLifetimes));
@@ -68,13 +68,14 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var lifetime = new AgentProjectStructureLifetime(reservation.DatabaseProfileId, reservation.ProjectId, reservation.LifetimeId);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
         await workspace.GrantAgentProjectStructureLifetimeAsync(firstId, lifetime);
-        await admissions.CancelCreationAsync(reservation);
-        Assert.Equal(lifetime, Assert.Single(AgentProjectStructureAccessMetadata.Read(
-            Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectLifetimes));
+        var cancelled = Assert.IsType<ProjectReservationCancellationOutcome.Committed>(await services
+            .GetRequiredService<ProjectReservationCancellationOwner>().CancelAsync(await admissions.CaptureReservationCancellationAsync(reservation)));
+        Assert.Null(cancelled.CompletionIssue);
+        Assert.Empty(AgentProjectStructureAccessMetadata.Read(
+            Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectLifetimes);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(reservation.ProjectId, new() { Name = "Different lifetime" })).IsSuccess);
         await Assert.ThrowsAsync<InvalidOperationException>(() => workspace.GrantAgentProjectStructureLifetimeAsync(otherId, lifetime));
-        await workspace.RevokeAgentProjectStructureLifetimeAsync(firstId, lifetime);
         Assert.Empty(AgentProjectStructureAccessMetadata.Read(
             Assert.Single(await workspace.ListAgentsAsync(), agent => agent.Id == firstId).ConfigurationJson).AllowedProjectIds);
     }
@@ -94,7 +95,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
         var old = ReadAccess(saved, agent.Id);
         await store.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(current => current.Id != agent.Id
             ? current : current with { ConfigurationJson = AgentProjectStructureAccessMetadata.RevokeProject(current.ConfigurationJson, projectId).ConfigurationJson }).ToArray() });
-        await projects.DeleteAsync(projectId);
+        await new ProjectLifecycleTestDriver(services).DeleteAsync(projectId);
         Assert.True((await projects.CreateAsync(projectId, new() { Name = "Replacement catalog binding" })).IsSuccess);
         await Assert.ThrowsAsync<InvalidOperationException>(() => store.SaveCatalogAsync(saved));
         var currentCatalog = await store.LoadCatalogAsync();
@@ -107,7 +108,7 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
     }
 
     [Fact]
-    public async Task Many_catalog_agents_use_two_bulk_owner_reads_without_a_carried_database_transaction_and_profile_mismatch_is_denied() {
+    public async Task Many_catalog_agents_use_two_bulk_owner_reads_per_publication_phase_without_a_carried_transaction_and_profile_mismatch_is_denied() {
         await using var application = await TestApplication.CreateAsync();
         await using var environment = CanDoItAllTestEnvironment.Create("catalog-bulk-facts");
         await using var scope = application.Services.CreateAsyncScope();
@@ -122,20 +123,43 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
             .AddInterceptors(probe).Options;
         var canonical = services.GetRequiredService<ICanonicalRuntimeDatabase>();
         var admissions = new ProjectWriteAdmissionService(new ProjectFactory(options), options,
-            services.GetRequiredService<CoordinatedDatabaseTransaction>(), canonical);
-        var guarded = new FileSandboxWorkspaceStore(environment.RootPath, catalogMutationPolicy:
-            new AgentProjectAccessCatalogPolicy(admissions, canonical.Profile.Profile.Id));
+            services.GetRequiredService<CoordinatedDatabaseTransaction>(), canonical, services.GetRequiredService<DatasetActivationService>());
+        var policy = new CatalogPolicyProbe(new AgentProjectAccessCatalogPolicy(admissions, canonical.Profile.Profile.Id), probe);
+        var guarded = new FileSandboxWorkspaceStore(environment.RootPath, catalogMutationPolicy: policy);
         var agentIds = agents.Select(agent => agent.Id).ToHashSet();
-        var saved = await guarded.UpdateCatalogAsync(catalog => catalog with { Agents = catalog.Agents.Select(agent => !agentIds.Contains(agent.Id)
-            ? agent : agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
-                new() { AllowedProjectIds = [projectId] }) }).ToArray() });
-        Assert.Equal(2, probe.Transactions.Count);
+        var callbacks = 0;
+        var saved = await guarded.UpdateCatalogAsync(catalog => {
+            callbacks++;
+            return catalog with { Agents = catalog.Agents.Select(agent => !agentIds.Contains(agent.Id)
+                ? agent : agent with { ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
+                    new() { AllowedProjectIds = [projectId] }) }).ToArray() };
+        });
+        Assert.Equal(1, callbacks);
+        Assert.Equal([2, 2], policy.ReadsPerPhase);
+        Assert.Equal(4, probe.Transactions.Count);
         Assert.All(probe.Transactions, transaction => Assert.Null(transaction));
         Assert.All(saved.Agents.Where(agent => agentIds.Contains(agent.Id)), agent =>
             Assert.Equal(projectId, Assert.Single(AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson).AllowedProjectLifetimes).ProjectId));
         var mismatched = new AgentProjectAccessCatalogPolicy(admissions, Guid.NewGuid());
         await Assert.ThrowsAsync<InvalidOperationException>(() => mismatched.ApplyAsync(saved, saved));
-        Assert.Equal(2, probe.Transactions.Count);
+        Assert.Equal(4, probe.Transactions.Count);
+
+        probe.Transactions.Clear();
+        await using (var held = await guarded.AcquireAgentAuthoritySnapshotAsync([agents[0].Id, agents[1].Id])) {
+            Assert.Equal(2, held.Agents.Length);
+            Assert.Empty(probe.Transactions);
+        }
+        var edited = await guarded.UpdateCatalogAsync(catalog => catalog with {
+            Agents = catalog.Agents.Select(agent => agent.Id != agents[0].Id ? agent : agent with {
+                Name = "Unrelated display edit",
+                ConfigurationJson = AgentProjectStructureAccessMetadata.Write(agent.ConfigurationJson,
+                    new() { AllowedProjectIds = [projectId] })
+            }).ToArray()
+        });
+        Assert.Equal("Unrelated display edit", Assert.Single(edited.Agents, agent => agent.Id == agents[0].Id).Name);
+        Assert.Equal(ReadAccess(saved, agents[0].Id).AllowedProjectLifetimes,
+            ReadAccess(edited, agents[0].Id).AllowedProjectLifetimes);
+        Assert.Empty(probe.Transactions);
     }
 
     private static FileSandboxWorkspaceStore CreateGuardedStore(IServiceProvider services, string root) => new(root,
@@ -176,6 +200,18 @@ public sealed class AgentProjectCatalogPolicyIntegrationTests {
             InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
             Transactions.Add(command.Transaction);
             return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class CatalogPolicyProbe(IAgentCatalogMutationPolicy inner, QueryProbe queries) : IAgentCatalogMutationPolicy {
+        public List<int> ReadsPerPhase { get; } = [];
+
+        public async Task<SandboxWorkspaceCatalog> ApplyAsync(SandboxWorkspaceCatalog before, SandboxWorkspaceCatalog after,
+            CancellationToken cancellationToken = default) {
+            var previousCount = queries.Transactions.Count;
+            var result = await inner.ApplyAsync(before, after, cancellationToken);
+            ReadsPerPhase.Add(queries.Transactions.Count - previousCount);
+            return result;
         }
     }
 }

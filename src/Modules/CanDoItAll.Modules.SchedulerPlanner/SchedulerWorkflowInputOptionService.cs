@@ -48,7 +48,11 @@ public sealed class SchedulerWorkflowInputOptionService(
             parameter,
             currentValues.ToDictionary(StringComparer.Ordinal));
         var resolved = new List<WorkflowInputParameterOption>();
-        foreach (var provider in providers.Where(provider => provider.SourceKind == parameter.OptionSource.Kind))
+        var matchingProviders = providers.Where(provider => provider.SourceKind == parameter.OptionSource.Kind).ToArray();
+        if (matchingProviders.Length == 0) {
+            throw new InvalidOperationException($"No Scheduler input option provider is registered for {parameter.OptionSource.Kind}.");
+        }
+        foreach (var provider in matchingProviders)
         {
             var options = await provider.ListOptionsAsync(query, cancellationToken);
             resolved.AddRange(options);

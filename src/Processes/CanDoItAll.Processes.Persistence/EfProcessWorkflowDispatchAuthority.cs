@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -26,7 +25,7 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Mapped Workflow dispatch fencing requires the actual PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var request = expected.Request;
         await context.RuntimeStates.FromSqlInterpolated($"""
@@ -63,7 +62,7 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
         if (!context.Database.IsNpgsql()) {
             throw new NotSupportedException("Mapped Workflow continuation fencing requires the actual PostgreSQL owner transaction.");
         }
-        var key = RootLockKey(expected.Dispatch.RootRunId.Value);
+        var key = ProcessRootAdvisoryKey.From(expected.Dispatch.RootRunId.Value);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
         var request = expected.Request;
         await context.RuntimeStates.FromSqlInterpolated($"""
@@ -83,6 +82,9 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
             WHERE "RunId" = {request.RunId.Value} AND "StepInstanceId" = {request.StepInstanceId.Value} FOR SHARE
             """).AsNoTracking().ToArrayAsync(cancellationToken);
         var current = await ReadContinuationCoreAsync(context, request, clock.GetUtcNow(), cancellationToken);
+        if (expected.Dispatch.Assignment.DecisionDataPolicy is not null || current.Dispatch.Assignment.DecisionDataPolicy is not null) {
+            throw Mismatch("The mapped Workflow continuation does not support the admitted Process decision policy.");
+        }
         if (current.OriginalClaimSequence != expected.OriginalClaimSequence || current.Dispatch.RootRunId != expected.Dispatch.RootRunId ||
                 current.Dispatch.OwnerFingerprint != expected.Dispatch.OwnerFingerprint ||
                 current.Dispatch.Request != expected.Dispatch.Request || current.ProjectAdmission != expected.ProjectAdmission) {
@@ -222,18 +224,13 @@ public sealed class EfProcessWorkflowDispatchAuthority(IDbContextFactory<Process
             LaunchVariables = assignment.LaunchVariables.OrderBy(item => item.Key, StringComparer.Ordinal).ToArray(),
             PreparationFingerprint = saved?.PreparationFingerprint
         })))).ToLowerInvariant();
-        var current = state.Status == ProcessRuntimeStatus.Active && step.IsExecutable &&
+        var current = assignment.DecisionDataPolicy is null && state.Status == ProcessRuntimeStatus.Active && step.IsExecutable &&
             step.Status is (ProcessRuntimeStepStatus.Claimed or ProcessRuntimeStepStatus.Running) && step.ActiveClaimToken == request.Claim.Value &&
             step.AttemptNumber == claim.AttemptNumber && claim.Status is (DispatchClaimStatus.Claimed or DispatchClaimStatus.LeaseRenewed or DispatchClaimStatus.Reclaimed) &&
             claim.CreatedAtUtc <= now && claim.ExpiresAtUtc > now;
         return new(request, new(state.RootRunId), assignment, fingerprint, source, current, now);
     }
 
-    private static long RootLockKey(Guid rootRunId) {
-        Span<byte> bytes = stackalloc byte[16];
-        rootRunId.TryWriteBytes(bytes);
-        return BinaryPrimitives.ReadInt64LittleEndian(bytes[..8]) ^ BinaryPrimitives.ReadInt64LittleEndian(bytes[8..]);
-    }
 
     private static ProcessExecutionAuthorityMismatchException Mismatch(string message) => new(message);
 }

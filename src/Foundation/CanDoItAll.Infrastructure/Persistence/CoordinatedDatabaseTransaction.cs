@@ -132,8 +132,12 @@ public sealed class CoordinatedDatabaseTransaction {
             }
             frame.RequireActive();
             return context;
-        } catch {
-            await context.DisposeAsync().ConfigureAwait(false);
+        } catch (Exception primary) {
+            try {
+                await context.DisposeAsync().ConfigureAwait(false);
+            } catch (Exception cleanup) {
+                throw new AggregateException("Participant enrollment and context release both failed.", primary, cleanup);
+            }
             throw;
         }
     }

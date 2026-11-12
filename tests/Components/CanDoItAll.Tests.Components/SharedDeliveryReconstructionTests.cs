@@ -74,7 +74,7 @@ public sealed class SharedDeliveryReconstructionTests {
     }
 
     [Fact]
-    public async Task Exact_before_state_allows_deliberate_action_without_replay() {
+    public async Task Exact_before_state_still_requires_acknowledgement_before_a_separate_write() {
         var service = DispatchProxy.Create<ISharedProviderManagementService, SharedProviderRecoveryTests.SharingProxy>();
         var proxy = (SharedProviderRecoveryTests.SharingProxy)(object)service;
         var before = proxy.State(proxy.Id);
@@ -83,7 +83,9 @@ public sealed class SharedDeliveryReconstructionTests {
         await cut.WaitForElement("[data-testid='shared-provider-publish']").ClickAsync();
         proxy.Read = (_, _) => Task.FromResult(before);
         await cut.Find("[data-testid='shared-provider-retry']").ClickAsync();
-        Assert.Contains("write was not applied", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
+        Assert.True(cut.Find("[data-testid='shared-provider-publish']").HasAttribute("disabled"));
+        await cut.Find("[data-testid='shared-provider-acknowledge-current']").ClickAsync();
         Assert.False(cut.Find("[data-testid='shared-provider-publish']").HasAttribute("disabled"));
         Assert.Equal(1, proxy.Writes);
     }
@@ -99,11 +101,11 @@ public sealed class SharedDeliveryReconstructionTests {
             services.AddSingleton<IProviderProfilesReads>(reads);
         });
         var cut = harness.Context.Render<AgentProviderProfilesPanel>();
-        cut.WaitForElement("[data-testid='providers-name-input']").Change("Unsaved local name");
+        cut.WaitForElement("[data-testid='providers-name-input']").Input("Unsaved local name");
         var context = cut.FindComponent<ProviderProfileEditorForm>().Instance.Context;
         await cut.FindAll("button[role='tab']").Single(x => x.TextContent.Contains("Runtime", StringComparison.Ordinal)).ClickAsync();
         var raw = "first\n\n second \n first";
-        cut.Find("[data-testid='providers-suggested-models']").Change(raw);
+        cut.Find("[data-testid='providers-suggested-models']").Input(raw);
         await cut.Find("[data-testid='providers-connections']").ClickAsync();
         reads.FailCatalog = true;
         await cut.WaitForElement("[data-testid='shared-provider-source-sync']").ClickAsync();

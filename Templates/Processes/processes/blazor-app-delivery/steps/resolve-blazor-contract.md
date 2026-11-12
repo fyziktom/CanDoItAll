@@ -8,3 +8,9 @@ Resolve the validation environment as part of this contract, before handing work
 
 Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.
 
+
+Resolve the final result parent at contract time: read the exact `ProjectNodeId` and record its id and kind in the handoff. A selected WorkItem or delivery ProjectBlock is the direct parent for the result Note. Do not infer a sibling WorkItem or substitute the project root. Block before implementation if the selected node is missing or has an unsupported kind.
+
+The final writeback must also register a persistent typed Environment runtime node directly under that same selected parent, so the user can start the delivered app later. Require the implementation/QA handoff to identify the exact runnable app project and its launch settings; keep the result Note descriptive and the runtime launch control separate.
+
+Keep validation-host cache policy separate from production deployment policy. The managed workspace_static_serve host deliberately returns no-cache, max-age=0, must-revalidate for fresh-build proof; this is compatible with service-worker offline caching and is not by itself a product defect. Require a particular cache lifetime or immutable fingerprinted-asset response only when explicitly required by the project source or a named deployment target. Do not promote a recommended production caching optimization into a new mandatory acceptance criterion, or replace the managed proof host with a custom script solely to obtain that optimization. Still verify current published assets, entry/worker revalidation, required offline/update behavior and cleanup. An explicitly required deployment cache policy remains a separate required check; if the available host cannot prove it, report the concrete capability gap as Blocked without claiming that deployment requirement passed.

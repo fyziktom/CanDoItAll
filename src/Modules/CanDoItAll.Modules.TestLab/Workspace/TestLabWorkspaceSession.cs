@@ -1,0 +1,481 @@
+using CanDoItAll.AppComponents.Navigation;
+using CanDoItAll.Modules.TestLab.Pages;
+using CanDoItAll.TestLab.UI;
+using Microsoft.Extensions.Logging;
+
+namespace CanDoItAll.Modules.TestLab;
+
+// The routed page applies its address through ApplyRouteAsync; user intents report the address they produce
+// through navigate, with the history rule of the intent.
+public sealed class TestLabWorkspaceSession(
+    ITestLabWorkspaceOwner owner,
+    Action changed,
+    Action<TestLabReceipt> notify,
+    ILogger<TestLabWorkspaceSession> logger,
+    Action<TestLabUrlState, UrlHistoryMode>? navigate = null) : ITestLabWorkspaceView, IDisposable {
+    private readonly ReadLane planReads = new();
+    private readonly ReadLane listReads = new();
+    private readonly ReadLane projectReads = new();
+    private readonly ReadLane partyReads = new();
+    private (Guid? PlanId, Guid? ProjectId)? route;
+    private long routeVersion;
+    private Guid? requestedPlan;
+    private bool disposed;
+    public TestLabWorkspaceState State { get; } = new();
+
+    public TestLabUrlState Route => TestLabUrlState.From(State.Draft?.Model.Id ?? requestedPlan, State.Section, route?.ProjectId, State.Filter);
+
+    // The section and filters apply without a read; a different plan or project selects again.
+    public async Task ApplyRouteAsync(TestLabUrlState address) {
+        if (disposed) {
+            return;
+        }
+        State.Filter = address.Filter;
+        if (route == (address.PlanId, address.ProjectId)) {
+            State.Section = address.Section;
+            Changed();
+            return;
+        }
+        route = (address.PlanId, address.ProjectId);
+        var version = ++routeVersion;
+        RetireEditor();
+        State.Section = address.Section;
+        await Task.WhenAll(LoadProjectsAsync(), LoadListAsync());
+        if (disposed || routeVersion != version) {
+            return;
+        }
+        if (address.PlanId is { } id) {
+            await SelectCoreAsync(id, address.Section);
+        } else {
+            await NewCoreAsync(address.Section);
+        }
+    }
+
+    public Task NewAsync() {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        route = (null, route?.ProjectId);
+        var loading = NewCoreAsync(TestLabSection.Overview);
+        Publish(UrlHistoryMode.Push);
+        return loading;
+    }
+
+    private Task NewCoreAsync(TestLabSection section) {
+        routeVersion++;
+        RetireEditor();
+        State.Section = section;
+        requestedPlan = null;
+        var projectId = route?.ProjectId;
+        State.Draft = new(new() {
+            ProjectId = projectId,
+            ExpectedProjectAdmission = State.Projects.FirstOrDefault(item => item.Id == projectId)?.Admission
+        });
+        State.EditorRead = TestLabReadState.Ready;
+        Changed();
+        return LoadPartiesAsync(State.Draft);
+    }
+
+    public Task SelectAsync(Guid id) {
+        if (disposed) {
+            return Task.CompletedTask;
+        }
+        route = (id, route?.ProjectId);
+        var loading = SelectCoreAsync(id, TestLabSection.Overview);
+        Publish(UrlHistoryMode.Push);
+        return loading;
+    }
+
+    public void SelectSection(TestLabSection section) {
+        if (disposed || State.Section == section) {
+            return;
+        }
+        State.Section = section;
+        Changed();
+        Publish(UrlHistoryMode.Push);
+    }
+
+    // Filters apply instantly over the loaded plans, so their address replaces the current entry.
+    public void ApplyFilter(TestLabPlanFilter filter) {
+        ArgumentNullException.ThrowIfNull(filter);
+        if (disposed || State.Filter == filter) {
+            return;
+        }
+        State.Filter = filter;
+        Changed();
+        Publish(UrlHistoryMode.Replace);
+    }
+
+    private async Task SelectCoreAsync(Guid id, TestLabSection section) {
+        routeVersion++;
+        RetireEditor();
+        State.Section = section;
+        requestedPlan = id;
+        using var read = planReads.Begin();
+        State.EditorRead = TestLabReadState.Loading;
+        Changed();
+        try {
+            var model = await owner.GetAsync(id, read.Token);
+            if (!planReads.Accept(read) || disposed) {
+                return;
+            }
+            State.EditorRead = model is null ? TestLabReadState.Missing : TestLabReadState.Ready;
+            State.Draft = model is null ? null : new(model);
+            Changed();
+            if (State.Draft is { } draft) {
+                await LoadPartiesAsync(draft);
+            }
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (planReads.Accept(read) && !disposed) {
+                State.EditorRead = TestLabReadState.Unavailable;
+                ReadFailed(exception, "plan", id);
+            }
+        }
+    }
+
+    public Task ChangeProjectAsync(TestLabDraft origin, Guid? projectId, long? targetVersion = null) {
+        if (!AcceptIntent(origin, targetVersion)) {
+            return Task.CompletedTask;
+        }
+        planReads.Retire();
+        origin.ChangeProject(projectId, State.Projects.FirstOrDefault(item => item.Id == projectId)?.Admission);
+        Changed();
+        return LoadPartiesAsync(origin);
+    }
+
+    public Task ChangePartyAsync(TestLabDraft origin, Guid? partyId, long? targetVersion = null) {
+        if (!AcceptIntent(origin, targetVersion)) {
+            return Task.CompletedTask;
+        }
+        origin.Model.ResponsiblePartyId = partyId;
+        origin.Edited();
+        return LoadPartiesAsync(origin);
+    }
+
+    public async Task SaveAsync(TestLabDraft origin, long? targetVersion = null) {
+        if (!AcceptIntent(origin, targetVersion) || origin.BeginSave() is not { } submission) {
+            return;
+        }
+        planReads.Retire();
+        Changed();
+        TestLabWriteResult result;
+        try {
+            result = await owner.SaveAsync(submission.Model);
+        } catch (Exception exception) {
+            logger.LogError("TestLab owner port failed. FailureType={FailureType}", exception.GetType().Name);
+            result = new(TestLabWriteOutcome.Unknown, null, "Save outcome is unknown. Review stored plans before starting another submission.");
+        }
+        if (disposed) {
+            return;
+        }
+        var current = submission.BelongsTo(State.Draft);
+        if (result.Outcome is TestLabWriteOutcome.Refused or TestLabWriteOutcome.Unknown or TestLabWriteOutcome.Conflict) {
+            if (current) {
+                var status = result.Outcome switch {
+                    TestLabWriteOutcome.Refused => TestLabSaveState.Refused,
+                    TestLabWriteOutcome.Conflict => TestLabSaveState.Conflict,
+                    _ => TestLabSaveState.Unknown
+                };
+                origin.Finish(submission, status, result.Message);
+                Receipt(new(status, null, result.Message));
+            }
+            return;
+        }
+        if (result.PlanId is not { } id || id == Guid.Empty) {
+            if (current) {
+                origin.Finish(submission, TestLabSaveState.Unknown, "The owner returned no committed identity. Review stored plans before starting another submission.");
+                Changed();
+            }
+            return;
+        }
+        if (current) {
+            submission.RetainIdentities(origin, id);
+            origin.LastCommitted = submission;
+            if (route?.PlanId != id) {
+                // The new plan has an identity now; the address had no selection, so it is replaced.
+                requestedPlan = id;
+                route = (id, route?.ProjectId);
+                Publish(UrlHistoryMode.Replace);
+            }
+        }
+        var statusAfterSave = TestLabSaveState.SavedWithWarning;
+        if (result.Outcome == TestLabWriteOutcome.Committed && current) {
+            statusAfterSave = await RefreshCommittedAsync(origin, submission) ? TestLabSaveState.Saved : TestLabSaveState.SavedWithWarning;
+        } else if (result.Outcome == TestLabWriteOutcome.Committed) {
+            statusAfterSave = TestLabSaveState.Saved;
+        }
+        if (disposed) {
+            return;
+        }
+        var message = statusAfterSave == TestLabSaveState.Saved
+            ? $"Test plan '{id:D}' was saved."
+            : $"Test plan '{id:D}' was saved; refresh incomplete. Retry refresh to review the committed state.";
+        if (submission.BelongsTo(State.Draft)) {
+            origin.Finish(submission, statusAfterSave, message);
+        }
+        Receipt(new(statusAfterSave, id, message));
+    }
+
+    public async Task CompareChangesAsync(TestLabDraft origin) {
+        if (!AcceptIntent(origin, null) || origin.SaveState != TestLabSaveState.Conflict || origin.IsComparing || origin.Model.Id is not { } id) {
+            return;
+        }
+        var revision = origin.Revision;
+        using var read = planReads.Begin();
+        origin.IsComparing = true;
+        origin.Comparison = null;
+        Changed();
+        try {
+            var current = await owner.GetAsync(id, read.Token);
+            if (!AcceptIntent(origin, null) || !planReads.Accept(read)) {
+                return;
+            }
+            if (current?.Id != id || current.ExpectedPlan is null) {
+                origin.Message = "The saved plan is unavailable. Your draft is retained.";
+            } else if (origin.Revision != revision) {
+                origin.Message = "The draft changed during the read. Compare changes again.";
+            } else {
+                origin.Comparison = new(origin, current);
+                origin.Message = "Review the current plan and choose how to combine your changes.";
+            }
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (AcceptIntent(origin, null) && planReads.Accept(read)) {
+                origin.Message = "The plan comparison could not be prepared. Your draft is retained.";
+                ReadFailed(exception, "plan comparison", id);
+            }
+        } finally {
+            origin.IsComparing = false;
+            Changed();
+        }
+    }
+
+    public async Task ApplyComparisonAsync(TestLabDraft origin, TestLabPlanComparison comparison) {
+        if (AcceptIntent(origin, null) && origin.SaveState == TestLabSaveState.Conflict && origin.ApplyComparison(comparison)) {
+            State.Receipt = null;
+            Changed();
+            await LoadPartiesAsync(origin);
+        }
+    }
+
+    public async Task RetryAsync() {
+        if (disposed) {
+            return;
+        }
+        var draft = State.Draft;
+        var submission = draft?.LastCommitted;
+        await Task.WhenAll(LoadProjectsAsync(), LoadListAsync());
+        if (disposed || !ReferenceEquals(draft, State.Draft)) {
+            return;
+        }
+        if (draft is null && requestedPlan is { } id) {
+            // A retry reads the same selection again; it is not a navigation.
+            await SelectCoreAsync(id, State.Section);
+        } else if (draft is not null) {
+            if (submission is not null && draft.Pending is null && await RefreshCommittedAsync(draft, submission, refreshList: false) && submission.BelongsTo(State.Draft)) {
+                draft.SaveState = TestLabSaveState.Saved;
+                draft.Message = $"Test plan '{submission.CommittedId:D}' refreshed. Newer edits are retained.";
+            }
+            if (!disposed && ReferenceEquals(draft, State.Draft)) {
+                await LoadPartiesAsync(draft);
+            }
+        }
+        Changed();
+    }
+
+    private async Task<bool> RefreshCommittedAsync(TestLabDraft origin, TestLabSubmission submission, bool refreshList = true) {
+        if (!IsCurrentCommit(origin, submission) || submission.CommittedId is not { } id) {
+            return false;
+        }
+        using var read = planReads.Begin();
+        try {
+            if (refreshList) {
+                await LoadListAsync();
+            }
+            if (!planReads.Accept(read) || !IsCurrentCommit(origin, submission)) {
+                return false;
+            }
+            var accepted = await owner.GetAsync(id, read.Token);
+            if (!planReads.Accept(read) || !IsCurrentCommit(origin, submission)) {
+                return false;
+            }
+            if (accepted?.Id != id || accepted.ExpectedPlan != submission.Model.ExpectedPlan) {
+                State.EditorRead = TestLabReadState.Stale;
+                return false;
+            }
+            submission.Reconcile(origin, accepted);
+            State.EditorRead = TestLabReadState.Ready;
+            return State.PlansRead is TestLabReadState.Ready or TestLabReadState.Empty;
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+            return false;
+        } catch (Exception exception) {
+            if (planReads.Accept(read) && IsCurrentCommit(origin, submission)) {
+                State.EditorRead = TestLabReadState.Stale;
+                ReadFailed(exception, "committed plan", id);
+            }
+            return false;
+        }
+    }
+
+    public Task MovePlanPageAsync(bool next) {
+        if (disposed || State.PlansRead == TestLabReadState.Loading || (next ? !State.HasMorePlans : State.PlanOffset == 0)) {
+            return Task.CompletedTask;
+        }
+        return LoadListAsync(State.PlanOffset + (next ? TestLabPlanPage.Size : -TestLabPlanPage.Size));
+    }
+
+    private async Task LoadListAsync(int? pageOffset = null) {
+        using var read = listReads.Begin();
+        var offset = pageOffset ?? State.PlanOffset;
+        State.PlansRead = TestLabReadState.Loading;
+        Changed();
+        try {
+            var page = await owner.ListAsync(offset, read.Token);
+            if (!disposed && listReads.Accept(read)) {
+                State.PlanOffset = offset;
+                State.HasMorePlans = page.HasNext;
+                State.Plans = page.Plans;
+                State.PlansRead = page.Plans.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+                Changed();
+            }
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed && listReads.Accept(read)) {
+                State.PlansRead = State.Plans.Count == 0 ? TestLabReadState.Unavailable : TestLabReadState.Stale;
+                ReadFailed(exception, "list", null);
+            }
+        }
+    }
+
+    private async Task LoadProjectsAsync() {
+        using var read = projectReads.Begin();
+        State.ProjectsRead = TestLabReadState.Loading;
+        try {
+            var projects = await owner.ProjectsAsync(read.Token);
+            if (!disposed && projectReads.Accept(read)) {
+                State.Projects = projects;
+                State.ProjectsRead = projects.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+                Changed();
+            }
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (!disposed && projectReads.Accept(read)) {
+                State.ProjectsRead = State.Projects.Count == 0 ? TestLabReadState.Unavailable : TestLabReadState.Stale;
+                ReadFailed(exception, "projects", null);
+            }
+        }
+    }
+
+    private async Task LoadPartiesAsync(TestLabDraft origin) {
+        using var read = partyReads.Begin();
+        var version = origin.TargetVersion;
+        var projectId = origin.Model.ProjectId;
+        var partyId = origin.Model.ResponsiblePartyId;
+        State.Parties = [];
+        State.PartiesRead = TestLabReadState.Loading;
+        Changed();
+        bool Current() => !disposed && partyReads.Accept(read) && ReferenceEquals(State.Draft, origin) &&
+            origin.TargetVersion == version && origin.Model.ResponsiblePartyId == partyId;
+        try {
+            var options = projectId is { } id ? await owner.PartiesAsync(id, read.Token) : [];
+            if (!Current()) {
+                return;
+            }
+            if (partyId is { } savedId && options.All(item => item.PartyId != savedId)) {
+                var saved = await owner.PartyAsync(savedId, read.Token);
+                if (!Current()) {
+                    return;
+                }
+                if (saved is not null) {
+                    options = options.Append(saved).OrderBy(item => item.DisplayName).ToArray();
+                }
+            }
+            State.Parties = options;
+            State.PartiesRead = options.Count == 0 ? TestLabReadState.Empty : TestLabReadState.Ready;
+            Changed();
+        } catch (OperationCanceledException) when (read.Token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            if (Current()) {
+                State.PartiesRead = TestLabReadState.Unavailable;
+                ReadFailed(exception, "parties", projectId);
+            }
+        }
+    }
+
+    private void RetireEditor() {
+        planReads.Retire();
+        partyReads.Retire();
+        State.Draft = null;
+        State.Parties = [];
+        State.Section = TestLabSection.Overview;
+    }
+
+    private void Receipt(TestLabReceipt receipt) {
+        State.Receipt = receipt;
+        notify(receipt);
+        Changed();
+    }
+
+    private void ReadFailed(Exception exception, string scope, Guid? id) {
+        logger.LogWarning("TestLab read failed. Scope={Scope} Id={Id} FailureType={FailureType}", scope, id, exception.GetType().Name);
+        Changed();
+    }
+
+    private void Changed() {
+        if (!disposed) {
+            changed();
+        }
+    }
+
+    private void Publish(UrlHistoryMode mode) {
+        if (!disposed) {
+            navigate?.Invoke(Route, mode);
+        }
+    }
+
+    private bool AcceptIntent(TestLabDraft origin, long? version) => !disposed && ReferenceEquals(State.Draft, origin) &&
+        (version is null || version == origin.TargetVersion);
+
+    private bool IsCurrentCommit(TestLabDraft origin, TestLabSubmission submission) => !disposed &&
+        submission.BelongsTo(State.Draft) && ReferenceEquals(origin.LastCommitted, submission);
+
+    public void Dispose() {
+        disposed = true;
+        routeVersion++;
+        planReads.Retire();
+        listReads.Retire();
+        projectReads.Retire();
+        partyReads.Retire();
+    }
+
+    private sealed class ReadLane {
+        private Request? current;
+        public Request Begin() {
+            Retire();
+            current = new();
+            return current;
+        }
+        public bool Accept(Request request) => ReferenceEquals(current, request);
+        public void Retire() {
+            current?.Cancel();
+            current = null;
+        }
+    }
+
+    private sealed class Request : IDisposable {
+        private readonly CancellationTokenSource source = new();
+        private bool finished;
+        public CancellationToken Token { get; }
+        public Request() => Token = source.Token;
+        public void Cancel() {
+            if (!finished) {
+                source.Cancel();
+            }
+        }
+        public void Dispose() {
+            finished = true;
+            source.Dispose();
+        }
+    }
+}

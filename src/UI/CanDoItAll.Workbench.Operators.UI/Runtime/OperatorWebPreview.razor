@@ -1,0 +1,97 @@
+@namespace CanDoItAll.Workbench.Operators.UI.Runtime
+@{
+    var view = View;
+    var stop = Stop;
+    var close = Close;
+}
+<CanvasOverlayDialog CanvasScoped="CanvasScoped" SizeToggleTestId="project-structure-dialog-size-toggle"
+                               CanMaximize="true"
+                               AriaLabel="@($"{view.Title} web preview")"
+                               Kicker="@view.SourceLabel"
+                               Title="@view.Title"
+                               Summary="@view.Url.AbsoluteUri"
+                               BodyClass="project-structure-web-preview-dialog__body"
+                               FillBody="true"
+                               DataTestId="project-structure-web-preview-dialog"
+                               Close="close">
+    <Actions>
+        @if (view.CanStop) {
+            <Button Text="Stop"
+                    Icon="stop_circle"
+                    ButtonStyle="ButtonStyle.Danger"
+                    Click="@(() => StopAsync(view, stop))" Disabled="@(view.IsBusy || submitting == view.OpeningId)"
+                    data-testid="project-structure-web-preview-stop" />
+        }
+        <Button Text="Open in browser"
+                Icon="open_in_new"
+                ButtonStyle="ButtonStyle.Primary"
+                Href="@view.Url.AbsoluteUri"
+                Target="_blank"
+                Rel="noopener noreferrer"
+                data-testid="project-structure-web-preview-open-browser" />
+        <Button Text="Close"
+                Variant="Variant.Text"
+                ButtonStyle="ButtonStyle.Base"
+                Click="close" />
+    </Actions>
+    <Body>
+        <Stack GapScale="LayoutGap.Medium"
+               FillHeight="true"
+               AlignItems="AlignItems.Stretch"
+               Class="min-h-0"
+               Style="width:100%;height:100%;min-height:0;overflow:hidden;">
+            @if (view.ProcessLabel is { } identity) {
+                <TextBlock TextStyle="TextStyle.Note" Value="@identity" data-testid="operator-preview-process" />
+            }
+            @if (!string.IsNullOrWhiteSpace(view.Error)) {
+                <Alert AlertStyle="AlertStyle.Danger"
+                       Variant="Variant.Outlined"
+                       role="alert"
+                       data-testid="project-structure-web-preview-stop-error">
+                    @view.Error
+                </Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(view.Notes))
+            {
+                <PanelCard Soft="true"
+                           Style="flex:0 1 auto;max-height:min(12rem,35%);min-height:0;overflow:auto;box-sizing:border-box;"
+                           data-testid="project-structure-web-preview-notes">
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@view.Notes"
+                                   Class="whitespace-pre-wrap break-words" />
+                    </Stack>
+                </PanelCard>
+            }
+
+            <EmbeddedBrowser Source="@view.Url"
+                             Title="@($"Web preview for {view.Title}")"
+                             CanEmbed="@view.CanEmbed"
+                             EmbedUnavailableReason="@view.EmbedUnavailableReason"
+                             Class="min-h-0 flex-1"
+                             DataTestId="project-structure-web-preview-frame" />
+        </Stack>
+    </Body>
+</CanvasOverlayDialog>
+
+@code {
+    [Parameter, EditorRequired] public OperatorWebPreviewView View { get; set; } = default!;
+    [Parameter] public bool CanvasScoped { get; set; } = true;
+    [Parameter] public EventCallback Close { get; set; }
+    [Parameter] public EventCallback Stop { get; set; }
+    private Guid? submitting;
+    private async Task StopAsync(OperatorWebPreviewView view, EventCallback callback) {
+        if (view.OpeningId != View.OpeningId || submitting == view.OpeningId || !view.CanStop || view.IsBusy) {
+            return;
+        }
+        submitting = view.OpeningId;
+        try {
+            await callback.InvokeAsync();
+        } finally {
+            if (submitting == view.OpeningId) {
+                submitting = null;
+            }
+        }
+    }
+}

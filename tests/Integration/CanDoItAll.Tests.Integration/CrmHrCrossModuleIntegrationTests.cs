@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
@@ -107,6 +108,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
         var convertResult = await recruitingService.ConvertCandidateAsync(new RecruitmentConversionEditorModel
         {
             ApplicationId = applicationId,
+            Original = (await recruitingService.GetRecruitmentWorkspaceAsync(applicationId)).Conversion.Original,
             WorkforceKind = WorkforceKind.Employee,
             JobTitle = "Senior Platform Engineer",
             Discipline = "Platform",
@@ -188,7 +190,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
             PartyRoleKind.Employee,
             "morgan.maintainer@example.test");
 
-        var resourceResult = await resourcesService.SaveAsync(new ResourceEditorModel
+        var resourceResult = await resourcesService.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resourcesService, new ResourceEditorModel
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
@@ -205,8 +207,8 @@ public sealed class CrmHrCrossModuleIntegrationTests
             Sensitivity = ResourceSensitivity.Normal,
             SupportsPreview = true,
             SupportsIndexing = true
-        });
-        Assert.True(resourceResult.IsSuccess);
+        }));
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(resourceResult);
 
         var testPlanResult = await testLabService.SaveAsync(new TestPlanEditorModel
         {
@@ -219,7 +221,7 @@ public sealed class CrmHrCrossModuleIntegrationTests
         });
         Assert.True(testPlanResult.IsSuccess);
 
-        var savedResource = await resourcesService.GetAsync(resourceResult.Value);
+        var savedResource = resourcesService.CreateEditor(accepted.Snapshot);
         var savedTestPlan = await testLabService.GetAsync(testPlanResult.Value);
 
         Assert.Equal(ownerId, savedResource.OwnerPartyId);

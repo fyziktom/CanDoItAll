@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Search;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
@@ -112,17 +113,20 @@ public sealed partial class ProjectDeletionIntegrationTests
         var copied = await workbench.CopySubtreesAsync(
             projectId,
             [asset.Id],
-            BuildProjectRootNodeKey(projectId));
+            BuildProjectRootNodeKey(projectId),
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
         var copiedNodeId = copied.NodeIdMap[asset.Id];
         var physicalPath = Path.Combine(
             workspacePathResolver.ResolveWorkspaceRoot(),
             asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(physicalPath));
 
-        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, asset.Id));
+        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, asset.Id,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.True(File.Exists(physicalPath));
 
-        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, copiedNodeId));
+        Assert.Equal(1, await workbench.DeleteObjectAsync(projectId, copiedNodeId,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
         Assert.False(File.Exists(physicalPath));
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
@@ -212,16 +216,18 @@ public sealed partial class ProjectDeletionIntegrationTests
                 await dbContext.SaveChangesAsync();
             }
 
-            await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(() =>
-                workbench.DeleteObjectDetailedAsync(
+            await Assert.ThrowsAsync<ProjectManagedStorageBindingException>(async () =>
+                await workbench.DeleteObjectDetailedAsync(
                     projectId,
                     asset.Id,
-                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles));
+                    ProjectStructureManagedStorageDisposition.DeleteOwnedManagedFiles,
+                    mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
 
             var retained = await workbench.DeleteObjectDetailedAsync(
                 projectId,
                 asset.Id,
-                ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+                ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
             Assert.Equal(1, retained.DeletedNodeCount);
             Assert.True(File.Exists(physicalPath));
@@ -283,7 +289,8 @@ public sealed partial class ProjectDeletionIntegrationTests
         var result = await coordinator.DeleteNodesAsync(
             projectId,
             [NonHideablePhaseProjectionContributor.NodeKey],
-            ProjectStructureManagedStorageDisposition.RetainManagedFiles);
+            ProjectStructureManagedStorageDisposition.RetainManagedFiles,
+            mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId));
 
         Assert.Equal(1, result.DeletedNodeCount);
         Assert.DoesNotContain(
@@ -350,6 +357,8 @@ public sealed partial class ProjectDeletionIntegrationTests
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
+                PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                    .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Stakeholder, string.Empty),
                 Source = "project-deletion-integration-test"
             });
         Assert.True(
@@ -413,7 +422,7 @@ public sealed partial class ProjectDeletionIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
 
         Assert.False(File.Exists(physicalPath));
         var missingProjectFailure = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
@@ -481,8 +490,9 @@ public sealed partial class ProjectDeletionIntegrationTests
             workspacePathResolver.ResolveWorkspaceRoot(),
             asset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
 
-        var failure = await Assert.ThrowsAsync<ProjectStructureDeletionPartialCommitException>(() =>
-            workbench.DeleteObjectAsync(projectId, asset.Id));
+        var failure = await Assert.ThrowsAsync<ProjectStructureDeletionPartialCommitException>(async () =>
+            await workbench.DeleteObjectAsync(projectId, asset.Id,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId)));
 
         Assert.Equal(projectId, failure.Recovery.ProjectId);
         Assert.Equal(asset.Id, failure.Recovery.RootNodeId);
@@ -564,18 +574,20 @@ public sealed partial class ProjectDeletionIntegrationTests
                 PartyId = createdParty.PartyId,
                 Role = ProjectPartyAssignmentRole.Stakeholder,
                 IsPrimary = true,
+                PrimaryOriginal = await scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>()
+                    .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Stakeholder, string.Empty),
                 Source = "project-deletion-replay-integration-test"
             });
         Assert.True(
             assignment.IsSuccess,
             string.Join(" ", assignment.Errors.Select(error => error.Message)));
 
-        var failure = await Assert.ThrowsAsync<ProjectDeletionPartialCommitException>(() =>
-            projects.DeleteAsync(projectId));
-
-        var workbenchFailure = Assert.Single(failure.Recovery.Failures);
+        var original = await ProjectLifecycleTestCommands.CaptureDeleteAsync(scope.ServiceProvider, projectId);
+        var accepted = Assert.IsType<ProjectLifecycleOutcome.Accepted>(
+            await ProjectLifecycleTestCommands.SubmitAsync(scope.ServiceProvider, original));
+        Assert.Equal(ProjectLifecycleCompletionIssue.PostCommitProcessing, accepted.CompletionIssue);
+        var workbenchFailure = Assert.Single(await projects.ListPendingDeletionCleanupsAsync());
         Assert.Equal(new ProjectDeletionParticipantId("workbench"), workbenchFailure.ParticipantId);
-        Assert.NotNull(workbenchFailure.RecoveryId);
         Assert.True(File.Exists(physicalPath));
         Assert.Empty(await partyIntegration.ListAssignmentsDetailedAsync(projectId));
         await using (var failedContext = await dbContextFactory.CreateDbContextAsync())
@@ -591,7 +603,7 @@ public sealed partial class ProjectDeletionIntegrationTests
         var retryResult = await projects.RetryDeletionCleanupAsync(
             projectId,
             workbenchFailure.ParticipantId,
-            workbenchFailure.RecoveryId!.Value);
+            workbenchFailure.RecoveryId);
 
         Assert.False(File.Exists(physicalPath));
         Assert.Equal(2, registry.FileSystemDeleteCalls);
@@ -600,7 +612,7 @@ public sealed partial class ProjectDeletionIntegrationTests
         var replayResult = await projects.RetryDeletionCleanupAsync(
             projectId,
             workbenchFailure.ParticipantId,
-            workbenchFailure.RecoveryId!.Value);
+            workbenchFailure.RecoveryId);
         Assert.Equal(projectId, replayResult.ProjectId);
         Assert.Empty(replayResult.Warnings);
         Assert.Equal(2, registry.FileSystemDeleteCalls);
@@ -634,7 +646,7 @@ public sealed partial class ProjectDeletionIntegrationTests
         var sourceReference = await CreateRetiredProjectReferenceAsync(scope.ServiceProvider, "Missing dependency cleanup");
         var projectId = sourceReference.ProjectId;
         var missingDependencyId = Guid.NewGuid();
-        var recoveryId = await SeedProjectDeletionMutationAsync(
+        var recoveryId = await ResetBoundProjectDeletionMutationAsync(
             dbContextFactory,
             projectId,
             ProjectCrossModuleMutationStatus.WorkbenchCommitted,
@@ -694,7 +706,7 @@ public sealed partial class ProjectDeletionIntegrationTests
         var freshAttemptAtUtc = now;
         var staleAttemptAtUtc = now - processingOptions.LeaseDuration -
                                 TimeSpan.FromSeconds(1);
-        var freshRecoveryId = await SeedProjectDeletionMutationAsync(
+        var freshRecoveryId = await ResetBoundProjectDeletionMutationAsync(
             dbContextFactory,
             freshProjectId,
             ProjectCrossModuleMutationStatus.Processing,
@@ -702,7 +714,7 @@ public sealed partial class ProjectDeletionIntegrationTests
             lastAttemptAtUtc: freshAttemptAtUtc,
             attemptCount: 1,
             errorMessage: $"processing:{Guid.NewGuid():N}");
-        var staleRecoveryId = await SeedProjectDeletionMutationAsync(
+        var staleRecoveryId = await ResetBoundProjectDeletionMutationAsync(
             dbContextFactory,
             staleProjectId,
             ProjectCrossModuleMutationStatus.Processing,
@@ -784,7 +796,7 @@ public sealed partial class ProjectDeletionIntegrationTests
             ProjectManagedStorageOwnershipBasis.ImmutableContentAddress,
             string.Empty,
             string.Empty);
-        var recoveryId = await SeedProjectDeletionMutationAsync(
+        var recoveryId = await ResetBoundProjectDeletionMutationAsync(
             dbContextFactory,
             projectId,
             ProjectCrossModuleMutationStatus.WorkbenchCommitted,
@@ -851,7 +863,7 @@ public sealed partial class ProjectDeletionIntegrationTests
             .GetRequiredService<IDbContextFactory<AppDbContext>>();
         var sourceReference = await CreateRetiredProjectReferenceAsync(setupScope.ServiceProvider, "Concurrent exact cleanup");
         var projectId = sourceReference.ProjectId;
-        var recoveryId = await SeedProjectDeletionMutationAsync(
+        var recoveryId = await ResetBoundProjectDeletionMutationAsync(
             dbContextFactory,
             projectId,
             ProjectCrossModuleMutationStatus.WorkbenchCommitted,
@@ -937,7 +949,7 @@ public sealed partial class ProjectDeletionIntegrationTests
 
         await using var monitoringConnection = new NpgsqlConnection(connectionString);
         await monitoringConnection.OpenAsync();
-        var deletion = projects.DeleteAsync(projectId);
+        var deletion = ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
         await WaitForAdvisoryWaitersAsync(monitoringConnection, expectedCount: 1);
 
         bool projectExistedWhileBlocked;
@@ -979,8 +991,8 @@ public sealed partial class ProjectDeletionIntegrationTests
         Assert.False(deletionMutationExistedWhileBlocked);
         Assert.True(physicalBytesExistedWhileBlocked);
         Assert.Equal(0, deleteCallsWhileBlocked);
-        Assert.Equal(projectId, result.ProjectId);
-        Assert.Empty(result.Warnings);
+        Assert.Equal(projectId, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(result.Result.Acknowledgement)
+            .Completion.Original.Project.ProjectId);
         Assert.False(File.Exists(physicalPath));
         Assert.Equal(1, registry.FileSystemDeleteCalls);
 
@@ -1082,6 +1094,27 @@ public sealed partial class ProjectDeletionIntegrationTests
                     serviceProvider.GetRequiredService<ObservedStorageDriverRegistry>());
             }
         });
+    }
+
+    private static async Task<Guid> ResetBoundProjectDeletionMutationAsync(
+        IDbContextFactory<AppDbContext> factory, Guid projectId, ProjectCrossModuleMutationStatus status,
+        DeleteProjectMutationPayload payload, DateTimeOffset? lastAttemptAtUtc = null,
+        int attemptCount = 0, string errorMessage = "") {
+        await using var context = await factory.CreateDbContextAsync();
+        var mutation = await context.Set<ProjectCrossModuleMutationRecord>().SingleAsync(row =>
+            row.ProjectId == projectId && row.MutationKind == ProjectCrossModuleMutationKind.DeleteProject);
+        var original = Deserialize<DeleteProjectMutationPayload>(mutation.PayloadJson);
+        Assert.NotNull(original.CompletionContext);
+        Assert.Equal(original.SourceReference, payload.SourceReference);
+        mutation.PayloadJson = JsonSerializer.Serialize(payload with { CompletionContext = original.CompletionContext }, JsonOptions);
+        mutation.Status = status;
+        mutation.LastAttemptAtUtc = lastAttemptAtUtc;
+        mutation.AttemptCount = attemptCount;
+        mutation.ErrorMessage = errorMessage;
+        mutation.CompletedAtUtc = null;
+        mutation.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+        return mutation.Id;
     }
 
     private static async Task<Guid> SeedProjectDeletionMutationAsync(

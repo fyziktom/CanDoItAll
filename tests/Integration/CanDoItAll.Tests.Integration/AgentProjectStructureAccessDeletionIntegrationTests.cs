@@ -175,7 +175,7 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
             isTemplate: false,
             [projectId]);
 
-        await projects.DeleteAsync(projectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
 
         await using var verificationContext = await dbContextFactory.CreateDbContextAsync();
         var record = await verificationContext
@@ -241,44 +241,32 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
                 services.AddSingleton(workspaceService);
             }
         });
-        var projectId = Guid.NewGuid();
-        ProjectDeletionParticipantPreparation preparation;
-        await using (var setupScope = application.Services.CreateAsyncScope())
-        {
-            var participant = setupScope.ServiceProvider
-                .GetServices<IProjectDeletionParticipant>()
-                .Single(candidate => candidate.Id == ParticipantId);
-            var dbContextFactory = setupScope.ServiceProvider
-                .GetRequiredService<IDbContextFactory<AppDbContext>>();
-            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-            using (setupScope.ServiceProvider.GetRequiredService<CoordinatedDatabaseTransaction>().Enter(dbContext)) {
-                preparation = Assert.IsType<ProjectDeletionParticipantPreparation>(await participant.PrepareAsync(projectId));
-            }
-            await transaction.CommitAsync();
-        }
-
         await using var firstScope = application.Services.CreateAsyncScope();
         await using var secondScope = application.Services.CreateAsyncScope();
-        var firstParticipant = firstScope.ServiceProvider
-            .GetServices<IProjectDeletionParticipant>()
-            .Single(candidate => candidate.Id == ParticipantId);
-        var secondParticipant = secondScope.ServiceProvider
-            .GetServices<IProjectDeletionParticipant>()
-            .Single(candidate => candidate.Id == ParticipantId);
-        var firstCompletion = firstParticipant.CompleteAsync(preparation);
-        await workspaceController.Entered.WaitAsync(TimeSpan.FromSeconds(10));
-        var secondCompletion = secondParticipant.CompleteAsync(preparation);
-        await Task.Yield();
-        Assert.False(secondCompletion.IsCompleted);
-
-        workspaceController.Release();
-        var completions = await Task.WhenAll(firstCompletion, secondCompletion)
-            .WaitAsync(TimeSpan.FromSeconds(10));
-
-        Assert.All(
-            completions,
-            completion => Assert.Equal(preparation.RecoveryId, completion.RecoveryId));
+        var projectId = await CreateProjectAsync(firstScope.ServiceProvider.GetRequiredService<ProjectsService>(), "Concurrent cleanup");
+        var firstCompletion = ProjectLifecycleTestCommands.DeleteAsync(firstScope.ServiceProvider, projectId);
+        Task<ProjectDeletionParticipantCompletion>? secondCompletion = null;
+        ProjectDeletionParticipantPreparation preparation;
+        try {
+            await workspaceController.Entered.WaitAsync(TimeSpan.FromSeconds(10));
+            await using var context = await secondScope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+            var pending = await context.Set<AgentProjectStructureAccessRevocationRecord>().AsNoTracking().SingleAsync(row => row.ProjectId == projectId);
+            preparation = new(projectId, pending.Id);
+            var secondParticipant = secondScope.ServiceProvider.GetServices<IProjectDeletionParticipant>().Single(candidate => candidate.Id == ParticipantId);
+            secondCompletion = secondParticipant.CompleteAsync(preparation);
+            await Task.Yield();
+            Assert.False(secondCompletion.IsCompleted);
+            workspaceController.Release();
+            var accepted = await firstCompletion.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(projectId, Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(accepted.Result.Acknowledgement).Completion.Original.Project.ProjectId);
+            Assert.Equal(preparation.RecoveryId, (await secondCompletion.WaitAsync(TimeSpan.FromSeconds(10))).RecoveryId);
+        } finally {
+            workspaceController.Release();
+            await firstCompletion.WaitAsync(TimeSpan.FromSeconds(10));
+            if (secondCompletion is not null) {
+                await secondCompletion.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+        }
         Assert.Equal(1, workspaceController.InvocationCount);
         await using var verificationScope = application.Services.CreateAsyncScope();
         var verificationFactory = verificationScope.ServiceProvider
@@ -311,13 +299,14 @@ public sealed class AgentProjectStructureAccessDeletionIntegrationTests
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         var projectId = await CreateProjectAsync(projects, "Retry agent access deletion");
 
-        var failure = await Assert.ThrowsAsync<ProjectDeletionPartialCommitException>(() =>
-            projects.DeleteAsync(projectId));
+        var original = await ProjectLifecycleTestCommands.CaptureDeleteAsync(scope.ServiceProvider, projectId);
+        var accepted = Assert.IsType<ProjectLifecycleOutcome.Accepted>(
+            await ProjectLifecycleTestCommands.SubmitAsync(scope.ServiceProvider, original));
+        Assert.Equal(ProjectLifecycleCompletionIssue.PostCommitProcessing, accepted.CompletionIssue);
         var participantFailure = Assert.Single(
-            failure.Recovery.Failures,
+            await projects.ListPendingDeletionCleanupsAsync(),
             candidate => candidate.ParticipantId == ParticipantId);
-        Assert.NotNull(participantFailure.RecoveryId);
-        var recoveryId = participantFailure.RecoveryId!.Value;
+        var recoveryId = participantFailure.RecoveryId;
         await using (var failedContext = await dbContextFactory.CreateDbContextAsync())
         {
             var failedRecord = await failedContext

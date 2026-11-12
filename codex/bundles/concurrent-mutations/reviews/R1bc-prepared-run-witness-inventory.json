@@ -1,0 +1,718 @@
+{
+  "schemaVersion": 1,
+  "status": "AuthoredUnbuiltPeerReviewPending",
+  "owner": "/root/persistence_architecture",
+  "mainReadOnly": true,
+  "managedHistoricalSourceUntouched": true,
+  "ownershipRecordSha256": "973D12E3D75253AEB52DA391C45220484032A86C92B431311473053F56474200",
+  "candidateRoot": ".artifacts/concurrent-mutations/candidates/run-prepared-witness",
+  "files": [
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+      "targetPath": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+      "bytes": 146889,
+      "candidateSha256": "BF855D01303BB3B31DAD5E04640217A03969CAA1F8B37078E33BF47815978F9C",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "6A929E633231A6A5B5A6CCA7E42F5F9ED3FE56B2E1F1CED00855595F1A46F079",
+      "managedOrdinarySourceExists": true,
+      "managedOrdinarySourceSha256": "59BEF00C9365796B0EA6DB29E2A0D5AE598A98EF8F99559B251B09E2F7C8B886"
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+      "targetPath": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceJsonStore.cs",
+      "bytes": 25137,
+      "candidateSha256": "01AF402E8D03F7B2BDC84991CC9209DD3D48D32C0D481D26DC82780A8B3B6A2F",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "9A580CD4B357B814E079B5817C74C32EEE94AD6430839BD40AA5F3043DE4C985",
+      "managedOrdinarySourceExists": true,
+      "managedOrdinarySourceSha256": "9A580CD4B357B814E079B5817C74C32EEE94AD6430839BD40AA5F3043DE4C985"
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceRunReadSnapshot.cs",
+      "targetPath": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceRunReadSnapshot.cs",
+      "bytes": 3383,
+      "candidateSha256": "D7FDA9558EDFE83248147D093B9B030F9FB4878F414BC880FA8388A8349C2675",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedOrdinarySourceExists": false,
+      "managedOrdinarySourceSha256": null
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "targetPath": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "bytes": 98414,
+      "candidateSha256": "007864C9C73288EA1EDD324D6ADC6D7EAC475F248FC0C8F1821E34C7B21B5DE6",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "0577C05AB5D9280E1883AF3CDA8CEF89E658102DACE6D2D52BE0F45EEEB0F813",
+      "managedOrdinarySourceExists": true,
+      "managedOrdinarySourceSha256": "78B06F4C3208AB15031AD20A325DF66689B434D6A1B1E37D483AFC2150E1B5EF"
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+      "targetPath": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+      "bytes": 17854,
+      "candidateSha256": "5722A65EFC0D748EB206DFA0A1FF3814DDD5931539ACB39F05F8B008309B6828",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "39DDC069C59F2B946C1DF8CC3F3BF12E939EAF09B37BDB69634022F944924867",
+      "managedOrdinarySourceExists": true,
+      "managedOrdinarySourceSha256": "39DDC069C59F2B946C1DF8CC3F3BF12E939EAF09B37BDB69634022F944924867"
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+      "targetPath": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedCommitReadIntegrationTests.cs",
+      "bytes": 17982,
+      "candidateSha256": "55E3A35EF240D806EB4C45E6EEF8868426AF10B3192C5333B6B4322D4B059953",
+      "mainPredecessorExists": true,
+      "mainPredecessorSha256": "CB2ACA4C9E14FCB34AB519D19FE55EF73FBDE23D7908DB370F0C59E5D685EFF8",
+      "managedOrdinarySourceExists": true,
+      "managedOrdinarySourceSha256": "CB2ACA4C9E14FCB34AB519D19FE55EF73FBDE23D7908DB370F0C59E5D685EFF8"
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedRunWitnessTests.cs",
+      "targetPath": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspacePreparedRunWitnessTests.cs",
+      "bytes": 13103,
+      "candidateSha256": "8D1467C1A051705C847C0CD760D0DF0AD705B7E4A5DA17AAB659E73098852AF7",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedOrdinarySourceExists": false,
+      "managedOrdinarySourceSha256": null
+    },
+    {
+      "candidatePath": ".artifacts/concurrent-mutations/candidates/run-prepared-witness/tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceRunWitnessTests.cs",
+      "targetPath": "tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceRunWitnessTests.cs",
+      "bytes": 5386,
+      "candidateSha256": "8D6ADB6971B130FE4063A9C7A530590AB27F34D1F2B011F32F5D982E6E2A91FC",
+      "mainPredecessorExists": false,
+      "mainPredecessorSha256": null,
+      "managedOrdinarySourceExists": false,
+      "managedOrdinarySourceSha256": null
+    }
+  ],
+  "documents": [
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/R1bc-accepted-trace-next-owner-change.md",
+      "sha256": "E95BF477CCA66C5BF8601184D6208672FAE7068F4D44311A7A3CD366233CF057",
+      "mainPredecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1bc-prepared-run-witness-source.md",
+      "sha256": "09B3CADD49787337C9C5F3DE484139E41761C7EBC12FC178CAB7B88910FF78B0",
+      "mainPredecessorSha256": null
+    }
+  ],
+  "sourceReferences": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceJsonWriteCompatibilityTests.cs",
+      "sha256": "4925BA0A1D6E3F3BF075522EBA89BC5A04C1B7EAB6FB5880312E82D8E81FF0CA"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileSandboxWorkspaceJsonBatchTests.cs",
+      "sha256": "ECF4476CA65E5DA46C150D0DDB4CBBF927AB93C0DDEC1D9ADB8495122CC43547"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFileWriterTests.cs",
+      "sha256": "ACC63D99867DC80AB7F54DD315E89F8FDD61A0E11895ADF4C5F9AB57D9684B07"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/DurableFilePublicationTests.cs",
+      "sha256": "80B2A726A703573E6F4BF31D3F89EB8B628A21661A3B877509652506269A3642"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/FileProviderUsageWindowTests.cs",
+      "sha256": "D6FC84DC6D198DA618103FA740738C2D48C1292E1489C21C414EF434DF0C63B0"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceUsageProjectionIntegrationTests.cs",
+      "sha256": "F3C532C7ED7E78345088B2EE731DB56E2F33D7938B8B614D09C634DF801E4404"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.cs",
+      "sha256": "EADF11342EE9B6ACF5439A641A8F0BFBD3C42AB13D07599B590967616191D44F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs",
+      "sha256": "5E66B240547BC771440E9B75E9F7762E5E3311637CD59EB5D00EEB4D51FC4268"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+      "sha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceTests.cs",
+      "sha256": "E1A7F021149280AB6FC64C198C5B7CB5A35B4A2B7A14B1652B51F243BF7B6924"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceFixture.cs",
+      "sha256": "54FCC4346B6B1D9A2B7A4BDC058981D250F00938AE645B8CD97154CF13801841"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceProbe.cs",
+      "sha256": "769E3C45791C4EBB7E63C937477BBA1DA8FB40CE234BF7CC470058156A8B6130"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceEvidence.cs",
+      "sha256": "C185DB729B9C67B5B6BA79CDBDDBCC571EA1DE9FD6200BA8BB8D32A1AEA04FF5"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Conversations/ConversationModels.cs",
+      "sha256": "FC2CB1F5B8742E0472FE37F26CD37C798C653678AA863046736F6BF1E4314645"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolJournalModels.cs",
+      "sha256": "4C6B1BB44C041ADDBFF9866FC4866552CFE3F7832421A1AE717E0510D601D923"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolAdmissionModels.cs",
+      "sha256": "824FE178AAE992A9FA2256D36D9DB08C9D78D35603373005B5E6AAE3E01B931F"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolAdmittedContextAttachment.cs",
+      "sha256": "F941F021A8E56336128E39DA340A587F26999C072882ECA414DE898B19B2EEFF"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolProviderDispatchModels.cs",
+      "sha256": "812E913A504C7ABBE72E20C25A8E3EC778E92F982278C326FB34AF006D4B556C"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Execution/AgentToolBackgroundSourceModels.cs",
+      "sha256": "232C4BF19B574B784E57687869A581ACB24A703A6C7F22B8701A5F531BAAE490"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Workspace/WorkspaceScopeModels.cs",
+      "sha256": "8DDB277EADAD461372E35B1354AF755577E3EAC377C93E472BE502382ADEFE59"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Providers/ProviderRequestCompatibility.cs",
+      "sha256": "36CB506A6851A64B7A2A3AF29526B8D5279E855B97173072A3636647E06F6A93"
+    },
+    {
+      "path": "src/MAF/ProviderHistory/CanDoItAll.AgentFramework.ProviderHistory.Abstractions/HistoryEvidence.cs",
+      "sha256": "E304A4D92C8743E014DFCFEE11866C5FE613417B188EE4C2AE0634C3EAE20F3D"
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceSnapshotCache.cs",
+      "sha256": "7351B93624F59CF684C6AA2EE6AA636D9B2EC1CEC2AEE170CAD1A8D1BEA56895"
+    }
+  ],
+  "sourceExpectedCorrectnessCases": 112,
+  "sourceExpectedNewCases": 14,
+  "sourceExpectedUnit": 50,
+  "sourceExpectedIntegration": 62,
+  "overlaps": "None across7 correctness lanes. Prior62UTF8 cases are47Unit+15UsageProjection and do not include PreparedCommitRead19/ExistingRunUpdateRecovery15. Cost2select exact methods, not wholepartialclass.",
+  "lanes": [
+    {
+      "id": "prepared-run-witness-unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.FileSandboxWorkspaceRunWitnessTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 3,
+      "expectedRuntime": 3,
+      "defaultExecution": true,
+      "notes": "New3Facts, no dynamic data or skips."
+    },
+    {
+      "id": "prepared-run-witness-owner",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedRunWitnessTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 11,
+      "expectedRuntime": 11,
+      "defaultExecution": true,
+      "notes": "New3Facts+8InlineData (three theories 2/3/3)."
+    },
+    {
+      "id": "prepared-run-existing-conflict-reads",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspacePreparedCommitReadIntegrationTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 19,
+      "expectedRuntime": 19,
+      "defaultExecution": true,
+      "notes": "Existing1Fact+18InlineData. Two original-run expectations now typed hash checks, diagnostic output updated."
+    },
+    {
+      "id": "prepared-run-existing-recovery",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.FileSandboxWorkspaceExistingRunUpdateRecoveryIntegrationTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 15,
+      "expectedRuntime": 15,
+      "defaultExecution": true,
+      "notes": "Unchanged6Facts+9InlineData."
+    },
+    {
+      "id": "prepared-run-actual-receipt-cost",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Pinned_claims_and_batched_checkpoint_bound_full_run_decodes_independent_of_candidate_count|FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Maximum_journal_slice_bounds_evidence_response_bytes_and_records_real_store_cost)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 2,
+      "expectedRuntime": 2,
+      "defaultExecution": true,
+      "notes": "Exact2Facts in partialclass. Four fresh reads retained; maximum graph has2decodes instead of4."
+    },
+    {
+      "id": "utf8-write-unit-compatibility",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "(FullyQualifiedName~FileSandboxWorkspaceJsonWriteCompatibilityTests|FullyQualifiedName~FileSandboxWorkspaceJsonBatchTests|FullyQualifiedName~DurableFileWriterTests|FullyQualifiedName~DurableFilePublicationTests|FullyQualifiedName~FileProviderUsageWindowTests)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 47,
+      "expectedRuntime": 47,
+      "defaultExecution": true,
+      "notes": "Unchanged prior UTF8 compatibility selection; source counts independently reconfirmed."
+    },
+    {
+      "id": "utf8-write-file-owner-integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName~FileSandboxWorkspaceUsageProjectionIntegrationTests)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 15,
+      "expectedRuntime": 15,
+      "defaultExecution": true,
+      "notes": "Unchanged prior UTF8 compatibility selection; source counts independently reconfirmed."
+    }
+  ],
+  "performance": {
+    "parentManifestPath": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\r1bc-utf8-candidate-selections.json",
+    "parentManifestSha256": "74DD0DFDEA91215D305824C38E34BF6CD93E180F11740E9D757948EB47E0A92B",
+    "expectedCases": 22,
+    "defaultExecution": false,
+    "harnessSourceChanged": false,
+    "sourceDerivation": "Serial12fixedInlineData+independent8fixedInlineData+shared2fixedInlineData",
+    "lanes": [
+      {
+        "id": "candidate-CoreSlice-OneProposal-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "CoreSlice",
+        "shape": "OneProposal",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: OneProposal",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: OneProposal)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: OneProposal)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-FourProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "CoreSlice",
+        "shape": "FourProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: FourProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: FourProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: FourProposals)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-MaximumProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "CoreSlice",
+        "shape": "MaximumProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: MaximumProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: MaximumProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: MaximumProposals)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-NearMaximumBytes-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "CoreSlice",
+        "shape": "NearMaximumBytes",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: NearMaximumBytes",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: NearMaximumBytes)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: CoreSlice, shape: NearMaximumBytes)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-OneProposal-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "FreshDetail",
+        "shape": "OneProposal",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: OneProposal",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: OneProposal)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: OneProposal)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-FourProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "FreshDetail",
+        "shape": "FourProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: FourProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: FourProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: FourProposals)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-MaximumProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "FreshDetail",
+        "shape": "MaximumProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: MaximumProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: MaximumProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: MaximumProposals)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-NearMaximumBytes-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "FreshDetail",
+        "shape": "NearMaximumBytes",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: NearMaximumBytes",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: NearMaximumBytes)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: FreshDetail, shape: NearMaximumBytes)"
+        ]
+      },
+      {
+        "id": "candidate-NativeSessionRefresh-OneProposal-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "NativeSessionRefresh",
+        "shape": "OneProposal",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: NativeSessionRefresh&DisplayName~shape: OneProposal",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: OneProposal)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: OneProposal)"
+        ]
+      },
+      {
+        "id": "candidate-NativeSessionRefresh-FourProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "NativeSessionRefresh",
+        "shape": "FourProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: NativeSessionRefresh&DisplayName~shape: FourProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: FourProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: FourProposals)"
+        ]
+      },
+      {
+        "id": "candidate-NativeSessionRefresh-MaximumProposals-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "NativeSessionRefresh",
+        "shape": "MaximumProposals",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: NativeSessionRefresh&DisplayName~shape: MaximumProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: MaximumProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: MaximumProposals)"
+        ]
+      },
+      {
+        "id": "candidate-NativeSessionRefresh-NearMaximumBytes-Serial-1",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh",
+        "workload": "NativeSessionRefresh",
+        "shape": "NearMaximumBytes",
+        "topology": "Serial",
+        "concurrency": 1,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: NativeSessionRefresh&DisplayName~shape: NearMaximumBytes",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: NearMaximumBytes)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Serial_owner_slice_detail_and_native_refresh(workload: NativeSessionRefresh, shape: NearMaximumBytes)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-MaximumProposals-IndependentWorkspaces-2",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "CoreSlice",
+        "shape": "MaximumProposals",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 2,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: MaximumProposals&DisplayName~concurrency: 2",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: MaximumProposals, concurrency: 2)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: MaximumProposals, concurrency: 2)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-MaximumProposals-IndependentWorkspaces-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "CoreSlice",
+        "shape": "MaximumProposals",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: MaximumProposals&DisplayName~concurrency: 4",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: MaximumProposals, concurrency: 4)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: MaximumProposals, concurrency: 4)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-NearMaximumBytes-IndependentWorkspaces-2",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "CoreSlice",
+        "shape": "NearMaximumBytes",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 2,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: NearMaximumBytes&DisplayName~concurrency: 2",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: NearMaximumBytes, concurrency: 2)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: NearMaximumBytes, concurrency: 2)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-NearMaximumBytes-IndependentWorkspaces-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "CoreSlice",
+        "shape": "NearMaximumBytes",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: CoreSlice&DisplayName~shape: NearMaximumBytes&DisplayName~concurrency: 4",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: NearMaximumBytes, concurrency: 4)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: CoreSlice, shape: NearMaximumBytes, concurrency: 4)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-MaximumProposals-IndependentWorkspaces-2",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "FreshDetail",
+        "shape": "MaximumProposals",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 2,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: MaximumProposals&DisplayName~concurrency: 2",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: MaximumProposals, concurrency: 2)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: MaximumProposals, concurrency: 2)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-MaximumProposals-IndependentWorkspaces-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "FreshDetail",
+        "shape": "MaximumProposals",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: MaximumProposals&DisplayName~concurrency: 4",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: MaximumProposals, concurrency: 4)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: MaximumProposals, concurrency: 4)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-NearMaximumBytes-IndependentWorkspaces-2",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "FreshDetail",
+        "shape": "NearMaximumBytes",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 2,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: NearMaximumBytes&DisplayName~concurrency: 2",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: NearMaximumBytes, concurrency: 2)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: NearMaximumBytes, concurrency: 2)"
+        ]
+      },
+      {
+        "id": "candidate-FreshDetail-NearMaximumBytes-IndependentWorkspaces-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces",
+        "workload": "FreshDetail",
+        "shape": "NearMaximumBytes",
+        "topology": "IndependentWorkspaces",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~workload: FreshDetail&DisplayName~shape: NearMaximumBytes&DisplayName~concurrency: 4",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: NearMaximumBytes, concurrency: 4)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Independent_maximum_workspaces(workload: FreshDetail, shape: NearMaximumBytes, concurrency: 4)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-MaximumProposals-SharedWorkspace-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination",
+        "workload": "CoreSlice",
+        "shape": "MaximumProposals",
+        "topology": "SharedWorkspace",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~shape: MaximumProposals",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination(shape: MaximumProposals)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination(shape: MaximumProposals)"
+        ]
+      },
+      {
+        "id": "candidate-CoreSlice-NearMaximumBytes-SharedWorkspace-4",
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "assembly": "CanDoItAll.Tests.Integration",
+        "method": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination",
+        "workload": "CoreSlice",
+        "shape": "NearMaximumBytes",
+        "topology": "SharedWorkspace",
+        "concurrency": 4,
+        "filter": "FullyQualifiedName=CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination&Category=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&DisplayName~shape: NearMaximumBytes",
+        "expectedDiscovery": 1,
+        "expectedRuntime": 1,
+        "expectedLabel": "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination(shape: NearMaximumBytes)",
+        "execution_mode": "explicit-separate-fresh-testhost",
+        "defaultExecution": false,
+        "performance": true,
+        "expectedLabels": [
+          "CanDoItAll.Tests.Integration.Runtime.AgentReceiptStorePerformanceTests.Four_distinct_runs_share_actual_workspace_coordination(shape: NearMaximumBytes)"
+        ]
+      }
+    ]
+  },
+  "noBuildOrExecutionPerformed": true
+}

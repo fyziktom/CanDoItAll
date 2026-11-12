@@ -24,7 +24,7 @@
                         Description="Close this editor and reload the definition catalog." />
         }
         else {
-            <ConversationDefinitionEditorShell @key="acceptedSource" Class="llm-chat-definition-editor">
+            <ConversationDefinitionEditorShell Class="llm-chat-definition-editor">
                 <Header>
                     @if (current is not null) {
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -42,15 +42,33 @@
                         <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="llm-chat-definition-editor-error">
                             <Stack GapScale="LayoutGap.Small">
                                 <span>@errorMessage</span>
-                                @if (hasConcurrencyConflict) {
-                                    <Button Text="Reload current revision"
+                                @if (current is not null && (hasConcurrencyConflict || Presentation.Unconfirmed || Presentation.Failure == DefinitionEditorFailure.Unavailable)) {
+                                    <Button Text="Compare current revision"
                                             Icon="refresh"
                                             Size="ButtonSize.Small"
                                             Variant="Variant.Outlined"
                                             Click="ReloadAsync"
-                                            Disabled="@isBusy"
+                                            Disabled="@(isBusy || Presentation.IsComparing)"
                                             data-testid="llm-chat-definition-editor-reload" />
                                 }
+                            </Stack>
+                        </Alert>
+                    }
+                    @if (!string.IsNullOrEmpty(Presentation.Notice)) {
+                        <Alert AlertStyle="AlertStyle.Info">@Presentation.Notice</Alert>
+                    }
+                    @if (Presentation.CanUndoComparison) {
+                        <Button Text="Undo last comparison" Click="@(() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.UndoComparison)))"
+                                Disabled="@(isBusy || Presentation.IsComparing)" data-testid="llm-chat-definition-review-undo" />
+                    }
+                    @if (Presentation.Comparison is { } comparison) {
+                        <DefinitionComparisonSurface Comparison="comparison" Providers="Presentation.Providers" Changed="ComparisonChanged" RequiresAcknowledgement="Presentation.Unconfirmed" Apply="ApplyComparisonAsync" />
+                    }
+                    @if (Presentation.ConfirmDiscard) {
+                        <Alert AlertStyle="AlertStyle.Warning" data-testid="llm-chat-definition-discard-confirmation">
+                            <Stack GapScale="LayoutGap.Small">
+                                <TextBlock Value="This definition has unfinished changes or an unconfirmed outcome. Closing discards this local draft and never repeats the command." />
+                                <Button Text="Discard draft and close" Click="ConfirmDiscardAsync" Disabled="@isBusy" data-testid="llm-chat-definition-discard" />
                             </Stack>
                         </Alert>
                     }
@@ -64,6 +82,7 @@
                           OverflowMode="TabsOverflowMode.Scroll"
                           PanelOverflowMode="TabsPanelOverflowMode.Auto"
                           FillHeight="true"
+                          RenderMode="TabRenderMode.Client"
                           Class="llm-chat-definition-editor__tabs w-full min-w-0 flex-1 min-h-0"
                           AriaLabel="Simple Chat definition sections"
                           data-testid="llm-chat-definition-editor-tabs">
@@ -79,7 +98,7 @@
                                                                 Avatar="@DefinitionAvatar"
                                                                 AvatarStatus="@ResolveAvatarSelectionText()"
                                                                 AvatarDescription="Stored with the Simple Chat definition and reused by conversation surfaces."
-                                                                Disabled="@isBusy"
+                                                                Disabled="@fieldsBlocked"
                                                                 NameTestId="llm-chat-definition-name"
                                                                 AvatarTestId="llm-chat-definition-avatar-summary"
                                                                 SummaryTestId="llm-chat-definition-summary">
@@ -91,11 +110,13 @@
                                         <AdditionalFields>
                                             <FormField Text="Tags">
                                                 <TagEditor Value="@form.Tags"
+                                                           PendingInput="@form.PendingTagInput"
+                                                           PendingInputChanged="HandlePendingTagChanged"
                                                            ValueChanged="HandleTagsChanged"
                                                            Placeholder="Add Simple Chat tag"
                                                            Hint="Use Enter or comma to add tags."
                                                            MaxTags="12"
-                                                           Disabled="@isBusy"
+                                                           Disabled="@fieldsBlocked"
                                                            TestId="llm-chat-definition-tags"
                                                            InputTestId="llm-chat-definition-tags-input" />
                                             </FormField>
@@ -111,7 +132,7 @@
                                             <ConversationProviderSelector Options="@providerOptions"
                                                                           Value="@SelectedProviderKey"
                                                                           ValueChanged="HandleProviderChangedAsync"
-                                                                          Disabled="@isBusy"
+                                                                          Disabled="@fieldsBlocked"
                                                                           IsLoading="@isLoadingProviders"
                                                                           ErrorMessage="@providerErrorMessage"
                                                                           EmptyMessage="No configured providers are available."
@@ -120,7 +141,7 @@
                                                                                Value="@form.Model"
                                                                                ValueChanged="HandleModelChangedAsync"
                                                                                UseEmptyValueForProviderDefault="false"
-                                                                               Disabled="@isBusy"
+                                                                               Disabled="@fieldsBlocked"
                                                                                ChoiceTestId="llm-chat-definition-model"
                                                                                OverrideTestId="llm-chat-definition-model-override"
                                                                                CustomModelTestId="llm-chat-definition-custom-model" />
@@ -130,15 +151,13 @@
                                             <ConversationPromptTextArea Value="@form.SystemPrompt"
                                                                         ValueChanged="HandleSystemPromptChanged"
                                                                         Rows="12"
-                                                                        ReadOnly="@isBusy"
+                                                                        ReadOnly="@fieldsBlocked"
                                                                         data-testid="llm-chat-definition-system-prompt" />
                                         </FormField>
                                         <Grid ColumnsMd="3" Gap="LayoutGap.Large">
-                                            <ConversationTemperatureField Value="@form.Temperature"
-                                                                          ValueChanged="HandleTemperatureChanged"
-                                                                          Description="Use the provider default by leaving this empty."
-                                                                          Disabled="@isBusy"
-                                                                          InputTestId="llm-chat-definition-temperature" />
+                                            <FormField Text="Temperature (optional, 0 to 2)">
+                                                <TextBox Value="@form.TemperatureText" ValueChanged="HandleTemperatureChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-temperature" />
+                                            </FormField>
                                             <FormField Text="Thinking effort">
                                                 <DropDown TValue="DefinitionEditorEffort?"
                                                           Data="@ThinkingEffortChoices"
@@ -146,25 +165,19 @@
                                                           ValueChanged="HandleThinkingEffortChanged"
                                                           Placeholder="Provider default"
                                                           AllowClear="true"
-                                                          Disabled="@(isBusy || ThinkingEffortChoices.Count == 0)"
+                                                          Disabled="@(fieldsBlocked || ThinkingEffortChoices.Count == 0)"
                                                           data-testid="llm-chat-definition-thinking-effort" />
                                                 <p class="mt-2 text-sm leading-6 text-slate-600">@ThinkingEffortDescription</p>
                                             </FormField>
                                             <FormField Text="Timeout (seconds)">
-                                                <Numeric TValue="double?"
-                                                         Value="@form.TimeoutSeconds"
-                                                         ValueChanged="HandleTimeoutChanged"
-                                                         Min="1"
-                                                         Step="1"
-                                                         Disabled="@isBusy"
-                                                         data-testid="llm-chat-definition-timeout" />
+                                                <TextBox Value="@form.TimeoutText" ValueChanged="HandleTimeoutChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-timeout" />
                                             </FormField>
                                         </Grid>
                                         <FormField Text="Model parameter configuration (JSON)">
                                             <ConversationPromptTextArea Value="@form.ModelParameterConfigurationJson"
                                                                         ValueChanged="HandleModelParametersChanged"
                                                                         Rows="8"
-                                                                        ReadOnly="@isBusy"
+                                                                        ReadOnly="@fieldsBlocked"
                                                                         data-testid="llm-chat-definition-model-parameters" />
                                         </FormField>
                                     </Stack>
@@ -181,7 +194,7 @@
                                                       ValueProperty="@nameof(ResponseFormatOption.Value)"
                                                       Value="@form.ResponseFormat"
                                                       ValueChanged="HandleResponseFormatChanged"
-                                                      Disabled="@isBusy"
+                                                      Disabled="@fieldsBlocked"
                                                       data-testid="llm-chat-definition-response-format" />
                                         </FormField>
 
@@ -190,13 +203,13 @@
                                                 <FormField Text="Schema name">
                                                     <TextBox Value="@form.SchemaName"
                                                              ValueChanged="HandleSchemaNameChanged"
-                                                             Disabled="@isBusy"
+                                                             Disabled="@fieldsBlocked"
                                                              data-testid="llm-chat-definition-schema-name" />
                                                 </FormField>
                                                 <FormField Text="Schema description">
                                                     <TextBox Value="@form.SchemaDescription"
                                                              ValueChanged="HandleSchemaDescriptionChanged"
-                                                             Disabled="@isBusy"
+                                                             Disabled="@fieldsBlocked"
                                                              data-testid="llm-chat-definition-schema-description" />
                                                 </FormField>
                                             </Grid>
@@ -204,7 +217,7 @@
                                                 <ConversationPromptTextArea Value="@form.SchemaJson"
                                                                             ValueChanged="HandleSchemaJsonChanged"
                                                                             Rows="14"
-                                                                            ReadOnly="@isBusy"
+                                                                            ReadOnly="@fieldsBlocked"
                                                                             data-testid="llm-chat-definition-schema-json" />
                                             </FormField>
                                         }
@@ -213,7 +226,7 @@
                                             <TextArea Value="@form.RevisionReason"
                                                       ValueChanged="HandleRevisionReasonChanged"
                                                       Size="TextAreaSize.Standard"
-                                                      Disabled="@isBusy"
+                                                      Disabled="@fieldsBlocked"
                                                       data-testid="llm-chat-definition-revision-reason" />
                                         </FormField>
                                     </Stack>
@@ -231,7 +244,7 @@
                                             Variant="Variant.Outlined"
                                             ButtonStyle="@(status == LlmChatDefinitionStatusFilter.Archived ? ButtonStyle.Danger : ButtonStyle.Secondary)"
                                             Click="@(() => ChangeStatusAsync(status))"
-                                            Disabled="@isBusy"
+                                            Disabled="@writesBlocked"
                                             data-testid="@($"llm-chat-definition-status-{status.ToString().ToLowerInvariant()}")" />
                                 }
                             }
@@ -246,7 +259,7 @@
                                     Icon="save"
                                     ButtonStyle="ButtonStyle.Primary"
                                     Click="SaveAsync"
-                                    Disabled="@isBusy"
+                                    Disabled="@writesBlocked"
                                     IsBusy="@isBusy"
                                     data-testid="llm-chat-definition-editor-save" />
                         </PrimaryActions>
@@ -266,6 +279,9 @@
     private DefinitionEditorValues? form;
     private DefinitionEditorValues? acceptedSource;
     private DefinitionEditorSection section;
+    private long acceptedGeneration;
+    private bool fieldsBlocked => Presentation.Phase != DefinitionEditorPhase.Ready;
+    private bool writesBlocked => fieldsBlocked || isBusy || Presentation.IsComparing || Presentation.Unconfirmed || Presentation.NeedsReview || Presentation.Saved || Presentation.Comparison is not null;
     private DefinitionCatalogCard? current => Presentation.Definition;
     private bool isLoading => Presentation.Phase == DefinitionEditorPhase.Loading;
     private bool canManage => Presentation.Phase != DefinitionEditorPhase.Denied;
@@ -299,14 +315,26 @@
     ];
 
     protected override void OnParametersSet() {
-        if (ReferenceEquals(acceptedSource, Presentation.Source)) {
+        if (acceptedGeneration == Presentation.Generation && ReferenceEquals(acceptedSource, Presentation.Source)) {
             return;
         }
         acceptedSource = Presentation.Source;
         form = acceptedSource;
-        section = DefinitionEditorSection.Identity;
+        if (acceptedGeneration != Presentation.Generation) {
+            section = DefinitionEditorSection.Identity;
+            acceptedGeneration = Presentation.Generation;
+        }
     }
 
+    private Task NotifyDraftAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.DraftChanged, form));
+    private Task ChangeDraftAsync(DefinitionEditorValues value) {
+        form = value;
+        return NotifyDraftAsync();
+    }
+    private void ComparisonChanged() { }
+    private Task ApplyComparisonAsync(bool acknowledge) => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ApplyComparison, AcknowledgeUnconfirmed: acknowledge));
+    private Task ConfirmDiscardAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ConfirmDiscard));
+    private Task HandlePendingTagChanged(string value) => ChangeDraftAsync(form! with { PendingTagInput = value });
     private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Save, form));
     private Task CancelAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Cancel));
     private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Reload));
@@ -320,14 +348,14 @@
         form = form with { ProviderProfileId = Guid.TryParse(key?.Value, out var id) && id != Guid.Empty ? id : null };
         form = form with { Model = SelectedProviderOption?.DefaultModel ?? "" };
         ApplyThinkingEffortCapability();
-        return Task.CompletedTask;
+        return NotifyDraftAsync();
     }
     private Task HandleModelChangedAsync(string? model) {
         if (form is not null) {
             form = form with { Model = model ?? "" };
             ApplyThinkingEffortCapability();
         }
-        return Task.CompletedTask;
+        return NotifyDraftAsync();
     }
     private void ApplyThinkingEffortCapability() {
         if (form is not null && (SelectedModelCapability is not { Support: DefinitionEditorEffortSupport.Supported } capability
@@ -344,35 +372,34 @@
         };
         return Task.CompletedTask;
     }
-    private void HandleNameChanged(string? value) => form = form! with { Name = value ?? string.Empty };
+    private Task HandleNameChanged(string? value) => ChangeDraftAsync(form! with { Name = value ?? string.Empty });
 
-    private void HandleSummaryChanged(string? value) => form = form! with { Summary = value ?? string.Empty };
+    private Task HandleSummaryChanged(string? value) => ChangeDraftAsync(form! with { Summary = value ?? string.Empty });
 
-    private void HandleAvatarChanged(string? value) => form = form! with { AvatarImageUrl = value ?? string.Empty };
+    private Task HandleAvatarChanged(string? value) => ChangeDraftAsync(form! with { AvatarImageUrl = value ?? string.Empty });
 
 
-    private void HandleSystemPromptChanged(string? value) => form = form! with { SystemPrompt = value ?? string.Empty };
+    private Task HandleSystemPromptChanged(string? value) => ChangeDraftAsync(form! with { SystemPrompt = value ?? string.Empty });
 
-    private void HandleTemperatureChanged(double? value) => form = form! with { Temperature = value };
+    private Task HandleTemperatureChanged(string? value) => ChangeDraftAsync(form! with { TemperatureInput = value ?? string.Empty });
 
-    private void HandleThinkingEffortChanged(DefinitionEditorEffort? value) => form = form! with { ThinkingEffort = value };
+    private Task HandleThinkingEffortChanged(DefinitionEditorEffort? value) => ChangeDraftAsync(form! with { ThinkingEffort = value });
 
-    private void HandleTimeoutChanged(double? value) => form = form! with { TimeoutSeconds = value };
+    private Task HandleTimeoutChanged(string? value) => ChangeDraftAsync(form! with { TimeoutInput = value ?? string.Empty });
 
-    private void HandleResponseFormatChanged(DefinitionEditorFormat value)
-        => form = form! with { ResponseFormat = value };
+    private Task HandleResponseFormatChanged(DefinitionEditorFormat value) => ChangeDraftAsync(form! with { ResponseFormat = value });
 
-    private void HandleTagsChanged(IReadOnlyList<string> value) => form = form! with { Tags = System.Collections.Immutable.ImmutableArray.CreateRange(value) };
+    private Task HandleTagsChanged(IReadOnlyList<string> value) => ChangeDraftAsync(form! with { Tags = System.Collections.Immutable.ImmutableArray.CreateRange(value) });
 
-    private void HandleSchemaNameChanged(string? value) => form = form! with { SchemaName = value ?? string.Empty };
+    private Task HandleSchemaNameChanged(string? value) => ChangeDraftAsync(form! with { SchemaName = value ?? string.Empty });
 
-    private void HandleSchemaDescriptionChanged(string? value) => form = form! with { SchemaDescription = value ?? string.Empty };
+    private Task HandleSchemaDescriptionChanged(string? value) => ChangeDraftAsync(form! with { SchemaDescription = value ?? string.Empty });
 
-    private void HandleSchemaJsonChanged(string? value) => form = form! with { SchemaJson = value ?? string.Empty };
+    private Task HandleSchemaJsonChanged(string? value) => ChangeDraftAsync(form! with { SchemaJson = value ?? string.Empty });
 
-    private void HandleModelParametersChanged(string? value) => form = form! with { ModelParameterConfigurationJson = value ?? string.Empty };
+    private Task HandleModelParametersChanged(string? value) => ChangeDraftAsync(form! with { ModelParameterConfigurationJson = value ?? string.Empty });
 
-    private void HandleRevisionReasonChanged(string? value) => form = form! with { RevisionReason = value ?? string.Empty };
+    private Task HandleRevisionReasonChanged(string? value) => ChangeDraftAsync(form! with { RevisionReason = value ?? string.Empty });
 
     private static string StatusTone(LlmChatDefinitionStatusFilter status)
         => status switch {

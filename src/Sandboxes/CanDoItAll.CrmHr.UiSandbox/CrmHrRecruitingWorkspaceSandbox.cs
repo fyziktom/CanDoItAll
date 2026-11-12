@@ -78,6 +78,7 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
 
     public string IntentLog { get; private set; } = "No intent yet.";
 
+    public Guid DatabaseProfileId => CrmHrWorkspaceSandboxIds.Id("recruitment-sandbox-database");
     public RecruitmentWorkspaceModel? CurrentWorkspace { get; private set; }
 
     public RecruitmentApplicationEditorModel ApplicationEditor { get; private set; } = new();
@@ -109,6 +110,9 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
     public PagedRecordSelection<Guid>? ApplicationSelection => selected is null ? null : new PagedRecordSelection<Guid>(selected.Id);
 
     public int SelectedRecruitingTabIndex { get; private set; }
+
+    // The catalog keeps its own query here; the routed host keeps it in the location.
+    public PagedRecordQueryState<RecruitmentApplicationScope>? CatalogQuery => null;
 
     public string RecruitmentDialogTitle => selected?.CandidateName ?? "New candidate";
 
@@ -152,6 +156,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         Log($"Select application: {application.CandidateName}");
         return Task.CompletedTask;
     }
+
+    public Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change) => Task.CompletedTask;
 
     public Task HandleApplicationPageLoadFailed(Exception exception)
     {
@@ -250,8 +256,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         return Task.CompletedTask;
     }
 
-    public Task DeleteInterviewAsync(Guid interviewId)
-    {
+    public Task DeleteInterviewAsync(RecruitmentInterviewItemModel row) {
+        var interviewId = row.Id;
         selected?.Interviews.RemoveAll(item => item.Id == interviewId);
         RefreshWorkspace();
         Log($"Delete interview: {interviewId:D}");
@@ -284,8 +290,8 @@ public sealed class CrmHrRecruitingSandboxView(CrmHrSandboxPartyStore partyStore
         return Task.CompletedTask;
     }
 
-    public Task DeleteTaskAsync(Guid taskId)
-    {
+    public Task DeleteTaskAsync(LifecycleTaskItemModel row) {
+        var taskId = row.Id;
         selected?.LifecycleTasks.RemoveAll(item => item.Id == taskId);
         RefreshWorkspace();
         Log($"Delete task: {taskId:D}");

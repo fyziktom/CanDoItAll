@@ -170,12 +170,12 @@ public sealed class SharedProviderRelayApplicationService(
                 SharedProviderRelayUsage.Unavailable);
             return Failed(SharedProviderRelayFailures.UpstreamTimeout);
         }
-        catch
-        {
+        catch (Exception exception) {
             logger.LogWarning(
-                "Shared-provider upstream dispatch failed for request {RequestId} and publication {PublicationId}.",
+                "Shared-provider upstream dispatch failed for request {RequestId} and publication {PublicationId}. FailureType={FailureType}.",
                 request.Context.RequestId,
-                target.PublicationId);
+                target.PublicationId,
+                exception.GetType().FullName);
             await finalizer.FailedAsync(
                 SharedProviderRelayFailures.UpstreamFailure,
                 SharedProviderRelayUsage.Unavailable);
@@ -325,7 +325,7 @@ public sealed class SharedProviderRelayApplicationService(
                     persisted.Model.UpstreamModelId,
                     persisted.PublicModelId,
                     TimeSpan.FromSeconds(persisted.Profile.TimeoutSeconds),
-                    persisted.Profile.ExtraSettingsJson,
+                    ProviderMetadata.BuildConfigurationJson(persisted.Profile),
                     credential,
                     persisted.Support) {
                     Thinking = SharedProviderThinkingCapabilityMapper.ToCatalog(

@@ -6878,8 +6878,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         }
     }
 
-    [Fact]
-    public async Task ExecuteAsync_rejects_oversized_runtime_tool_contract_before_workflow_launch()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExecuteAsync_rejects_invalid_contract_or_unsupported_policy_before_workflow_launch(bool decisionPolicy, bool declaredContract)
     {
         var agent = NewAgent(
             "Workflow process sentinel",
@@ -6898,6 +6901,12 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 "process.adapter.workflow_must_not_launch",
                 "Workflow execution must remain behind bounded preflight.",
                 assignment.StepInstanceId.ToString()));
+        if (decisionPolicy) {
+            assignment = assignment with { DecisionDataPolicy = CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Create(
+                ProcessDefinitionVersionId.New(), assignment.StepInstanceId) with {
+                    ExecutionContract = declaredContract ? CanDoItAll.Tests.Support.ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Workflow) : null
+                } };
+        }
         var workspace = new ThrowingWorkspaceService(
             agent,
             new InvalidOperationException("The agent path must not execute for a workflow assignment."));
@@ -6916,7 +6925,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                     ProcessRuntimeToolPreflightContributionCatalog.Empty,
                     ProductToolPolicies),
                 workflowStepExecutor: workflowExecutor);
-            var requiredTools = Enumerable.Range(0, 65)
+            var requiredTools = Enumerable.Range(0, decisionPolicy ? 0 : 65)
                 .Select(index => $"runtime_tool_{index:D2}")
                 .ToArray();
 
@@ -6929,11 +6938,11 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                 [],
                 new ProcessStepExecutionContract([], [], requiredTools, "sha256:oversized-workflow-tools")));
 
-            Assert.Equal(StrategyOutcome.NeedsManager, result.Outcome);
+            Assert.Equal(decisionPolicy ? StrategyOutcome.Failed : StrategyOutcome.NeedsManager, result.Outcome);
             Assert.Equal(0, workflowExecutor.ExecutionCount);
             Assert.False(workspace.ExecuteRunCalled);
             Assert.Equal(
-                "process.adapter.runtime_tool_preflight_failed",
+                decisionPolicy ? ProcessExecutionAdapterDiagnosticCodes.DecisionDataPolicyUnsupported : "process.adapter.runtime_tool_preflight_failed",
                 Assert.Single(result.Diagnostics).Code.Value);
         }
         finally
@@ -8758,17 +8767,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             agent.Id,
             executionRunId,
             responseText,
-            RunOutcome.Failed);
-        if (signal == AgentTransientDurableSignal.ImmediateMetricToolCall)
-        {
-            executeResult = executeResult with
-            {
-                Metric = executeResult.Metric with
-                {
-                    ToolCalls = 1
-                }
-            };
-        }
+            RunOutcome.Failed,
+            toolCalls: signal == AgentTransientDurableSignal.ImmediateMetricToolCall ? 1 : 0);
 
         var workspace = new ThrowingWorkspaceService(
             agent,
@@ -12950,7 +12950,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             [
                 new BrowserExecutionMetadataContribution()
             ]),
-            logger ?? NullLogger<AgentFrameworkProcessStepExecutor>.Instance);
+            logger ?? NullLogger<AgentFrameworkProcessStepExecutor>.Instance, []);
         return new AgentFrameworkProcessExecutionAdapter(executor);
     }
 
@@ -13034,7 +13034,8 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         Guid agentId,
         Guid executionRunId,
         string responseText,
-        RunOutcome outcome = RunOutcome.Succeeded)
+        RunOutcome outcome = RunOutcome.Succeeded,
+        int toolCalls = 0)
         => new(
             executionRunId,
             null,
@@ -13051,7 +13052,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
                  1,
                  10,
                  2,
-                 0)
+                 toolCalls)
              {
                  ExecutionRunId = executionRunId
              });
@@ -13108,6 +13109,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
             executionRunId,
             responseText,
             RunOutcome.Failed).Metric;
+        Assert.NotNull(metric);
         var usageObservation = new ProviderUsageObservation(
             Guid.NewGuid(),
             now,
@@ -13781,16 +13783,22 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         public async Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(ExecutionRunSourceKey source,
             ExecutionRunRequest request, CancellationToken cancellationToken = default) {
             Assert.True(source.RequiresBackgroundAdmission);
-            Assert.Equal(request.Context!.CorrelationId, source.CorrelationId);
-            Assert.Equal(request.Context.CausationId, source.CausationId);
-            var result = await ExecuteRunAsync(request, cancellationToken);
-            var now = DateTimeOffset.UtcNow;
             var context = request.Context;
-            var run = executionDetail?.Run ?? new ExecutionRunRecord(result.ExecutionRunId, request.AgentId, null,
-                "Process adapter fixture", source.SourceKind, source.SourceId, context.CorrelationId, context.CausationId,
-                context.RequestedBy, context.RequestedByKind, context.MetadataJson, request.Prompt, result.ResponseText,
-                result.Metric.ProviderName, result.Metric.Model, result.State, result.Metric.Outcome, now, now, now, now,
-                string.Empty, null, []);
+            Assert.NotNull(context);
+            Assert.Equal(context.CorrelationId, source.CorrelationId);
+            Assert.Equal(context.CausationId, source.CausationId);
+            var result = await ExecuteRunAsync(request, cancellationToken);
+            var run = executionDetail?.Run;
+            if (run is null) {
+                var now = DateTimeOffset.UtcNow;
+                var metric = result.Metric;
+                Assert.NotNull(metric);
+                run = new ExecutionRunRecord(result.ExecutionRunId, request.AgentId, null,
+                    "Process adapter fixture", source.SourceKind, source.SourceId, context.CorrelationId, context.CausationId,
+                    context.RequestedBy, context.RequestedByKind, context.MetadataJson, request.Prompt, result.ResponseText,
+                    metric.ProviderName, metric.Model, result.State, metric.Outcome, now, now, now, now,
+                    string.Empty, null, []);
+            }
             return new(ExecutionRunSourceDisposition.Created, run, result);
         }
 
@@ -13876,7 +13884,7 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
 
         public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
-        public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
+        public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default) => throw Unused();
 
@@ -13890,12 +13898,13 @@ public sealed class ProcessRuntimeIntegrationAdapterTests
         public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(
             Guid agentId,
             Guid? chatSessionId = null,
-            CancellationToken cancellationToken = default) => throw Unused();
+            CancellationToken cancellationToken = default, string? initialTitle = null) => throw Unused();
 
         public Task<ChatSessionRecord> RenameChatSessionAsync(
             Guid agentId,
             Guid chatSessionId,
             string title,
+            string expectedTitle,
             CancellationToken cancellationToken = default) => throw Unused();
 
         public Task<ExecutionRunResult> ContinueExecutionRunAsync(

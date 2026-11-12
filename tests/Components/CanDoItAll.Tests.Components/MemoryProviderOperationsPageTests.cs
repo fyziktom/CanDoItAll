@@ -6,6 +6,7 @@ using CanDoItAll.Memory.Mock;
 using CanDoItAll.Memory.Persistence;
 using CanDoItAll.Modules.Memory;
 using CanDoItAll.Modules.Memory.Pages;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,7 +32,7 @@ public sealed class MemoryProviderOperationsPageTests
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
-        cut.WaitForElement("[data-testid='memory-ui-query-text']").Change("payment integration");
+        cut.WaitForElement("[data-testid='memory-ui-query-text']").Input("payment integration");
         cut.Find("[data-testid='memory-ui-query-submit']").Click();
 
         cut.WaitForAssertion(() =>
@@ -61,7 +62,7 @@ public sealed class MemoryProviderOperationsPageTests
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
-        cut.WaitForElement("[data-testid='memory-ui-query-text']").Change("long recall");
+        cut.WaitForElement("[data-testid='memory-ui-query-text']").Input("long recall");
         cut.Find("[data-testid='memory-ui-query-async']").Change(true);
 
         cut.WaitForAssertion(() =>
@@ -95,13 +96,14 @@ public sealed class MemoryProviderOperationsPageTests
 
         cut.WaitForElement("[data-testid='memory-ui-provider-list']");
         cut.Find("[data-testid='memory-ui-tab-query']").Click();
-        cut.WaitForElement("[data-testid='memory-ui-query-text']").Change("failure case");
+        cut.WaitForElement("[data-testid='memory-ui-query-text']").Input("failure case");
         cut.Find("[data-testid='memory-ui-query-submit']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Failed", cut.Markup);
-            Assert.Contains("provider route failed", cut.Markup);
+            Assert.Contains("Provider request failed", cut.Markup);
+            Assert.DoesNotContain("provider route failed", cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain("Cognitive Memory", cut.Markup);
         });
     }
@@ -191,7 +193,9 @@ public sealed class MemoryProviderOperationsPageTests
             context.Services.AddDeterministicMockMemoryProviderDriver();
         }
         configureServices?.Invoke(context.Services);
+        context.Services.AddSingleton<CanDoItAll.Infrastructure.ControlPlane.ICanonicalRuntimeDatabase>(new MemoryTestDatabase());
         context.Services.AddMemoryUiModule();
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
         using var scope = context.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
         var profileStore = scope.ServiceProvider.GetRequiredService<IMemoryProviderProfileStore>();

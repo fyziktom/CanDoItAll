@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CanDoItAll.Tests.Integration.LlmChats;
 
-public sealed class LlmChatProjectStructureReportPersistenceIntegrationTests
+public sealed partial class LlmChatProjectStructureReportPersistenceIntegrationTests
 {
     private static readonly DateTimeOffset UtcMidnight =
         new(2026, 8, 18, 0, 0, 0, TimeSpan.Zero);

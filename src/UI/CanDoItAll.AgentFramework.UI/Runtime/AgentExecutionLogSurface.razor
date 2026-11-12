@@ -1,0 +1,50 @@
+@{ var rendered = State; }
+
+<div class="agent-execution-log-dialog-body" data-testid="agent-execution-log-dialog-body">
+    @if (rendered.Entries.IsEmpty) {
+        <EmptyState Eyebrow="Agent work" Title="No execution steps"
+                    Description="The selected run does not have persisted execution log entries." />
+    } else {
+        <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+            <SurfaceCard Soft="true">
+                <Stack GapScale="LayoutGap.Small">
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@rendered.Tone" Text="@rendered.State" />
+                        <StatusBadge Tone="neutral" Text="@($"{rendered.Entries.Length} steps")" />
+                        <StatusBadge Tone="neutral" Text="@rendered.Duration" />
+                        @if (rendered.Provider is not null) {
+                            <StatusBadge Tone="info" Text="@rendered.Provider" />
+                        }
+                    </Cluster>
+                    <TextBlock TextStyle="TextStyle.Subtitle2" Value="@rendered.Title" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@rendered.Metadata" />
+                </Stack>
+            </SurfaceCard>
+            <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                @foreach (var entry in rendered.Entries) {
+                    <article class="agent-execution-log-dialog-entry @(entry.Id == rendered.HighlightEntryId ? "agent-execution-log-dialog-entry--highlight" : string.Empty)"
+                             data-testid="agent-execution-log-dialog-entry" data-entry-id="@entry.Id" data-run-id="@entry.RunId">
+                        <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="@entry.Tone" Text="@entry.State" />
+                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@entry.Phase" />
+                                <TextBlock TextStyle="TextStyle.Caption" Value="@entry.CreatedAtUtc" />
+                            </Cluster>
+                            <pre class="agent-execution-log-dialog-entry__message">@entry.Message</pre>
+                            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                                <StatusBadge Tone="neutral" Text="@($"Run {entry.RunId}")" />
+                                <CopyButton Value="@entry.Message" Disabled="@string.IsNullOrWhiteSpace(entry.Message)"
+                                            DisplayMode="CopyButtonDisplayMode.IconOnly" Size="CopyButtonSize.ExtraSmall"
+                                            AriaLabel="Copy execution step details" />
+                            </Cluster>
+                        </Stack>
+                    </article>
+                }
+            </Stack>
+        </Stack>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AgentExecutionLogState State { get; set; } = default!;
+}

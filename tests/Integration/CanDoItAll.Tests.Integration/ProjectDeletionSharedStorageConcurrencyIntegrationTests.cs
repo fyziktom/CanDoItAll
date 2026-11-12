@@ -1,6 +1,8 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
@@ -14,8 +16,10 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
 {
-    [Fact]
-    public async Task Concurrent_project_deletions_hold_shared_binding_scope_and_delete_last_shared_object_once()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Concurrent_project_deletions_hold_shared_binding_scope_and_delete_last_shared_object_once(bool initializeCatalog)
     {
         await using var application = await TestApplication.CreateAsync(new TestHarnessOptions
         {
@@ -29,6 +33,9 @@ public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
         });
         await using var setupScope = application.Services.CreateAsyncScope();
         var projects = setupScope.ServiceProvider.GetRequiredService<ProjectsService>();
+        if (initializeCatalog) {
+            await setupScope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>().LoadCatalogSnapshotAsync();
+        }
         var workbench = setupScope.ServiceProvider
             .GetRequiredService<ProjectWorkbenchService>();
         var dbContextFactory = setupScope.ServiceProvider
@@ -62,10 +69,12 @@ public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
             sourceAsset.MediaRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(physicalPath));
 
-        Task<ProjectDeletionResult> firstDeletion;
-        Task<ProjectDeletionResult> secondDeletion;
+        Task<ProjectLifecycleOutcome> firstDeletion;
+        Task<ProjectLifecycleOutcome> secondDeletion;
         await using var firstScope = application.Services.CreateAsyncScope();
         await using var secondScope = application.Services.CreateAsyncScope();
+        var firstOriginal = await ProjectLifecycleTestCommands.CaptureDeleteAsync(firstScope.ServiceProvider, firstProjectId);
+        var secondOriginal = await ProjectLifecycleTestCommands.CaptureDeleteAsync(secondScope.ServiceProvider, secondProjectId);
         await using (var lockContext = await dbContextFactory.CreateDbContextAsync())
         await using (var bindingScope = await SerializableMutationScope.BeginAsync(
                          lockContext,
@@ -73,12 +82,8 @@ public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
                              .ManagedStorageBindingScopeKey,
                          CancellationToken.None))
         {
-            firstDeletion = firstScope.ServiceProvider
-                .GetRequiredService<ProjectsService>()
-                .DeleteAsync(firstProjectId);
-            secondDeletion = secondScope.ServiceProvider
-                .GetRequiredService<ProjectsService>()
-                .DeleteAsync(secondProjectId);
+            firstDeletion = ProjectLifecycleTestCommands.SubmitAsync(firstScope.ServiceProvider, firstOriginal);
+            secondDeletion = ProjectLifecycleTestCommands.SubmitAsync(secondScope.ServiceProvider, secondOriginal);
 
             await AssertRemainBlockedAsync(
                 [firstDeletion, secondDeletion],
@@ -86,8 +91,30 @@ public sealed class ProjectDeletionSharedStorageConcurrencyIntegrationTests
             await bindingScope.CommitAsync(CancellationToken.None);
         }
 
-        await Task.WhenAll(firstDeletion, secondDeletion)
+        var outcomes = await Task.WhenAll(firstDeletion, secondDeletion)
             .WaitAsync(TimeSpan.FromSeconds(20));
+        foreach (var outcome in outcomes) {
+            var accepted = Assert.IsType<ProjectLifecycleOutcome.Accepted>(outcome);
+            Assert.False(accepted.DiagnosticsUnavailable);
+            if (initializeCatalog || accepted.CompletionIssue is null) {
+                ProjectLifecycleTestCommands.RequireAccepted(accepted);
+                continue;
+            }
+            Assert.Equal(ProjectLifecycleCompletionIssue.PostCommitProcessing, accepted.CompletionIssue);
+            var completion = Assert.IsType<ProjectLifecycleAcknowledgement.DeletionCommitted>(accepted.Result.Acknowledgement).Completion;
+            var pending = Assert.Single(await projects.ListPendingDeletionCleanupsAsync(),
+                row => row.ProjectId == completion.Original.Project.ProjectId);
+            Assert.Equal(new ProjectDeletionParticipantId(AgentProjectStructureAccessDeletionParticipant.ParticipantIdValue), pending.ParticipantId);
+            Assert.Contains(completion.Obligations, obligation => obligation.Participant == pending.ParticipantId && obligation.RecoveryId == pending.RecoveryId);
+            await using var failedContext = await dbContextFactory.CreateDbContextAsync();
+            var failed = await failedContext.Set<AgentProjectStructureAccessRevocationRecord>().AsNoTracking()
+                .SingleAsync(row => row.Id == pending.RecoveryId);
+            Assert.Equal(nameof(SandboxWorkspacePublicationConflictException), failed.LastFailureCode);
+            Assert.Equal(AgentProjectStructureAccessRevocationStatus.Failed, failed.Status);
+            var recovered = await projects.RetryDeletionCleanupAsync(pending.ProjectId, pending.ParticipantId, pending.RecoveryId);
+            Assert.Empty(recovered.Warnings);
+        }
+        Assert.Empty(await projects.ListPendingDeletionCleanupsAsync());
 
         Assert.False(File.Exists(physicalPath));
         Assert.Equal(

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/ui_validation_architecture",
+  "sourceOnly": true,
+  "inputs": [
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+      "bytes": 18008,
+      "sha256": "B771EC7B3EFF2EFBB9D6237FC6C76124183323E66CB6321E46EADD5B5D41FF94"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-data-sources-partial-transfer-fixture.md",
+      "bytes": 3161,
+      "sha256": "4BD838506B5CA5EA34FEB0EC5CCB16A957A56323D7DAAB3EB57A6DD978BF7DCF"
+    }
+  ],
+  "mainPredecessor": {
+    "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+    "bytes": 15994,
+    "sha256": "A923E3897D7621C780137291115A0FE7D6316A0E472901F5DDE669A34E30D331"
+  },
+  "preservedPredecessor": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-partial-transfer-repair-source\\DataSourcesBrowserTests.cs.before.txt",
+    "bytes": 15994,
+    "sha256": "A923E3897D7621C780137291115A0FE7D6316A0E472901F5DDE669A34E30D331"
+  },
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\data-sources-partial-transfer-repair-source.ownership.json",
+    "bytes": 414,
+    "sha256": "D232763DB9CC286D79F1441B0B6FF4066BEDD3F5B0DD10B65F5160F493D2F74B"
+  },
+  "dependencies": [
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "bytes": 13228,
+      "sha256": "EAC9248FD670C79627CB0CF80D082087B0A7D7B8935133E45E0658B64F01E4DF",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/DatabaseTransfer/WorkspaceDefaultProviderDatabaseTransferHandler.cs",
+      "bytes": 4240,
+      "sha256": "AFB2843E67D33598AB70B2EDA4B3CF27191BEA6AA564DFB9E8117B38F4B76F7B",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace.Contracts/WorkspaceSettingsMutationContracts.cs",
+      "bytes": 8015,
+      "sha256": "4462EF8B4309DF00796DE02DDD71BF838E140591D98DDC8677F9CFAB9086BA67",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Models/WorkspaceModels.cs",
+      "bytes": 4330,
+      "sha256": "BC9AC18180E64D06D4BBC0D797D65A62ECC1E56E2197A7F7B4A112B5AB520E6E",
+      "sourceRoot": "main"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Services/WorkspaceSettingsWriter.cs",
+      "bytes": 9563,
+      "sha256": "D1F1545DCC38990A3F43EE596233295360F0BDEB65BEAB9C709D1FE8D9D72FF6",
+      "sourceRoot": "main"
+    }
+  ],
+  "failureEvidence": [
+    {
+      "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\resource-browser-validation\\execute-resource-browser-data-sources.stdout.log",
+      "bytes": 7196,
+      "sha256": "305BEB00BB19E1E86DFD97D2155BB67308BC0EDF2726766C1C0517FAEDF3C2A5"
+    },
+    {
+      "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\resource-browser-validation\\resource-browser-data-sources.trx",
+      "bytes": 10047,
+      "sha256": "3FD892A82438976ABDF4224E9C4C4F0A2E72F21223D508706B03879626E4D6AA"
+    }
+  ],
+  "testClass": "CanDoItAll.Tests.Playwright.DataSourcesBrowserTests",
+  "testMethod": "Unlocked_UI_creates_transfers_and_activates_only_after_restart_with_real_partial_group_progress",
+  "facts": 1,
+  "theories": 0,
+  "attributes": [
+    "Playwright",
+    "HostPlatform"
+  ],
+  "browserSelectionRows": 4,
+  "ordinarySelectionRows": 346,
+  "productionChanged": false,
+  "mainChanged": false,
+  "executionPerformed": false,
+  "validationStatus": "Source-only independent review pending; parent build/static/fresh exact browser proof required."
+}

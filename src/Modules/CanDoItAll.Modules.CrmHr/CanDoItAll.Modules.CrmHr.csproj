@@ -27,6 +27,7 @@
     <PackageReference Include="CanDoItAll.Components.Gantt" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\Foundation\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.AppComponents\CanDoItAll.AppComponents.csproj" />
+    <ProjectReference Include="../../UI/CanDoItAll.AppComponents.Navigation/CanDoItAll.AppComponents.Navigation.csproj" />
     <ProjectReference Include="..\..\UI\CanDoItAll.CrmHr.UI\CanDoItAll.CrmHr.UI.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.CrmHr.Contracts\CanDoItAll.Modules.CrmHr.Contracts.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />

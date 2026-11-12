@@ -40,7 +40,7 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
     }
 
     [Fact]
-    public async Task Legacy_pending_and_completed_agent_recoveries_survive_restart_and_remain_profile_isolated() {
+    public async Task Legacy_completed_recoveries_survive_restart_but_unbound_pending_evidence_requires_offline_installation() {
         await using var environment = CanDoItAllTestEnvironment.Create("project-lifecycle-owner-restart");
         var profile = environment.CreatePostgreSqlProfile("original");
         var otherProfile = environment.CreatePostgreSqlProfile("other");
@@ -56,10 +56,16 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
         completed.CompletedAtUtc = timestamp.AddMinutes(3);
         await using (var original = await TestApplication.CreateAsync(options)) {
             await using var schema = await original.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-            schema.AddRange(pending, completed);
+            schema.Add(completed);
             await schema.SaveChangesAsync();
         }
         await using var restarted = await TestApplication.CreateAsync(options);
+        await using (var schema = await restarted.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync()) {
+            schema.Add(pending);
+            await schema.SaveChangesAsync();
+        }
+        var restartFailure = await Assert.ThrowsAsync<InvalidDataException>(() => TestApplication.CreateAsync(options));
+        Assert.Contains("no original completion binding", restartFailure.Message, StringComparison.Ordinal);
         await using var scope = restarted.Services.CreateAsyncScope();
         var participant = AgentParticipant(scope.ServiceProvider);
         Assert.Equal(pending.Id, Assert.Single(await participant.ListPendingRecoveriesAsync()).RecoveryId);
@@ -72,9 +78,8 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
         var coordinator = restarted.Services.GetRequiredService<CoordinatedDatabaseTransaction>();
         await using (var transaction = await owner.Database.BeginTransactionAsync(IsolationLevel.Serializable)) {
             using (coordinator.Enter(owner)) {
-                Assert.Null(await participant.PrepareAsync(completed.ProjectId));
-                Assert.Equal(new ProjectDeletionParticipantPreparation(pending.ProjectId, pending.Id),
-                    await participant.PrepareAsync(pending.ProjectId));
+                await Assert.ThrowsAsync<NotSupportedException>(() => participant.PrepareAsync(completed.ProjectId));
+                await Assert.ThrowsAsync<NotSupportedException>(() => participant.PrepareAsync(pending.ProjectId));
             }
             await transaction.CommitAsync();
         }
@@ -108,11 +113,12 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
         }
         saves.Saved.Clear();
         await using var scope = application.Services.CreateAsyncScope();
-        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var original = await ProjectLifecycleTestCommands.CaptureDeleteAsync(scope.ServiceProvider, projectId);
+        var outcome = await ProjectLifecycleTestCommands.SubmitAsync(scope.ServiceProvider, original);
         if (failFinalSave) {
-            await Assert.ThrowsAsync<InjectedProjectSaveFailure>(() => projects.DeleteAsync(projectId));
+            Assert.Equal(ProjectLifecycleRefusal.TransactionConflict, Assert.IsType<ProjectLifecycleOutcome.Refused>(outcome).Reason);
         } else {
-            Assert.Equal(projectId, (await projects.DeleteAsync(projectId)).ProjectId);
+            ProjectLifecycleTestCommands.RequireAccepted(outcome);
         }
         var ownerSave = Assert.IsType<SaveObservation>(saves.FinalSave);
         Assert.Equal(IsolationLevel.Serializable, ownerSave.IsolationLevel);
@@ -161,7 +167,8 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
             await schema.SaveChangesAsync();
         }
         await using var scope = application.Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(projectId);
+        await Assert.ThrowsAsync<ProjectLifecycleOriginalIntentRequiredException>(() =>
+            scope.ServiceProvider.GetRequiredService<ProjectsService>().DeleteAsync(projectId));
         await using var readback = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         Assert.Equal("{\"retained\":true}",
             (await readback.Set<ProjectWorkbenchViewStateRecord>().SingleAsync(item => item.ProjectId == projectId)).StateJson);
@@ -173,12 +180,17 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
     public async Task Residual_recovery_waits_for_the_managed_binding_gate_before_refusing_new_bindings() {
         var reads = new RecoveryReadProbe();
         await using var application = await TestApplication.CreateAsync(Harness(reads: reads));
+        await using var scope = application.Services.CreateAsyncScope();
         var projectId = Guid.NewGuid();
+        Assert.True((await scope.ServiceProvider.GetRequiredService<ProjectsService>().CreateAsync(projectId,
+            new() { Name = "Completed deletion with residual binding" })).IsSuccess);
+        await ProjectLifecycleTestCommands.DeleteAsync(scope.ServiceProvider, projectId);
         var objectId = Guid.NewGuid();
-        var mutation = CompletedMutation(projectId, DateTimeOffset.UtcNow);
         var factory = application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        ProjectCrossModuleMutationRecord mutation;
         await using (var schema = await factory.CreateDbContextAsync()) {
-            schema.AddRange(mutation, ProjectObject(projectId, objectId), new ProjectNodeBindingRecord {
+            mutation = await schema.Set<ProjectCrossModuleMutationRecord>().SingleAsync(row => row.ProjectId == projectId);
+            schema.AddRange(ProjectObject(projectId, objectId), new ProjectNodeBindingRecord {
                 ProjectObjectId = objectId, Route = "/residual/note"
             });
             await schema.SaveChangesAsync();
@@ -191,7 +203,6 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
             originalBindingJson = JsonSerializer.Serialize(await original.Set<ProjectNodeBindingRecord>().SingleAsync(item => item.ProjectObjectId == objectId));
             originalReceiptJson = JsonSerializer.Serialize(await original.Set<ProjectCrossModuleMutationRecord>().SingleAsync(item => item.Id == mutation.Id));
         }
-        await using var scope = application.Services.CreateAsyncScope();
         var participant = Assert.Single(scope.ServiceProvider.GetServices<IProjectDeletionParticipant>()
             .OfType<ProjectWorkbenchDeletionParticipant>());
         Task<ProjectDeletionParticipantCompletion> completion;
@@ -219,7 +230,7 @@ public sealed class ProjectLifecycleOwnerPersistenceTests {
         Assert.Equal(originalReceiptJson, JsonSerializer.Serialize(retained));
         Assert.Equal(mutation.Id, retained.Id);
         Assert.Equal(ProjectCrossModuleMutationStatus.Completed, retained.Status);
-        Assert.Equal(0, retained.AttemptCount);
+        Assert.Equal(mutation.AttemptCount, retained.AttemptCount);
     }
 
     private static ProjectObjectRecord ProjectObject(Guid projectId, Guid objectId) => new() {

@@ -1,0 +1,105 @@
+{
+  "Status": "Source frozen after peer lock-path correction; no build or execution",
+  "Inputs": [
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessHistoricalReceiptRead.cs",
+      "action": "new",
+      "reason": "Original-evidence query/current historical source observation ports",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "B9F3AF2E26DE2B724694E84E4AFB208879622893FDF5E3D87C1071506080032B",
+      "bytes": 1241
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessOriginalReceiptAuthorityReader.cs",
+      "action": "new",
+      "reason": "Existing EF dispatch evidence query and initialized-profile checks only",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "2B86B98619DEC910D363747D383F8131EE910243A883851FCC87D847384F124A",
+      "bytes": 1010
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessHistoricalReceiptSourcePolicy.cs",
+      "action": "new",
+      "reason": "Captured-run original evidence/current read with no execution store",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "E5FE86DE2D319BD3A89099C5FD035D9B392799B344555F8ED98557C1922F66C2",
+      "bytes": 2472
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessHistoricalReadAuthority.cs",
+      "action": "new",
+      "reason": "Current source observation without launch targets/contributors/mutation service",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "837878DBF7049EF831321CF502D592BB47F189749112F30BE33A98B0916F1E7C",
+      "bytes": 8072
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessReadAuthorityPolicy.cs",
+      "action": "new",
+      "reason": "Shared pure operator/source-project/grant validation, exact old semantics",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null,
+      "sha256": "66CD46473C5D4B04FC744EC20436B2335142836483FCF70D495BF93C6D52C084",
+      "bytes": 3902
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
+      "action": "modify",
+      "reason": "Use shared pure validators; ordinary policy/lease behavior unchanged",
+      "managedPredecessorSha256": "E0246ABE0238841E750FAF15E91F9D5089F226A421BA3DC4D05E8F0367CA128B",
+      "mainParentSha256": "E0246ABE0238841E750FAF15E91F9D5089F226A421BA3DC4D05E8F0367CA128B",
+      "sha256": "FFDE0FFC170969F7E2A2372A057E1DE561F5540E630F00DB6C1518BB57852061",
+      "bytes": 17424
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessToolBackgroundSourcePolicy.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "C25CD52885BEB73D6108F0A029004ECA35C83BD719AAA66544863EE0CA0D73C0",
+      "mainParentSha256": "EBA3CC835B03D542DB12E5012890EF0DC3399C861FCA7897578C5C93A90525C3",
+      "sha256": "708214E95EDED6D0C220267F5D2E5588FF9A68DBAFB4F121C1058593F4CA2173",
+      "bytes": 3661
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.Observation.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "F28ACAD1BBA1EBBB22C37E3B47E902519314994291714E8B1B411787471ACD4A",
+      "mainParentSha256": "8E8D48A64AFA7FE1FA9912C33B9C65ABAC7B19AC6693AF7BAA26E274B4181F47",
+      "sha256": "47B012829E133F111DA20ED3052C59EAE5D425081D2AF2FA1769026810E318A7",
+      "bytes": 6273
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessExecutionMutationService.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "4FB829C3C58CFBB49FC3345FF04802B527AB806924BDF7BE58B6AD285096A4FC",
+      "mainParentSha256": "8946318B68897E4AEFADD9D6B276A09EB8D05DA21141219C767D552B1D9063FE",
+      "sha256": "8C1C4C660E8104EF22ED08DF413C7F4F9514A125413AF42F1BB63D271709C11F",
+      "bytes": 10606
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessExecutionDispatchAuthority.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "CEF1B15A822147FC52C3B66B701C6C00AD2BCE80041215AEF24DDE9A2962E827",
+      "mainParentSha256": "D14EB3DD5AE6B3DCAAF06E63A4D53B16B96C0F781C5A7E553317E8115C1DFFF6",
+      "sha256": "74A5904B493AA3ED52FB7CC9E08D16FF100C1FCAB6D55A9DFF163E4DACBA41A1",
+      "bytes": 2095
+    }
+  ],
+  "Review": {
+    "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-process-cold-source.md",
+    "sha256": "CF55D01F5E908D86A19B115FD62B6D62927161E8CFF8E6A807648DD00218F01B"
+  },
+  "Verification": {
+    "syntaxFiles": 10,
+    "syntaxErrors": 0,
+    "addedTestRows": 0,
+    "execution": "None"
+  }
+}

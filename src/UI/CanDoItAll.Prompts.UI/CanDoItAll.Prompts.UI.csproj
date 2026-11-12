@@ -16,6 +16,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="$(MicrosoftAspNetCoreComponentsVersion)" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="$(CanDoItAllComponentsPackageVersion)" />
     <ProjectReference Include="..\..\Modules\CanDoItAll.Modules.Prompts.Contracts\CanDoItAll.Modules.Prompts.Contracts.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Editing.UI\CanDoItAll.Editing.UI.csproj" />
+    <ProjectReference Include="..\..\Foundation\CanDoItAll.Editing\CanDoItAll.Editing.csproj" />
   </ItemGroup>
 
 </Project>

@@ -97,6 +97,7 @@ internal sealed class MafRuntimeAgentFactory
     {
         ArgumentNullException.ThrowIfNull(workspaceRuntimeServices);
         var runtimeOptions = executionOptions ?? MafRuntimeExecutionOptionsResolver.CreateDisabled(null);
+        MafToolRunContext.RequireSupportedAdmission(runtimeOptions.ToolAdmissionSupport);
         if (runtimeOptions.Handoff is not null)
         {
             return await CreateHandoffRuntimeBuildAsync(
@@ -500,7 +501,6 @@ internal sealed class MafRuntimeAgentFactory
         var runtimeToolOwnershipByToolName = CreateRuntimeToolOwnershipByToolName(capabilityState);
         var featureMatrix = ProviderFeatureService.ResolveFeatureMatrix(provider);
         var logger = loggerFactory.CreateLogger<MafAgentRuntime>();
-        var configuredWorkspaceAccess = AgentWorkspaceToolAccessMetadata.Read(agentDefinition.ConfigurationJson);
         builder.UseLogging(
             loggerFactory,
             logging => logging.JsonSerializerOptions = LoggingJsonSerializerOptions);
@@ -508,69 +508,26 @@ internal sealed class MafRuntimeAgentFactory
         {
             var functionName = context.Function?.Name ?? "unknown";
             var invocationArguments = context.Arguments.ToArray();
-            var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(functionName, invocationArguments, capabilityState.ToolPolicies);
-            var pathArguments = ToolInvocationPathArgumentResolver.Resolve(functionName, invocationArguments);
             var isRequiredFinalizerTool = IsRequiredFinalizerTool(functionName, finalizerPolicy, finalizerMode);
             var classification = isRequiredFinalizerTool
                 ? ToolInvocationClassification.Read
                 : capabilityState.ToolPolicies.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
-            var externalTargetAccess = EffectiveExternalTargetAccessResolver.Resolve(
-                configuredWorkspaceAccess,
-                auditScope?.AllowedExternalTargetAliases,
-                auditScope?.ReadOnlyExternalTargetAliases,
-                auditScope?.InvocationExternalTargetScopeIsAuthoritative == true);
-            var scriptSideEffectManifestJson = MafScriptPolicyInspectionService.TryGetStringArgument(
-                invocationArguments,
-                GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;
-            var scriptInspection = scriptPolicyInspectionService.ResolveScriptContentInspectionForPolicy(
-                functionName,
-                invocationArguments,
-                auditScope,
-                scriptSideEffectManifestJson,
-                externalTargetAccess);
-            // Provider-neutral policy context: the adapter maps generic run,
-            // tool, workspace, and governance facts only. Domain restrictions
-            // (for example governed process rules) are contributed by the
-            // owning module through the injected policy pipeline; this adapter
-            // does not interpret process fields.
-            var neutralPolicyContext = new ToolInvocationPolicyContext(
-                AgentId: agentDefinition.Id,
-                AgentName: agentDefinition.Name,
-                ToolName: functionName,
-                RedactedArguments: redactedArguments,
-                Classification: classification,
-                IsKnownTool: isRequiredFinalizerTool || knownToolNames.Contains(functionName),
-                AutoApprovalAllowed: suppressApprovalRequirements,
-                ApprovalWrapperAvailable: approvalWrappedToolNames.Contains(functionName),
-                ExecutionRunId: auditScope?.ExecutionRunId.ToString("D") ?? string.Empty,
-                SourceKind: auditScope?.SourceKind ?? string.Empty,
-                ProcessRunId: string.Empty,
-                ProcessStepId: string.Empty,
-                AllowedExternalTargetAliases: externalTargetAccess.WritableAliases,
-                ReadOnlyExternalTargetAliases: externalTargetAccess.ReadOnlyAliases,
-                ApprovalWrapperEffectiveForProvider: featureMatrix.SupportsApprovalRequiredAIFunction,
-                ApplicationApprovalAvailable: false,
-                ContextWorkspaceScopeKind: auditScope?.ContextWorkspaceScope?.Kind.ToString() ?? string.Empty,
-                ContextWorkspaceScopeKey: auditScope?.ContextWorkspaceScope?.Key ?? string.Empty,
-                InspectedScriptContent: scriptInspection.Content,
-                ScriptInspectionFailure: scriptInspection.FailureMessage,
-                ScriptSideEffectManifestJson: scriptSideEffectManifestJson,
-                ToolInvocationTraces: toolInvocationTraceRecorder.Snapshot())
-            {
-                DeclaredCapability = capabilityState.ToolPolicies.TryResolve(functionName, out var declaredCapability)
-                    ? declaredCapability
-                    : null,
-                SourceId = auditScope?.SourceId ?? string.Empty,
-                AllowedManagedArtifactReadRefs = auditScope?.AllowedManagedArtifactReadRefs ?? [],
-                ScriptEnvironmentAccessAllowed = configuredWorkspaceAccess.CanScriptsReadEnvironment,
-                ExecutionGovernance = executionGovernance,
-                PathArguments = pathArguments
-            };
+            var neutralPolicyContext = MafToolInvocationPolicyContextFactory.Create(
+                agentDefinition, functionName, invocationArguments, classification, capabilityState.ToolPolicies,
+                isRequiredFinalizerTool || knownToolNames.Contains(functionName),
+                new(suppressApprovalRequirements, approvalWrappedToolNames.Contains(functionName),
+                    featureMatrix.SupportsApprovalRequiredAIFunction),
+                executionGovernance, scriptPolicyInspectionService.ResolveScriptContentInspectionForPolicy,
+                auditScope, toolInvocationTraceRecorder.Snapshot());
+            var pathArguments = neutralPolicyContext.PathArguments;
             var policyEvaluation = await toolPolicy
                 .ComposeAndEvaluateAsync(neutralPolicyContext, auditScope, cancellationToken);
             var policyContext = policyEvaluation.EffectiveContext;
             var policyDecision = policyEvaluation.Decision;
+            var scriptIntent = MafWorkspaceScriptIntentResolver.Resolve(policyContext);
+            var resultClassification = scriptIntent is MafWorkspaceScriptIntent.Validation or MafWorkspaceScriptIntent.InvalidManifest
+                ? ToolInvocationClassification.Validation : classification;
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
             activity?.SetTag("agentframework.tool_name", functionName);
@@ -663,6 +620,13 @@ internal sealed class MafRuntimeAgentFactory
                         policyDecision,
                         policyContext.HasEffectiveApprovalPath);
 
+                    if (scriptIntent == MafWorkspaceScriptIntent.InvalidManifest) {
+                        return CapturePreDispatchFailure(new(false, AgentToolInputValidationException.FailureCode,
+                            $"The script side-effect manifest is invalid. {MafWorkspaceScriptIntentResolver.ManifestGuidance}", true) {
+                            EffectState = AgentToolEffectState.NotCommitted
+                        });
+                    }
+
                     if (MafToolArgumentBindingFailureMapper.TryCreatePreInvocationFailure(
                             context.Function as AIFunction,
                             invocationArguments,
@@ -684,12 +648,12 @@ internal sealed class MafRuntimeAgentFactory
                     return await next(context, token);
                 }
 
-                var result = MafToolRunContext.Current is { } admitted
-                    ? await admitted.InvokeAsync(context.CallContent, InvokeCurrentToolAsync, effectScope, cancellationToken)
-                    : await InvokeCurrentToolAsync(cancellationToken);
+                var (result, savedEffect) = MafToolRunContext.Current is { } admitted
+                    ? await admitted.InvokeWithEffectAsync(context.CallContent, InvokeCurrentToolAsync, effectScope, cancellationToken, resultClassification)
+                    : (await InvokeCurrentToolAsync(cancellationToken), (AgentToolEffectState?)null);
                 var assessment = MafRuntimeToolInvocationResultClassifier.Assess(
                     functionName,
-                    classification,
+                    resultClassification,
                     result,
                     effectScope.PreDispatchFailure,
                     effectScope.RejectedBeforeEffect,
@@ -697,7 +661,7 @@ internal sealed class MafRuntimeAgentFactory
                 directReceiptExecutionRunId = assessment.DirectReceiptExecutionRunId;
                 succeeded = assessment.Succeeded;
                 outcome = assessment.Outcome;
-                effectState = assessment.EffectState;
+                effectState = savedEffect ?? assessment.EffectState;
                 failureCode = assessment.FailureCode;
                 canRetryWithCorrectedInput = assessment.CanRetryWithCorrectedInput;
                 ApplyCommittedEffectCapture(
@@ -825,7 +789,8 @@ internal sealed class MafRuntimeAgentFactory
                     failureCode,
                     canRetryWithCorrectedInput,
                     effectSourceKind,
-                    effectSourceId);
+                    effectSourceId,
+                    effectState is AgentToolEffectState.None or AgentToolEffectState.NotCommitted ? resultClassification : classification);
             }
         });
         builder.UseOpenTelemetry(

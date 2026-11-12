@@ -232,6 +232,48 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         Assert.Single(await test.Owner().ListEventsAsync(run.RunId));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Mapped_workflow_unsupported_decision_policy_remains_readable_but_cannot_admit_an_owner_effect(bool latePolicy) {
+        var clock = new NativeClock();
+        await using var app = await TestApplication.CreateAsync(NativeHarness(clock));
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var test = await MappedCase.CreateAsync(services, clock, decisionPolicy: !latePolicy);
+        var options = NativeOptions<ProcessPersistenceDbContext>(services);
+        var transactions = services.GetRequiredService<CoordinatedDatabaseTransaction>();
+        var authority = new EfProcessWorkflowDispatchAuthority(new Factory<ProcessPersistenceDbContext>(options, static configured => new(configured)),
+            options, transactions, clock);
+        var request = new ProcessWorkflowDispatchRequest(test.Assignment.RunId, test.Assignment.StepInstanceId, new(test.Claim), test.Contract.ContractHash);
+        var original = await authority.ReadAsync(request);
+        Assert.Equal(latePolicy, original.IsCurrent);
+        if (latePolicy) {
+            await using (var owner = test.Fixture.Context()) {
+                await using var transaction = await owner.Database.BeginTransactionAsync();
+                using var participation = transactions.Enter(owner);
+                await authority.RequireForMutationAsync(original);
+            }
+            await using var changed = test.Fixture.Context();
+            var assignment = await changed.RuntimeStepAssignments.SingleAsync(item => item.RunId == test.Assignment.RunId.Value);
+            var plan = await changed.InstancePlans.SingleAsync(item => item.PlanId == assignment.PlanId);
+            assignment.DecisionDataPolicyJson = ProcessDecisionDataPolicyAdmissionCodec.Serialize(
+                ProcessDecisionPolicyFixture.Create(new(plan.DefinitionVersionId), new(assignment.StepInstanceId)));
+            await changed.SaveChangesAsync();
+        }
+        var current = await authority.ReadAsync(request);
+        Assert.False(current.IsCurrent);
+        Assert.NotNull(current.Assignment.DecisionDataPolicy);
+        Assert.Equal(original.OwnerFingerprint, current.OwnerFingerprint);
+        Assert.Equal(JsonSerializer.Serialize(original.SourceAuthority), JsonSerializer.Serialize(current.SourceAuthority));
+        await using var effect = test.Fixture.Context();
+        await using var effectTransaction = await effect.Database.BeginTransactionAsync();
+        using var effectParticipation = transactions.Enter(effect);
+        foreach (var observation in new[] { original, current }) {
+            await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => authority.RequireForMutationAsync(observation));
+        }
+    }
+
     private sealed record MappedCase(IServiceProvider Services, NativeClock Clock, Fixture Fixture,
         ProcessRuntimeStepAssignment Assignment, ProcessStepExecutionContract Contract, Guid Claim,
         ProjectStructureWorkflowAuthorityService Source) {
@@ -265,7 +307,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
             return next;
         }
 
-        public static async Task<MappedCase> CreateAsync(IServiceProvider services, NativeClock clock, bool legacyParent = false) {
+        public static async Task<MappedCase> CreateAsync(IServiceProvider services, NativeClock clock, bool legacyParent = false, bool decisionPolicy = false) {
             clock.Now = new(clock.Now.Ticks - clock.Now.Ticks % TimeSpan.TicksPerMicrosecond, clock.Now.Offset);
             var fixture = await Fixture.CreateAsync(services);
             var preparation = ProcessPreparedLaunchFixture.Create(fixture.SavedAuthority, new(Guid.NewGuid()));
@@ -276,6 +318,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
                 OperationTargetScope = string.Empty,
                 LaunchVariables = new Dictionary<string, string> { [ProcessRuntimeLaunchVariables.ProjectId] = fixture.Project.ProjectId.ToString("D") }
             };
+            if (decisionPolicy) {
+                assignment = assignment with { DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(initial.InitialPlan!.Definition.VersionId, assignment.StepInstanceId) };
+            }
             preparation = preparation with { InitialCommit = initial with { InitialAssignments = [assignment] } };
             var saved = await fixture.Store.PrepareAsync(preparation);
             await using (var context = fixture.Context()) {

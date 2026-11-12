@@ -2,9 +2,9 @@ using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-internal static class AgentExecutionActivityRuntimeProgressPolicy
+public static class AgentExecutionActivityRuntimeProgressPolicy
 {
-    private const string ApprovalPhase = "Approval";
+    public const string ApprovalPhase = "Approval";
 
     public static AgentExecutionActivityPhase? ResolvePhase(
         ExecutionState state,

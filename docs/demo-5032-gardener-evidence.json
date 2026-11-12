@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-10-07T13:15:09.3148445+00:00",
+  "scope": "Targeted Gardener repair on normal 5032; does not supersede the original WB6 freeze or claim full Blazor Process completion.",
+  "productionCommit": "145205fd2e46b8e5f5aeabf9742c458d57514bb0",
+  "imageRepairCommit": "822b79ad8c2ea2159e3b25501ef1e17728f9f5a9",
+  "genuineModelEvidenceCommit": "822b79ad8c2ea2159e3b25501ef1e17728f9f5a9",
+  "sourceSignaturesVerified": true,
+  "dependencies": {
+    "workingTreesClean": true,
+    "components": "a3fd4d22f2c4e0432cf389f194c6468b44ab7371",
+    "fileTools": "3a080ecd31068a77c1e1bd639f7a78e21c93db85"
+  },
+  "deterministic": {
+    "components": 90,
+    "failed": 0,
+    "broadStable": "Not rerun for this bounded repair; original WB6 checkpoint and qualification retained.",
+    "beforeRepairExpectedFailures": 4,
+    "integration": 27,
+    "passed": 158,
+    "skipped": 0,
+    "portability": "PASS: 15306 unchanged reviewed executable-source findings; no baseline rewrite.",
+    "unit": 41
+  },
+  "genuine": {
+    "generationRunId": "abb2a04f-ed8e-4bac-affd-d09fd5212816",
+    "visionRunId": "eac4e9b3-e6f2-418d-9263-a55d2179185c",
+    "newImages": 1,
+    "generation": "Completed/Succeeded",
+    "vision": "Completed/Succeeded",
+    "originalFailedRunPreserved": true,
+    "totalBilledCost": "Not established; see private ledger.",
+    "chatModel": "gpt-5.6-terra",
+    "imageModel": "gpt-image-2",
+    "independentVisionConversations": 1
+  },
+  "asset": {
+    "width": 1024,
+    "height": 1024,
+    "bytes": 2655734,
+    "sha256": "9596c754ef5dc2f64aadf9a77f46ef74a54fde14890bb029db531fa2026e83e0",
+    "preservedAfterRestart": true,
+    "projectId": "ca0d9457-4222-4b9a-9fa2-e5356ec3f904",
+    "nodeId": "custom:93e904861af84f88955b28930100207e",
+    "parentNodeId": "custom:2a58e8eca063401891e09eca4cae7e0f"
+  },
+  "finalUi": {
+    "hotReloadValidated": false,
+    "runtimePid": 56196,
+    "sessionId": "app_94b87e866d0946d38c5e232ad2e5ed57",
+    "newThreadVisibleWithDifferentHandle": true,
+    "urls": [
+      "http://localhost:5032",
+      "https://localhost:7271"
+    ],
+    "state": "Healthy",
+    "viewport": {
+      "height": 1080,
+      "dpr": 1,
+      "width": 1920
+    },
+    "previewLoaded": true
+  },
+  "originalWb6EvidenceHashesVerified": 173,
+  "testDatabaseContainerStopped": "candoitall-gardener-tests-20261007",
+  "files": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs",
+      "sha256": "ab2083f519d45ff63191c98879dd13b468316aafc700c6907850f04a9b7805d3"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+      "sha256": "e12202f997a33166f2ff7d32fbd40ab9a46a5331eeabf54f011052d81a5602c0"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ImageGenerationAgentRuntimeToolProviderTests.cs",
+      "sha256": "47714af777d7ac83b17b3e5a61938d236a6f93c3549f5882395b6434195d291b"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectStructureGeneratedImageAttachmentIntegrationTests.cs",
+      "sha256": "698aba28fcc3fc7324b2a4644e5e9667d210032fad68a09ec0586564552015a5"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectStructureGeneratedImageAttachmentIntegrationTests.Sources.cs",
+      "sha256": "e968073ade6d9d4bb01e966dae245bff87019f6c0794640c60810b4168d7e806"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs",
+      "sha256": "11bd9f15574b07bb1b674508da47c3fc4bfbe8447ae184f29e91399657b55f07"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.NewThread.cs",
+      "sha256": "ff81834111e93a189396e54583ab6ffa01ef47967ab138091826ce1f4ea7ec13"
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/AgentPanelSelectionFailClosedTests.cs",
+      "sha256": "086c9403b16cc77e0174ff207fe3ebbe28f0b72a14dd9c6870c6d73d8098c3e1"
+    },
+    {
+      "path": "docs/agent-runtime-tool-surface.md",
+      "sha256": "db7d05857d66837a76322bb7af24db6f38a5dd812c1ceff6a9d9d6a6527ef29c"
+    },
+    {
+      "path": "docs/demo-5032-gardener.cs.md",
+      "sha256": "f32fafc8da7701762dde207e6cbc46e69410392028069a1a0b87c20b090dbf91"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/original-image-request.json",
+      "sha256": "800891278f2e5419683628063554924cbb035d4a5b7641cc9e90b9bd3c43787f"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/original-run-preserved.json",
+      "sha256": "cedfe0fad4e7d87eabe81038fe24ab863f1d7cb6b21d90166f548c4c3f7eb58e"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/gardener-permission-readback.json",
+      "sha256": "f035731faa3c99819d253d8cc699056ee6d33faf015b5087d64ea53852bb758b"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/source-before.trx",
+      "sha256": "b29f7d6ebffda62d9742f565a4288ed9aa2af73330c5a9d72a39f04324e02c8a"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/source-before.log",
+      "sha256": "f2b776b11d134a1e8c841ed747700cb7375ccbc7bca6145492a96da884a8ff76"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/image-unit.trx",
+      "sha256": "8307ebbf0eb2485c1b03dc0a5d0842bc15dd402ead2cf6a0351522bd49f4617c"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/image-integration.trx",
+      "sha256": "0ca7b0e805fa27be29241fa309e9e503c207b5f7af3269f1971a2a291f6b0e06"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/chat-components.trx",
+      "sha256": "8a14acdf4593a8586a4b4685baf3b99fe05a0e1eee36c9015799b8d8aa10fd9f"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/unit-discovery.log",
+      "sha256": "d86c540740d34b33e7afb0cb6d77e664637a6d97f344cc04a1a6fe48f80c8fd8"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/integration-discovery.log",
+      "sha256": "dea4be8adfdf568eba230d655b29d49ec098f23fd3140420482cde3e833f016b"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/chat-discovery.log",
+      "sha256": "0181c57ac9e743f9846b972e3a18a7ad15502882019b2d994499d201419358a7"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/module-build-02.log",
+      "sha256": "f3d74f5f1af6671f3cdb76621b33edfdd716a166d2e6861d567ad5cf8ff61b9e"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/chat-module-build.log",
+      "sha256": "fcf16df282bfbaffdac8f1d699ade33f5c089f7a80c3c31c85798eba85cb4ba8"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/unit-build.log",
+      "sha256": "0938fd983d969233937d147c73d95e753c2f1e929f8fd8d1546d8526aab5797e"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/integration-build.log",
+      "sha256": "187115f2f34685b9fd8da3cef1f00655a76bd6470303002c25a3b229dbe97669"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/chat-components-build.log",
+      "sha256": "65aa6a722f20785ad66b33af49f273ddb31055320d29c4ee059271dd303577c8"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/portability-chat-final.log",
+      "sha256": "fe3c0405e3aee1540c7a8660cd8b7e87d272d0f7cae9ec257ed8663e3e70226e"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generation-run-complete.json",
+      "sha256": "cb4bb12adae805f4bc4fd489133bd2fbded6be0ce29e1f7d249c1178274aa182"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/vision-run-complete.json",
+      "sha256": "e3eca1372c90308bd713eaefb4bce385b804945515403d605b5d16fb2d32b909"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/genuine-model-ledger.json",
+      "sha256": "2f07d861b6f0ccf618b38de602beb8d0e7d7d33920997f2e1c954c2d0dd00230"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generation-provider-readback.json",
+      "sha256": "f0f93b9750545d6e7d47abd7286668f0b77cdf8de616f5ee32ad59e2503cbe77"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generation-native-result.json",
+      "sha256": "0ca697ad1595a2d480dc7d4db4478ca2c631c3f88a5634716b4a591fc84eff6d"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generation-input-options.json",
+      "sha256": "d6bd01f7062364d1f7dfe29f2a4d87ff370bba06505df2adfd0045c6d09b0447"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generated-asset-metadata.json",
+      "sha256": "7c1ecb9c2e126c943d6031502ffe5a497bfa1dccf07c5ca29f6345bdcb175fc3"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generated-image-hash.json",
+      "sha256": "0fdac7a37d9da94fb3e713eecc1d0f49dd6e29234d9291a18c196a909485477a"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/gardener-south-view.png",
+      "sha256": "9596c754ef5dc2f64aadf9a77f46ef74a54fde14890bb029db531fa2026e83e0"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/browser-proof.json",
+      "sha256": "eae4587a34d4fb96e0451962a1856868e96f7f5638b29b63a1d5833054779f08"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/generation-complete.png",
+      "sha256": "50a4c99272e4b72fcc379a080e9a835fa45ea641738735ff3f000de8a80b9586"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/vision-complete.png",
+      "sha256": "eba751366575a8f62328abb71b173170da1420ceff36458bc6d83698441771e7"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/new-thread-fixed.png",
+      "sha256": "0e12239f05a0909a15a2e31bbd9f0a2ae68473c6e7d6540cf7e051cb9f17b8c6"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/final-native-preview.png",
+      "sha256": "e0bf6beb5c36f034e961c3f4bec8e807cf8582fa46dabc9f6f3834a671d6b65d"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/final-asset-hash.json",
+      "sha256": "c41ed293c7c964f04b5566c697dbd339d4e07adc96d09387ee0ce40a4a20cffe"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/preserved-gardener-proof.zip",
+      "sha256": "03ff42a738282ffe438bc2830996ff85b60fd823771595967744459560ac46bf"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/runtime-binary-hashes.json",
+      "sha256": "388fb155fe070619ef56efee47b4679a1ba1d835449d5797d530b9294776c930"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/original-freeze-preservation.json",
+      "sha256": "5735150782198b2972257cc647de722c735cbc5f2f6e36f4fd42562676ec22fc"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/final-app-status.json",
+      "sha256": "7529c8efbb2c22811a3fa0cfc6ca828a229d0e45347c5d06dce8dda34568382d"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/final-startup-logs.json",
+      "sha256": "bd90f3ada9500b55ce0dc77e759d83982617d2f6ca85e12127382ac0729b54f4"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/secret-review-final.json",
+      "sha256": "89cf981c5f341795df09101b96104950c2898097b2feaee04808036ea06a6956"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/source-signature.log",
+      "sha256": "fed690bf4b93d57cc91e5d267cc2c167cf4db33eacd0b7ce70eec9757bb7e9c6"
+    },
+    {
+      "path": "artifacts/gardener-image-repair-20261007/chat-signature.log",
+      "sha256": "a26e0f63810fe902eff011bfd1f25053d93ee312ca7f7ec1878ab6b428022d8b"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Historical Unit candidate repair
+
+Source-only successor to the retained historical Unit run: 43 executed, 40 passed, 3 failed. The original result remains at main ignored `r1c-historical-candidate-validation/historical-unit.result.json`. This repair has not been built or run and does not recast that run as passing.
+
+Two failures occurred before observation because the shared profile fixture leaves `Runtime.Fingerprint` empty. The historical fixture now assigns an explicit synthetic fingerprint and reuses that exact profile accessor in its unsupported-catalog/source variants. Original admission still has generation8; current host remains generation0. Its current read fence now names the actual organization catalog scope, while original governance and source lifetime retain project scope. The existing ordinary profile fixture is unchanged.
+
+The third failure changed an envelope type but kept the same payload `{}`. The digest intentionally covers payload bytes, so the arrangement had not created a mismatch. It now computes genuinely different payload bytes, asserts inequality, and retains the exact constructor refusal assertion.
+
+Following source inspection, parent approved one narrow production successor: both historical observer entries reject an original profile ID/fingerprint mismatch before catalog/selected-record access, using one shared pure predicate. Current host/context checks remain first, including the existing typed context-change exception in the invocation-basis entry. Saved generation is deliberately not compared to current generation. The later selected-record defense remains. No source/provider/permission fallback or mutation authority is introduced.
+
+The existing second authority Fact now covers profile-only and fingerprint-only mismatch through both entry paths, zero catalog/source calls, and current-generation-change precedence. Its invocation basis is deliberately unselected so accidental selected-record access also fails. The first authority Fact still proves original generation8 with current generation0 is permitted when all actual identities/source checks agree. No new Fact, theory or skipped row was added: the two edited files retain four Facts, three affected failing Fact identities; the parent's complete historical Unit selector remains43 rows.
+
+Exact predecessor images were preserved under `.artifacts/concurrent-mutations/candidates/historical-unit-fixture-repair-predecessors/` before edits, with separate fixture and observer ownership records. The new successor inventory pins all three changed source files, their exact main/managed predecessor hashes and this note. Older historical inventories remain retained predecessors; parent must overlay this explicit successor only after releasing its current main validation freeze.
+
+No main source, D1 input, production serializer or persisted contract was changed. No build, test, static scan, host or database operation was performed. Parent must rebuild the affected module/Unit assembly, refresh required static evidence and rediscover/execute the same43-row selection against the frozen successor; previous evidence alone does not validate it.

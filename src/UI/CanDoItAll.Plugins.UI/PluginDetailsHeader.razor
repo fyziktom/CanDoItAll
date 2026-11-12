@@ -1,0 +1,61 @@
+@namespace CanDoItAll.Plugins.UI
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using Microsoft.AspNetCore.Components
+
+<Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start">
+    <Stack GapScale="LayoutGap.Tiny">
+        <Cluster Gap="LayoutGap.Small">
+            @PluginsPageHelpers.RenderPluginIcon(Plugin.Icon, "h-8 w-8")
+            <span class="cda-eyebrow">@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)</span>
+        </Cluster>
+        <Cluster Gap="LayoutGap.Small">
+            <StatusBadge Tone="@PluginsPageHelpers.ResolveAvailabilityTone(Plugin)" Text="@Plugin.Availability.ToString()" />
+            <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(Plugin)" Text="@Plugin.InstallationState.ToString()" />
+            <StatusBadge Tone="neutral" Text="@Plugin.SourceKind.ToString()" />
+        </Cluster>
+        <h2 class="cda-title-xl">@Plugin.DisplayName</h2>
+        <p class="cda-body-muted">@Plugin.Description</p>
+    </Stack>
+
+    <Cluster Gap="LayoutGap.Tiny" Class="shrink-0">
+        @if (!Plugin.IsInstalled)
+        {
+            <Button Text="Install and enable"
+                    Icon="download"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Size="ButtonSize.Small"
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Install))" />
+        }
+        else if (Plugin.IsEnabled)
+        {
+            <Button Text="Disable"
+                    Icon="block"
+                    ButtonStyle="ButtonStyle.Warning"
+                    Variant="Variant.Outlined"
+                    Size="ButtonSize.Small"
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Disable))" />
+        }
+        else
+        {
+            <Button Text="Enable"
+                    Icon="play_arrow"
+                    ButtonStyle="ButtonStyle.Success"
+                    Size="ButtonSize.Small"
+                    Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
+                    Click="@(() => Workspace.SetLifecycleAsync(Plugin, PluginLifecycleAction.Enable))" />
+        }
+    </Cluster>
+</Split>
+
+@code {
+    [Parameter, EditorRequired] public PluginCatalogItem Plugin { get; set; } = default!;
+    [Parameter, EditorRequired] public IPluginsWorkspace Workspace { get; set; } = default!;
+}

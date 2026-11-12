@@ -31,6 +31,7 @@ public sealed class ProjectStructureGanttMutationException : InvalidOperationExc
     }
 
     public ProjectStructureGanttMutationErrorCode Code { get; }
+    public ProjectStructureTaskCompensationFacts? Compensation { get; internal set; }
 }
 
 /// <summary>

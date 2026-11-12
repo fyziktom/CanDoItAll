@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
@@ -20,6 +22,220 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    [Theory]
+    [InlineData(4, false)]
+    [InlineData(96, false)]
+    [InlineData(4, true)]
+    [InlineData(96, true)]
+    public async Task BeginChatBackedRunAsync_PrecreatedSession_DoesNotReadHistoricalPayloads(
+        int historicalRunCount,
+        bool editSession) {
+        await using var scenario = await CreateScenarioAsync(historicalRunCount, includeExistingSession: false);
+        var session = await scenario.Store.CreateChatSessionAsync(CreateEmptySession(scenario));
+        if (editSession) {
+            session = await scenario.Store.RenameChatSessionAsync(new(session.AgentId, session.Id, session.Title,
+                "Renamed before sending", session.UpdatedAtUtc.AddSeconds(1)));
+        }
+
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        scenario.ReadRecorder.Clear();
+        var stopwatch = Stopwatch.StartNew();
+        var result = await scenario.Store.BeginChatBackedRunAsync(
+            new ChatBackedRunStartRequest(scenario.Agent.Id, scenario.Agent.ProviderProfileId!.Value,
+                scenario.CatalogRevision, session.Id),
+            context => CreateAdmissionMutation(context, "first floating-chat message"));
+        stopwatch.Stop();
+
+        var started = Assert.IsType<ChatBackedRunStarted>(result);
+        Assert.Equal(session.Id, started.Detail.ChatSession!.Id);
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        AssertReadBudget(scenario, expectedPhysicalReadCount: 15, "precreated-session");
+        output.WriteLine($"admission-duration historical-runs={historicalRunCount} edited={editSession} elapsed-ms={stopwatch.Elapsed.TotalMilliseconds:F1}");
+        await AssertUsageAfterAdmissionAsync(scenario);
+    }
+
+    [Theory]
+    [InlineData(InvalidUsageProjection.Missing)]
+    [InlineData(InvalidUsageProjection.StaleRevision)]
+    [InlineData(InvalidUsageProjection.DifferentVersion)]
+    public async Task CreateChatSessionAsync_InvalidUsageProjection_RemainsStaleUntilCanonicalRebuild(
+        InvalidUsageProjection invalidProjection) {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var json = new FileSandboxWorkspaceJsonStore();
+        var invalid = scenario.InitialUsageProjection with {
+            Revision = invalidProjection == InvalidUsageProjection.StaleRevision
+                ? scenario.InitialUsageProjection.Revision - 1
+                : scenario.InitialUsageProjection.Revision,
+            Version = invalidProjection == InvalidUsageProjection.DifferentVersion
+                ? "incompatible-test-version"
+                : scenario.InitialUsageProjection.Version,
+            Agents = [],
+            Providers = [],
+            Models = []
+        };
+        if (invalidProjection == InvalidUsageProjection.Missing) {
+            File.Delete(scenario.Layout.ExecutionUsageIndexPath);
+        } else {
+            await json.WriteJsonAtomicallyAsync(scenario.Layout.ExecutionUsageIndexPath, invalid, default);
+        }
+
+        await scenario.Store.CreateChatSessionAsync(CreateEmptySession(scenario));
+
+        Assert.Empty(GetHistoricalRunHeaderReads(scenario));
+        Assert.Empty(GetHistoricalUsageReads(scenario));
+        var saved = await json.ReadJsonAsync<AgentUsageProjection>(scenario.Layout.ExecutionUsageIndexPath, default);
+        if (invalidProjection == InvalidUsageProjection.Missing) {
+            Assert.Null(saved);
+        } else {
+            Assert.Equal(JsonSerializer.Serialize(invalid), JsonSerializer.Serialize(saved));
+        }
+
+        var rebuilt = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, rebuilt.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.Version, rebuilt.Version);
+        Assert.Equal(scenario.InitialUsageProjection.Agents, rebuilt.Agents);
+        Assert.Equal(scenario.InitialUsageProjection.Providers, rebuilt.Providers);
+        Assert.Equal(scenario.InitialUsageProjection.Models, rebuilt.Models);
+        Assert.Equal(scenario.HistoricalRunCount, GetHistoricalRunHeaderReads(scenario).Count);
+        Assert.Equal(scenario.HistoricalRunCount, GetHistoricalUsageReads(scenario).Count);
+    }
+
+    [Fact]
+    public async Task CreateChatSessionAsync_InterruptedBeforeUsageAdvance_RebuildsOnNextRead() {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var json = new FileSandboxWorkspaceJsonStore();
+        var failureInjected = false;
+        var diagnostics = new FileSandboxWorkspaceJsonReadDiagnostics(read => {
+            if (read.PayloadType != typeof(AgentUsageProjection)) {
+                return;
+            }
+
+            var index = JsonSerializer.Deserialize<ExecutionStorageIndex>(
+                File.ReadAllText(scenario.Layout.ExecutionIndexPath), json.SerializerOptions)!;
+            if (index.Revision > scenario.InitialUsageProjection.Revision) {
+                failureInjected = true;
+                throw new InjectedSessionProjectionFailureException();
+            }
+        });
+        var failingStore = new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope,
+            chatBackedRunCommitBoundary: null, existingRunDetailCommitBoundary: null,
+            jsonReadDiagnostics: diagnostics);
+        var session = CreateEmptySession(scenario);
+
+        await Assert.ThrowsAsync<InjectedSessionProjectionFailureException>(
+            () => failingStore.CreateChatSessionAsync(session));
+
+        Assert.True(failureInjected);
+        Assert.True(File.Exists(scenario.Layout.SessionPath(session.Id)));
+        var stale = await json.ReadJsonAsync<AgentUsageProjection>(scenario.Layout.ExecutionUsageIndexPath, default);
+        Assert.Equal(scenario.InitialUsageProjection.Revision, stale!.Revision);
+        var recovered = await new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope)
+            .LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1, recovered.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.Agents, recovered.Agents);
+        Assert.Equal(scenario.InitialUsageProjection.Providers, recovered.Providers);
+        Assert.Equal(scenario.InitialUsageProjection.Models, recovered.Models);
+    }
+
+    [Fact]
+    public async Task CreateChatSessionAsync_ConcurrentAdmissionThroughAnotherStore_PreservesUsage() {
+        await using var scenario = await CreateScenarioAsync(4, includeExistingSession: false);
+        var otherStore = new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope);
+        var emptySession = CreateEmptySession(scenario);
+        ChatSessionRecord? acceptedSession = null;
+        ChatBackedRunStartResult? acceptedAdmission = null;
+        ChatBackedRunStartMutation? preparedAdmission = null;
+        var admissionCalls = 0;
+        var key = FileSandboxWorkspaceWriteSet.Session(emptySession.Id, emptySession.AgentId).LockPaths(scenario.Layout)[0];
+        var outcomes = await PreparedPublicationCompetition.RunAsync(scenario.Layout, key,
+            async cancellationToken => acceptedSession = await otherStore.CreateChatSessionAsync(emptySession, cancellationToken),
+            async cancellationToken => acceptedAdmission = await scenario.Store.BeginChatBackedRunAsync(
+                scenario.CreateRequest(), context => {
+                    admissionCalls++;
+                    return preparedAdmission = CreateAdmissionMutation(context, "concurrent admission");
+                }, cancellationToken));
+
+        Assert.Equal(1, admissionCalls);
+        Assert.Null(outcomes[0]);
+        var admissionWon = acceptedAdmission is not null;
+        if (admissionWon) {
+            Assert.Null(outcomes[1]);
+        } else {
+            var conflict = Assert.IsType<SandboxWorkspaceConcurrencyException>(outcomes[1]);
+            Assert.Equal(conflict.ExpectedRevision + 1, conflict.ActualRevision);
+        }
+        Assert.Equal(emptySession.Id, acceptedSession!.Id);
+        Assert.True(File.Exists(scenario.Layout.SessionPath(emptySession.Id)));
+        Assert.NotNull(preparedAdmission);
+        Assert.Equal(admissionWon, Directory.Exists(scenario.Layout.RunRoot(preparedAdmission.Detail.Run.Id)));
+        Assert.Equal(admissionWon, File.Exists(scenario.Layout.SessionPath(preparedAdmission.Detail.ChatSession!.Id)));
+        var observedProjection = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 1 + (admissionWon ? 1 : 0), observedProjection.Revision);
+        Assert.Equal(scenario.InitialUsageProjection.UsageObservationCount + (admissionWon ? 1 : 0), observedProjection.UsageObservationCount);
+        Assert.Equal(scenario.InitialUsageProjection.TotalTokens + (admissionWon ? AdmissionInputTokens + AdmissionOutputTokens : 0), observedProjection.TotalTokens);
+        Assert.Equal(scenario.InitialUsageProjection.KnownCostUsd + (admissionWon ? AdmissionCostUsd : 0), observedProjection.KnownCostUsd);
+        var observedCatalog = await otherStore.LoadCatalogSnapshotAsync();
+        Assert.Equal(scenario.CatalogRevision, observedCatalog.Revision);
+
+        if (admissionWon) {
+            Assert.IsType<ChatBackedRunStarted>(acceptedAdmission);
+        } else {
+            Assert.Equal(emptySession.Id, acceptedSession!.Id);
+            Assert.Equal(emptySession.AgentId, acceptedSession.AgentId);
+            Assert.Empty(acceptedSession.Messages);
+            Assert.Null(acceptedSession.LatestExecutionRunId);
+            var laterCalls = 0;
+            var later = Assert.IsType<ChatBackedRunStarted>(await scenario.Store.BeginChatBackedRunAsync(
+                new ChatBackedRunStartRequest(scenario.Agent.Id, scenario.Agent.ProviderProfileId!.Value,
+                    observedCatalog.Revision, null), context => {
+                        laterCalls++;
+                        return CreateAdmissionMutation(context, "concurrent admission");
+                    }));
+            Assert.Equal(1, laterCalls);
+            Assert.NotEqual(preparedAdmission.Detail.Run.Id, later.Detail.Run.Id);
+            Assert.NotEqual(preparedAdmission.Detail.ChatSession.Id, later.Detail.ChatSession!.Id);
+            Assert.False(Directory.Exists(scenario.Layout.RunRoot(preparedAdmission.Detail.Run.Id)));
+            Assert.False(File.Exists(scenario.Layout.SessionPath(preparedAdmission.Detail.ChatSession.Id)));
+        }
+
+        Assert.Equal(1, admissionCalls);
+        var projection = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.Revision + 2, projection.Revision);
+        await AssertUsageAfterAdmissionAsync(scenario);
+    }
+
+    private static ChatSessionRecord CreateEmptySession(AdmissionScenario scenario) {
+        var now = DateTimeOffset.UtcNow;
+        return new ChatSessionRecord(Guid.NewGuid(), scenario.Agent.Id, "Empty floating chat", now, now, []);
+    }
+
+    private static async Task AssertUsageAfterAdmissionAsync(AdmissionScenario scenario) {
+        var incremental = await scenario.Store.LoadUsageProjectionAsync();
+        Assert.Equal(scenario.InitialUsageProjection.UsageObservationCount + 1, incremental.UsageObservationCount);
+        Assert.Equal(scenario.InitialUsageProjection.TotalTokens + AdmissionInputTokens + AdmissionOutputTokens,
+            incremental.TotalTokens);
+        Assert.Equal(scenario.InitialUsageProjection.KnownCostUsd + AdmissionCostUsd, incremental.KnownCostUsd);
+        File.Delete(scenario.Layout.ExecutionUsageIndexPath);
+        var rebuilt = await new FileSandboxWorkspaceStore(scenario.WorkspaceRoot, scenario.Scope)
+            .LoadUsageProjectionAsync();
+        Assert.Equal(incremental.Version, rebuilt.Version);
+        Assert.Equal(incremental.Revision, rebuilt.Revision);
+        Assert.Equal(incremental.UpdatedAtUtc, rebuilt.UpdatedAtUtc);
+        Assert.Equal(incremental.Agents, rebuilt.Agents);
+        Assert.Equal(incremental.Providers, rebuilt.Providers);
+        Assert.Equal(incremental.Models, rebuilt.Models);
+    }
+
+    public enum InvalidUsageProjection {
+        Missing,
+        StaleRevision,
+        DifferentVersion
+    }
+
+    private sealed class InjectedSessionProjectionFailureException : Exception;
 
     [Theory]
     [InlineData(4)]
@@ -210,7 +426,7 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         }
 
         var environment = CanDoItAllTestEnvironment.Create(
-            $"workspace-admission-read-scaling-{Guid.NewGuid():N}");
+            "workspace-admission-read-scaling");
         try
         {
             var profile = environment.CreateInMemoryProfile("primary");
@@ -542,7 +758,12 @@ public sealed class FileSandboxWorkspaceAdmissionReadScalingIntegrationTests(
         output.WriteLine(
             $"admission-read-budget kind={admissionKind} historical-runs={scenario.HistoricalRunCount} successful-opens={reads.Count} total-bytes={totalBytes}");
         Assert.Single(reads, read => read.PayloadType == typeof(FileUsageIndexHeader));
-        Assert.Equal(expectedPhysicalReadCount, reads.Count);
+        var selectionRead = Assert.Single(reads, read => PathComparer.Equals(read.FullPath,
+            NormalizePath(scenario.Layout.ExecutionProcessIndexPath)));
+        Assert.Equal(FileSandboxWorkspaceJsonReadKind.RawText, selectionRead.Kind);
+        Assert.InRange(selectionRead.LengthBytes, 1, 1024);
+        output.WriteLine($"process-selection-comparison-read bytes={selectionRead.LengthBytes}");
+        Assert.Equal(expectedPhysicalReadCount, reads.Count - 1);
         Assert.All(
             reads,
             read => Assert.True(

@@ -20,12 +20,21 @@ public sealed class ProjectsDatabaseTransferHandler(
         CancellationToken cancellationToken = default) {
         var sourceCounts = await operations.RunIndependentAsync(context.SourceProfile, data.CountAsync, cancellationToken);
         var targetCounts = await operations.RunIndependentAsync(context.TargetProfile, data.CountAsync, cancellationToken);
+        string? sourceRestriction = null;
+        try {
+            await operations.RunIndependentAsync(context.SourceProfile, async (session, token) => {
+                await targetStateGuard.RequireSupportedSourceAsync(session, token);
+                return true;
+            }, cancellationToken);
+        } catch (InvalidDataException exception) {
+            sourceRestriction = exception.Message;
+        }
 
         return new DatabaseTransferItemPreview(
             Descriptor,
-            sourceCounts.Total > 0,
+            sourceCounts.Total > 0 && sourceRestriction is null,
             $"{sourceCounts.Projects} project(s), {sourceCounts.Objects} structure object(s), and {sourceCounts.ViewStates} view state record(s) are available.",
-            sourceCounts.Total == 0 ? "The source database does not contain projects or retained project history." : null,
+            sourceRestriction ?? (sourceCounts.Total == 0 ? "The source database does not contain projects or retained project history." : null),
             sourceCounts.Total,
             targetCounts.Total);
     }
@@ -36,6 +45,7 @@ public sealed class ProjectsDatabaseTransferHandler(
         CoordinatedDatabaseTransaction.RequireDistinctPhysicalDatabases(context.SourceProfile, context.TargetProfile);
         var sourceData = await operations.RunSerializableAsync(context.SourceProfile,
             [ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey], async (session, token) => {
+                await targetStateGuard.RequireSupportedSourceAsync(session, token);
                 var loaded = await data.LoadAsync(session, token);
                 loaded.ValidateForImport();
                 return loaded;
@@ -100,38 +110,44 @@ public sealed class ProjectsDatabaseTransferHandler(
         }
 
         sourceData.PrepareForTargetImport(context.SourceProfile.Profile.Id, Guid.NewGuid());
-        return await targetStateGuard.RunLockedImportAsync(context.TargetProfile, async (session, token) => {
-            if (context.TargetProfile.Profile.Id == profileAccessor.ResolveCurrentProfile().Profile.Id) {
-                throw new InvalidOperationException("Project transfer requires an inactive target database profile; the running profile was left unchanged.");
-            }
-            var lockedTargetCounts = await data.CountAsync(
-                session,
-                cancellationToken);
-            var lockedTargetResidues = await targetStateGuard.FindLockedResiduesAsync(
-                session,
-                cancellationToken);
-            if (lockedTargetCounts.Total > 0 || lockedTargetResidues.Count > 0) {
-                var residueDetails = lockedTargetResidues.Count == 0
-                    ? string.Empty
-                    : $" Related state found: {ProjectTransferTargetStateGuard.Describe(lockedTargetResidues)}.";
-                return new DatabaseTransferItemResult(
+        DatabaseTransferItemResult? imported = null;
+        try {
+            return await targetStateGuard.RunLockedImportAsync(context.TargetProfile, async (session, token) => {
+                if (context.TargetProfile.Profile.Id == profileAccessor.ResolveCurrentProfile().Profile.Id) {
+                    throw new InvalidOperationException("Project transfer requires an inactive target database profile; the running profile was left unchanged.");
+                }
+                var lockedTargetCounts = await data.CountAsync(session, token);
+                var lockedTargetResidues = await targetStateGuard.FindLockedResiduesAsync(session, token);
+                if (lockedTargetCounts.Total > 0 || lockedTargetResidues.Count > 0) {
+                    var residueDetails = lockedTargetResidues.Count == 0
+                        ? string.Empty
+                        : $" Related state found: {ProjectTransferTargetStateGuard.Describe(lockedTargetResidues)}.";
+                    return imported = new DatabaseTransferItemResult(
+                        Descriptor.Key,
+                        Descriptor.Label,
+                        false,
+                        "The inactive target acquired project or project-related data before exclusive import locks were established; nothing was replaced." +
+                        residueDetails,
+                        0);
+                }
+
+                await data.ClearAsync(session, token);
+                await data.SaveAsync(session, sourceData, token);
+
+                return imported = new DatabaseTransferItemResult(
                     Descriptor.Key,
                     Descriptor.Label,
-                    false,
-                    "The inactive target acquired project or project-related data before exclusive import locks were established; nothing was replaced." +
-                    residueDetails,
-                    0);
-            }
-
-            await data.ClearAsync(session, cancellationToken);
-            await data.SaveAsync(session, sourceData, cancellationToken);
-
-            return new DatabaseTransferItemResult(
-                Descriptor.Key,
-                Descriptor.Label,
-                true,
-                $"Copied {sourceCounts.Projects} project(s) with their structure workbench data and retained history. New target admissions are required to execute imported history.",
-                sourceCounts.Total);
-        }, cancellationToken);
+                    true,
+                    $"Copied {sourceCounts.Projects} project(s) with their structure workbench data and retained history. New target admissions are required to execute imported history.",
+                    sourceCounts.Total);
+            }, cancellationToken);
+        } catch (DatabaseImportCommitException exception) when (exception.TargetProfileId == context.TargetProfile.Profile.Id &&
+                exception.Knowledge == DatabaseImportCommitKnowledge.Acknowledged && imported is not null) {
+            throw new DatabaseTransferCommittedException(context.SourceProfile.Profile.Id, context.TargetProfile.Profile.Id, imported, exception);
+        } catch (DatabaseImportCommitException exception) when (exception.TargetProfileId == context.TargetProfile.Profile.Id &&
+                exception.Knowledge == DatabaseImportCommitKnowledge.Unconfirmed) {
+            return new(Descriptor.Key, Descriptor.Label, false,
+                "The target import outcome is unconfirmed and data may have committed. Inspect the target before further action; do not repeat this transfer.", 0);
+        }
     }
 }

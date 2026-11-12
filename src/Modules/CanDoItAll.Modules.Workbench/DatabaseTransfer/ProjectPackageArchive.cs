@@ -16,8 +16,7 @@ internal static class ProjectPackageArchive
         string packagePath,
         DateTimeOffset createdUtc,
         IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken, Func<CancellationToken, ValueTask>? requireCurrentAccess = null) {
         var workingPathPolicy = physicalPathPolicyFactory.Create(workingRoot);
         var packageDirectory = Path.GetDirectoryName(Path.GetFullPath(packagePath))
             ?? throw new InvalidDataException("The project package destination does not have a directory parent.");
@@ -93,6 +92,9 @@ internal static class ProjectPackageArchive
                 }
             }
 
+            if (requireCurrentAccess is not null) {
+                await requireCurrentAccess(cancellationToken);
+            }
             packagePathPolicy.RevalidateMutationTarget(packagePath);
             File.Move(stagingPath, packagePath, overwrite: false);
             EnsureTrustedPath(packagePathPolicy, packagePath);

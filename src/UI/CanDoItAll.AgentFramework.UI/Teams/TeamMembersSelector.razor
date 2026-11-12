@@ -1,0 +1,263 @@
+@using System.Collections.Immutable
+@using CanDoItAll.Editing
+@implements IDisposable
+@{
+    var owner = current;
+}
+@if (owner is not null && IsCurrent(owner)) {
+    @if (owner.Loading) {
+        <SurfaceCard data-testid="agents-team-members-loading"><TextBlock Value="Loading current Team membership." /></SurfaceCard>
+    } else if (owner.LoadFailed) {
+        <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-team-members-load-failed">
+            <TextBlock Value="Current Team membership could not be loaded, or this team lifetime changed. Retry the read or reopen with current access." />
+            <Button Text="Retry membership read" Click="() => LoadOriginalAsync(owner)" />
+        </Alert>
+    } else {
+    <div class="agent-team-members-dialog" data-testid="agents-team-members-dialog">
+        <Stack GapScale="LayoutGap.Medium">
+            @if (owner.Status is { } status) {
+                <Alert AlertStyle="@(owner.Unknown ? AlertStyle.Danger : AlertStyle.Info)" data-testid="agents-team-members-status">@status</Alert>
+            }
+            @if (owner.Conflict || owner.ObservedSequence != ChangeSequence) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-team-members-changed">
+                    <TextBlock Value="Team configuration changed. Your selections are retained. Compare the current team before saving." />
+                    <Button Text="Compare membership" Disabled="@(owner.Busy || owner.Unknown)" Click="() => CompareAsync(owner)" data-testid="agents-team-members-compare" />
+                </Alert>
+            }
+            @if (owner.Comparison is { } review) {
+                <SurfaceCard data-testid="agents-team-members-comparison">
+                    <Stack GapScale="LayoutGap.Small">
+                        <TextBlock Value="@($"Current team: {review.Current.Name}. Applying changes this selection only.")" />
+                        <Grid ColumnsXl="3" Gap="LayoutGap.Small">
+                            <FormField Text="Original"><TextBlock Value="@MemberNames(owner, owner.Original.AgentIds)" /></FormField>
+                            <FormField Text="My selection"><TextBlock Value="@MemberNames(owner, review.Local)" /></FormField>
+                            <FormField Text="Current saved"><TextBlock Value="@MemberNames(owner, review.Current.AgentIds)" /></FormField>
+                        </Grid>
+                        <FormField Text="Combined membership"><TextBlock Value="@MemberNames(owner, review.Result)" /></FormField>
+                        <Cluster Gap="LayoutGap.Small">
+                            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="() => owner.Comparison = null" />
+                            <Button Text="Apply to selection" Disabled="@(owner.Revision != review.Revision || ChangeSequence != review.ChangeSequence)"
+                                    Click="() => ApplyComparison(owner, review)" data-testid="agents-team-members-apply" />
+                        </Cluster>
+                    </Stack>
+                </SurfaceCard>
+            }
+            <FilterBar ResultText="@($"{Filtered(owner).Count} of {owner.Agents.Count} agent(s)")">
+                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="cda-input min-w-[14rem] flex-1" placeholder="Search agents" data-testid="agents-team-members-search" />
+                <StatusBadge Tone="info" Text="@($"{owner.Selected.Count} selected")" />
+            </FilterBar>
+            @foreach (var missing in owner.Selected.Where(id => owner.Agents.All(agent => agent.Id != id)).Order()) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="agents-team-unavailable-member">
+                    Unavailable agent reference: @missing
+                    <Button Text="Remove unavailable reference" Click="() => Toggle(owner, missing)" />
+                </Alert>
+            }
+            @if (Filtered(owner).Count == 0) {
+                <EmptyState Eyebrow="No matches" Title="No agents match the current filters" Description="Clear the search filter to choose agents for this team." />
+            } else {
+                <Grid Gap="LayoutGap.Medium" ColumnTemplate="repeat(auto-fit,minmax(13rem,1fr))" Class="agent-team-members-dialog__grid">
+                    @foreach (var agent in Filtered(owner)) {
+                        <AgentSelectionCard Agent="agent" IsSelected="@owner.Selected.Contains(agent.Id)" IsPrivateProvider="@owner.PrivateAgents.Contains(agent.Id)"
+                                            SelectDisabled="@(owner.Busy || owner.Unknown || owner.Completed)"
+                                            SelectedLabel="In team" Compact="true" CenterContent="true" ShowDetailsTooltip="true" ShowWorkload="false" ShowUpdatedAt="false"
+                                            ShellTestId="agents-team-member-card-shell" SelectTestId="agents-team-member-card" OnSelect="() => Toggle(owner, agent.Id)" />
+                    }
+                </Grid>
+            }
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End" Wrap="FlexWrap.Wrap">
+                <Button Text="Cancel" Icon="close" Variant="Variant.Outlined" Click="() => CancelAsync(owner)" />
+                <Button Text="Save membership" Icon="check" IsBusy="owner.Busy" Disabled="@(owner.Completed || owner.Busy || owner.Unknown || owner.Conflict || owner.Comparison is not null || owner.ObservedSequence != ChangeSequence)" Click="() => ConfirmAsync(owner)" data-testid="agents-team-members-confirm" />
+            </Cluster>
+        </Stack>
+    </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public AgentTeamDefinition Team { get; set; } = default!;
+    [Parameter] public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+    [Parameter] public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [Parameter] public TeamMembershipOperations? Operations { get; set; }
+    [Parameter] public long ChangeSequence { get; set; }
+    [Parameter] public EventCallback<TeamMembershipSelection> Completed { get; set; }
+    [Parameter] public EventCallback Cancelled { get; set; }
+    private Selection? current;
+    private bool disposed;
+
+    protected override async Task OnParametersSetAsync() {
+        if (!disposed && (current is null || current.TeamId != Team.Id || current.Token != OwnerCancellationToken || !ReferenceEquals(current.Operations, Operations))) {
+            current = new(Team with { AgentIds = Team.AgentIds.ToArray() }, Agents.ToImmutableArray(), PrivateAgentIds.ToHashSet(), OwnerCancellationToken, ChangeSequence, Operations);
+            if (Operations is not null) {
+                await LoadOriginalAsync(current);
+            }
+        }
+    }
+
+    private async Task LoadOriginalAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Loading || owner.Operations is not { } operations) {
+            return;
+        }
+        owner.Loading = true;
+        owner.LoadFailed = false;
+        try {
+            var saved = await operations.ReadCurrent(owner.TeamId, owner.Token);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            if (saved.Id != owner.TeamId || saved.CreatedAtUtc != owner.Original.CreatedAtUtc) {
+                throw new InvalidOperationException("The original team lifetime changed.");
+            }
+            owner.Original = saved with { AgentIds = saved.AgentIds.ToArray() };
+            owner.Selected = saved.AgentIds.ToHashSet();
+        } catch (Exception) when (!IsCurrent(owner)) {
+        } catch (Exception) {
+            owner.LoadFailed = true;
+        } finally {
+            if (IsCurrent(owner)) {
+                owner.Loading = false;
+            }
+        }
+    }
+    private bool IsCurrent(Selection owner) => !disposed && ReferenceEquals(current, owner) && !owner.Token.IsCancellationRequested;
+    private void Search(Selection owner, ChangeEventArgs args) {
+        if (IsCurrent(owner)) {
+            owner.Search = args.Value?.ToString() ?? string.Empty;
+        }
+    }
+    private void Toggle(Selection owner, Guid id) {
+        if (IsCurrent(owner) && !owner.Loading && !owner.LoadFailed && !owner.Completed && !owner.Busy && !owner.Unknown) {
+            if (!owner.Selected.Add(id)) {
+                owner.Selected.Remove(id);
+            }
+            owner.Revision++;
+        }
+    }
+    private async Task ConfirmAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Loading || owner.LoadFailed || owner.Completed || owner.Busy || owner.Unknown || owner.Conflict || owner.Comparison is not null || owner.ObservedSequence != ChangeSequence) {
+            return;
+        }
+        var selection = new TeamMembershipSelection(owner.TeamId, owner.Selected.Order().ToImmutableArray());
+        if (owner.Operations is { } operations) {
+            owner.Busy = true;
+            TeamMembershipOutcome outcome;
+            try {
+                outcome = await operations.Save(new(owner.TeamId, owner.Original.UpdatedAtUtc, selection.AgentIds), owner.Token);
+            } catch (Exception) when (!IsCurrent(owner)) {
+                return;
+            } catch (Exception) {
+                outcome = new TeamMembershipOutcome.Unknown();
+            } finally {
+                if (IsCurrent(owner)) {
+                    owner.Busy = false;
+                }
+            }
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            switch (outcome) {
+                case TeamMembershipOutcome.Accepted:
+                    break;
+                case TeamMembershipOutcome.Conflict:
+                    owner.Conflict = true;
+                    owner.Status = "The team changed before this save. Your selections are retained; compare the current membership.";
+                    return;
+                case TeamMembershipOutcome.Rejected:
+                    owner.Status = "Membership was not saved. Review the selected agents and current access.";
+                    return;
+                default:
+                    owner.Unknown = true;
+                    owner.Status = "The membership save could not be confirmed. It will not be repeated. Keep this selection and check the catalog before reopening.";
+                    return;
+            }
+        }
+        owner.Completed = true;
+        await Completed.InvokeAsync(selection);
+    }
+
+    private async Task CompareAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Busy || owner.Unknown || owner.Operations is not { } operations) {
+            return;
+        }
+        var local = owner.Selected.Order().ToArray();
+        var revision = owner.Revision;
+        var sequence = ChangeSequence;
+        owner.Busy = true;
+        try {
+            var saved = await operations.ReadCurrent(owner.TeamId, owner.Token);
+            if (!IsCurrent(owner)) {
+                return;
+            }
+            if (saved.Id != owner.TeamId || saved.CreatedAtUtc != owner.Original.CreatedAtUtc) {
+                throw new InvalidOperationException("The original team lifetime was replaced.");
+            }
+            if (Math.Max(local.Length, Math.Max(saved.AgentIds.Count, owner.Original.AgentIds.Count)) > MaximumComparisonMembers) {
+                throw new InvalidOperationException("The membership exceeds the supported comparison size.");
+            }
+            owner.Comparison = new(saved with { AgentIds = saved.AgentIds.ToArray() }, local,
+                CollectionMerge.Membership(owner.Original.AgentIds, local, saved.AgentIds), revision, sequence);
+        } catch (Exception) when (!IsCurrent(owner)) {
+        } catch (Exception) {
+            owner.Status = "Current membership could not be compared, the team lifetime changed, or the team exceeds the comparison limit. Your selection is retained. Retry the read or reopen with current access.";
+        } finally {
+            if (IsCurrent(owner)) {
+                owner.Busy = false;
+            }
+        }
+    }
+
+    private void ApplyComparison(Selection owner, MembershipComparison review) {
+        if (!IsCurrent(owner) || !ReferenceEquals(owner.Comparison, review) || owner.Revision != review.Revision || ChangeSequence != review.ChangeSequence) {
+            return;
+        }
+        owner.Selected = review.Result.ToHashSet();
+        owner.Original = review.Current;
+        owner.ObservedSequence = review.ChangeSequence;
+        owner.Conflict = false;
+        owner.Comparison = null;
+        owner.Revision++;
+        owner.Status = "Comparison applied to this selection. Save membership is a separate action.";
+    }
+
+    private static string MemberNames(Selection owner, IEnumerable<Guid> ids)
+        => string.Join(", ", ids.Select(id => owner.Agents.FirstOrDefault(agent => agent.Id == id)?.Name ?? $"Unavailable agent {id:D}"));
+    private async Task CancelAsync(Selection owner) {
+        if (!IsCurrent(owner) || owner.Completed) {
+            return;
+        }
+        owner.Completed = true;
+        await Cancelled.InvokeAsync();
+    }
+    private static IReadOnlyList<AgentDefinition> Filtered(Selection owner) {
+        var query = owner.Search.Trim();
+        return owner.Agents.Where(agent => query.Length == 0 || agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(agent => owner.Selected.Contains(agent.Id)).ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+    public void Dispose() => disposed = true;
+
+    private const int MaximumComparisonMembers = 1000;
+    private sealed record MembershipComparison(AgentTeamDefinition Current, IReadOnlyList<Guid> Local, IReadOnlyList<Guid> Result, long Revision, long ChangeSequence);
+
+    private sealed class Selection(AgentTeamDefinition original, IReadOnlyList<AgentDefinition> agents, HashSet<Guid> privateAgents, CancellationToken token, long sequence, TeamMembershipOperations? operations) {
+        public Guid TeamId => Original.Id;
+        public TeamMembershipOperations? Operations { get; } = operations;
+        public AgentTeamDefinition Original { get; set; } = original;
+        public HashSet<Guid> Selected { get; set; } = original.AgentIds.ToHashSet();
+        public MembershipComparison? Comparison { get; set; }
+        public long Revision { get; set; }
+        public long ObservedSequence { get; set; } = sequence;
+        public bool Conflict { get; set; }
+        public bool Busy { get; set; }
+        public bool Loading { get; set; }
+        public bool LoadFailed { get; set; }
+        public bool Unknown { get; set; }
+        public string? Status { get; set; }
+        public IReadOnlyList<AgentDefinition> Agents { get; } = agents;
+        public HashSet<Guid> PrivateAgents { get; } = privateAgents;
+        public CancellationToken Token { get; } = token;
+        public string Search { get; set; } = string.Empty;
+        public bool Completed { get; set; }
+    }
+}

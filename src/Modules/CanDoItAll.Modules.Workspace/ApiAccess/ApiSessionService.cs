@@ -91,7 +91,45 @@ public sealed class ApiSessionService(
     }
 
     public async Task<ApiSessionIdentity?> ResolveIdentityAsync(ApiTokenRecord record, CancellationToken cancellationToken = default) {
-        if (!options.Value.UserAuthentication.Enabled || record.GetStatus(clock.GetUtcNow()) != ApiTokenStatus.Active) {
+        if (!CanResolve(record)) {
+            return null;
+        }
+        var user = record.Kind == ApiCredentialKind.UserSession
+            ? (await users.ReadAsync(cancellationToken)).FirstOrDefault(candidate => candidate.Id == record.UserId) : null;
+        return ResolveIdentity(record, user);
+    }
+
+    public async Task<ApiSessionAuthoritySnapshot?> ResolveAuthoritySnapshotAsync(ApiTokenRecord record,
+        CancellationToken cancellationToken = default) {
+        if (!CanResolve(record)) {
+            return null;
+        }
+        var snapshot = record.Kind == ApiCredentialKind.UserSession ? await users.ReadSnapshotAsync(cancellationToken) : null;
+        var user = snapshot?.Users.FirstOrDefault(candidate => candidate.Id == record.UserId);
+        var identity = ResolveIdentity(record, user);
+        return identity is null ? null : new(identity,
+            user?.NormalizedUserName ?? ApiIdentityRules.NormalizeUserName(options.Value.BootstrapAdmin.UserName), snapshot?.Generation);
+    }
+
+    public bool IsAuthoritySnapshotCurrent(ApiSessionAuthoritySnapshot snapshot, ApiTokenRecord record) {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(record);
+        if (!CanResolve(record)) {
+            return false;
+        }
+        return record.Kind == ApiCredentialKind.AdministratorSession
+            ? snapshot.Identity.IsAdministrator && ResolveIdentity(record, null) is not null
+            : !snapshot.Identity.IsAdministrator && snapshot.Identity.UserId == record.UserId &&
+                snapshot.NormalizedUserName != ApiIdentityRules.NormalizeUserName(options.Value.BootstrapAdmin.UserName);
+    }
+
+    private bool CanResolve(ApiTokenRecord record)
+        => options.Value.UserAuthentication.Enabled && record.GetStatus(clock.GetUtcNow()) == ApiTokenStatus.Active &&
+            (record.Kind == ApiCredentialKind.AdministratorSession ||
+                record.Kind == ApiCredentialKind.UserSession && record.UserId is { } id && record.Subject == UserSubject(id));
+
+    private ApiSessionIdentity? ResolveIdentity(ApiTokenRecord record, ApiUserRecord? user) {
+        if (!CanResolve(record)) {
             return null;
         }
         if (record.Kind == ApiCredentialKind.AdministratorSession) {
@@ -102,10 +140,6 @@ public sealed class ApiSessionService(
             }
             return new(null, options.Value.BootstrapAdmin.UserName, record.DisplayName, true, record.Scopes);
         }
-        if (record.Kind != ApiCredentialKind.UserSession || record.UserId is not { } id || record.Subject != UserSubject(id)) {
-            return null;
-        }
-        var user = (await users.ReadAsync(cancellationToken)).FirstOrDefault(candidate => candidate.Id == id);
         if (user?.Enabled != true || user.AuthenticationRevision != record.AuthenticationRevision ||
             user.NormalizedUserName == ApiIdentityRules.NormalizeUserName(options.Value.BootstrapAdmin.UserName) ||
             !ApiPasswordService.IsSupportedHash(user.PasswordHash)) {

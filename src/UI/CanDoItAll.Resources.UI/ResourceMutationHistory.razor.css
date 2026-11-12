@@ -1,0 +1,4 @@
+.resource-mutation-history {
+    max-height: 12rem;
+    overflow-y: auto;
+}

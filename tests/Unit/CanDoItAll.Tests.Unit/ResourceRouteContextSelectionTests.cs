@@ -89,6 +89,6 @@ public sealed class ResourceRouteContextSelectionTests
             ResourceValidationStatus.Valid,
             ResourceSensitivity.Normal);
 
-    private static ProjectWriteSelection CreateProject(Guid projectId, Guid? lifetimeId = null)
+    private static ResourceProjectOption CreateProject(Guid projectId, Guid? lifetimeId = null)
         => new(projectId, "Project", new(Guid.NewGuid(), projectId, lifetimeId ?? Guid.NewGuid()));
 }

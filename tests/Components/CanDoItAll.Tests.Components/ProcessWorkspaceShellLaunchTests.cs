@@ -4,6 +4,7 @@ using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.Processes.Runtime;
 using CanDoItAll.Processes.Projections;
+using CanDoItAll.Processes.UI;
 using CanDoItAll.Tests.Support;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -12,15 +13,104 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.Processes;
 
 public sealed partial class ProcessWorkspaceShellTests {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retired_new_intent_cleanup_cannot_launch_or_clear_successor_busy_state(bool fail) {
+        var authority = new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()));
+        var store = new RetainedLaunchStore(null);
+        using var context = CreateContext(out var client, services: LaunchServices(authority, store, new LaunchStateStore(null)));
+        client.ShellResultTransform = (_, projection) => projection with {
+            Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
+                ? command with { IsEnabled = true, DisabledReason = null } : command).ToArray()
+        };
+        context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(Guid.NewGuid().ToString("D"));
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-shell']");
+        await InvokeLaunchAsync(cut);
+        var removing = context.JSInterop.SetupVoid("sessionStorage.removeItem", _ => true);
+        var originalKey = ((IProcessWorkspaceSession)cut.Instance).PendingLaunchStorageKey;
+        var clearing = cut.InvokeAsync(() => ((IProcessWorkspaceSession)cut.Instance).StartNewProcessLaunchAsync());
+        cut.WaitForAssertion(() => Assert.Single(removing.Invocations));
+        Assert.Equal(originalKey, Assert.Single(removing.Invocations).Arguments[0]);
+        client.DeferShellRequests = true;
+        await cut.InvokeAsync(() => cut.Render(p => p.Add(c => c.ProjectId, Guid.NewGuid())));
+        if (fail) {
+            removing.SetException(new InvalidOperationException("Retired cleanup details"));
+        } else {
+            removing.SetVoidResult();
+        }
+        await clearing;
+        Assert.True(((IProcessWorkspaceSession)cut.Instance).IsBusy);
+        Assert.Single(authority.ProjectCaptures);
+        Assert.Equal(0, store.ContinuationCalls);
+        Assert.DoesNotContain("Retired cleanup details", cut.Markup, StringComparison.Ordinal);
+        await context.DisposeRenderedComponentsAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retired_feed_receipt_cannot_refresh_or_clear_successor_busy_state(bool fail) {
+        using var context = CreateContext(out var client);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-shell']");
+        client.FeedCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        var feeding = cut.InvokeAsync(() => cut.Find("[data-testid='processes-feed-defaults']").ClickAsync(new MouseEventArgs()));
+        cut.WaitForAssertion(() => Assert.Equal(1, client.FeedDefaultsCommandCount));
+        var initialRequests = client.Requests.Count;
+        client.DeferShellRequests = true;
+        await cut.InvokeAsync(() => cut.Render(p => p.Add(c => c.ProjectId, Guid.NewGuid())));
+        cut.WaitForAssertion(() => Assert.Equal(initialRequests + 1, client.Requests.Count));
+        var requestCount = client.Requests.Count;
+        if (fail) {
+            client.FeedCompletion.SetException(new InvalidOperationException("Retired feed details"));
+        } else {
+            client.FeedCompletion.SetResult(new(Guid.NewGuid(), ProcessDefinitionCatalogCommandKind.FeedDefaults,
+                ProcessDefinitionCatalogCommandStatus.Accepted, new("retired"), 1, Now, "Retired feed receipt"));
+        }
+        await feeding;
+        Assert.True(((IProcessWorkspaceSession)cut.Instance).IsBusy);
+        Assert.Equal(requestCount, client.Requests.Count);
+        Assert.DoesNotContain("Retired feed", cut.Markup, StringComparison.Ordinal);
+        await context.DisposeRenderedComponentsAsync();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retired_launch_observation_cannot_clear_the_successor_read_busy_state(bool fail) {
+        var store = new RetainedLaunchStore(null);
+        using var context = CreateContext(out var client, services: LaunchServices(
+            new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid())), store, new LaunchStateStore(null)));
+        client.ShellResultTransform = (_, projection) => projection with {
+            Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
+                ? command with { IsEnabled = true, DisabledReason = null } : command).ToArray()
+        };
+        var storage = context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true);
+        var cut = context.Render<ProcessWorkspaceShell>();
+        cut.WaitForElement("[data-testid='processes-shell']");
+        var launching = InvokeLaunchAsync(cut);
+        cut.WaitForAssertion(() => Assert.Single(storage.Invocations));
+        client.DeferShellRequests = true;
+        await cut.InvokeAsync(() => cut.Render(parameters => parameters.Add(component => component.ProjectId, Guid.NewGuid())));
+        if (fail) {
+            storage.SetException(new InvalidOperationException("Retired storage failure"));
+        } else {
+            storage.SetResult(Guid.NewGuid().ToString("D"));
+        }
+        await launching;
+        Assert.True(((IProcessWorkspaceSession)cut.Instance).IsBusy);
+        Assert.DoesNotContain("Retired storage failure", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(0, store.ContinuationCalls);
+    }
+
     [Fact]
     public async Task Launch_missing_browser_preparation_remains_explicit_without_creating_a_replacement() {
-        using var context = CreateLaunchContext();
         var intent = Guid.NewGuid();
         var authority = new LaunchOperatorSource(ProcessPreparedLaunchFixture.Local(Guid.NewGuid()));
         var store = new RetainedLaunchStore(null);
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(authority);
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(null)));
+        using var context = CreateLaunchContext(LaunchServices(authority, store, new LaunchStateStore(null)));
         context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(intent.ToString("D"));
         var cut = context.Render<ProcessWorkspaceShell>();
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -38,7 +128,6 @@ public sealed partial class ProcessWorkspaceShellTests {
     [InlineData(ProcessLaunchContinuationState.Accepted, false)]
     public async Task Launch_restores_the_accepted_browser_intent_without_recapturing_a_new_project_lifetime(
         ProcessLaunchContinuationState continuation, bool acknowledged) {
-        using var context = CreateLaunchContext();
         var profile = Guid.NewGuid();
         var project = Guid.NewGuid();
         var originalAuthority = ProcessPreparedLaunchFixture.Local(profile, new(profile, project, Guid.NewGuid()));
@@ -50,9 +139,7 @@ public sealed partial class ProcessWorkspaceShellTests {
             ProcessLaunchLinkDeliveryState.NotRequested, null, null);
         var store = new RetainedLaunchStore(retained);
         var authorities = new LaunchOperatorSource(originalAuthority with { ProjectAdmission = null });
-        context.Services.AddSingleton<IProcessLaunchOperatorAuthoritySource>(authorities);
-        context.Services.AddSingleton<IProcessPreparedLaunchStore>(store);
-        context.Services.AddSingleton(ObservationOnlyLaunchService(store, new LaunchStateStore(preparation.InitialCommit.Mutation.State)));
+        using var context = CreateLaunchContext(LaunchServices(authorities, store, new LaunchStateStore(preparation.InitialCommit.Mutation.State)));
         context.JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(preparation.CallerIntentId!.Value.Value.ToString("D"));
         var cut = context.Render<ProcessWorkspaceShell>(parameters => parameters.Add(component => component.ProjectId, project));
         cut.WaitForElement("[data-testid='processes-shell']");
@@ -66,8 +153,8 @@ public sealed partial class ProcessWorkspaceShellTests {
         Assert.Equal(acknowledged, context.JSInterop.Invocations.Any(invocation => invocation.Identifier == "sessionStorage.removeItem"));
     }
 
-    private static BunitContext CreateLaunchContext() {
-        var context = CreateContext(out var client);
+    private static BunitContext CreateLaunchContext(Action<IServiceCollection> services) {
+        var context = CreateContext(out var client, services: services);
         client.ShellResultTransform = (_, projection) => projection with {
             Authorization = projection.Authorization with { CanLaunchRuns = true },
             Commands = projection.Commands.Select(command => command.Kind == ProcessWorkspaceCommandKind.LaunchRun
@@ -75,6 +162,15 @@ public sealed partial class ProcessWorkspaceShellTests {
         };
         return context;
     }
+
+    // The launch collaborators are registered before the renderer is built.
+    private static Action<IServiceCollection> LaunchServices(IProcessLaunchOperatorAuthoritySource authority,
+        IProcessPreparedLaunchStore store, IProcessRuntimeStateStore states)
+        => services => {
+            services.AddSingleton(authority);
+            services.AddSingleton(store);
+            services.AddSingleton(ObservationOnlyLaunchService(store, states));
+        };
 
     private static Task InvokeLaunchAsync(IRenderedComponent<ProcessWorkspaceShell> cut)
         => cut.Find("[data-testid='processes-command-launchrun']").ClickAsync(new MouseEventArgs());

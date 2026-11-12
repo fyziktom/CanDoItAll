@@ -1,104 +1,81 @@
-using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.AgentFramework.ProviderHistory;
+using CanDoItAll.AgentFramework.UI.History;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.Pages.Navigation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components.History;
 
 public partial class ProviderRequestHistoryPanel : IDisposable {
     [Parameter, EditorRequired] public HistoryProviderScope Scope { get; set; } = default!;
+    [Parameter] public ProviderHistoryLocation? Location { get; set; }
+    [Parameter] public EventCallback<ProviderHistoryLocationChange> LocationChanged { get; set; }
     [Inject] public IProviderRequestHistory History { get; set; } = default!;
     [Inject] public TimeProvider Clock { get; set; } = default!;
-    [Inject] public ILogger<ProviderHistorySearchState> Logger { get; set; } = default!;
     [Inject] public IDatabaseSwitchNotificationService ProfileChanges { get; set; } = default!;
     [CascadingParameter] public Task<AuthenticationState>? AuthenticationState { get; set; }
 
-    private ProviderHistorySearchState state = default!;
-    private ProviderHistoryFilterDraft draft = default!;
-    private EditContext editContext = default!;
+    private ProviderHistoryWorkspace? workspace;
+    private HistoryViewOrigin activation = HistoryViewOrigin.New();
     private HistoryProviderScope? previousScope;
     private Task<AuthenticationState>? previousAuthentication;
-    private HistoryEntryId? selectedEntry;
-    private bool draftChanged;
+    private ProviderHistoryLocation? published;
+    private ProviderHistoryLocation? publishedOver;
+    private bool hasPublished;
+    private bool awaitingHost;
     private bool disposed;
 
-    protected override void OnInitialized() {
-        state = new(History, Logger);
-        state.Changed += Render;
-        ResetDraft();
-        ProfileChanges.Changed += ProfileChanged;
-    }
+    // A queued render of this panel can run before the host re-renders it with the location it was just told about,
+    // so the published location stands until the host supplies a location other than the one it was published over.
+    private ProviderHistoryLocation? WorkspaceLocation
+        => awaitingHost || hasPublished && Reduce(published) == Reduce(Location) ? published : Location;
+
+    private EventCallback<ProviderHistoryLocationChange> WorkspaceLocationChanged => LocationChanged.HasDelegate
+        ? EventCallback.Factory.Create<ProviderHistoryLocationChange>(this, PublishAsync)
+        : default;
+
+    protected override void OnInitialized() => ProfileChanges.Changed += ProfileChanged;
 
     protected override void OnParametersSet() {
         ArgumentNullException.ThrowIfNull(Scope);
+        if (awaitingHost && Location != publishedOver) {
+            awaitingHost = false;
+        }
         if (previousScope != Scope || !ReferenceEquals(previousAuthentication, AuthenticationState)) {
-            ClearResults();
-            ResetDraft();
+            Retire();
             previousScope = Scope;
             previousAuthentication = AuthenticationState;
         }
     }
 
-    private void ResetDraft() {
-        draft = new(Clock.GetUtcNow());
-        editContext = new(draft);
-        draftChanged = false;
+    private Task PublishAsync(ProviderHistoryLocationChange change) {
+        published = change.Location;
+        publishedOver = Location;
+        hasPublished = true;
+        awaitingHost = true;
+        return LocationChanged.InvokeAsync(change);
     }
 
-    private async Task SearchAsync() {
-        if (!editContext.Validate()) {
-            return;
-        }
-        selectedEntry = null;
-        draftChanged = false;
-        await state.SearchAsync(draft.ToQuery(Scope, Clock.GetUtcNow()));
-    }
+    private static AgentsHistoryUrlState? Reduce(ProviderHistoryLocation? location) => AgentsHistoryUrlState.FromLocation(location);
 
-    private void Render() => _ = InvokeAsync(() => {
-        if (!disposed) {
-            StateHasChanged();
-        }
-    });
-
-    private Task DispatchAsync(HistoryResultsIntent intent) {
-        switch (intent) {
-            case HistoryResultsIntent.Previous:
-                return state.PreviousAsync();
-            case HistoryResultsIntent.Next:
-                return state.NextAsync();
-            case HistoryResultsIntent.Cancel:
-                state.Cancel();
-                break;
-            case HistoryResultsIntent.Clear:
-                ClearResults();
-                break;
-            case HistoryResultsIntent.Details details when state.Page?.Entries.Any(entry => entry.Id == details.EntryId) == true:
-                selectedEntry = details.EntryId;
-                break;
-        }
-        return Task.CompletedTask;
-    }
-
-    private void DraftChanged() => draftChanged = true;
-
-    private void ClearResults() {
-        state.Reset();
-        selectedEntry = null;
-        draftChanged = false;
+    private void Retire() {
+        workspace?.Dispose();
+        workspace = null;
+        published = null;
+        publishedOver = null;
+        hasPublished = false;
+        awaitingHost = false;
+        activation = HistoryViewOrigin.New();
     }
 
     private void ProfileChanged(object? sender, DatabaseProfileChangedNotification notification) {
         if (!disposed) {
             _ = InvokeAsync(() => {
-                if (disposed) {
-                    return;
+                if (!disposed) {
+                    Retire();
+                    StateHasChanged();
                 }
-                ClearResults();
-                ResetDraft();
-                StateHasChanged();
             });
         }
     }
@@ -109,6 +86,6 @@ public partial class ProviderRequestHistoryPanel : IDisposable {
         }
         disposed = true;
         ProfileChanges.Changed -= ProfileChanged;
-        state.Dispose();
+        Retire();
     }
 }

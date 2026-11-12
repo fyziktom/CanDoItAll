@@ -34,17 +34,134 @@ public sealed class AgentExecutionActivityAdmissionException(
     public AgentExecutionActivityAdmissionRejectionReason Reason { get; } = reason;
 }
 
-public sealed class AgentExecutionActivityPublicationException(
-    AgentExecutionActivityStreamId streamId,
-    AgentExecutionActivityPhase phase,
-    Exception innerException)
-    : InvalidOperationException(
-        $"Publishing agent execution activity phase '{phase}' failed.",
-        innerException)
-{
-    public AgentExecutionActivityStreamId StreamId { get; } = streamId;
+public sealed class AgentExecutionActivityPublicationException : InvalidOperationException {
+    public AgentExecutionActivityPublicationException(AgentExecutionActivityStreamId streamId,
+        AgentExecutionActivityPhase phase, Exception innerException)
+        : base($"Publishing agent execution activity phase '{phase}' failed.", innerException) {
+        StreamId = streamId;
+        Phase = phase;
+    }
 
-    public AgentExecutionActivityPhase Phase { get; } = phase;
+    private AgentExecutionActivityPublicationException(AgentExecutionActivityStreamId streamId,
+        AgentExecutionActivityPhase phase, Exception innerException, AgentEffectContinuation? continuation,
+        AgentEffectReconciliationFailureKind? failureKind, bool leaseReleaseUnconfirmed, bool disposalFailed)
+        : this(streamId, phase, innerException) {
+        HasEffectOutcome = true;
+        EffectContinuation = continuation;
+        EffectFailureKind = failureKind;
+        EffectLeaseReleaseUnconfirmed = leaseReleaseUnconfirmed;
+        ActivityDisposalFailed = disposalFailed;
+    }
+
+    public AgentExecutionActivityStreamId StreamId { get; }
+    public AgentExecutionActivityPhase Phase { get; }
+    public bool HasEffectOutcome { get; }
+    public AgentEffectContinuation? EffectContinuation { get; }
+    public AgentEffectReconciliationFailureKind? EffectFailureKind { get; }
+    public bool EffectLeaseReleaseUnconfirmed { get; }
+    public bool ActivityDisposalFailed { get; }
+
+    internal static AgentExecutionActivityPublicationException PreserveEffectOutcome(
+        IAgentExecutionActivityOperationLease operation, Exception? primary, Exception publication,
+        AgentEffectContinuation? continuation = null, bool disposalFailed = false) {
+        var retained = primary as AgentExecutionActivityPublicationException;
+        continuation = primary switch {
+            AgentExecutionActivityPublicationException { HasEffectOutcome: true } prior => prior.EffectContinuation,
+            AgentEffectReconciliationIncompleteException incomplete => incomplete.Continuation,
+            AgentEffectReconciliationCleanupException cleanup => cleanup.Continuation,
+            _ => continuation
+        };
+        var kind = primary switch {
+            AgentExecutionActivityPublicationException { HasEffectOutcome: true } prior => prior.EffectFailureKind,
+            AgentEffectReconciliationLeaseException lease => lease.FailureKind,
+            AgentToolReceiptAccessDeniedException => AgentEffectReconciliationFailureKind.ReadDenied,
+            AgentToolReceiptReadUnavailableException => AgentEffectReconciliationFailureKind.ReadUnavailable,
+            OperationCanceledException => AgentEffectReconciliationFailureKind.Cancelled,
+            AgentToolAdmissionException => AgentEffectReconciliationFailureKind.AdmissionRejected,
+            null => (AgentEffectReconciliationFailureKind?)null,
+            _ => AgentEffectReconciliationFailureKind.Failed
+        };
+        var leaseUnconfirmed = primary is AgentEffectReconciliationCleanupException or AgentEffectReconciliationLeaseException or
+            AgentEffectReconciliationIncompleteException { LeaseReleaseUnconfirmed: true } || retained?.EffectLeaseReleaseUnconfirmed == true;
+        var phase = kind == AgentEffectReconciliationFailureKind.Cancelled ? AgentExecutionActivityPhase.Cancelled :
+            continuation?.Persistence == AgentEffectCheckpointPersistence.Confirmed ? AgentExecutionActivityPhase.AwaitingContinuation : AgentExecutionActivityPhase.Failed;
+        return new(operation.StreamId, phase, primary is null ? publication : new AggregateException(primary, publication),
+            continuation, kind, leaseUnconfirmed, disposalFailed || retained?.ActivityDisposalFailed == true);
+    }
+}
+
+public static class AgentEffectActivityFinalization {
+    public static bool IsEffectFailure(Exception? exception) => exception is AgentEffectReconciliationIncompleteException or
+        AgentEffectReconciliationCleanupException or AgentEffectReconciliationLeaseException or AgentEffectReconciliationCancellationException or
+        AgentToolAdmissionException { IsEffectReconciliation: true } or
+        AgentToolReceiptAccessDeniedException or AgentToolReceiptReadUnavailableException or AgentExecutionActivityPublicationException { HasEffectOutcome: true };
+
+    public static AgentEffectContinuation? Continuation<TResult>(TResult result) => result switch {
+        ExecutionRunResult run => run.EffectContinuation,
+        AgentChatRunResult chat => chat.EffectContinuation,
+        _ => null
+    };
+
+    public static Exception? Publish(IAgentExecutionActivityOperationLease operation, AgentEffectContinuation? continuation,
+        Exception? primary) {
+        RequireEffectOutcome(operation, continuation, primary);
+        if (primary is AgentExecutionActivityPublicationException { HasEffectOutcome: true }) {
+            return primary;
+        }
+        continuation ??= primary switch {
+            AgentEffectReconciliationCleanupException cleanup => cleanup.Continuation,
+            AgentEffectReconciliationIncompleteException incomplete => incomplete.Continuation,
+            _ => null
+        };
+        try {
+            if (!operation.IsTerminal) {
+                if (continuation?.Persistence == AgentEffectCheckpointPersistence.Confirmed) {
+                    operation.SuspendForContinuation(continuation, "The original execution checkpoint is confirmed and requires explicit continuation.");
+                } else if (primary is OperationCanceledException or AgentEffectReconciliationLeaseException { FailureKind: AgentEffectReconciliationFailureKind.Cancelled }) {
+                    operation.Cancel("Receipt reconciliation was cancelled.");
+                } else {
+                    operation.Fail("Receipt reconciliation needs attention.", AgentExecutionActivityFailureCodes.UnhandledExecutionFailure);
+                }
+            }
+            return primary;
+        } catch (Exception publication) {
+            return AgentExecutionActivityPublicationException.PreserveEffectOutcome(operation, primary, publication, continuation);
+        }
+    }
+
+    public static Exception? Dispose(IAgentExecutionActivityOperationLease operation, AgentEffectContinuation? continuation,
+        Exception? primary) {
+        RequireEffectOutcome(operation, continuation, primary);
+        try {
+            operation.Dispose();
+            return primary;
+        } catch (Exception disposal) {
+            return AgentExecutionActivityPublicationException.PreserveEffectOutcome(operation, primary, disposal, continuation, disposalFailed: true);
+        }
+    }
+
+    private static void RequireEffectOutcome(IAgentExecutionActivityOperationLease operation, AgentEffectContinuation? continuation,
+        Exception? primary) {
+        ArgumentNullException.ThrowIfNull(operation);
+        if (continuation is null && !IsEffectFailure(primary)) {
+            throw new ArgumentException("Effect finalization requires a typed effect result or failure.", nameof(primary));
+        }
+        continuation = primary switch {
+            AgentExecutionActivityPublicationException { HasEffectOutcome: true } publication => publication.EffectContinuation,
+            AgentEffectReconciliationIncompleteException incomplete => incomplete.Continuation,
+            AgentEffectReconciliationCleanupException cleanup => cleanup.Continuation,
+            _ => continuation
+        };
+        if (continuation?.Stop == AgentEffectReconciliationStop.SnapshotRead) {
+            throw new ArgumentException("A read-only snapshot is not an execution checkpoint publication.", nameof(continuation));
+        }
+        if (primary is AgentExecutionActivityPublicationException { HasEffectOutcome: true } prior && prior.StreamId != operation.StreamId) {
+            throw new ArgumentException("The effect failure must belong to the original activity stream.", nameof(primary));
+        }
+        if (continuation is not null && (continuation.ExecutionRunId != operation.ExecutionRunId || continuation.ChatSessionId != operation.ChatSessionId)) {
+            throw new ArgumentException("The effect outcome must belong to the original bound activity.", nameof(continuation));
+        }
+    }
 }
 
 public interface IAgentExecutionActivityCoordinator
@@ -97,6 +214,16 @@ public interface IAgentExecutionActivityOperationLease :
     void Cancel(string message);
 
     void Suspend(string message);
+
+    void SuspendForContinuation(AgentEffectContinuation continuation, string message) {
+        ArgumentNullException.ThrowIfNull(continuation);
+        if (continuation.Persistence != AgentEffectCheckpointPersistence.Confirmed || continuation.Stop == AgentEffectReconciliationStop.SnapshotRead ||
+            continuation.ExecutionRunId != ExecutionRunId || continuation.ChatSessionId != ChatSessionId) {
+            throw new ArgumentException("Continuation activity requires the original confirmed waiting checkpoint.", nameof(continuation));
+        }
+        Report(AgentExecutionActivityPhase.AwaitingContinuation, message);
+        Suspend(message);
+    }
 }
 
 public sealed class AgentExecutionActivityCoordinator(
@@ -464,8 +591,8 @@ internal sealed class AgentExecutionActivityOperation :
                     AgentExecutionActivityPhase.Failed,
                 AgentExecutionActivityTerminalOutcome.Cancelled =>
                     AgentExecutionActivityPhase.Cancelled,
-                AgentExecutionActivityTerminalOutcome.Suspended =>
-                    AgentExecutionActivityPhase.AwaitingApproval,
+                AgentExecutionActivityTerminalOutcome.Suspended => currentPhase == AgentExecutionActivityPhase.AwaitingContinuation
+                    ? AgentExecutionActivityPhase.AwaitingContinuation : AgentExecutionActivityPhase.AwaitingApproval,
                 _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
             };
             var activity = new AgentExecutionActivity(

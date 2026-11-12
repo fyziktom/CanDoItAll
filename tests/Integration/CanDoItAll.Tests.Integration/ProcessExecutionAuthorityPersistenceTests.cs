@@ -187,7 +187,61 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         Assert.Null(result.Snapshot);
     }
 
-    private static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0) {
+    [Theory]
+    [InlineData(PolicyChange.AlreadyGoverned, false)]
+    [InlineData(PolicyChange.Added, false)]
+    [InlineData(PolicyChange.AlreadyGoverned, true)]
+    [InlineData(PolicyChange.Added, true)]
+    [InlineData(PolicyChange.Removed, false)]
+    [InlineData(PolicyChange.Removed, true)]
+    public async Task Unsupported_decision_policy_preserves_history_but_blocks_reservation_and_owner_mutation(PolicyChange change, bool declaredContract) {
+        await using var app = await TestApplication.CreateAsync(Harness());
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var fixture = await SeedAsync(services, decisionPolicy: change != PolicyChange.Added, declaredContract: declaredContract);
+        var original = Assert.IsType<ProcessExecutionDispatchAuthority>((await Reader(services).ReadAsync(fixture.Run.Id)).Snapshot?.DispatchAuthority);
+        Assert.Equal(change == PolicyChange.Added, original.ObservedCurrentDispatch);
+        var options = Options(services);
+        var transactions = services.GetRequiredService<CoordinatedDatabaseTransaction>();
+        var guard = new EfProcessExecutionMutationGuard(options, transactions, new Clock());
+        if (change != PolicyChange.AlreadyGoverned) {
+            if (change == PolicyChange.Added) {
+                await using (var owner = new ProcessPersistenceDbContext(options)) {
+                    await using var transaction = await owner.Database.BeginTransactionAsync();
+                    using var participation = transactions.Enter(owner);
+                    await guard.RequireForMutationAsync(original);
+                }
+            }
+            await using var changed = new ProcessPersistenceDbContext(options);
+            var assignment = await changed.RuntimeStepAssignments.SingleAsync(item => item.RunId == fixture.RunId);
+            assignment.DecisionDataPolicyJson = change == PolicyChange.Removed ? null : ProcessDecisionDataPolicyAdmissionCodec.Serialize(ProcessDecisionPolicyFixture.Create(
+                fixture.Prepared.Preparation.InitialCommit.InitialPlan!.Definition.VersionId, new(assignment.StepInstanceId)) with {
+                    ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent) : null
+                });
+            await changed.SaveChangesAsync();
+        }
+        var history = await Reader(services).ReadAsync(fixture.Run.Id);
+        Assert.Equal(ProcessExecutionAuthorityDisposition.Bound, history.Disposition);
+        var current = Assert.IsType<ProcessExecutionDispatchAuthority>(history.Snapshot?.DispatchAuthority);
+        Assert.False(current.ObservedCurrentDispatch);
+        Assert.Equal(original.OwnerFingerprint, current.OwnerFingerprint);
+        Assert.Equal(original.ProjectReference, current.ProjectReference);
+        Assert.Equal(original.SourceAuthority, current.SourceAuthority);
+        var query = new EfProcessExecutionAuthorityQuery(new Factory(options), new Clock());
+        await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => query.ReadReservationAsync(original.Evidence));
+        await using var effect = new ProcessPersistenceDbContext(options);
+        await using var effectTransaction = await effect.Database.BeginTransactionAsync();
+        using var effectParticipation = transactions.Enter(effect);
+        foreach (var observation in new[] { original, current }) {
+            await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => guard.RequireDispatchAsync(observation));
+            await Assert.ThrowsAsync<ProcessExecutionAuthorityMismatchException>(() => guard.RequireForMutationAsync(observation));
+        }
+    }
+
+    public enum PolicyChange { AlreadyGoverned, Added, Removed }
+
+    internal static async Task<Fixture> SeedAsync(IServiceProvider services, int channel = 0, bool decisionPolicy = false,
+        bool declaredContract = false, bool admitBackground = false, bool persistExecution = true) {
         var projectId = Guid.NewGuid();
         Assert.True((await services.GetRequiredService<ProjectsService>().CreateAsync(projectId, new() { Name = "Saved Process source" })).IsSuccess);
         var project = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
@@ -201,8 +255,20 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         };
         var authority = new ProcessLaunchAuthority(source, project.DatabaseProfileId,
             new(project.DatabaseProfileId, project.ProjectId, project.LifetimeId), true, true, "fixture-source");
-        var prepared = await services.GetRequiredService<IProcessPreparedLaunchStore>()
-            .PrepareAsync(ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid())));
+        if (admitBackground) {
+            authority = await services.GetRequiredService<IProcessLaunchOperatorAuthoritySource>()
+                .CaptureLocalAsync(projectId, ProcessLaunchOperatorSurface.UserInterface);
+        }
+        var preparation = ProcessPreparedLaunchFixture.Create(authority, new(Guid.NewGuid()));
+        if (decisionPolicy) {
+            var initial = Assert.Single(preparation.InitialCommit.InitialAssignments!);
+            preparation = preparation with { InitialCommit = preparation.InitialCommit with { InitialAssignments = [initial with {
+                DecisionDataPolicy = ProcessDecisionPolicyFixture.Create(preparation.InitialCommit.InitialPlan!.Definition.VersionId, initial.StepInstanceId) with {
+                    ExecutionContract = declaredContract ? ProcessDecisionPolicyFixture.Contract(ProcessDecisionChildOwner.Agent) : null
+                }
+            }] } };
+        }
+        var prepared = await services.GetRequiredService<IProcessPreparedLaunchStore>().PrepareAsync(preparation);
         await using (var context = new ProcessPersistenceDbContext(Options(services))) {
             var commit = new EfProcessRuntimeUnitOfWork(context,
                 coordinatedTransaction: services.GetRequiredService<CoordinatedDatabaseTransaction>(),
@@ -239,7 +305,17 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
             "process-runtime", "system", Metadata(claim), "Execute assigned step.", string.Empty, "fixture", "fixture-model",
             ExecutionState.Running, null, created, created, created, null, string.Empty, null, [],
             ProcessRunId: assignment.RunId.ToString(), ProcessStepId: assignment.StepInstanceId.ToString());
-        run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(run, null, [], []))).Run;
+        if (admitBackground) {
+            run = run with { State = ExecutionState.Preparing };
+            var profile = services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile.Profile;
+            var journal = new AgentToolAdmissionJournal(services.GetRequiredService<ISandboxWorkspaceStore>(),
+                new(profile.Id, profile.Runtime.Fingerprint, services.GetRequiredService<IAgentExecutionProfileGenerationSource>().GetGeneration()),
+                services.GetRequiredService<TimeProvider>(), services.GetServices<IAgentToolBackgroundSourcePolicy>());
+            run = run with { ToolAdmission = await journal.CreateForNewBackgroundRunAsync(run, "Original Process input.") };
+        }
+        if (persistExecution) {
+            run = (await services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>().SaveExecutionRunDetailAsync(new(run, null, [], []))).Run;
+        }
         return new(prepared, run, claim);
     }
 
@@ -269,20 +345,22 @@ public sealed class ProcessExecutionAuthorityPersistenceTests {
         => new(services.GetRequiredService<ISandboxWorkspaceExecutionRunStore>(), new(new Factory(Options(services, interceptors)), new Clock()),
             services.GetRequiredService<ICanonicalRuntimeDatabase>());
 
-    private static DbContextOptions<ProcessPersistenceDbContext> Options(IServiceProvider services, params IInterceptor[] interceptors) {
+    internal static DbContextOptions<ProcessPersistenceDbContext> Options(IServiceProvider services, params IInterceptor[] interceptors) {
         var builder = new DbContextOptionsBuilder<ProcessPersistenceDbContext>();
         AppDbContextOptionsConfigurator.Configure(builder, services.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         return builder.AddInterceptors(interceptors).Options;
     }
 
-    private static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null)
+    internal static TestHarnessOptions Harness(CanDoItAllTestEnvironment? environment = null, TestDatabaseProfile? profile = null,
+        Action<IServiceCollection>? configure = null)
         => new() { TestEnvironment = environment, ActiveProfile = profile, ConfigureServices = services => {
             foreach (var descriptor in services.Where(item => item.ImplementationType?.Name == "ProcessLaunchContinuationWorker").ToArray()) {
                 services.Remove(descriptor);
             }
+            configure?.Invoke(services);
         } };
 
-    private sealed record Fixture(ProcessPreparedLaunchSnapshot Prepared, ExecutionRunRecord Run, Guid Claim) {
+    internal sealed record Fixture(ProcessPreparedLaunchSnapshot Prepared, ExecutionRunRecord Run, Guid Claim) {
         public Guid RunId => Prepared.Preparation.InitialCommit.Mutation.State.RunId.Value;
     }
 

@@ -1,0 +1,88 @@
+@page "/completion"
+@using CanDoItAll.AgentFramework.UI.Shell
+@using CanDoItAll.AgentFramework.UI.Usage
+
+<PageTitle>Agents completion sandbox</PageTitle>
+
+<Stack GapScale="LayoutGap.Medium" Class="p-6">
+    <PageHeader Title="Agents completion sandbox" Description="Actual shared shell and Usage renderers. Sample actions do not query or mutate the product." Compact="true" />
+    <Cluster Gap="LayoutGap.Small">
+        @foreach (var scenario in Enum.GetValues<CompletionScenario>()) {
+            <Button Text="@scenario.ToString()" Click="@(() => Apply(scenario))" data-testid="@($"completion-{scenario}")" />
+        }
+        <Button Text="Second instance" Click="@(() => showSecond = !showSecond)" data-testid="completion-second" />
+    </Cluster>
+    <output aria-live="polite" data-testid="completion-intent">@intentText</output>
+    <AgentsShellSurface State="shell" Intent="ShellIntent">
+        <SecondaryTabs Items="DetailTabs" SelectedKey="@detail" SelectedKeyChanged="@(key => detail = key)" />
+        @switch (detail) {
+            case "consumers":
+                <AgentUsageSurface State="state" Intent="UsageIntent" />
+                break;
+            case "providers":
+                <ProviderUsageSurface State="state" Intent="UsageIntent" />
+                break;
+            case "models":
+                <ModelUsageSurface State="state" Intent="UsageIntent" />
+                break;
+        }
+        @if (confirmDefaults) {
+            <AgentDefaultsConfirmation Decision="DefaultsDecision" />
+        }
+    </AgentsShellSurface>
+    @if (showSecond) {
+        <SurfaceCard data-testid="completion-independent">
+            <PageHeader Title="Independent provider detail" Description="A separate fourteen-day Simple Chat interval." Compact="true" />
+            <ProviderUsageSurface State="second" Intent="@(intent => intentText = $"Independent {intent.Action}: {intent.Query.Selection} / {intent.Query.Period}")" />
+        </SurfaceCard>
+    }
+</Stack>
+<Tooltip />
+
+@code {
+    [SupplyParameterFromQuery(Name = "scenario")] public string? Scenario { get; set; }
+    [SupplyParameterFromQuery(Name = "detail")] public string? Detail { get; set; }
+    private static readonly SecondaryTabItem[] DetailTabs = [new("consumers", "Consumer usage"), new("providers", "Provider usage"), new("models", "Model usage")];
+    private AgentsShellState shell = CompletionSandboxFixture.Shell();
+    private UsageDetailState state = CompletionSandboxFixture.Usage();
+    private readonly UsageDetailState second = CompletionSandboxFixture.Usage(selection: ProviderUsageWorkloadSelection.SimpleChats, period: ProviderUsagePeriod.FourteenDays);
+    private string detail = "consumers";
+    private string intentText = "No intent yet.";
+    private bool showSecond;
+    private bool confirmDefaults;
+
+    protected override void OnParametersSet() {
+        detail = Detail is "providers" or "models" ? Detail : "consumers";
+        Apply(Enum.TryParse<CompletionScenario>(Scenario, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : CompletionScenario.Ready);
+    }
+
+    private void Apply(CompletionScenario scenario) {
+        state = CompletionSandboxFixture.Usage(scenario);
+        shell = shell with { HeaderFailure = scenario == CompletionScenario.Partial ? "Sample bound-resource information is unavailable." : null };
+    }
+
+    private void ShellIntent(AgentsShellIntent intent) {
+        if (intent.Origin != shell.Origin) {
+            return;
+        }
+        intentText = $"Sample shell intent: {intent}";
+        if (intent is AgentsShellIntent.SelectTab tab) {
+            shell = shell with { Origin = shell.Origin with { Tab = tab.Key } };
+        } else if (intent is AgentsShellIntent.Command { Action: AgentsShellCommand.FeedDefaults }) {
+            confirmDefaults = true;
+        }
+    }
+
+    private void DefaultsDecision(bool confirmed) {
+        confirmDefaults = false;
+        intentText = $"Sample defaults confirmation: {confirmed}. No native feeding runs.";
+    }
+
+    private void UsageIntent(UsageDetailIntent intent) {
+        intentText = $"Sample {intent.Action}: {intent.Query.Selection} / {intent.Query.Period} / {intent.Query.Window.FromUtc:u} to {intent.Query.Window.ToUtc:u}";
+        if (intent.Origin != state.Origin) {
+            return;
+        }
+        state = intent.Action == UsageDetailAction.Retry ? CompletionSandboxFixture.Usage() : state with { Retired = true, Snapshot = null };
+    }
+}

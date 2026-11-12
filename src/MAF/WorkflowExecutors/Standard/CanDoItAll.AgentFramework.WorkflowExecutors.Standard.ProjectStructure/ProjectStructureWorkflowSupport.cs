@@ -28,6 +28,7 @@ public sealed partial class ProjectStructureWorkflowExecutor
         string Title,
         string Summary,
         string Owner,
+        DateTimeOffset? StartUtc,
         DateTimeOffset? DueUtc,
         string Urgency,
         bool RequiresResponse,

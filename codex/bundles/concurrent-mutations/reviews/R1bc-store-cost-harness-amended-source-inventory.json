@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceOnlyUnbuiltUnexecuted",
+  "expectedSourceRows": 22,
+  "stableRowsAdded": 0,
+  "theoryRows": [
+    12,
+    8,
+    2
+  ],
+  "productionChangesIncluded": false,
+  "excluded": [
+    "parked JsonStore UTF8 optimization",
+    "R1c frozen inputs",
+    "historical receipt review"
+  ],
+  "inputs": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolAdmissionJournalFixture.cs",
+      "sha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955",
+      "mainBaseSha256": "B98294F041300E40E3C766A1BA454F46C759A643E33B6F520212536FF9CD7A75",
+      "previousSha256": "3280D4F2D852DB72911455E035D7BC5D7F086555C266E1DF72D6854ACEE54955"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceTests.cs",
+      "sha256": "86DDBFECA7407E157EA641056516D1126267E740EFF9FA137D9C4F205CADD1C0",
+      "mainBaseSha256": null,
+      "previousSha256": "4E8371D6E39736371EA71D113C49A05EB30B4D69E22925951C24CB1B5DA4AA7F"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceFixture.cs",
+      "sha256": "AB881933E9C0137D7BEBB8F22478358AC723D1D1A43CBB9EBBBF12ECAA21C61E",
+      "mainBaseSha256": null,
+      "previousSha256": "AB881933E9C0137D7BEBB8F22478358AC723D1D1A43CBB9EBBBF12ECAA21C61E"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceProbe.cs",
+      "sha256": "8932E117046013CCB0D0353A34E8E3FC1EC4C5897F8510FB225988152D7432DB",
+      "mainBaseSha256": null,
+      "previousSha256": "06634BF714893E2910EA6C385F75067D254BBE0937BED87593200F6564198B8B"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentReceiptStorePerformanceEvidence.cs",
+      "sha256": "A19645D4BB6E1960DC529B095D0A64075794D7AC26E08ACABFE82B8C849BC260",
+      "mainBaseSha256": null,
+      "previousSha256": "A19645D4BB6E1960DC529B095D0A64075794D7AC26E08ACABFE82B8C849BC260"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/plan/P02b-R1bc-store-cost-remediation.md",
+      "sha256": "5D6FE97D0C30D9BCC73430653AEB9D0CCB838E6152795DC5337E31C2F67235F6",
+      "mainBaseSha256": "350E892135F245625D88BB7BCB96F8299B9D35A074EB0C7B529F73907D27E3AD",
+      "previousSha256": "597ACCE5EBF2106D79CCF4FC0898B5E6D3AE830BCF17244A4FF76458D083D87F"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1bc-store-cost-harness-source.md",
+      "sha256": "B6F4D923CB42B9103FB8C45E99B44DAFAAB743C09D26F7BEFB5C92F0D7AD2264",
+      "mainBaseSha256": null,
+      "previousSha256": "4ED5859BD96770840893C73F8F2B0FF5E8CB38998D90FF0469B2404282852804"
+    }
+  ],
+  "previousInventorySha256": "285656A5354829E921A4784F05FC5F07DE010B5532BD1D9060F875A8CFBB2328",
+  "amendment": "Correct Windows effective-limit/current-process available-commit labels from documented MEMORYSTATUSEX semantics; no values, thresholds, workload or counts changed."
+}

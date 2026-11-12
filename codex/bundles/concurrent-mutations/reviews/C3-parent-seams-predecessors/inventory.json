@@ -1,0 +1,26 @@
+[
+  {
+    "path": "src/App/CanDoItAll.Composition/FiniteOperationComposition.cs",
+    "sha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+    "mainSha256": "6BD3AB6F90AEE98217EEB1186283BE6879634ADAFC64D117EC580EF4A7CC6D8F",
+    "backupPath": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationComposition.cs.txt"
+  },
+  {
+    "path": "src/App/CanDoItAll.Web/Infrastructure/DatasetActivationCommand.cs",
+    "sha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+    "mainSha256": "3CDB8D39D117D32A3C78AD957662F462FE5F54A01F2B8C2C48CEF370BFBC99AB",
+    "backupPath": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommand.cs.txt"
+  },
+  {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/DatasetActivationCommandProcessTests.cs",
+    "sha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+    "mainSha256": "FF5BF901C4DD2C0C03806D8D73EC766A5E596B39CF3621A9C136BEB230FDE59A",
+    "backupPath": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/DatasetActivationCommandProcessTests.cs.txt"
+  },
+  {
+    "path": "tests/Integration/CanDoItAll.Tests.Integration/FiniteOperationMigrationTests.cs",
+    "sha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+    "mainSha256": "6FC394FEF86CAC6172DB10EB2165B412C2E97F14BD3672CB9B24362E0ED725C4",
+    "backupPath": "codex/bundles/concurrent-mutations/reviews/C3-parent-seams-predecessors/FiniteOperationMigrationTests.cs.txt"
+  }
+]

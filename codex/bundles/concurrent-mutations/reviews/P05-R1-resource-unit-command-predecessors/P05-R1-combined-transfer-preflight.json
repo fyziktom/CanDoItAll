@@ -1,0 +1,2543 @@
+{
+  "schemaVersion": 1,
+  "kind": "Resource combined transfer source-only preflight",
+  "observedAtUtc": "2026-10-17T01:02:29.8490051-04:00",
+  "managedRoot": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll",
+  "parentRoot": "C:\\repositories\\CanDoItAll",
+  "sourceOnly": true,
+  "executed": false,
+  "transferPerformed": false,
+  "inventoryInputs": [
+    {
+      "path": "codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-native-source-inventory.json",
+      "sha256": "56DEA5B7B68DA2B001F156EA37F0DB98ED47E6920B398EC6072F2F9CFC251B1D"
+    },
+    {
+      "path": "codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-resource-backend-failure-amended-source-inventory.json",
+      "sha256": "ABC02079E18D249ED474F15555DCD986E601199AA1107A3624C8EA19C380E71E"
+    },
+    {
+      "path": "codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-native-rendering-entries.json",
+      "sha256": "B6C276FAC13A00C7BB2F77A19CEA5F00606C49ED144E22A22262C5506792E4CE"
+    }
+  ],
+  "entries": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14",
+      "bytes": 18966
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceRegistryOwner.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "265E32BD870CFDB8C0876F26D7E9C334A2ADA935575241E8AE2F19B3D5F2E4F7",
+      "sha256": "38862C9D69A7A6C11392E29216270A9C5D7BAF7669F533AD50847BE191E73F00",
+      "bytes": 1630
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "73428CFC61129756A04F6A5E365AAEF6F3AB62A29172376D3B79ADCF9DA05487",
+      "sha256": "76BB61C35C84D76DA24A3D069245B98EB2DA1AF167EA4530C534988B1BE23211",
+      "bytes": 6492
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMutationKind.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "EA6DBC8BB8DD6F2F223B2820A952DA0F6AAE23E400FCA754E4293F4E3318492B",
+      "bytes": 100
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceCommittedMutationException.cs",
+      "owner": "backend",
+      "operation": "delete",
+      "parentBaseSha256": "CC336060C11DF65A15B9F4A4ADA5650B44A28D91699673B3CEFBEC7C5D2FD92B",
+      "sha256": null,
+      "bytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataValues.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "D2F681114E8CCCC30E9B4398F4DDE7A2826436073EB1EB6869A760FC0DFEBBF9",
+      "bytes": 13156
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataStore.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "EC95ECC1A63923CDCBB1E75677B7ACA5AE3C005933E3F3BCB4C903AA32DE7109",
+      "bytes": 10576
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceMetadataWriter.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "6320752EFDC88C3B78A666E5769199FE1C99684457CDC111281561317F50A385",
+      "bytes": 21581
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "ADC12BD0E78453281C8BF06C746B5623F80297A2D5C7B432F57102EF58DAC368",
+      "sha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833",
+      "bytes": 10670
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceRegistryOwner.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "F99BA5722FEB5BD29FAC3B22B7F20B1CAAD6FA1667C43B4174954EE6A012450A",
+      "sha256": "DAF279E0134E0BF0719654A373769595EB272ECCFFDFD2081F405320BA581848",
+      "bytes": 3697
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceStorageObjectPromotion.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "B57F201F4F0F8F4714EDC2328F053D5D0604ACF56B878E6139E6CBC488F43427",
+      "sha256": "14AB30A57095D6964D3DBDA9DE2EF51CE67944DE7DCF2536D484E0105D00F0B6",
+      "bytes": 12881
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcePromotionCommittedException.cs",
+      "owner": "backend",
+      "operation": "delete",
+      "parentBaseSha256": "4A6D8E9C2D6B1A63111CE3C2A692CE31A7CD19034C7A0E4BF9CE7603ACFC98A7",
+      "sha256": null,
+      "bytes": 0
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceBrowseOwner.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "90D356A7C8EBAF51BFBF5193BAA92E7C4B2C41C696EA2FB1707A7A3178C89818",
+      "sha256": "6918B51EC802D35309484214880E342C09082197BA8C09A654AAADD4C3C35E30",
+      "bytes": 6434
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourcesModuleServiceCollectionExtensions.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "D399E8A7F90931798317F970CE98A3AA55585C4CEF7DE57DEA2D0959285D63B3",
+      "sha256": "5B93F17C85DEDB13509F063BC2BB1ACB664A8627120CFDF2AF0FF187D0A4F693",
+      "bytes": 2544
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Search/SearchIndexing.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "A511B0AA1DFB4E40655ADDA94523199973DE4A092A0D83F381E57499E2641F12",
+      "sha256": "E62842810E79FC688799CC6340880D285FD8689A4950CB1A2E4AB07FF1B821D8",
+      "bytes": 8681
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceMetadataContractTests.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "D27A7F25267D1665B4BD5872DBBFCEB5D34DB7BCAB24B47D37EE62BF59721945",
+      "bytes": 10697
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "E3509856939FB4667906D435387DF15E94E4047FCB19A277946C3899532EA32B",
+      "sha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD",
+      "bytes": 17118
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceStorageObjectPromotionTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "03196C67C7662FC5BCD335D54355989B502DDBC509D77DC1E21CC7F87AA80876",
+      "sha256": "A43E6571491315FEC651A80F9EFE48A30FDAAC6D0943C66BF8999385D0304083",
+      "bytes": 17503
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CrmAgentCommittedSaveTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "C2C8CF88FC37E97A5D0C4309F9BF76BCB76FB946C648371BBFBAC4AB3A679E9E",
+      "sha256": "07CB4DFCCD1B48F7F207CFD9399C99AC3D502963F2126F58A9F2D1AEB5846A0D",
+      "bytes": 8533
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "6FCA0DAFF4F4C56337C3F418EE402C21A23354C511DF93819E54D6FD1DE932EF",
+      "bytes": 28061
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9",
+      "bytes": 12627
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "71D0BE01FCE6D409940C2EFBF68229151FA0A9FE1984E132A2FB6B0FA1FA64B1",
+      "sha256": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3",
+      "bytes": 24891
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/OwnerPostcommitPersistenceTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "599F6001332D7E02C78A5955E18C005D9DCFF86FC97522BE8912FC88B7AD8704",
+      "sha256": "C37E0E8A52B325DCF4FF7F1D54445FBFB6A5BB5138ACD1C0C144254B5E764D8B",
+      "bytes": 22416
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcePromotionOutcomeTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "E2A7248744646CF7C02D0C17F3A05C239F5583F7492D4BD79DFEC322B4E0A7F1",
+      "sha256": "6CBA9B73E442E882E268BD1F98A686A544E9258FC673BDE899D600B6C3A6E34C",
+      "bytes": 22138
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceStorageObjectIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "7D2D5E903F2F2B9E79C12EB58E246D363B188CCBD3DBD1095D11AFA4B6F60BE7",
+      "sha256": "A01760288E12C22B64DFF351BB7EEFA2F4D5BF69A303867E1FF0FA8E62462B45",
+      "bytes": 5353
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcesOwnerPersistenceTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "0F8C4B83E0C3EA9061F6430C55AFB030ED0161BBC8C02F8252CC09071709580A",
+      "sha256": "5615AB6FC718A8CD2CEE612079BE9260BB0ADBD1BD1297CF543FB2DBE9AB72D0",
+      "bytes": 9555
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ConnectorPluginIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "E15AFC401D09E653DB360A68B3FB36DB7111B67AEA053AB632045451F59D30AE",
+      "sha256": "EE44AE7685138095CE589F29CC6C61276B5A6D006B35870CF1ACEB966AC57D00",
+      "bytes": 5112
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/CrmHrCrossModuleIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "E84B062E14394361AA1B83867178AAD96239E4409CB4945B667DC563F3DA1478",
+      "sha256": "5E9D86641F64AAC805CEAF814C22B794F258E1BDDACE8E88979429D0DDCB3A12",
+      "bytes": 12351
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/UnknownConnectorManifestIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "512865A36E2F3ACCC837D5624932CB5749E2BF4D8C664DE938B896F7105A8E7B",
+      "sha256": "F262602D67591AD8B3D89C734971E542ECC6870E1D141A449A2F1E22848FEB96",
+      "bytes": 11880
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsServiceIntegrationTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "1888B00116C0AD3706A4A785DA7931A4F9618E19ED5327F5B3700F8005AAC3D1",
+      "sha256": "4CD24164D36487E687C7EE29F474229D750541226FC1DC2DEA7439E67EF87572",
+      "bytes": 13499
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/OwnerPostcommitTestProbe.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "EB52C33DF775C414B59E90B2115C875465558D2E94FF2392786C135A52734332",
+      "sha256": "2CE57F72675DCF123F45A9958582F890506EBAD57A9A3E791B689F3DD83F3C4D",
+      "bytes": 10132
+    },
+    {
+      "path": "tests/Support/CanDoItAll.Tests.Support/ResourceMetadataTestCommands.cs",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "44481064B5425500045F58168E6C9358A0DEB4A633154FBEE3D06FFC7DB2671D",
+      "bytes": 1647
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserHost.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "F4EC9EABB6263D5E96260A7328D7E8E876DE1947C94D71BDA1E9673B58F85D53",
+      "sha256": "EAC9248FD670C79627CB0CF80D082087B0A7D7B8935133E45E0658B64F01E4DF",
+      "bytes": 13228
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "326CA1A795CA4D44792E8DF18D2DE24A5DE7BA0F3E56D5AD9889679383C37356",
+      "sha256": "A923E3897D7621C780137291115A0FE7D6316A0E472901F5DDE669A34E30D331",
+      "bytes": 15994
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrRegressionTests.cs",
+      "owner": "backend",
+      "operation": "replace",
+      "parentBaseSha256": "41948C7F8ED39CD908223C4C0CAAE9CAD2D217086DA1D14F87101A0BB7508226",
+      "sha256": "359630A4635F6B49EF07BAB782D99AAC6368D0892B0BA983C4838A44F639A792",
+      "bytes": 21965
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-backend-source.md",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "D5AF071344ACDA6499068DB921470C77B3CCDF79A400339B31FC14F43E47579E",
+      "bytes": 8996
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-backend-failure-amendment.md",
+      "owner": "backend",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "9303F3A3EB12074EC16B053329803093C43EDCB8054038A28D97B8D030EA9003",
+      "bytes": 3289
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceRegistryController.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "51E482110950BC203546D1194FBD4A9FF9D33885CE697347B80405B23D4EC8C4",
+      "sha256": "EED3CB02B16311E019022F0E0E86E1220BDDA536D3D908E445FACB7EBDC7F509",
+      "bytes": 32019
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Presentation/ResourceBrowseController.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "DAD0FDE32F3111DC9FA94452173029C5A63D4B43A92BBE5654BC7C9BCC402B22",
+      "sha256": "88F604142272A44B414ACB79563E1C2AE521D29AF19A725C30FB8457AEF27904",
+      "bytes": 20874
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceRegistryWorkspace.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "70A6684F8A0EAC3D24E71F57CD0467CB31F48DB1B27136C5F0E34A01E3BC0CE6",
+      "sha256": "0EB2BC330B4CCCFA10F6D7E8B207587B9802FA2A4BCD8604BE705B09B574031D",
+      "bytes": 8547
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseWorkspace.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "2C9FCA9A29797728B79AE0D3AF4F399C104776E7C4945555B6A3B4EA980A6BC7",
+      "sha256": "F55A2C962E78F5EE2420C9F4F03E73F16013D224930DFC224E6C3801787C2B4B",
+      "bytes": 3739
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "9F9E0D09B4BAAD54A8BC510D2ABF941007BEC3D9BD019DB92E8DDE5A192BC15B",
+      "sha256": "F12BFB7580FD11E1BB7AD29B89D27EA17C6DB8750228268B5EA67E79C9742850",
+      "bytes": 1772
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "24910E3B8918D8C26C20AC051E69979F4A9D9F20A9565B344053EB28FCEA0F4E",
+      "sha256": "6D5DB33DE220C88A4F46CF82A3D6E05C45856E5CE1D17AE4E7EBC9A40B8B0335",
+      "bytes": 2225
+    },
+    {
+      "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "D320F398F3DA134997F0150DAD8A9A1CC525A1CAD177E6A1048489C2E679E3A5",
+      "sha256": "71908D6049E773CB67B99CF71A92579DA93493F84BDB79950B39322FADD72DC4",
+      "bytes": 30164
+    },
+    {
+      "path": "src/Sandboxes/CanDoItAll.Resources.UiSandbox/ResourceScenarioStore.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "48F7D64404D243CE3AA0C37A8566A32539E2F4131B2FF8E02072B2EB1454FF3E",
+      "sha256": "EBC6BCF3D568C0AB63E3509FF4379075B32E87E2E543E2BE319F93340C94E4A0",
+      "bytes": 30637
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesExactEditorHostTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "436E375B54CB69C6683E7535C6472124877D68DD84A863BEE930EF5EFA59D0F5",
+      "sha256": "699CC81DF59ABD16ADD1ACEA1ED71EA89E21CF49411CDDA82A5AD2F73D125D57",
+      "bytes": 5989
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourceFileBrowsePaneTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "570B1762E4B729DBF4642717E1BC96D20CA4CEF5979DC7905F4B8E809EB38804",
+      "sha256": "A49A79BA35725D915B65D1AA0EFEC86BF4535286713494AD038490BB0628F281",
+      "bytes": 32600
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/OwnerPostcommitPageTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "0B9E9E8397EE466C4495BD0B69EF3EF6563F8AF72F51EC705082AAD240CCE411",
+      "sha256": "376DA0E60AC4FC70CF608B21A95B24AC13484E7D0C6CB55FE963D62F2A9C2BA6",
+      "bytes": 31502
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesPageUrlStateTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "929AF54240B9EF775FC53EEFF07F24259515A69B40D4CBB90002A7CEE29CD593",
+      "sha256": "6BEF242F1A2050B24BBE9DAAF08EC7CA684929D8F91994874A5988DD56327040",
+      "bytes": 7975
+    },
+    {
+      "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ResourcesBrowserTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "CBA620334146700AE51075E2E2FA023C19D59BFB929A4C1CF44282841FB66C01",
+      "sha256": "E44C1B20F4A0A8EAEC1299476DFF3123FBF8CF385605EA919E8BE2B9BCEB8691",
+      "bytes": 18412
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceBrowseTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "8F8DFC4D3F2E9878EC1DEFDCA5D4E5DA044CE4B37F7F9FB4F139D501A5B728E2",
+      "sha256": "C02FFAA2E7EEBEF77BA6C1395670E03CAF21E2B34402EBE62B4D461674398060",
+      "bytes": 19433
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceRegistryTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "0DF73A913E8E0D19853E749B5C512A5E7ACFA541BAC4486636DF47541301A303",
+      "sha256": "B0591206A99FAD4321A7B2EEC2E209A36A0FA8B0A02AA4559E184575316C8E95",
+      "bytes": 15150
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourcesPageLoadGenerationTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "896B0797B4CCF220B1B55031B94D70422848733C4E1FCE323C5168603B7F8C0D",
+      "sha256": "598C9BCAFA2A9F2C8B83B948847AF38F561953D37D4A62633CDECFAD048453A2",
+      "bytes": 1541
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceSurfaceTests.cs",
+      "owner": "native",
+      "operation": "replace",
+      "parentBaseSha256": "DB921B990167B93D9BF1FCE14F32A5EC06AC5D2CA90E90AB6FFC5E45CDA29661",
+      "sha256": "97834211297DBF116B7E4D8CBDA2904A7D773281C12729E408146A0693E84C05",
+      "bytes": 11184
+    },
+    {
+      "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceOriginalStateTests.cs",
+      "owner": "native",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "B7756E0A1857284486D29790A705C42DFC54C4588E3B88293AFE486B9C73BBA0",
+      "bytes": 12395
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-native-cutover-readiness.md",
+      "owner": "native",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "33035E7E61DC8606C9BF786F236C712E347EDCEAF4F8F3477A66B7B8ECD47198",
+      "bytes": 7539
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-native-predecessors.json",
+      "owner": "native",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "3C042AF8FFB3394B07DD750DE20C07F3CEA09FF1FB63EA994B62F63DB60E8C98",
+      "bytes": 4090
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-native-rendering-entries.json",
+      "owner": "native",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "B6C276FAC13A00C7BB2F77A19CEA5F00606C49ED144E22A22262C5506792E4CE",
+      "bytes": 4380
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-native-source.md",
+      "owner": "native",
+      "operation": "add",
+      "parentBaseSha256": null,
+      "sha256": "BC7BA9A6634B48BE89BE17AC42C2F7FA16C6ACABD6EA0E4D81F0CBDCAD8066CE",
+      "bytes": 7062
+    }
+  ],
+  "pathCount": 59,
+  "copyCount": 57,
+  "deletionCount": 2,
+  "ownerPathOverlap": 0,
+  "allCurrentMainPredecessorsMatch": true,
+  "allManagedSuccessorsMatch": true,
+  "publicContracts": [
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceMetadataContracts.cs",
+      "sha256": "B7B58985E909ABAD7A49719EDDE1996537790090D3ED944E1F42DDBD7EA69C14"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceRegistryOwner.cs",
+      "sha256": "38862C9D69A7A6C11392E29216270A9C5D7BAF7669F533AD50847BE191E73F00"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources.Contracts/ResourceBrowseOwner.cs",
+      "sha256": "76BB61C35C84D76DA24A3D069245B98EB2DA1AF167EA4530C534988B1BE23211"
+    }
+  ],
+  "rendering": {
+    "registerPath": "docs/architecture/components-decoupling-register.json",
+    "observedMainSha256": "19C617F6FACC8976B4486BB51C3C6CD62E215D53DBFF00783ACC76E0F54F72D1",
+    "mergeWholeRegister": false,
+    "rows": [
+      {
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourceBrowseHistory.razor",
+        "predecessorSha256Lf": "24910e3b8918d8c26c20ac051e69979f4a9d9f20a9565b344053eb28fcea0f4e",
+        "successorSha256Lf": "6d5db33de220c88a4f46cf82a3d6e05c45856e5ce1d17ae4e7ebc9a40b8b0335",
+        "familiesResolved": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourceMutationHistory.razor",
+        "predecessorSha256Lf": "9f9e0d09b4baad54a8bc510d2abf941007bec3d9bd019db92e8dde5a192bc15b",
+        "successorSha256Lf": "f12bfb7580fd11e1bb7ad29b89d27ea17c6db8750228268b5ea67e79c9742850",
+        "familiesResolved": true
+      },
+      {
+        "path": "src/UI/CanDoItAll.Resources.UI/ResourcesWorkspaceSurface.razor",
+        "predecessorSha256Lf": "d320f398f3da134997f0150dad8a9a1cc525a1cad177e6a1048489c2e679e3a5",
+        "successorSha256Lf": "71908d6049e773cb67b99cf71a92579da93493f84bdb79950b39322fadd72dc4",
+        "familiesResolved": true
+      }
+    ]
+  },
+  "selections": [
+    {
+      "class": "CanDoItAll.Tests.Unit.ResourceMetadataContractTests",
+      "expected": 8,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Original_identity_is_explicit_nonempty_and_distinguishes_retained_bindings",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Capture_freezes_raw_fields_and_configuration_without_normalizing_or_aliasing",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Capture_refuses_raw_byte_count_entry_and_aggregate_limits_before_accepting_values",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Invalid_references_enums_and_foreign_target_profile_cannot_form_a_command",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Snapshot_bound_counts_default_JSON_escaping_and_preserves_exact_values",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Local_editor_projection_preserves_supported_secret_reference_and_refuses_ambiguous_retained_JSON",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Preparation_normalizes_only_the_captured_proposal_and_retains_the_full_locator_contract",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Typed_outcomes_preserve_original_unknown_identity_and_exact_accepted_snapshot",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceMetadataContractTests.cs",
+          "sha256": "D27A7F25267D1665B4BD5872DBBFCEB5D34DB7BCAB24B47D37EE62BF59721945"
+        }
+      ],
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.ResourceMetadataContractTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Unit.Storage.StorageObjectResourceConnectorTests",
+      "expected": 10,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Config_round_trips_supported_stable_occurrences",
+          "kind": "Theory",
+          "rows": 4,
+          "attributes": [
+            "Theory",
+            "InlineData(StorageProviderKind.FileSystem, StorageLocatorKind.RelativePath)",
+            "InlineData(StorageProviderKind.Ipfs, StorageLocatorKind.ContentAddress)",
+            "InlineData(StorageProviderKind.Ipfs, StorageLocatorKind.RemotePath)",
+            "InlineData(StorageProviderKind.Ftp, StorageLocatorKind.RemotePath)"
+          ]
+        },
+        {
+          "name": "Stored_config_with_uppercase_source_digits_validates_without_being_rewritten",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Config_rejects_incompatible_provider_and_locator",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Config_rejects_unmapped_authority_fields",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "General_resource_save_rejects_governed_storage_object_connector_before_persistence",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Reopen_resolves_current_source_and_stable_occurrence_then_releases_session",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Reopen_missing_current_source_never_activates_persisted_occurrence",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/StorageObjectResourceConnectorTests.cs",
+          "sha256": "3B122CE9AF7D7C1EB4C71E9CE351B1DEEC3A6B1FEDC8059A0EFC750909B688AD"
+        }
+      ],
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.StorageObjectResourceConnectorTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Unit.Storage.ResourceStorageObjectPromotionTests",
+      "expected": 9,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Promote_reauthorizes_then_persists_curated_identity_then_publishes_revision",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promote_preserves_provider_native_stable_locator",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(StorageProviderKind.Ipfs, StorageLocatorKind.ContentAddress, \"bafy-promoted\")",
+            "InlineData(StorageProviderKind.Ipfs, StorageLocatorKind.RemotePath, \"mfs/report.md\")",
+            "InlineData(StorageProviderKind.Ftp, StorageLocatorKind.RemotePath, \"reports/report.md\")"
+          ]
+        },
+        {
+          "name": "Promote_persistence_failure_leaves_revision_unchanged_and_revokes_handle",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promote_cancellation_before_persistence_completion_leaves_revision_unchanged",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promote_cross_actor_handle_is_rejected_without_persistence_or_revision",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promote_forged_or_stale_browser_item_is_rejected_before_handle_creation",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promote_authorized_object_from_another_storage_is_rejected_and_revoked",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/ResourceStorageObjectPromotionTests.cs",
+          "sha256": "A43E6571491315FEC651A80F9EFE48A30FDAAC6D0943C66BF8999385D0304083"
+        }
+      ],
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.Storage.ResourceStorageObjectPromotionTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Unit.CrmHr.CrmAgentCommittedSaveTests",
+      "expected": 5,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Later_failure_retains_the_committed_agent_and_party_without_running_create_rollback",
+          "kind": "Theory",
+          "rows": 4,
+          "attributes": [
+            "Theory",
+            "InlineData(FailureStage.CrmWrite)",
+            "InlineData(FailureStage.Search)",
+            "InlineData(FailureStage.Activity)",
+            "InlineData(FailureStage.CancelledSearch)"
+          ]
+        },
+        {
+          "name": "Known_pre_save_rejection_keeps_the_existing_create_rollback_behavior",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/CrmAgentCommittedSaveTests.cs",
+          "sha256": "07CB4DFCCD1B48F7F207CFD9399C99AC3D502963F2126F58A9F2D1AEB5846A0D"
+        }
+      ],
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Unit.CrmHr.CrmAgentCommittedSaveTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.ResourceMetadataOwnerTests",
+      "expected": 18,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Independent_original_replacements_have_one_acceptance_and_one_exact_Search_projection",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Explicit_absence_does_not_overwrite_a_concurrent_creation",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Accepted_normalization_and_noop_revision_are_exact_and_SQL_compares_original_revision",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Stale_delete_and_original_binding_reject_after_rebind_without_removing_newer_Search",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Reactivation_fences_original_namespace_even_with_unchanged_revision_and_values",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Awaited_owner_creation_cannot_change_the_captured_proposal_or_target",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Waiting_project_gate_reads_the_committed_new_revision_before_replacement",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Enlisted_Search_failures_roll_back_both_owners_for_save_and_header_only_delete",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Real_commit_lost_ack_and_conflicting_cleanup_remain_unconfirmed_without_receipt_inference",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Acknowledged_commit_survives_cleanup_and_activity_failure_with_its_exact_snapshot",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Writer_persists_curated_configuration_and_reuses_exact_metadata_per_project_object",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Duplicate_governed_matches_refuse_without_repair_or_arbitrary_reuse",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Oversized_unbound_metadata_and_Search_body_can_be_deleted_without_payload_projection",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Stored_unsupported_payloads_refuse_replacement_even_with_forged_valid_header_but_allow_metadata_deletion",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Encoded_snapshot_limit_refuses_escape_expansion_without_changing_retained_row_or_Search",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Profile_generation_changed_after_enlisted_Search_rolls_back_before_commit",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Foreign_original_profile_and_nonrelational_factory_cannot_publish_any_Resource_effect",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Early_cancellation_and_prepared_activation_cannot_open_or_mutate_the_owner",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.cs",
+          "sha256": "6FCA0DAFF4F4C56337C3F418EE402C21A23354C511DF93819E54D6FD1DE932EF"
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataOwnerTests.Bounds.cs",
+          "sha256": "7AEAB1090ADFFD05B583B6BFC22B5DB5DB3BC7B863D5E34672555A560128DBC9"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceMetadataOwnerTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests",
+      "expected": 10,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Retained_reference_bindings_survive_restart_without_becoming_the_recreated_projects_admission",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Delayed_owner_save_and_search_keep_the_captured_lifetime_across_restart",
+          "kind": "Theory",
+          "rows": 4,
+          "attributes": [
+            "Theory",
+            "InlineData(false, 1)",
+            "InlineData(false, 2)",
+            "InlineData(true, 1)",
+            "InlineData(true, 2)"
+          ]
+        },
+        {
+          "name": "Promotion_rejects_a_retired_selection_and_does_not_reuse_its_retained_resource_for_a_new_lifetime",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Unbound_orphans_stay_readable_without_automatic_admission_and_global_plans_remain_writable",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Project_owner_selection_keeps_profile_identity_and_stale_owner_ids_cannot_be_recreated_by_edit",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "A_changed_editor_cannot_redirect_an_inflight_save_away_from_its_captured_admission",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceTestLabAdmissionIntegrationTests.cs",
+          "sha256": "B5E148800FA3A765F14FA5159C8F1EA3BFDA38F657E774708091632D473048B3"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceTestLabAdmissionIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests",
+      "expected": 16,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Resource_search_fault_rolls_back_while_activity_fault_retains_exact_save_across_restart",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitFault.Search)",
+            "InlineData(PostcommitFault.SearchCancellation)",
+            "InlineData(PostcommitFault.Activity)"
+          ]
+        },
+        {
+          "name": "Resource_search_fault_rolls_back_delete_while_activity_fault_preserves_deletion_across_restart",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitFault.Search)",
+            "InlineData(PostcommitFault.SearchCancellation)",
+            "InlineData(PostcommitFault.Activity)"
+          ]
+        },
+        {
+          "name": "Test_plan_confirmed_save_retains_parent_and_all_child_ids_for_restart_and_explicit_edit",
+          "kind": "Theory",
+          "rows": 6,
+          "attributes": [
+            "Theory",
+            "InlineData(false, PostcommitFault.Search)",
+            "InlineData(false, PostcommitFault.SearchCancellation)",
+            "InlineData(false, PostcommitFault.Activity)",
+            "InlineData(true, PostcommitFault.Search)",
+            "InlineData(true, PostcommitFault.SearchCancellation)",
+            "InlineData(true, PostcommitFault.Activity)"
+          ]
+        },
+        {
+          "name": "Recreated_project_denial_before_commit_does_not_claim_commit_or_assign_editor_ids",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource)",
+            "InlineData(PostcommitOwner.TestPlan)"
+          ]
+        },
+        {
+          "name": "Cancellation_at_owning_flush_preserves_original_exception_and_no_committed_ids",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource)",
+            "InlineData(PostcommitOwner.TestPlan)"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/OwnerPostcommitPersistenceTests.cs",
+          "sha256": "C37E0E8A52B325DCF4FF7F1D54445FBFB6A5BB5138ACD1C0C144254B5E764D8B"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.OwnerPostcommitPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.ResourcePromotionOutcomeTests",
+      "expected": 13,
+      "classAttributes": [
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Failed_preview_preserves_its_primary_failure_when_real_grant_cleanup_also_fails",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Production_browse_adapter_refuses_stale_origins_before_any_effect",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(SelectionFault.Scope)",
+            "InlineData(SelectionFault.Revision)",
+            "InlineData(SelectionFault.ItemSource)"
+          ]
+        },
+        {
+          "name": "Real_transaction_commit_acknowledgement_loss_is_unknown_and_exact_review_does_not_create_a_duplicate",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Actual_persisted_identity_survives_postwrite_faults_and_grant_is_revoked",
+          "kind": "Theory",
+          "rows": 5,
+          "attributes": [
+            "Theory",
+            "InlineData(PromotionFault.Publish)",
+            "InlineData(PromotionFault.Read)",
+            "InlineData(PromotionFault.Log)",
+            "InlineData(PromotionFault.Cleanup)",
+            "InlineData(PromotionFault.PublishCleanupAndLog)"
+          ]
+        },
+        {
+          "name": "Actual_commit_with_lost_writer_acknowledgement_remains_unknown_and_is_not_wrapped_as_confirmed",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Resource_postcommit_primary_failure_survives_throwing_diagnostics",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(ResourceMutationKind.Save)",
+            "InlineData(ResourceMutationKind.Delete)"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcePromotionOutcomeTests.cs",
+          "sha256": "6CBA9B73E442E882E268BD1F98A686A544E9258FC673BDE899D600B6C3A6E34C"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourcePromotionOutcomeTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests",
+      "expected": 1,
+      "classAttributes": [
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Browse_promotion_persists_stable_identity_advances_revision_and_reopens_current_content",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceStorageObjectIntegrationTests.cs",
+          "sha256": "A01760288E12C22B64DFF351BB7EEFA2F4D5BF69A303867E1FF0FA8E62462B45"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.Persistence.ResourceStorageObjectIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests",
+      "expected": 3,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Runtime_model_preserves_resource_mapping_and_rejects_foreign_entities",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Legacy_configuration_and_owner_references_survive_restart_and_profile_isolation",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Project_owner_queries_preserve_source_limit_and_missing_promotion_target_denial",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourcesOwnerPersistenceTests.cs",
+          "sha256": "5615AB6FC718A8CD2CEE612079BE9260BB0ADBD1BD1297CF543FB2DBE9AB72D0"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourcesOwnerPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests",
+      "expected": 2,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "SaveAsync_persists_custom_resource_plugin_and_projects_connector_node",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "SaveAsync_rejects_webhook_plugin_when_required_endpoint_is_missing",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ConnectorPluginIntegrationTests.cs",
+          "sha256": "EE44AE7685138095CE589F29CC6C61276B5A6D006B35870CF1ACEB966AC57D00"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.External.ConnectorPluginIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests",
+      "expected": 2,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Safe_crm_hr_records_surface_in_search_and_owned_workspaces",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Responsible_party_links_round_trip_for_resources_and_test_lab",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/CrmHrCrossModuleIntegrationTests.cs",
+          "sha256": "5E9D86641F64AAC805CEAF814C22B794F258E1BDDACE8E88979429D0DDCB3A12"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.CrmHr.CrmHrCrossModuleIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests",
+      "expected": 1,
+      "classAttributes": [
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Unknown_connector_manifest_fields_round_trip_without_page_specific_code",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/UnknownConnectorManifestIntegrationTests.cs",
+          "sha256": "F262602D67591AD8B3D89C734971E542ECC6870E1D141A449A2F1E22848FEB96"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.External.UnknownConnectorManifestIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests",
+      "expected": 8,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "SaveAsync_writes_project_search_document",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Hierarchy_queries_include_parent_and_child_counts",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "CreateSubprojectAsync_creates_the_project_and_parent_link_together",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "CreateAsync_uses_the_reserved_id_and_rejects_reuse",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "CreateAsync_rolls_back_project_when_required_search_projection_fails",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "CreateSubprojectAsync_with_missing_parent_does_not_leave_an_orphan_project",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "SaveAsync_normalizes_date_only_editor_values_to_utc",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "AddSubprojectAsync_rejects_cycles_and_ReconnectSubprojectAsync_moves_the_selected_parent_link",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectsServiceIntegrationTests.cs",
+          "sha256": "4CD24164D36487E687C7EE29F474229D750541226FC1DC2DEA7439E67EF87572"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ProjectStructure.ProjectsServiceIntegrationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests",
+      "expected": 6,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Runtime_models_match_the_complete_postgresql_schema_without_foreign_entities",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Legacy_search_routing_and_storage_records_survive_restart_and_remain_profile_bound",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Staged_deletion_and_planning_share_the_exact_transaction_while_normal_reads_stay_independent",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(true)",
+            "InlineData(false)"
+          ]
+        },
+        {
+          "name": "Catalog_facts_preserve_all_host_rows_and_only_parse_referenced_ftp_configuration",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Search_owner_keeps_case_matching_title_order_limits_and_upsert_identity",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/SearchStorageOwnerPersistenceTests.cs",
+          "sha256": "0301758A1AA0205EC042B6C5BCFF5800DB8322CF56E6C6021D4C9D9214E4C221"
+        }
+      ],
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "lane": "ordinary-backend",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.SearchStorageOwnerPersistenceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceBoundaryTests",
+      "expected": 3,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Renderer_and_sandbox_transitive_closures_contain_only_allowed_feature_and_component_assemblies",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Traversal_rejects_forbidden_transitive_and_unresolved_edges",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Public_contract_types_are_light_and_renderers_do_not_inject_owners",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceBoundaryTests.cs",
+          "sha256": "CB024C14115A3D787756EBAB4EEECC118121F512DBCF01A8AF5194C546272A94"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceBoundaryTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceBrowseTests",
+      "expected": 23,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Removed_source_cleanup_cannot_mark_a_successor_selection_failed",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Slow_source_cleanup_is_detached_before_a_new_selection_acquires_its_lease",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Slow_preview_cleanup_cannot_clear_or_dispose_a_new_preview",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Held_parent_notification_retains_the_id_and_cannot_steal_a_successor_dialog",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Stale_source_acquired_after_selection_or_retirement_is_released_once",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        },
+        {
+          "name": "A_b_a_open_and_old_catalog_completion_cannot_retire_the_latest_a",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Failed_catalog_refresh_retains_current_session_and_reports_stale_data",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promotion_freezes_all_fields_and_late_completion_does_not_close_successor_dialog",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "A_b_a_after_promotion_dispatch_does_not_reopen_the_new_a_session",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Confirmed_promotion_identity_survives_parent_callback_failure",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Promotion_outcomes_distinguish_refusal_unknown_and_confirmed_warning",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(ResourceScenario.RefusedWrite, ResourceEffectState.Refused, false)",
+            "InlineData(ResourceScenario.UnknownWrite, ResourceEffectState.Unknown, false)",
+            "InlineData(ResourceScenario.CommittedWarning, ResourceEffectState.CommittedWarning, true)"
+          ]
+        },
+        {
+          "name": "Late_preview_is_released_without_mounting_under_successor",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        },
+        {
+          "name": "Real_readonly_content_is_released_once_and_failed_cleanup_is_reported",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Activation_policy_keeps_supported_and_keyboard_invocations_in_promotion",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(true, FileBrowserInvocationKind.PointerDoubleClick, false)",
+            "InlineData(false, FileBrowserInvocationKind.PointerDoubleClick, true)",
+            "InlineData(false, FileBrowserInvocationKind.Keyboard, false)"
+          ]
+        },
+        {
+          "name": "Already_admitted_external_action_keeps_truthful_original_receipt_after_navigation",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Queued_download_does_not_open_content_after_authorization_returns_to_retired_host",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Queued_download_does_not_trigger_javascript_after_module_import_returns_to_retired_host",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceBrowseTests.cs",
+          "sha256": "C02FFAA2E7EEBEF77BA6C1395670E03CAF21E2B34402EBE62B4D461674398060"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceBrowseTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceContractCompatibilityTests",
+      "expected": 2,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Resource_summary_keeps_the_wire_shape_and_does_not_serialize_lifetime_provenance",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Existing_connector_json_and_editor_defaults_remain_readable_after_the_assembly_move",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceContractCompatibilityTests.cs",
+          "sha256": "0C890087FBB864EAC428C6D8094354D7815F5F3BDE414D1B7DB6E513C1EABB93"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceContractCompatibilityTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceEditorReadinessTests",
+      "expected": 10,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Catalog_refresh_cannot_admit_a_filled_placeholder_while_exact_read_is_pending",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Failed_exact_read_survives_catalog_refresh_and_same_identity_retries",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        },
+        {
+          "name": "Initial_catalog_failure_requires_exact_acquisition_after_references_recover",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Superseded_exact_failure_and_disposal_cannot_change_successor_readiness",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        },
+        {
+          "name": "Missing_exact_identity_cannot_become_a_new_draft_after_catalog_recovery",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Acquired_historical_editor_can_be_deleted_with_failed_optional_references",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Real_header_refresh_and_list_retry_respect_pending_or_failed_exact_editor",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceEditorReadinessTests.cs",
+          "sha256": "6F0B6F7DA5FE91D06A5D9FA7E714AD8A142AB3EB87B6E25E4A2092CCD680AE5C"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceEditorReadinessTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceOriginalStateTests",
+      "expected": 8,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Accepted_base_advances_while_later_project_connector_and_raw_configuration_remain_in_the_same_draft",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Accepted_metadata_survives_a_refusal_shaped_local_projection_failure_and_explicit_reload_restores_submission",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "A_later_stored_edit_is_not_adopted_as_the_accepted_snapshot_or_as_the_next_expected_revision",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "New_draft_and_promotion_keep_their_opening_context_when_the_dataset_changes",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Oversized_unbound_metadata_can_be_deleted_by_its_exact_header_without_editor_projection_or_a_current_project",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Unknown_update_and_delete_remain_blocked_after_current_found_or_missing_observations",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Reused_promotion_reports_exact_existing_metadata_even_when_a_later_notification_fails",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Raw_metadata_bounds_refuse_before_owner_dispatch_without_replacing_the_draft",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceOriginalStateTests.cs",
+          "sha256": "B7756E0A1857284486D29790A705C42DFC54C4588E3B88293AFE486B9C73BBA0"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceOriginalStateTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceRegistryTests",
+      "expected": 20,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Combined_route_mismatch_stays_failed_after_reference_refresh",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Unknown_create_can_review_an_exact_candidate_without_replaying_or_inventing_commit_acknowledgement",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Save_captures_deep_command_and_preserves_later_raw_fields_and_edit_context",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Edit_away_and_back_preserves_raw_value_instead_of_owner_normalization",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Conflicting_direct_dispatch_is_blocked_but_an_independent_target_is_admitted",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Project_proposal_keeps_accepted_base_but_a_new_draft_cannot_adopt_an_old_create",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        },
+        {
+          "name": "No_op_project_and_party_read_do_not_release_write_gate_or_replace_draft",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Owner_outcomes_are_distinct_and_refresh_never_replays",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(ResourceScenario.RefusedWrite, ResourceEffectState.Refused, 0)",
+            "InlineData(ResourceScenario.CommittedWarning, ResourceEffectState.CommittedWarning, 1)",
+            "InlineData(ResourceScenario.UnknownWrite, ResourceEffectState.Unknown, 1)"
+          ]
+        },
+        {
+          "name": "Confirmed_new_id_survives_a_missing_postcommit_read_and_next_save_uses_same_id",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Newer_save_acceptance_cannot_be_overwritten_by_earlier_reference_refresh",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Old_editor_read_and_aba_cannot_replace_successor_draft",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Failed_reference_read_keeps_ids_and_raw_configuration_without_fallback",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Invalid_or_unavailable_schema_does_not_dispatch_or_discard_inputs",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(ResourceScenario.MissingConnector)",
+            "InlineData(ResourceScenario.InvalidFields)"
+          ]
+        },
+        {
+          "name": "Current_project_filter_excludes_retired_lifetime_and_refuses_implicit_rebinding",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Unknown_review_is_single_flight_and_observation_cannot_finish_another_request",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Dispose_does_not_claim_accepted_write_rolled_back_or_publish_it_into_a_new_controller",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceRegistryTests.cs",
+          "sha256": "B0591206A99FAD4321A7B2EEC2E209A36A0FA8B0A02AA4559E184575316C8E95"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceRegistryTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourcesPageLoadGenerationTests",
+      "expected": 2,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Older_save_refresh_cannot_replace_a_newer_editor_selection",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "A_new_route_invalidates_every_older_editor_load",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourcesPageLoadGenerationTests.cs",
+          "sha256": "598C9BCAFA2A9F2C8B83B948847AF38F561953D37D4A62633CDECFAD048453A2"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourcesPageLoadGenerationTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTabTests",
+      "expected": 1,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "The_host_owned_tab_selects_the_panel_and_a_tab_click_raises_the_index",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceSurfaceTabTests.cs",
+          "sha256": "2608E386719A4BA99470C07316887C1211D3ED2375AD3A1082B1BAE98AF0AA55"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTabTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTests",
+      "expected": 10,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Unblurred_fields_validation_and_edit_context_survive_tabs_and_reference_refresh",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Save_dispatches_actual_preblur_input_and_keeps_same_form_after_owner_normalization",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Missing_exact_references_are_visible_without_inventing_a_selection",
+          "kind": "Theory",
+          "rows": 3,
+          "attributes": [
+            "Theory",
+            "InlineData(ResourceScenario.UnavailableReferences, \"Unavailable secret\", \"Unavailable party\")",
+            "InlineData(ResourceScenario.MissingConnector, \"Unavailable connector\", ResourceScenarioStore.MissingPlugin)",
+            "InlineData(ResourceScenario.RetiredProject, \"loaded project lifetime is unavailable\", \"admission is retained\")"
+          ]
+        },
+        {
+          "name": "Filtered_empty_is_distinct_from_empty_and_does_not_reset_editor",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Real_browser_promotion_and_readonly_interaction_share_the_same_production_renderer",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Actual_host_download_action_streams_bounded_fixture_and_releases_authorization",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Large_browser_keeps_page_size_bounded_and_uses_real_paging",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Shared_field_renderer_retains_invalid_raw_number_json_and_unavailable_secret_across_remount",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Resources.UI.Tests/ResourceSurfaceTests.cs",
+          "sha256": "97834211297DBF116B7E4D8CBDA2904A7D773281C12729E408146A0693E84C05"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Resources.UI.Tests/CanDoItAll.Resources.UI.Tests.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesUi.ResourceSurfaceTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesExactEditorHostTests",
+      "expected": 2,
+      "classAttributes": [
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Routed_agent_context_waits_for_exact_editor_after_independent_catalog_refresh",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesExactEditorHostTests.cs",
+          "sha256": "699CC81DF59ABD16ADD1ACEA1ED71EA89E21CF49411CDDA82A5AD2F73D125D57"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesExactEditorHostTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.Shell.ResourceFileBrowsePaneTests",
+      "expected": 7,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Late_source_open_cannot_replace_or_publish_current_source_and_is_disposed",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Catalog_renders_all_source_classes_including_empty_groups",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Invoked_file_opens_governed_promotion_dialog",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Pointer_double_click_keeps_supported_pdf_in_governed_interaction_flow",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Pointer_double_click_opens_unhandled_file_in_preferred_application",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Keyboard_invocation_preserves_promotion_when_local_launch_is_available",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Successful_promotion_refreshes_source_and_offers_authorized_reopen",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/ResourceFileBrowsePaneTests.cs",
+          "sha256": "A49A79BA35725D915B65D1AA0EFEC86BF4535286713494AD038490BB0628F281"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.Shell.ResourceFileBrowsePaneTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.OwnerPostcommitPageTests",
+      "expected": 18,
+      "classAttributes": [],
+      "methods": [
+        {
+          "name": "Owner_fault_preserves_atomic_Search_refusal_or_confirmed_followup_warning",
+          "kind": "Theory",
+          "rows": 4,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource, PostcommitFault.Search)",
+            "InlineData(PostcommitOwner.Resource, PostcommitFault.Activity)",
+            "InlineData(PostcommitOwner.TestPlan, PostcommitFault.Search)",
+            "InlineData(PostcommitOwner.TestPlan, PostcommitFault.Activity)"
+          ]
+        },
+        {
+          "name": "Refresh_failure_or_missing_saved_row_keeps_confirmed_id_and_warns",
+          "kind": "Theory",
+          "rows": 4,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource, false)",
+            "InlineData(PostcommitOwner.Resource, true)",
+            "InlineData(PostcommitOwner.TestPlan, false)",
+            "InlineData(PostcommitOwner.TestPlan, true)"
+          ]
+        },
+        {
+          "name": "Late_known_commit_warning_does_not_replace_new_editor_or_project_selection",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource)",
+            "InlineData(PostcommitOwner.TestPlan)"
+          ]
+        },
+        {
+          "name": "TestLab_project_selection_during_owning_flush_cannot_inherit_original_plan_or_child_ids",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "TestLab_late_commit_retains_only_still_present_original_child_references",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "TestLab_replaced_missing_children_keep_new_committed_ids_after_fault_and_explicit_resave",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Resource_delete_preserves_atomic_Search_refusal_or_confirmed_deletion_warning",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitFault.Search)",
+            "InlineData(PostcommitFault.Activity)"
+          ]
+        },
+        {
+          "name": "Same_id_project_recreation_before_save_keeps_original_editor_and_reports_ordinary_failure",
+          "kind": "Theory",
+          "rows": 2,
+          "attributes": [
+            "Theory",
+            "InlineData(PostcommitOwner.Resource)",
+            "InlineData(PostcommitOwner.TestPlan)"
+          ]
+        },
+        {
+          "name": "Resource_delete_denied_before_commit_keeps_existing_selection_and_ordinary_error",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/OwnerPostcommitPageTests.cs",
+          "sha256": "376DA0E60AC4FC70CF608B21A95B24AC13484E7D0C6CB55FE963D62F2A9C2BA6"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.OwnerPostcommitPageTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Components.ResourcesPageUrlStateTests",
+      "expected": 3,
+      "classAttributes": [
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Selecting_a_resource_pushes_it_and_keeps_the_project_seed_only_for_its_own_project",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Browse_tab_is_addressable_filters_replace_and_reset_pushes",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Saving_a_new_resource_replaces_the_location_with_its_identity_and_deleting_it_removes_it",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/ResourcesPageUrlStateTests.cs",
+          "sha256": "6BEF242F1A2050B24BBE9DAAF08EC7CA684929D8F91994874A5988DD56327040"
+        }
+      ],
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "lane": "ordinary-native",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Components.ResourcesPageUrlStateTests.&Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
+    },
+    {
+      "class": "CanDoItAll.Tests.Playwright.Smoke.ResourcesBrowserTests",
+      "expected": 2,
+      "classAttributes": [
+        "Collection(ResourcesBrowserCollection.Name)",
+        "Trait(\"Category\", \"Playwright\")",
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Production_registry_crud_browse_promotion_reopen_and_download_use_actual_owners",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        },
+        {
+          "name": "Standalone_sandbox_preserves_focus_raw_input_and_real_file_components_through_held_operations",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Playwright/CanDoItAll.Tests.Playwright/ResourcesBrowserTests.cs",
+          "sha256": "E44C1B20F4A0A8EAEC1299476DFF3123FBF8CF385605EA919E8BE2B9BCEB8691"
+        }
+      ],
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "lane": "browser",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Playwright.Smoke.ResourcesBrowserTests."
+    },
+    {
+      "class": "CanDoItAll.Tests.Playwright.DataSourcesBrowserTests",
+      "expected": 1,
+      "classAttributes": [
+        "Trait(\"Category\", \"Playwright\")",
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "methods": [
+        {
+          "name": "Unlocked_UI_creates_transfers_and_activates_only_after_restart_with_real_partial_group_progress",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Playwright/CanDoItAll.Tests.Playwright/DataSourcesBrowserTests.cs",
+          "sha256": "A923E3897D7621C780137291115A0FE7D6316A0E472901F5DDE669A34E30D331"
+        }
+      ],
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "lane": "browser",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Playwright.DataSourcesBrowserTests."
+    },
+    {
+      "class": "CanDoItAll.Tests.Playwright.Flows.CrmHrRegressionTests",
+      "expected": 1,
+      "classAttributes": [
+        "Collection(PlaywrightCollection.Name)"
+      ],
+      "methods": [
+        {
+          "name": "Final_crm_hr_regression_gate_keeps_core_routes_readable_and_persistent",
+          "kind": "Fact",
+          "rows": 1,
+          "attributes": [
+            "Fact"
+          ]
+        }
+      ],
+      "inputs": [
+        {
+          "path": "tests/Playwright/CanDoItAll.Tests.Playwright/CrmHrRegressionTests.cs",
+          "sha256": "359630A4635F6B49EF07BAB782D99AAC6368D0892B0BA983C4838A44F639A792"
+        }
+      ],
+      "project": "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+      "lane": "browser",
+      "filter": "FullyQualifiedName~CanDoItAll.Tests.Playwright.Flows.CrmHrRegressionTests."
+    }
+  ],
+  "totals": {
+    "ordinary": 221,
+    "backend": 112,
+    "native": 109,
+    "browser": 4,
+    "productBrowser": 3,
+    "sandboxBrowser": 1,
+    "all": 225,
+    "ordinaryClasses": 28,
+    "browserClasses": 3
+  },
+  "modelGate": "Generate/review C3-only canonical169/Workbench16 migration before transferring Resource mapping; later separate Resource Revision/check/index migration keeps entity counts unchanged. No migration/snapshot in this union.",
+  "supportArtifacts": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-native-source-inventory.json",
+      "sha256": "56DEA5B7B68DA2B001F156EA37F0DB98ED47E6920B398EC6072F2F9CFC251B1D",
+      "bytes": 14617,
+      "parentBaseSha256": null,
+      "operation": "add"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-backend-failure-amended-source-inventory.json",
+      "sha256": "ABC02079E18D249ED474F15555DCD986E601199AA1107A3624C8EA19C380E71E",
+      "bytes": 22446,
+      "parentBaseSha256": null,
+      "operation": "add"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-backend-source-inventory.json",
+      "sha256": "57CE00C84E5EC4503FA8F3710AEA7B038C56586E6AD65DAB97360F3E7BC73066",
+      "bytes": 19851,
+      "parentBaseSha256": null,
+      "operation": "add"
+    }
+  ],
+  "totalOwnedAndSupportingPaths": 62,
+  "newPreflightArtifacts": [
+    "codex/bundles/concurrent-mutations/reviews/P05-R1-combined-transfer-preflight.json",
+    "codex/bundles/concurrent-mutations/reviews/P05-R1-combined-transfer-preflight.md"
+  ]
+}

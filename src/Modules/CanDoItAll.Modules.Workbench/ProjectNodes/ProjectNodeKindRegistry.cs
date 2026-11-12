@@ -289,6 +289,7 @@ internal static class ProjectNodeKindRegistry
     private static ProjectObjectMetadataEnvelope ScopeMetadata(ProjectObjectMetadataEnvelope metadata, ProjectNodeKindFamily family)
         => new()
         {
+            ImportSource = metadata.ImportSource,
             WorkflowProjectWrite = metadata.WorkflowProjectWrite,
             DeferredCompletion = metadata.DeferredCompletion,
             ProjectBlock = family == ProjectNodeKindFamily.ProjectBlock ? metadata.ProjectBlock : null,

@@ -158,8 +158,8 @@ public sealed class SchedulerAgentRuntimeToolProvider(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var workspace = await schedulerPlannerService.GetWorkspaceAsync(
-            cancellationToken: cancellationToken);
+        var workspace = await schedulerPlannerService.GetWorkspaceAsync(new(new(), new(Take: NormalizeTake(request.Take),
+            Search: request.Text, TargetKind: SchedulerPlanTargetKind.Workflow, IsEnabled: request.IsEnabled, OrderByNextFire: true)), cancellationToken);
         var matches = workspace.Plans
             .Where(item => item.TargetKind == SchedulerPlanTargetKind.Workflow)
             .Where(item => !request.IsEnabled.HasValue || item.IsEnabled == request.IsEnabled.Value)
@@ -180,7 +180,7 @@ public sealed class SchedulerAgentRuntimeToolProvider(
             .Select(MapScheduleSearchItem)
             .ToArray();
 
-        return new SchedulerWorkflowScheduleSearchResult(items, matches.Length, items.Length);
+        return new SchedulerWorkflowScheduleSearchResult(items, workspace.PlanCount ?? matches.Length, items.Length);
     }
 
     private async Task<SchedulerWorkflowScheduleCreateResult> CreateWorkflowScheduleAsync(
@@ -227,6 +227,10 @@ public sealed class SchedulerAgentRuntimeToolProvider(
                         : null
                 },
                 cancellationToken);
+        }
+        catch (SchedulerPlanCommittedException exception) {
+            AgentToolInvocationEffectScope.RecordCommitted(SchedulerPlanEffectSourceKind, exception.Fact.PlanId.ToString("D"));
+            throw;
         }
         catch (SchedulerPlanValidationException exception)
         {

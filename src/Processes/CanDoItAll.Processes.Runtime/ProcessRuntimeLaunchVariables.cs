@@ -9,6 +9,8 @@ public static class ProcessRuntimeLaunchVariables
 {
     public const string ParentProcessRunId = "ParentProcessRunId";
     public const string ParentProcessStepId = "ParentProcessStepId";
+    public const string SubprocessDefinitionKey = "SubprocessDefinitionKey";
+    public const string SubprocessLiveRunProfileKey = "SubprocessLiveRunProfileKey";
     public const string ParentRequiredArtifactRefs = "ParentRequiredArtifactRefs";
     public const string ParentRequiredArtifactBindings = "ParentRequiredArtifactBindings";
     public const string ProductCompletionRequiredPaths = "ProductCompletionRequiredPaths";

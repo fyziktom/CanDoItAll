@@ -1,197 +1,146 @@
-@implements IDisposable
 @using CanDoItAll.AgentFramework.Core
 @using CanDoItAll.AgentFramework.Models
-@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.AgentFramework.UI.Teams
+@using CanDoItAll.Infrastructure.Persistence
+@using CanDoItAll.Editing
+@using Microsoft.Extensions.Logging
+@implements IAsyncDisposable
 @inject IAgentFrameworkWorkspaceService WorkspaceService
-@inject NotificationService NotificationService
+@inject IDatabaseSwitchNotificationService ProfileChanges
 @inject DialogService DialogService
+@inject ILogger<AgentTeamDetailsDialog> Logger
+@inject AgentConfigurationChanges ConfigurationChanges
 
-<div class="agent-team-details-dialog" data-testid="agents-team-details-dialog-content">
-    @if (isLoading)
-    {
-        <SurfaceCard Soft="true">
-            <p class="cda-eyebrow">Loading</p>
-            <h3 class="agent-team-details-dialog__title">Loading team details</h3>
-        </SurfaceCard>
-    }
-    else if (loadFailed)
-    {
-        <Alert AlertStyle="AlertStyle.Danger">Team details could not be loaded. Retry before editing this team.</Alert>
-        <Button Text="Retry" Click="LoadAsync" />
-        <Button Text="Close" Click="CancelAsync" />
-    }
-    else
-    {
-        <Stack GapScale="LayoutGap.Medium">
-            <div class="grid gap-2">
-                <span class="text-xs font-bold text-slate-600">Icon</span>
-                <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-                    <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700"
-                          data-testid="agents-team-selected-icon">
-                        <Icon Name="@AgentTeamIconCatalog.Normalize(editorModel.Icon)" Class="text-2xl" />
-                    </span>
-                    <Button Text="Choose icon"
-                            Icon="widgets"
-                            ButtonStyle="ButtonStyle.Light"
-                            Variant="Variant.Outlined"
-                            Click="OpenIconPickerAsync"
-                            data-testid="agents-team-choose-icon" />
-                </Cluster>
-            </div>
-
-            <label class="agent-team-details-dialog__field">
-                <span>Name</span>
-                <input @bind="editorModel.Name"
-                       @bind:event="oninput"
-                       class="cda-input agent-team-details-dialog__input"
-                       data-testid="agents-team-name" />
-            </label>
-
-            <label class="agent-team-details-dialog__field">
-                <span>Description</span>
-                <textarea @bind="editorModel.Description"
-                          @bind:event="oninput"
-                          class="cda-input agent-team-details-dialog__textarea"
-                          data-testid="agents-team-description"></textarea>
-            </label>
-
-            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
-                <Button Text="Cancel"
-                        Icon="close"
-                        Variant="Variant.Outlined"
-                        Disabled="@isBusy"
-                        Click="CancelAsync" />
-                <Button Text="Save team"
-                        Icon="check"
-                        Disabled="@isBusy"
-                        IsBusy="@isBusy"
-                        Click="SaveAsync"
-                        data-testid="agents-team-save" />
-            </Cluster>
-        </Stack>
-    }
-</div>
+@if (!RendererInfo.IsInteractive || opening?.IsReady != true) {
+    <SurfaceCard data-testid="agents-team-access"><TextBlock Value="@(accessError ?? "Initializing Team editing access.")" /></SurfaceCard>
+} else {
+    <TeamMetadataEditor @ref="editor" TeamId="TeamId" Operations="operations!" ChangeSequence="changeSequence" OwnerCancellationToken="ownerToken" Completed="CompleteAsync" Cancelled="CancelAsync" />
+}
 
 @code {
-    [Parameter]
-    public Guid? TeamId { get; set; }
-
-    [CascadingParameter]
-    public DialogReference? DialogReference { get; set; }
-
-    private AgentTeamEditorModel editorModel = new();
-    private bool isLoading = true;
-    private bool loadFailed;
-    private bool isBusy;
+    [Parameter] public Guid? TeamId { get; set; }
+    [Parameter] public CancellationToken OwnerCancellationToken { get; set; }
+    [CascadingParameter] public DialogReference? DialogReference { get; set; }
     private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? owner;
+    private CancellationToken previousOwner;
     private CancellationToken ownerToken;
+    private TeamMetadataEditor? editor;
+    private TeamMetadataOperations? operations;
+    private AgentConfigurationOpening? opening;
+    private Guid? previousTeamId;
+    private Guid? observedTeamId;
+    private Guid openingId;
+    private long changeSequence;
+    private string? accessError;
     private bool disposed;
-
-    protected override Task OnInitializedAsync() {
-        ownerToken = lifetime.Token;
-        return LoadAsync();
+    protected override void OnInitialized() {
+        ProfileChanges.Changed += ProfileChanged;
+        operations = new(LoadTeamAsync, SaveAsync, ChooseIconAsync);
     }
-
-    private async Task LoadAsync() {
-        if (disposed) {
+    protected override async Task OnParametersSetAsync() {
+        if (disposed || !RendererInfo.IsInteractive || owner is not null && previousOwner == OwnerCancellationToken && previousTeamId == TeamId) {
             return;
         }
-        isLoading = true;
-        loadFailed = false;
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
-        try
-        {
-            var loaded = await WorkspaceService.GetAgentTeamEditorAsync(TeamId, request.Token);
-            if (!disposed) {
-                editorModel = loaded;
-            }
+        owner?.Cancel();
+        if (opening is { } oldOpening) {
+            await oldOpening.DisposeAsync();
         }
-        catch (Exception) when (ownerToken.IsCancellationRequested) {
-        } catch (Exception) {
-            loadFailed = true;
-            NotificationService.Error("Team details unavailable", "Team details could not be loaded. Retry before editing this team.");
-        } finally {
-            if (!disposed) {
-                isLoading = false;
-            }
-        }
-    }
-
-    private async Task SaveAsync() {
-        if (disposed || isLoading || loadFailed) {
-            return;
-        }
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
-        if (disposed || isBusy) {
-            return;
-        }
-        isBusy = true;
-        try
-        {
-            editorModel.Icon = AgentTeamIconCatalog.Normalize(editorModel.Icon);
-            var teamId = await WorkspaceService.SaveAgentTeamAsync(editorModel, request.Token);
-            if (disposed) {
-                return;
-            }
-            NotificationService.Success("Team saved", "Agent team details were saved.");
-            if (DialogReference is not null)
-            {
-                await DialogReference.CloseAsync(new AgentTeamDetailsDialogResult(teamId));
-            }
-        }
-        catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
-        } catch (Exception) {
-            if (!disposed) {
-                NotificationService.Error("Team save failed", "The save result could not be confirmed. Check the team catalog before trying again.");
-            }
-        } finally {
-            if (!disposed) {
-                isBusy = false;
-            }
+        owner?.Dispose();
+        previousOwner = OwnerCancellationToken;
+        previousTeamId = TeamId;
+        observedTeamId = TeamId;
+        var id = openingId = Guid.NewGuid();
+        opening = new(ConfigurationChanges, EditingOwner.AgentTeam, TeamId, id, () => !disposed && openingId == id && !lifetime.IsCancellationRequested);
+        try {
+            await opening.StartAsync(batch => InvokeAsync(() => {
+                if (!disposed && openingId == id && observedTeamId is not null && (batch.RequiresResync ||
+                    batch.Changes.Any(change => change.OriginEditorId != id && change.Resource.ResourceId == observedTeamId))) {
+                    changeSequence++;
+                    StateHasChanged();
+                }
+            }), RetireAsync, catalog: TeamId is null);
+            owner = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, OwnerCancellationToken, opening.Lifetime);
+            ownerToken = owner.Token;
+        } catch (Exception error) {
+            accessError = "Team editing access is unavailable. Close and reopen with current workspace access.";
+            Logger.LogWarning("Team editor access could not be opened for {TeamId}: {FailureType}", TeamId, error.GetType().Name);
         }
     }
 
-    private Task CancelAsync()
-        => DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private Task<AgentTeamEditorModel> LoadTeamAsync(Guid? id, CancellationToken token)
+        => opening!.ReadAsync(request => WorkspaceService.GetAgentTeamEditorAsync(id, request), token);
 
-    private async Task OpenIconPickerAsync() {
-        if (disposed || isLoading || loadFailed) {
-            return;
-        }
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(ownerToken);
-        if (disposed) {
-            return;
+    private Task RetireAsync() {
+        owner?.Cancel();
+        return InvokeAsync(() => {
+            if (!disposed) {
+                accessError = "Team editing access changed. Close and reopen with current workspace access.";
+                StateHasChanged();
+            }
+        });
+    }
+    private async Task<TeamMetadataOutcome> SaveAsync(TeamMetadataSubmission submission, CancellationToken token) {
+        if (disposed || ownerToken.IsCancellationRequested) {
+            return new TeamMetadataOutcome.Rejected();
         }
         try {
-            var result = await DialogService.OpenAsync<MaterialIconPickerDialog>(
-                "Choose team icon",
-                new Dictionary<string, object?> {
-                    [nameof(MaterialIconPickerDialog.SelectedIcon)] = editorModel.Icon
-                },
-                new DialogOptions {
-                    Eyebrow = "Team identity",
-                    Subtitle = "Pick a Material icon for this AgentFramework team.",
-                    Size = ModalSize.Wide,
-                    DenseChrome = true,
-                    AriaLabel = "Choose team icon",
-                    TestId = "material-icon-picker-dialog-shell"
-                }, request.Token);
-            if (!disposed && result is string icon) {
-                editorModel.Icon = AgentTeamIconCatalog.Normalize(icon);
+            var accepted = await opening!.WriteAsync(request => WorkspaceService.SaveAgentTeamMetadataAsync(submission.ToEditorModel(), request), token);
+            observedTeamId = accepted.Id;
+            return accepted.Id is { } id ? new TeamMetadataOutcome.Accepted(id, accepted) : new TeamMetadataOutcome.Unknown();
+        } catch (AgentCatalogCommittedException<AgentTeamEditorModel> exception) when (exception.Accepted.Id is { } id) {
+            if (!token.IsCancellationRequested && (submission.Id is null || submission.Id == id)) {
+                observedTeamId = id;
             }
-        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
+            return new TeamMetadataOutcome.Accepted(id, exception.Accepted, exception.Message);
+        } catch (AgentTeamMetadataRejectedException) {
+            return new TeamMetadataOutcome.Rejected();
+        } catch (AgentTeamConcurrencyException) {
+            return new TeamMetadataOutcome.Conflict();
+        } catch (Exception error) {
+            Logger.LogWarning("Team metadata acknowledgement unavailable for {TeamId}: {FailureType}", submission.Id, error.GetType().Name);
+            return new TeamMetadataOutcome.Unknown();
         }
     }
-
-    public void Dispose() {
+    private async Task<string?> ChooseIconAsync(string selected, CancellationToken token) {
+        var result = await DialogService.OpenAsync<MaterialIconPickerDialog>("Choose team icon",
+            new Dictionary<string, object?> {
+                [nameof(MaterialIconPickerDialog.SelectedIcon)] = selected,
+                [nameof(MaterialIconPickerDialog.OwnerCancellationToken)] = token
+            }, new DialogOptions {
+                Eyebrow = "Team identity", Subtitle = "Pick a Material icon for this AgentFramework team.", Size = ModalSize.Wide,
+                DenseChrome = true, AriaLabel = "Choose team icon", TestId = "material-icon-picker-dialog-shell"
+            }, token);
+        return result as string;
+    }
+    private Task CompleteAsync(Guid id) => disposed || ownerToken.IsCancellationRequested ? Task.CompletedTask
+        : DialogReference?.CloseAsync(new AgentTeamDetailsDialogResult(id)) ?? Task.CompletedTask;
+    private Task CancelAsync() => disposed ? Task.CompletedTask : DialogReference?.CloseAsync() ?? Task.CompletedTask;
+    private void ProfileChanged(object? sender, DatabaseProfileChangedNotification notification) {
+        if (disposed) {
+            return;
+        }
+        lifetime.Cancel();
+        opening?.Stop();
+        _ = InvokeAsync(() => {
+            if (!disposed) {
+                StateHasChanged();
+            }
+        });
+    }
+    public async ValueTask DisposeAsync() {
         if (disposed) {
             return;
         }
         disposed = true;
-        try {
-            lifetime.Cancel();
-        } finally {
-            lifetime.Dispose();
+        ProfileChanges.Changed -= ProfileChanged;
+        editor?.Dispose();
+        lifetime.Cancel();
+        opening?.Stop();
+        if (opening is { } currentOpening) {
+            await currentOpening.DisposeAsync();
         }
+        owner?.Dispose();
+        lifetime.Dispose();
     }
 }

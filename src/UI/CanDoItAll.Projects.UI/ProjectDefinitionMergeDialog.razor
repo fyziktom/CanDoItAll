@@ -1,0 +1,47 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+
+<Dialog IsOpen="true" Title="Compare Project changes" Subtitle="Review the result before applying it to your draft."
+        Size="ModalSize.Wide" ShowCloseButton="true" OnClose="Cancel" TestId="project-merge-dialog">
+    <ChildContent>
+        @if (Stale) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="project-merge-stale"><TextBlock Value="The saved Project changed again. Refresh this comparison; your draft and result entries are retained." /></Alert>
+        }
+        @if (Message is not null) {
+            <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="@Message" /></Alert>
+        }
+        <EditForm EditContext="resultContext" id="@FormId" OnSubmit="Apply" novalidate>
+            <ProjectDefinitionMergeSurface Review="Review" Previous="Previous" Changed="Changed" />
+        </EditForm>
+    </ChildContent>
+    <Footer>
+        <Cluster Wrap="FlexWrap.Wrap">
+            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="project-merge-cancel" />
+            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="Busy" data-testid="project-merge-refresh" />
+            <Button Text="Apply to draft" Type="submit" form="@FormId" Disabled="@(!CanApply || Busy)" data-testid="project-merge-apply" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private EditContext resultContext = default!;
+    private ProjectDefinitionReview? observed;
+    [Parameter, EditorRequired] public ProjectDefinitionReview Review { get; set; } = default!;
+    [Parameter] public ProjectDefinitionReview? Previous { get; set; }
+    [Parameter, EditorRequired] public string FormId { get; set; } = string.Empty;
+    [Parameter] public bool Stale { get; set; }
+    [Parameter] public bool CanApply { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback Cancel { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Apply { get; set; }
+    [Parameter] public EventCallback Changed { get; set; }
+
+    protected override void OnParametersSet() {
+        if (!ReferenceEquals(observed, Review)) {
+            observed = Review;
+            resultContext = new(Review);
+        }
+    }
+}

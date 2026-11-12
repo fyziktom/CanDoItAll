@@ -1,8 +1,23 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 namespace CanDoItAll.Web.Api;
+
+[Description("A completed remote model operation whose provider configuration requires review or reconciliation.")]
+public sealed record ProviderModelMaintenancePersistenceApiResponse(
+    [property: Description("Stable outcome code for model maintenance that requires review.")] string Code,
+    [property: Description("Identifier of the provider whose configuration was targeted.")] Guid ProviderId,
+    [property: Description("Whether the remote model operation completed before the configuration result.")] bool RemoteOperationCompleted,
+    [property: Description("Observed configuration persistence outcome.")]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<ProviderModelMaintenancePersistenceState>))]
+    ProviderModelMaintenancePersistenceState ConfigurationState,
+    [property: Description("Result returned by the completed remote model operation.")] ProviderModelMaintenanceEditorResult Result,
+    [property: Description("Whether the server can safely repeat the operation automatically.")] bool AutomaticReplaySafe,
+    [property: Description("Receipt for read-only verification of the original configuration write, when available.")] ProviderMutationAttempt? Attempt,
+    [property: Description("Operator guidance for reviewing the saved configuration.")] string Message);
 
 /// <summary>
 /// HTTP 202 answer of a provider operation whose provider-profile change was stored but whose follow-up
@@ -87,12 +102,23 @@ internal static class ProviderApiResults {
     internal const string NotFoundCode = "agents.provider-not-found";
     internal const string UnavailableCode = "agents.provider-unavailable";
     internal const string DiagnosticUnavailableCode = "agents.provider-diagnostic-unavailable";
+    internal const string ModelMaintenanceReviewCode = "agents.provider-model-configuration-review-required";
+    internal const string ModelMaintenanceReviewOutcome = "model-completed-configuration-review-required";
 
     public static async Task<IResult> ExecuteAsync(
         HttpContext context, Func<Task<IResult>> operation,
         Func<ProviderMutationCommit, IResult>? committedResponse = null) {
         try {
             return await operation();
+        } catch (ProviderModelMaintenancePersistenceException exception) {
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers[OutcomeHeader] = ModelMaintenanceReviewOutcome;
+            var attempt = (exception.InnerException as ProviderMutationUnconfirmedException)?.Attempt;
+            var body = new ProviderModelMaintenancePersistenceApiResponse(ModelMaintenanceReviewCode, exception.ProviderId,
+                true, exception.State, exception.Result, false, attempt,
+                "Remote model maintenance completed. Review or reconcile provider configuration; do not repeat the remote operation.");
+            return Results.Json(body, statusCode: exception.State == ProviderModelMaintenancePersistenceState.CommittedWithWarning
+                ? StatusCodes.Status202Accepted : StatusCodes.Status409Conflict);
         } catch (ProviderMutationCommittedException exception) {
             context.Response.Headers[OutcomeHeader] = ReconciliationPending;
             return committedResponse?.Invoke(exception.Commit) ?? Results.Accepted(value: new ProviderCommittedApiResponse(exception.ProviderId, true, true,

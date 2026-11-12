@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
@@ -31,6 +32,16 @@ public sealed record ProjectStructureAgentContext(
     public ProjectStructureWorkflowAuthoritySource? WorkflowAuthority { get; init; }
     [JsonIgnore]
     public ProjectWriteAdmission? ExpectedProjectAdmission { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyCollection<ProjectStructureNode>? ExpectedTransferRoots { get; init; }
+
+    [JsonIgnore]
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyCollection<ProjectStructureNodeState>? ExpectedNodeStates { get; init; }
 
     [JsonIgnore]
     public System.Collections.Immutable.ImmutableArray<ProjectWriteAdmission> ExpectedProjectAdmissions { get; init; } = [];
@@ -253,12 +264,6 @@ public sealed record ProjectStructureLeaseConflict(
     DateTimeOffset RenewedAtUtc,
     DateTimeOffset ExpiresAtUtc);
 
-/// <summary>
-/// Project values for creating a root project or replacing an existing project's values. An update replaces every
-/// member with the sent value, so send the current values of members you keep: an omitted <c>status</c> becomes Draft
-/// and an omitted <c>targetDateUtc</c> is cleared. An update also removes the project's phases and option selections,
-/// which this request cannot carry.
-/// </summary>
 /// <param name="Name">Project name; required, not blank, trimmed.</param>
 /// <param name="Description">Project description; null is stored as empty. Trimmed.</param>
 /// <param name="Objective">Project objective; null is stored as empty. Trimmed.</param>
@@ -276,6 +281,7 @@ public sealed record ProjectStructureLeaseConflict(
 /// caller's active project lease, otherwise HTTP 409 <c>LeaseMissing</c> or <c>LeaseConflict</c>. Ignored when creating
 /// a project.
 /// </param>
+[Description("Scalar values for project creation or a conditional existing-project update. Updates require the original expectedDefinition from a coherent definition read and preserve phases, options and external identity. All scalar members are replacement values; omitted status becomes Draft and null targetDateUtc clears it. Creation rejects expectedDefinition.")]
 public sealed record ProjectStructureProjectSaveRequest(
     string Name,
     string Description,
@@ -283,7 +289,13 @@ public sealed record ProjectStructureProjectSaveRequest(
     string CurrentPhase,
     ProjectStatus Status = ProjectStatus.Draft,
     DateTime? TargetDateUtc = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description("For an existing project, the unchanged expectation from project_structure_project_definition_get or GET /api/project-structure/projects/{projectId}/definition. Required for updates; must be absent for creation. A lease does not replace this original definition expectation.")]
+    public ProjectDefinitionExpectation? ExpectedDefinition { get; init; }
+
+    [Description("Original parent admission for a governed subproject creation proposal. Copy the parent admission from its coherent definition read; recovery preserves this exact lifetime.")]
+    public ProjectWriteAdmission? ExpectedParentAdmission { get; init; }
+}
 
 /// <summary>
 /// Hierarchy change that makes a project a subproject of the route's parent project, either as an additional parent or
@@ -305,7 +317,11 @@ public sealed record ProjectStructureProjectSaveRequest(
 public sealed record ProjectStructureSubprojectChangeRequest(
     Guid ChildProjectId,
     Guid? CurrentParentProjectId = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    public ProjectWriteAdmission? ExpectedParentAdmission { get; init; }
+    public ProjectWriteAdmission? ExpectedChildAdmission { get; init; }
+    public ProjectHierarchyEdgeExpectation? ExpectedCurrentEdge { get; init; }
+}
 
 /// <summary>
 /// Source of a structure read, as a JSON integer. 0 ContextDefault (the default; over HTTP it reads the current
@@ -393,7 +409,10 @@ public sealed record ProjectStructureReadRequest(
     bool IncludeNotes = false,
     bool IncludeAssets = false,
     int? Take = null,
-    ProjectStructureReadSource Source = ProjectStructureReadSource.ContextDefault);
+    ProjectStructureReadSource Source = ProjectStructureReadSource.ContextDefault) {
+    [Description("Include the complete original graph required by copy, reparent, transfer, recomposition and deletion. Use a canonical current read and return expectedGraph unchanged with the mutation.")]
+    public bool IncludeMutationGraph { get; init; }
+}
 
 /// <summary>
 /// One action the application offers for a node in its structure editor, for example running a script node or showing
@@ -618,6 +637,9 @@ public sealed record ProjectStructureNodeSummary(
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ProjectProcessAssetReceiptObservation? ProcessAssetReceipt { get; init; }
+
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
 }
 
 /// <summary>
@@ -638,7 +660,10 @@ public sealed record ProjectStructureLinkSummary(
     string SourceId,
     string TargetId,
     ProjectObjectLinkKind Kind,
-    bool IsUserAuthored);
+    bool IsUserAuthored) {
+    [Description(ProjectStructureMutationStateDescriptions.Link)]
+    public ProjectStructureLinkState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Result of a structure read: the selected nodes of the project, the links between them when requested, warnings,
@@ -659,6 +684,8 @@ public sealed record ProjectStructureReadResponse(
     IReadOnlyList<ProjectStructureNodeSummary> Nodes,
     IReadOnlyList<ProjectStructureLinkSummary> Links,
     IReadOnlyList<string> Warnings) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission for the project lifetime that was read. Send it back unchanged as
     /// <c>expectedProjectAdmission</c> with task creation, task updates, task resource attachment and node deletions
@@ -834,7 +861,10 @@ public sealed record ProjectStructureNodeEditInput(
     DateTimeOffset? EndUtc = null,
     string? MetadataJson = null,
     string? LeaseToken = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Metadata change for one generic node: replaces its metadata and optionally its notes and status. Canonical tasks
@@ -864,7 +894,10 @@ public sealed record ProjectStructureNodeMetadataInput(
     string MetadataJson,
     string? Notes = null,
     string? Status = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Status change for several nodes of one project. Nodes kept in sync with other records (badge Synced) are skipped.
@@ -887,7 +920,10 @@ public sealed record ProjectStructureNodeMetadataInput(
 public sealed record ProjectStructureStatusBatchInput(
     IReadOnlyList<string> NodeIds,
     string Status,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
+    public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
+}
 
 /// <summary>Status change for the node named in the route.</summary>
 /// <param name="Status">
@@ -903,7 +939,10 @@ public sealed record ProjectStructureStatusBatchInput(
 /// </param>
 public sealed record ProjectStructureStatusInput(
     string Status,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>Explicit progress for several nodes of one project, independent of their status.</summary>
 /// <param name="NodeIds">
@@ -926,7 +965,10 @@ public sealed record ProjectStructureProgressBatchInput(
     IReadOnlyList<string> NodeIds,
     string ProgressMode,
     int ProgressPercent,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
+    public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
+}
 
 /// <summary>Explicit progress for the node named in the route, independent of its status.</summary>
 /// <param name="ProgressMode">
@@ -944,7 +986,10 @@ public sealed record ProjectStructureProgressBatchInput(
 public sealed record ProjectStructureProgressInput(
     string ProgressMode,
     int ProgressPercent,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Marker for several nodes of one project: every current marker of each node is replaced by this one marker, or
@@ -971,7 +1016,10 @@ public sealed record ProjectStructureMarkerBatchInput(
     string MarkerIcon,
     string MarkerTone,
     string MarkerLabel,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
+    public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
+}
 
 /// <summary>
 /// How a marker change treats the node's existing markers, as a JSON integer. Markers are identified by their icon,
@@ -1014,7 +1062,10 @@ public sealed record ProjectStructureMarkerInput(
     string MarkerIcon = "",
     string MarkerTone = "",
     string MarkerLabel = "",
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>Priority for several nodes of one project.</summary>
 /// <param name="NodeIds">
@@ -1034,7 +1085,10 @@ public sealed record ProjectStructureMarkerInput(
 public sealed record ProjectStructurePriorityBatchInput(
     IReadOnlyList<string> NodeIds,
     int Priority,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Nodes)]
+    public IReadOnlyList<ProjectStructureNodeState>? ExpectedStates { get; init; }
+}
 
 /// <summary>Priority for the node named in the route.</summary>
 /// <param name="Priority">
@@ -1049,7 +1103,10 @@ public sealed record ProjectStructurePriorityBatchInput(
 /// </param>
 public sealed record ProjectStructurePriorityInput(
     int Priority,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Type change for one generic node: the new object type and subtype. The node keeps its title, subtitle, notes,
@@ -1075,7 +1132,10 @@ public sealed record ProjectStructurePriorityInput(
 public sealed record ProjectStructureNodeTypeInput(
     ProjectObjectType ObjectType,
     string? ObjectSubtype = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>New canvas position for one node in the structure editor. Only the layout changes.</summary>
 /// <param name="NodeId">
@@ -1095,7 +1155,10 @@ public sealed record ProjectStructureNodeMoveInput(
     string NodeId,
     double X,
     double Y,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>Automatic re-layout of the descendants of one node on the structure canvas.</summary>
 /// <param name="RootNodeId">
@@ -1111,7 +1174,10 @@ public sealed record ProjectStructureNodeMoveInput(
 /// </param>
 public sealed record ProjectStructureNodeRecomposeInput(
     string RootNodeId,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>Parent change for one node, named in the body, within its project.</summary>
 /// <param name="NodeId">Identifier of the node to move in the hierarchy, as returned in <c>nodes[].id</c>.</param>
@@ -1129,7 +1195,10 @@ public sealed record ProjectStructureNodeRecomposeInput(
 public sealed record ProjectStructureNodeReparentInput(
     string NodeId,
     string? ParentNodeKey,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>
 /// Copy of one or more subtrees under a destination parent in the same project. Each source node is copied with all
@@ -1154,7 +1223,10 @@ public sealed record ProjectStructureNodeReparentInput(
 public sealed record ProjectStructureNodesCopyInput(
     IReadOnlyList<string> SourceNodeIds,
     string DestinationParentNodeId,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>Correspondence between one copied source node and its new copy.</summary>
 /// <param name="SourceNodeId">Identifier of the original node.</param>
@@ -1201,7 +1273,10 @@ public sealed record ProjectStructureNodesCopyResult(
 /// </param>
 public sealed record ProjectStructureNodeParentInput(
     string? ParentNodeKey,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>
 /// Deletion of the node named in the route with all its descendants, or a retry of the cleanup of an earlier deletion
@@ -1229,6 +1304,8 @@ public sealed record ProjectStructureNodeDeleteInput(
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null,
     Guid? DurableMutationId = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
     /// Required for a new deletion (no <c>durableMutationId</c>): when it is omitted, null or names another project,
@@ -1263,6 +1340,8 @@ public sealed record ProjectStructureNodeDeleteBatchInput(
     IReadOnlyList<string> NodeIds,
     ProjectStructureManagedStorageDisposition ManagedStorageDisposition,
     string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
     /// <summary>
     /// Project write admission returned as <c>expectedProjectAdmission</c> by the structure read, sent back unchanged.
     /// Required: when it is omitted, null or names another project, the request is rejected with HTTP 409
@@ -1298,7 +1377,10 @@ public sealed record ProjectStructureLinkInput(
     string SourceNodeId,
     string TargetNodeId,
     ProjectObjectLinkKind Kind = ProjectObjectLinkKind.DependsOn,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Link)]
+    public ProjectStructureLinkState? ExpectedState { get; init; }
+}
 
 /// <summary>Result of a committed link creation or removal.</summary>
 /// <param name="Changed">
@@ -1436,7 +1518,9 @@ public sealed record ProjectStructureWorkflowNodeCreateInput(
     ProjectStructureWorkflowInputSettings? InputSettings = null,
     double? X = null,
     double? Y = null,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    internal ProjectStructureNode? ExpectedParent { get; init; }
+}
 
 /// <summary>Result of a committed workflow node creation.</summary>
 /// <param name="ProjectId">Identifier of the project that contains the node.</param>
@@ -1469,7 +1553,10 @@ public sealed record ProjectStructureWorkflowAddOptionsInput(
     WorkflowId? WorkflowId = null,
     WorkflowVersionId? VersionId = null,
     ProjectStructureWorkflowInputSettings? InputSettings = null,
-    IReadOnlyList<string>? SelectedNodeIds = null);
+    IReadOnlyList<string>? SelectedNodeIds = null) {
+    internal ProjectWriteAdmission? ExpectedProject { get; init; }
+    internal ProjectStructureNode? ExpectedParent { get; init; }
+}
 
 /// <summary>One workflow definition that can be added to a project structure.</summary>
 /// <param name="WorkflowId">Identifier of the workflow definition, a GUID string.</param>
@@ -1591,7 +1678,9 @@ public sealed record ProjectStructureWorkflowNodeStartInput(
     string RequestedBy = "project-structure",
     string? LeaseToken = null,
     IReadOnlyList<string>? SimulatedNodeIds = null,
-    Guid? IntentId = null);
+    Guid? IntentId = null) {
+    internal ProjectStructureNode? ExpectedNode { get; init; }
+}
 
 /// <summary>One recorded event of a workflow run.</summary>
 /// <param name="Kind">
@@ -1763,7 +1852,10 @@ public sealed record ProjectStructureWorkflowNodeStartResult(
 /// </param>
 public sealed record ProjectStructureNodeCommandInput(
     ProjectStructureCommandKind CommandKind,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Node)]
+    public ProjectStructureNodeState? ExpectedState { get; init; }
+}
 
 /// <summary>
 /// Transfer of a node's descendants into another existing project, which does not have to be a subproject. The node
@@ -1784,7 +1876,10 @@ public sealed record ProjectStructureNodeCommandInput(
 public sealed record ProjectStructureSubtreeTransferInput(
     Guid TargetProjectId,
     string? LeaseToken = null,
-    string? TargetLeaseToken = null);
+    string? TargetLeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>
 /// Extraction of selected nodes into a new subproject of the route's project: the owner creates the project and moves
@@ -1822,7 +1917,10 @@ public sealed record ProjectStructureNodesToSubprojectInput(
     string? CurrentPhase = null,
     ProjectStatus Status = ProjectStatus.Active,
     bool IncludeDescendants = true,
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [Description(ProjectStructureMutationStateDescriptions.Graph)]
+    public ProjectStructureGraphState? ExpectedGraph { get; init; }
+}
 
 /// <summary>Result of a committed extraction of nodes into a new subproject.</summary>
 /// <param name="SourceProjectId">Identifier of the project the nodes came from.</param>
@@ -2524,7 +2622,10 @@ public sealed record ProjectStructureImportRequest(
     ProjectObjectMediaPayload? SourceAsset = null,
     string ContainerBlockSubtype = "delivery",
     string LeafWorkItemSubtype = "task",
-    string? LeaseToken = null);
+    string? LeaseToken = null) {
+    [System.ComponentModel.Description("When true, every JsonOutline object in sourceText must supply sourceKey alongside title (or name), optional notes and children. A key is case-sensitive, unique across the complete outline, starts with an ASCII letter or digit, and contains at most 128 ASCII letters, digits, '-', '_', '.', ':' or '/'. Supplied keys are validated even when this option is false. Missing required keys fail with HTTP 400 ImportSourceKeyRequired; invalid supplied keys with InvalidImportSourceKey; duplicate keys with DuplicateImportSourceKey; other source kinds with this option enabled fail with ImportSourceKeysUnsupported. Validation occurs before creating the import container or source asset. Supplied keys are preserved in each node's typed metadataJson.importSource with numeric sourceKind and containerNodeId; notes remain human text. Default false preserves imports without keys. Clients that depend on structured identities should verify this property exists in the live schema, then set it true. Imports remain non-atomic after validation; inspect partial results before retrying.")]
+    public bool RequireSourceKeys { get; init; }
+}
 
 /// <summary>Result of a committed outline import.</summary>
 /// <param name="ProjectId">Identifier of the project the outline was imported into.</param>

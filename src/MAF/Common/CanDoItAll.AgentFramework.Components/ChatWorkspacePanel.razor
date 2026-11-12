@@ -1,40 +1,45 @@
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.UI.Chat
+@using Microsoft.Extensions.Logging
 @inject DialogService DialogService
+@inject ILogger<ChatWorkspacePanel> Logger
 @inject AgentToolPolicyCatalog ToolPolicies
 @implements IDisposable
 
+@if (ChildContent is not null) {
+    @ChildContent(new(MapPresentation(), EventCallback.Factory.Create<ChatWorkspaceIntent>(this, HandleIntentAsync),
+        ActivityStreamId?.OperationId == activity?.OperationId ? activity : null))
+    @if (ActivityStreamId is not null) {
+        <AgentExecutionActivityStatus @key="ActivityStreamId" StreamId="ActivityStreamId"
+                                      Headless="true" StateChanged="UpdateActivity" />
+    }
+} else {
 <AgentChatSurface Presentation="@MapPresentation()" Intent="HandleIntentAsync" Navigation="@Navigation" NavigationIntent="@NavigationIntent"
-                  HeaderActions="@HeaderActions" ComposerActions="@ComposerActions">
+                  HeaderActions="@HeaderActions" HeaderDetails="@HeaderDetails" HeaderContext="@HeaderContext" ComposerActions="@ComposerActions">
     <ActivityContent>
         @if (ActivityStreamId is not null) {
             <AgentExecutionActivityStatus @key="ActivityStreamId"
-                                          StreamId="@ActivityStreamId" />
+                                          StreamId="@ActivityStreamId" StateChanged="UpdateActivity" />
         }
     </ActivityContent>
     <AttachmentPicker>
-                    @if (AttachmentFilesSelected.HasDelegate) {
-                        <label for="@ResolveAttachmentInputId()"
-                               class="@ResolveAttachmentUploadButtonClass()"
-                               aria-label="Attach image file"
-                               aria-disabled="@IsBusy"
-                               title="Attach image file"
-                               data-testid="chat-image-attachment-button">
-                            <Icon Name="image" />
-                        </label>
-                        <InputFile id="@attachmentInputId"
-                                   class="chat-attachment-file-input"
-                                   style="display:none"
-                                   OnChange="HandleAttachmentFilesSelectedAsync"
-                                   accept="image/png,image/jpeg,image/gif,image/webp"
-                                   multiple
-                                   disabled="@IsBusy"
-                                   data-testid="chat-image-attachment-input" />
-                    }
+        @if (AttachmentFilesSelected.HasDelegate) {
+            <AgentImageAttachmentPicker Generation="SelectionGeneration" Disabled="IsBusy" Selected="HandleAttachmentFilesSelectedAsync" />
+        }
     </AttachmentPicker>
 </AgentChatSurface>
+}
 
 @code {
+    [Parameter] public RenderFragment<ChatWorkspaceBinding>? ChildContent { get; set; }
+    private AgentActivityState? activity;
+
+    private void UpdateActivity(AgentActivityState state) {
+        if (!disposed && ActivityStreamId?.OperationId == state.OperationId) {
+            activity = state;
+        }
+    }
+
     [Parameter]
     public AgentDefinition? Agent { get; set; }
 
@@ -52,6 +57,9 @@
 
     [Parameter]
     public bool IsBusy { get; set; }
+
+    [Parameter]
+    public bool IsSendBlocked { get; set; }
 
     [Parameter]
     public int ComposerKey { get; set; }
@@ -79,6 +87,9 @@
 
     [Parameter]
     public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter] public RenderFragment? HeaderDetails { get; set; }
+    [Parameter] public RenderFragment? HeaderContext { get; set; }
 
     [Parameter]
     public RenderFragment? ComposerActions { get; set; }
@@ -178,7 +189,7 @@
         var badges = new List<PresentationBadge> {
             new(ResolveSessionBadge(), AgentConversationPresentationMapper.MapTone(ResolveSessionTone()))
         };
-        if (!string.IsNullOrWhiteSpace(RunStateText)) {
+        if (!string.IsNullOrWhiteSpace(RunStateText) && Navigation?.Focused != true) {
             badges.Add(new(
                 RunStateText,
                 AgentConversationPresentationMapper.MapTone(RunStateTone),
@@ -211,23 +222,16 @@
     }
 
     private IReadOnlyList<PendingToolApprovalRecord> PendingApprovals
-        => ActiveRun?.PendingApprovals ?? [];
+        => IsBusy || ActiveRun?.ToolAdmission?.PlanningDecision is not null ? [] : ActiveRun?.PendingApprovals ?? [];
 
     private bool HasPendingApprovals => PendingApprovals.Count > 0;
 
     internal static string FormatApprovalArguments(string? argumentsJson, string? toolName = null, AgentToolPolicyCatalog? toolPolicies = null)
         => AgentToolArgumentDisplayFormatter.DescribeArguments(argumentsJson, toolName, toolPolicies);
 
-    private Task HandleAttachmentFilesSelectedAsync(InputFileChangeEventArgs args)
-        => AttachmentFilesSelected.InvokeAsync(args);
-
-    private string ResolveAttachmentInputId()
-        => IsBusy ? string.Empty : attachmentInputId;
-
-    private string ResolveAttachmentUploadButtonClass()
-        => IsBusy
-            ? "chat-attachment-upload-button chat-attachment-upload-button--disabled"
-            : "chat-attachment-upload-button";
+    private Task HandleAttachmentFilesSelectedAsync(AgentImageSelection selection)
+        => disposed || IsBusy || selection.Generation != SelectionGeneration
+            ? Task.CompletedTask : AttachmentFilesSelected.InvokeAsync(selection.Files);
 
     private IReadOnlyList<ExecutionLogEntry> ResolveActiveExecutionEntries() {
         if (ActiveRun is not null) {
@@ -365,7 +369,7 @@
         IReadOnlyList<ExecutionLogEntry> entries,
         Guid? highlightEntryId,
         ModalSize size) {
-        _ = DialogService.OpenAsync<AgentExecutionLogDialog>(
+        _ = ObserveExecutionDialogAsync(DialogService.OpenAsync<AgentExecutionLogDialog>(
             title,
             new Dictionary<string, object?> {
                 [nameof(AgentExecutionLogDialog.Run)] = ActiveRun,
@@ -381,7 +385,16 @@
                 AriaLabel = title,
                 Style = "max-height:calc(100vh - 2rem);"
             },
-            dialogLifetime.Token);
+            dialogLifetime.Token), dialogLifetime.Token, ActiveRun?.Id);
+    }
+
+    private async Task ObserveExecutionDialogAsync(Task<object?> opening, CancellationToken token, Guid? runId) {
+        try {
+            await opening;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception exception) {
+            Logger.LogWarning("Execution log dialog failed ({FailureType}); run {RunId}.", exception.GetType().Name, runId);
+        }
     }
 
     private string BuildExecutionDialogSubtitle(IReadOnlyList<ExecutionLogEntry> entries) {
@@ -415,6 +428,9 @@
            !string.IsNullOrWhiteSpace(VoiceStatusText);
 
     private string ResolveSessionBadge() {
+        if (IsBusy) {
+            return "Working";
+        }
         if (Session is null) {
             return "Idle";
         }
@@ -457,7 +473,6 @@
     private long presentationRevision;
     private (Guid? Agent, Guid? Session, Guid? Run, long Generation) observedTarget;
     private CancellationTokenSource dialogLifetime = new();
-    private readonly string attachmentInputId = $"chat-attachment-file-input-{Guid.NewGuid():N}";
     private bool disposed;
 
     protected override void OnParametersSet() {
@@ -477,11 +492,24 @@
         old.Dispose();
     }
 
+    private PresentationBadge? ResolveRunStatus() {
+        var hasSettledRun = !IsBusy && ActiveRun?.State is (ExecutionState.Completed or ExecutionState.Failed) &&
+            !string.IsNullOrWhiteSpace(RunStateText);
+        if (activity is not null && ActivityStreamId?.OperationId == activity.OperationId &&
+            (!activity.IsUnavailable || !hasSettledRun)) {
+            return new(activity.Label, AgentConversationPresentationMapper.MapTone(activity.Tone));
+        }
+
+        return string.IsNullOrWhiteSpace(RunStateText) ? null
+            : new(RunStateText, AgentConversationPresentationMapper.MapTone(RunStateTone));
+    }
+
     private ChatWorkspacePresentation MapPresentation() {
         var entries = ResolveActiveExecutionEntries();
         return new() {
             Revision = presentationRevision,
             Header = HeaderPresentation,
+            RunStatus = ResolveRunStatus(),
             Session = Session is null ? null : new(Session.Id, Session.Title),
             Messages = MessagePresentations.ToImmutableArray(),
             TransientMessages = TransientMessagePresentations.ToImmutableArray(),
@@ -499,6 +527,7 @@
             DraftPrompt = DraftPrompt,
             ComposerKey = ComposerKey,
             IsBusy = IsBusy,
+            IsSendBlocked = IsSendBlocked,
             AutoApproval = IsAutoApprovalActive(),
             ComposerGuidance = ResolveComposerGuidance(),
             Attachments = DraftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray(),

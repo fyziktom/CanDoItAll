@@ -46,4 +46,12 @@ public sealed class ProjectWorkAssignmentPartyFacts(
         PartyType.AiAgent => ProjectPartyType.AiAgent,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported party type.")
     };
+
+    public async Task<ProjectAssignmentObservation?> ReadParticipationForMutationAsync(Guid assignmentId,
+        CancellationToken cancellationToken = default) {
+        await using var context = await transactions.CreateEnlistedAsync(options,
+            static configured => new CrmHrDbContext(configured), cancellationToken);
+        var row = await context.Set<ProjectPartyAssignment>().AsNoTracking().SingleOrDefaultAsync(item => item.Id == assignmentId, cancellationToken);
+        return row is null ? null : ProjectAssignmentEditValues.Observe(row);
+    }
 }

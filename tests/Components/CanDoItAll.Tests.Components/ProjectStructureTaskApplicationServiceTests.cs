@@ -3,12 +3,105 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureTaskApplicationServiceTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Canceled_assignment_only_compensates_the_created_occurrence(bool replaceTask) {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var owner = CreateMutationOwner(admission);
+        var person = await CreateRatedPartyAsync(services.GetRequiredService<PartyDirectoryService>(),
+            services.GetRequiredService<HrService>(), "Canceled assignee", PartyType.Person, 10m);
+        var application = services.GetRequiredService<ProjectStructureTaskApplicationService>();
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        using var cancellation = new CancellationTokenSource();
+        ProjectStructureNode? originalTask = null;
+        Guid? replacementRecordId = null;
+        var failure = await Assert.ThrowsAsync<ProjectStructureTaskApplicationException>(() => application.CreateAsync(
+            new(projectId, new(4m, ProjectWorkItemEffortUnit.Hours, null, string.Empty),
+                new(ProjectStructureTaskResourceKind.Person, person), "application-service-tests", owner),
+            async (pricing, token) => {
+                originalTask = Assert.IsType<ProjectStructureNode>(await CreateTaskAsync(workbench, projectId,
+                    "Canceled task", pricing, owner, token));
+                if (replaceTask) {
+                    await using var context = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync(token);
+                    var original = await context.Set<ProjectObjectRecord>().SingleAsync(node => node.Id == originalTask.RecordId, token);
+                    context.Remove(original);
+                    await context.SaveChangesAsync(token);
+                    var replacement = new ProjectObjectRecord {
+                        ProjectId = projectId, NodeKey = original.NodeKey, ParentNodeKey = original.ParentNodeKey,
+                        ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = "task", Title = "Replacement occurrence",
+                        CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
+                    };
+                    replacementRecordId = replacement.Id;
+                    context.Add(replacement);
+                    await context.SaveChangesAsync(token);
+                }
+                cancellation.Cancel();
+                return originalTask;
+            }, cancellation.Token));
+        var created = Assert.IsType<ProjectStructureNode>(originalTask);
+        Assert.Equal(replaceTask ? ProjectStructureTaskApplicationErrorCode.CompensationFailed
+            : ProjectStructureTaskApplicationErrorCode.ConcurrencyConflict, failure.Code);
+        Assert.Equal(new(created.Id, IsCreate: true, Succeeded: !replaceTask), failure.Compensation);
+        var surface = await workbench.GetStructureAsync(projectId);
+        if (replaceTask) {
+            var replacement = Assert.Single(surface.Nodes, node => node.Id == created.Id);
+            Assert.Equal(replacementRecordId, replacement.RecordId);
+            Assert.Equal("Replacement occurrence", replacement.Title);
+            Assert.Contains(Assert.IsType<AggregateException>(failure.InnerException).InnerExceptions,
+                exception => exception is ProjectStructureEditConflictException);
+        } else {
+            Assert.DoesNotContain(surface.Nodes, node => node.Id == created.Id);
+            Assert.IsAssignableFrom<OperationCanceledException>(failure.InnerException);
+        }
+    }
+
+    [Fact]
+    public async Task Lost_acknowledgement_after_task_commit_preserves_the_committed_assignment_and_price() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var owner = CreateMutationOwner(admission);
+        var directory = services.GetRequiredService<PartyDirectoryService>();
+        var hr = services.GetRequiredService<HrService>();
+        var personA = await CreateRatedPartyAsync(directory, hr, "Original assignee", PartyType.Person, 10m);
+        var personB = await CreateRatedPartyAsync(directory, hr, "Committed assignee", PartyType.Person, 30m);
+        var application = services.GetRequiredService<ProjectStructureTaskApplicationService>();
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var mutations = services.GetRequiredService<ProjectStructureGanttMutationService>();
+        var created = await CreateAssignedTaskAsync(application, workbench, projectId, "Before commit", personA, 8m, owner);
+        var original = ProjectStructureTaskEditStatePolicy.Read(created.Task);
+        var failure = await Record.ExceptionAsync(() => application.EditAsync<bool>(
+            new(projectId, created.Task.Id, original, new(4m, ProjectWorkItemEffortUnit.Hours, null, string.Empty),
+                ProjectTaskExecutionSnapshot.NotStarted, true,
+                new(ProjectStructureTaskResourceKind.Person, personB), "lost-acknowledgement-test", owner),
+            async (commit, token) => {
+                await PersistEditAsync(mutations, projectId, commit, "Committed task", owner, token);
+                throw new IOException("Injected acknowledgement loss after the native transaction committed.");
+            }));
+        Assert.NotNull(failure);
+        var actual = await ReadTaskAsync(workbench, projectId, created.Task.Id);
+        var state = ProjectStructureTaskEditStatePolicy.Read(actual);
+        Assert.Equal("Committed task", actual.Title);
+        Assert.Equal(original.DirectAssignmentRevision + 1, state.DirectAssignmentRevision);
+        Assert.Equal(120m, state.Estimate.ExpectedCostAmount);
+        Assert.Equal(personB, state.CostBasis?.ResourceId);
+        Assert.Equal(personB, Assert.Single(await ReadDirectAssignmentsAsync(
+            services.GetRequiredService<IProjectPartyIntegrationBridge>(), projectId, created.Task.Id)).PartyId);
+    }
+
     [Fact]
     public async Task Create_applies_the_CRM_quote_and_returns_the_committed_assignment_revision()
     {
@@ -256,7 +349,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
                     }
                 ],
                 [ProjectPartyAssignmentRole.WorkItemAssignee],
-                expectedProjectAdmission: admission);
+                expectedProjectAdmission: admission,
+                expectedAssignments: (await ReadDirectAssignmentsAsync(bridge, projectId, created.Task.Id))
+                    .Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray());
         Assert.True(exactAssignmentResult.IsSuccess);
         var originalAssignment = Assert.Single(
             await ReadDirectAssignmentsAsync(
@@ -270,7 +365,7 @@ public sealed class ProjectStructureTaskApplicationServiceTests
         var originalState =
             ProjectStructureTaskEditStatePolicy.Read(originalTask);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<ProjectStructureTaskApplicationException>(
             () => applicationService.EditAsync<bool>(
                 new ProjectStructureTaskEditApplicationRequest(
                     projectId,
@@ -294,8 +389,9 @@ public sealed class ProjectStructureTaskApplicationServiceTests
 
         Assert.Contains(
             "Injected persistence failure",
-            exception.Message,
+            Assert.IsType<InvalidOperationException>(exception.InnerException).Message,
             StringComparison.Ordinal);
+        Assert.Equal(new ProjectStructureTaskCompensationFacts(created.Task.Id, false, true, true, true), exception.Compensation);
         var restoredAssignment = Assert.Single(
             await ReadDirectAssignmentsAsync(
                 bridge,

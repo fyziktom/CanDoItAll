@@ -8,6 +8,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -44,6 +45,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
     IDatabaseSwitchNotificationService databaseSwitchNotificationService,
     ILogger<CanDoItAllAgentWorkspaceFactory> logger,
     IOptions<ProcessMockAgentOptions> processMockAgentOptions,
+    TimeProvider timeProvider,
     IEnumerable<IAgentChatContextAttachmentCodec>? contextAttachmentCodecs = null) :
     ICanDoItAllAgentWorkspaceFactory,
     IDisposable
@@ -124,10 +126,13 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         string profileFingerprint)
     {
         var store = new FileSandboxWorkspaceStore(workspaceRoot, scope,
-            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId));
+            new AgentProjectAccessCatalogPolicy(serviceProvider.GetRequiredService<ProjectWriteAdmissionService>(), workspaceIdentity.DatabaseProfileId,
+                serviceProvider.GetRequiredService<AgentConfigurationWriteContext>()),
+            serviceProvider.GetRequiredService<AgentConfigurationChanges>().Publisher(
+                new(EditingScopeKind.Dataset, workspaceIdentity.DatabaseProfileId, workspaceIdentity.DatabaseProfileGeneration.Value)));
         var toolAdmission = serviceProvider.GetService<IAgentToolAdmissionVerifier>() is null ? null :
             new AgentToolAdmissionJournal(store, new(workspaceIdentity.DatabaseProfileId, profileFingerprint,
-                workspaceIdentity.DatabaseProfileGeneration), backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
+                workspaceIdentity.DatabaseProfileGeneration), timeProvider, backgroundSources: serviceProvider.GetServices<IAgentToolBackgroundSourcePolicy>(),
                 contextAttachmentCodecs: contextAttachmentCodecs);
         var lifecycleFactExtractors = serviceProvider
             .GetServices<IWorkspaceCommandReceiptLifecycleFactExtractor>()
@@ -229,7 +234,10 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
             toolAdmissionJournal: toolAdmission,
             executionAuthorityResolver: serviceProvider.GetService<IAgentExecutionAuthorityResolver>(),
             receiptReconciliationProviders: serviceProvider.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray(),
-            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>());
+            toolPolicies: serviceProvider.GetRequiredService<AgentToolPolicyCatalog>(),
+            planningRuntime: serviceProvider.GetRequiredService<IAgentPlanningStepRuntime>(),
+            planningParticipants: serviceProvider.GetServices<IAgentPlanningParticipant>(),
+            inheritedPlanningParticipants: serviceProvider.GetServices<IAgentInheritedPlanningParticipant>());
         return workspaceService;
     }
 

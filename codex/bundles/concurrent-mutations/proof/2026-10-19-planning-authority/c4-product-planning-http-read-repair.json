@@ -1,0 +1,508 @@
+{
+  "candidate": "c4-product-planning-http-read-repair",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-release-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--no-restore"
+      ],
+      "StartedUtc": "2026-10-19T11:23:53.0223263+00:00",
+      "State": "Completed",
+      "RunnerPid": 17108,
+      "ChildPid": 44116,
+      "ChildStartedUtc": "2026-10-19T11:23:53.0359358Z",
+      "ExitCode": 0,
+      "Seconds": 37.2137722,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 175409,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-web-release-final",
+      "Arguments": [
+        "build",
+        "src/App/CanDoItAll.Web/CanDoItAll.Web.csproj",
+        "--configuration",
+        "Release",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-19T11:23:16.5365996+00:00",
+      "State": "Completed",
+      "RunnerPid": 17108,
+      "ChildPid": 32612,
+      "ChildStartedUtc": "2026-10-19T11:23:16.5667201Z",
+      "ExitCode": 0,
+      "Seconds": 36.4282404,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 142717,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-19T11:23:43.3703874+00:00",
+      "State": "Completed",
+      "RunnerPid": 59052,
+      "ChildPid": 40876,
+      "ChildStartedUtc": "2026-10-19T11:23:43.3753230Z",
+      "ExitCode": 0,
+      "Seconds": 0.1339179,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 626,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-product-planning-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanHttpTests",
+        "--list-tests"
+      ],
+      "StartedUtc": "2026-10-19T11:24:30.2620287+00:00",
+      "State": "Completed",
+      "RunnerPid": 17108,
+      "ChildPid": 33356,
+      "ChildStartedUtc": "2026-10-19T11:24:30.2657653Z",
+      "ExitCode": 0,
+      "Seconds": 2.3729027,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 493,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-19T11:23:37.2754968+00:00",
+      "State": "Completed",
+      "RunnerPid": 59052,
+      "ChildPid": 12240,
+      "ChildStartedUtc": "2026-10-19T11:23:37.2794988Z",
+      "ExitCode": 0,
+      "Seconds": 6.075203,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-product-planning-integration",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProjectTaskPlanHttpTests",
+        "--logger",
+        "trx;LogFileName=product-planning-integration.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-http-read-repair"
+      ],
+      "StartedUtc": "2026-10-19T11:26:32.6021494+00:00",
+      "State": "Completed",
+      "RunnerPid": 18068,
+      "ChildPid": 28912,
+      "ChildStartedUtc": "2026-10-19T11:26:32.6398492Z",
+      "ExitCode": 0,
+      "Seconds": 46.0371386,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 984171,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-product-planning-http-read-repair/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-19T11:26:20.1667284+00:00",
+      "State": "Completed",
+      "RunnerPid": 44692,
+      "ChildPid": 54364,
+      "ChildStartedUtc": "2026-10-19T11:26:20.1833488Z",
+      "ExitCode": 0,
+      "Seconds": 59.0006211,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 53,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-http-read-repair/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-19T11:24:56.6929094+00:00",
+      "State": "Completed",
+      "RunnerPid": 7960,
+      "ChildPid": 27592,
+      "ChildStartedUtc": "2026-10-19T11:24:56.6981671Z",
+      "ExitCode": 0,
+      "Seconds": 0.4693893,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-final",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-product-planning-http-read-repair/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-19T11:23:34.2494856+00:00",
+      "State": "Completed",
+      "RunnerPid": 7960,
+      "ChildPid": 56112,
+      "ChildStartedUtc": "2026-10-19T11:23:34.2900398Z",
+      "ExitCode": 0,
+      "Seconds": 82.3734981,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 460,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-final",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-19T11:23:34.2554548+00:00",
+      "State": "Completed",
+      "RunnerPid": 59052,
+      "ChildPid": 26824,
+      "ChildStartedUtc": "2026-10-19T11:23:34.3095565Z",
+      "ExitCode": 0,
+      "Seconds": 2.941094,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "7358477a-ffed-465d-8724-4cc3d3d5381e",
+      "testId": "99609fcc-6d42-8023-35f7-01eee700881e",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanHttpTests.Http_requires_write_permission_bounded_unique_body_and_exact_lossless_revision",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:13.9337888",
+      "startTime": "2026-10-19T07:27:04.5476089-04:00",
+      "endTime": "2026-10-19T07:27:18.4697312-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7358477a-ffed-465d-8724-4cc3d3d5381e",
+      "trx": "product-planning-integration.trx"
+    },
+    {
+      "executionId": "8080d856-d728-4626-aee9-4303cce44c00",
+      "testId": "d4391189-fc22-4713-0f3e-84a1e452e26d",
+      "testName": "CanDoItAll.Tests.Integration.ProjectTaskPlanHttpTests.Http_review_and_publication_keep_original_binding_and_reject_duplicate_dispatch",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:29.8014823",
+      "startTime": "2026-10-19T07:26:34.7257674-04:00",
+      "endTime": "2026-10-19T07:27:04.5342393-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "8080d856-d728-4626-aee9-4303cce44c00",
+      "trx": "product-planning-integration.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "snapshotId": "snap-20261019110006-165f3713",
+      "status": "PassForFocusedTesting",
+      "scope": [
+        {
+          "name": "CanDoItAll.AgentFramework.Core",
+          "documents": 239,
+          "references": [
+            "CanDoItAll.AgentFramework.Models"
+          ]
+        },
+        {
+          "name": "CanDoItAll.AgentFramework.Models",
+          "documents": 138,
+          "references": []
+        },
+        {
+          "name": "CanDoItAll.Modules.Workbench",
+          "documents": 386,
+          "references": [
+            "CanDoItAll.AgentFramework.Core",
+            "CanDoItAll.AgentFramework.Models"
+          ]
+        },
+        {
+          "name": "CanDoItAll.Web",
+          "documents": 169,
+          "references": [
+            "CanDoItAll.Modules.Workbench"
+          ]
+        }
+      ],
+      "addedCycles": [],
+      "retainedCycles": [
+        {
+          "level": "Module",
+          "nodeIds": [
+            "mod-proj-candoitall-modules-workbench-candoitall-module-0f477a149fbd",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-719c9c04c259",
+            "mod-proj-candoitall-modules-workbench-candoitall-module-8728e66eb823",
+            "mod-proj-candoitall-modules-workbench-candoitall-modules-workbench"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-152cf43aa7bb",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-1a990fe814d7",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-244216b46507",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-6783a14556a8",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9ad3f723b960",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-9c7b9e7ebdc1",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-ddf87e625d14",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-fb60e0ed084c"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-5b51f78cf7ac",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-dde9fb0d855d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-agentframework-core-candoitall-agen-b442bc8577ed",
+            "type-proj-candoitall-agentframework-core-candoitall-agen-f2201f05f716"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-02c9ba5465b1",
+            "type-proj-candoitall-modules-workbench-candoitall-module-9ba2a3abd2fe"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-0f41c602b1fe",
+            "type-proj-candoitall-modules-workbench-candoitall-module-4b7d2fcd61a3"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-52c32b619f41",
+            "type-proj-candoitall-modules-workbench-candoitall-module-8069c738a25d"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-60d3a4551568",
+            "type-proj-candoitall-modules-workbench-candoitall-module-b68d6311eb55",
+            "type-proj-candoitall-modules-workbench-candoitall-module-c69b5db5dd23"
+          ]
+        },
+        {
+          "level": "Type",
+          "nodeIds": [
+            "type-proj-candoitall-modules-workbench-candoitall-module-683329e17440",
+            "type-proj-candoitall-modules-workbench-candoitall-module-96caa8516513"
+          ]
+        }
+      ],
+      "newProjectReferences": [],
+      "newServiceRegistrations": [],
+      "review": "Core owns current-read checks and immutable review projection; Workbench alone describes task proposal content; Models carry bounded presentation and exact expectations; Web owns strict transport parsing. No new execution-service partial or module dependency. Historical revision codec and OpenAPI transformation reused. Repair bridge: the coordinator now distinguishes never-dispatched pending proposals from uncertain entered work. Both HTTP detail routes explicitly disable caching and map current-read failures. No new type, dependency, registration or ownership boundary. HTTP-only repair routes typed read failures through the shared scoped projection helper before its ordinary not-found catch. Existing handler inputs gain HttpContext; no new service or dependency.",
+      "limitations": [
+        "Full snapshot/dashboard response exceeded tool IPC frame limit; recovered exact snapshot identity via recent snapshots and queried dependency, finding and inventory facts successfully.",
+        "Existing complexity and dependency advisories remain. Direct Models/Core/Workbench/Web Release builds passed. Real host/read revocation/action tests must pass before promotion."
+      ],
+      "focusedCases": {
+        "integration": 2
+      },
+      "productionBuilds": "Passed standard Release",
+      "findingCounts": {
+        "COMPLEXITY-001": 177,
+        "COMPLEXITY-002": 859,
+        "DEPENDENCY-001": 9
+      },
+      "repairOf": "c4-product-planning-review-repair"
+    },
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9355,
+      "runtimeFiles": 6436,
+      "sourceSha256": "8ED403ACB3CD87FCEBBD33F70A0FD7F9ED726FF280CC015C6FE42649B84E41FC",
+      "runtimeSha256": "87121018697383C9E3EF058D5208798EFFF8F8706E70FF73B3974974F9E2A5B4"
+    },
+    "final-resource-reconciliation.json": {
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\u1ac2w4q.tzn",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\fa6f0c6c-f7fc-4dc7-bdd5-25f5afe39a28.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ulg24hqa.hht",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_28912_20261019_072632_822.log",
+          "family": "anonymous-and-package-temp-files"
+        }
+      ],
+      "outcome": "Both HTTP cases passed, including exact revision OpenAPI and all scoped evidence refusals",
+      "remainingObservedProcesses": [],
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-19T11:27:26.5128816+00:00"
+    },
+    "production-bridge.json": {
+      "previousCandidate": "c4-product-planning-review-repair",
+      "unchangedProductionFiles": 5230,
+      "changes": [
+        {
+          "path": "src/App/CanDoItAll.Web/Api/AgentsApi.cs",
+          "before": "EAF4962491A0F9ED490A7A1407CE799519B90F297C9A36C274228B904BE92589",
+          "after": "F3FEE8F125635ABC29877AEE995E13254A66113D7201AD0EAA39B37E71F89F03"
+        }
+      ]
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-19T11:26:20.1667284+00:00",
+      "observerSeconds": 59.0006211,
+      "commands": [
+        {
+          "command": "execute-product-planning-integration",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-19T11:26:32.6021494+00:00",
+          "seconds": 46.0371386
+        }
+      ]
+    },
+    "queryPlans": [],
+    "measurements": []
+  }
+}

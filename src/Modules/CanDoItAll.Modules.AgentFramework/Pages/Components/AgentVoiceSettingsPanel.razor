@@ -1,3 +1,6 @@
+@using CanDoItAll.Editing
+@inject AgentConfigurationChanges ConfigurationChanges
+@inject WorkflowChanges WorkflowChanges
 @using System.Collections.Immutable
 @using CanDoItAll.AgentFramework.UI.Settings
 @using Microsoft.JSInterop
@@ -7,18 +10,26 @@
 @inject NotificationService NotificationService
 @inject IJSRuntime JsRuntime
 @inject ILogger<AgentVoiceSettingsSession> Logger
-@implements IDisposable
+@implements IAsyncDisposable
 
-<VoiceSettingsSurface Presentation="session.Presentation" Intent="HandleIntentAsync" />
+<CanDoItAll.Editing.UI.DraftNavigationGuard EditorName="settings" MustRetain="session.MustRetain" IsBusy="session.Presentation.IsBusy" OutcomeUnknown="session.Presentation.Editor.OutcomeUnknown" />
+<VoiceSettingsSurface Presentation="session.Presentation" Intent="HandleIntentAsync" DraftChanged="Refresh" />
 
 @code {
-    private const string PlayAudioFunction = "CanDoItAll.agentFramework.voice.playAudio";
+    private const string PlayAudioFunction = "CanDoItAll.agentFramework.voice.playAudioForOwner";
+    private const string DisposeAudioFunction = "CanDoItAll.agentFramework.voice.disposeOwner";
+    private readonly string audioOwnerId = $"voice-settings-{Guid.NewGuid():N}";
+    private bool playbackStarted;
     private AgentVoiceSettingsSession session = default!;
     private bool disposed;
+    private AgentSettingsOpening opening = default!;
     protected override async Task OnInitializedAsync() {
-        session = new(VoiceService, ReadProvidersAsync, PlayAsync, Logger);
+        opening = new(ConfigurationChanges, WorkflowChanges, EditingOwner.AgentVoiceSettings, () => !disposed);
+        session = new(VoiceService, ReadProvidersAsync, PlayAsync, Logger, opening);
         session.Changed += Refresh;
-        await session.LoadAsync();
+        if (RendererInfo.IsInteractive) {
+            await OpenAsync();
+        }
     }
     private async Task<ImmutableArray<VoiceSettingsProvider>> ReadProvidersAsync(CancellationToken cancellationToken) {
         var providers = await ProviderRuntimeAdministrationService.ListProvidersAsync(cancellationToken);
@@ -28,7 +39,20 @@
             .Select(provider => new VoiceSettingsProvider(provider.Id, provider.Name, provider.DefaultModel))];
     }
     private async Task PlayAsync(AgentVoiceSynthesisResult result, CancellationToken cancellationToken) {
-        await JsRuntime.InvokeVoidAsync(PlayAudioFunction, cancellationToken, Convert.ToBase64String(result.AudioBytes), result.ContentType);
+        if (disposed || cancellationToken.IsCancellationRequested) {
+            return;
+        }
+        playbackStarted = true;
+        await JsRuntime.InvokeVoidAsync(PlayAudioFunction, cancellationToken, audioOwnerId, Convert.ToBase64String(result.AudioBytes), result.ContentType);
+    }
+    private async Task OpenAsync() {
+        try {
+            await opening.StartAsync(() => InvokeAsync(session.Hint), () => InvokeAsync(session.Retire));
+            await session.LoadAsync();
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            Logger.LogWarning("Settings editor could not open original access ({FailureType}).", failure.GetType().Name);
+            session.Retire();
+        }
     }
     private async Task HandleIntentAsync(VoiceSettingsIntent intent) {
         if (!session.IsCurrent(intent.Generation) || session.Presentation.IsBusy) {
@@ -42,6 +66,8 @@
             NotificationService.Success("Voice settings saved", "AgentFramework voice settings were saved.");
         } else if (session.Presentation.Status is VoiceSettingsStatus.SavedSynthesisFailed or VoiceSettingsStatus.SavedPlaybackFailed) {
             NotificationService.Warning("Voice settings saved", session.Presentation.StatusText);
+        } else if (session.Presentation.Status == VoiceSettingsStatus.Conflict) {
+            NotificationService.Warning("Voice settings changed", session.Presentation.StatusText);
         } else if (session.Presentation.Status == VoiceSettingsStatus.SaveFailed) {
             NotificationService.Error("Voice settings", session.Presentation.StatusText);
         }
@@ -59,11 +85,25 @@
             _ = InvokeAsync(StateHasChanged);
         }
     }
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
+        if (disposed) {
+            return;
+        }
         disposed = true;
         if (session is not null) {
             session.Changed -= Refresh;
             session.Dispose();
+        }
+        if (opening is not null) {
+            await opening.DisposeAsync();
+        }
+        if (playbackStarted) {
+            try {
+                await JsRuntime.InvokeVoidAsync(DisposeAudioFunction, audioOwnerId);
+            } catch (JSDisconnectedException) {
+            } catch (JSException exception) {
+                Logger.LogWarning("Voice playback cleanup failed ({FailureType}) for owner {OwnerId}.", exception.GetType().Name, audioOwnerId);
+            }
         }
     }
 }

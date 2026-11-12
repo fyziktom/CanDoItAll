@@ -1,0 +1,33 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "discover-chat-browser",
+  "Arguments": [
+    "test",
+    "tests/Playwright/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj",
+    "--configuration",
+    "Release",
+    "--no-build",
+    "--no-restore",
+    "-p:UseLocalCanDoItAllLibraries=true",
+    "/m:1",
+    "--filter",
+    "FullyQualifiedName=CanDoItAll.Tests.Playwright.AgentChatSubmissionBrowserTests.Native_chat_retains_original_submissions_across_typing_navigation_and_unconfirmed_outcomes",
+    "--list-tests"
+  ],
+  "StartedUtc": "2026-10-18T17:02:00.8824039+00:00",
+  "State": "Completed",
+  "RunnerPid": 57532,
+  "ChildPid": 55496,
+  "ChildStartedUtc": "2026-10-18T17:02:00.9192735Z",
+  "ExitCode": 0,
+  "Seconds": 1.448043,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 369,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

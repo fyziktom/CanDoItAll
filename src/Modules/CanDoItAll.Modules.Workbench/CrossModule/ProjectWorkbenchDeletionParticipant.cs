@@ -15,9 +15,9 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
     IDbContextFactory<WorkbenchDbContext> dbContextFactory,
     DbContextOptions<WorkbenchDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction,
-    ProjectWriteAdmissionService admissions) : IProjectDeletionParticipant
+    ProjectWriteAdmissionService admissions, IProjectCreationCompensationGuard creationCleanup) : IProjectDeletionParticipant
 {
-    private const string ProjectDeletionScopeNodeKey = "project";
+    internal const string ProjectDeletionScopeNodeKey = "project";
     private const int CompletionLockStripeCount = 64;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly SemaphoreSlim[] CompletionLockStripes = Enumerable
@@ -25,55 +25,70 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         .Select(static _ => new SemaphoreSlim(1, 1))
         .ToArray();
 
-    public ProjectDeletionParticipantId Id { get; } = new("workbench");
+    internal const string ParticipantIdValue = "workbench";
+    public ProjectDeletionParticipantId Id { get; } = new(ParticipantIdValue);
+    public int RecoveryProtocolVersion => ProjectWorkbenchDeletionPayload.RecoveryProtocolVersion;
 
     public IReadOnlyCollection<ProjectDeletionPreparationScopeKey> PreparationScopeKeys { get; } =
     [
         new(ProjectStructureSerializableMutationScope.ManagedStorageBindingScopeKey)
     ];
 
-    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(
-        Guid projectId, CancellationToken cancellationToken = default) {
-        await using var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
+    public Task<ProjectDeletionParticipantPreparation?> PrepareAsync(Guid projectId,
+        CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Project cleanup preparation requires the original typed deletion completion context.");
+
+    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectDeletionPreparationContext original,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        await admissions.RequireForMutationAsync(original.Project, cancellationToken);
+        var dbContext = await coordinatedTransaction.CreateEnlistedAsync(
             contextOptions, static options => new WorkbenchDbContext(options), cancellationToken);
-        var preparation = await PrepareCoreAsync(dbContext, projectId, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return preparation;
+        Exception? primary = null;
+        try {
+            coordinatedTransaction.RequireOwnerProfile(dbContext);
+            var preparation = await PrepareCoreAsync(dbContext, original, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return preparation;
+        } catch (Exception failure) {
+            primary = failure;
+            throw;
+        } finally {
+            try {
+                await dbContext.DisposeAsync();
+            } catch (Exception cleanup) when (primary is not null) {
+                throw new AggregateException("Workbench deletion preparation and enlisted context release failed.", primary, cleanup);
+            }
+        }
     }
 
-    private async Task<ProjectDeletionParticipantPreparation?> PrepareCoreAsync(
-        WorkbenchDbContext dbContext,
-        Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
-        var active = await admissions.CaptureForMutationAsync(projectId, cancellationToken);
-        if (active is not null) {
-            await admissions.RequireForMutationAsync(active, cancellationToken);
+    public async Task<ProjectDeletionParticipantPreparation?> PrepareAsync(ProjectReservationCancellationPreparationContext original,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        await admissions.RequireReservedCancellationForMutationAsync(original, cancellationToken);
+        if (!await creationCleanup.CanCancelReservationForMutationAsync(original, cancellationToken)) {
+            throw new InvalidOperationException("The never-created reservation retains Workbench, party or storage state requiring explicit reconciliation.");
         }
+        return null;
+    }
+
+    private async Task<ProjectDeletionParticipantPreparation?> PrepareCoreAsync(WorkbenchDbContext dbContext,
+        ProjectDeletionPreparationContext original, CancellationToken cancellationToken) {
+        var projectId = original.Project.ProjectId;
         var sourceProjectMutations = await dbContext.Set<ProjectCrossModuleMutationRecord>()
             .Where(record => record.ProjectId == projectId)
             .ToListAsync(cancellationToken);
         var projectObjects = await LoadProjectObjectsAsync(dbContext, projectId, cancellationToken);
         var allProjectMutations = sourceProjectMutations
             .Where(record => record.MutationKind == ProjectCrossModuleMutationKind.DeleteProject).ToArray();
-        var reference = active is not null ? ProjectAssignmentReference.From(active)
-            : allProjectMutations.Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)
-                .OrderByDescending(record => record.CreatedAtUtc)
-                .Select(record => DeserializeProjectPayload(record.PayloadJson).SourceReference)
-                .FirstOrDefault(candidate => candidate?.LifetimeId is not null);
-        if (reference is null) {
-            if (projectObjects.Count > 0 || allProjectMutations.Any(record => record.Status != ProjectCrossModuleMutationStatus.Completed)) {
-                throw new InvalidOperationException("Project deletion has unbound retained state and requires reconciliation by its original mutation identity.");
-            }
-            return null;
-        }
+        var reference = ProjectAssignmentReference.From(original.Project);
         reference.RequireProfile(admissions.DatabaseProfileId, projectId);
-        if (active is null && projectObjects.Count > 0) {
-            throw new InvalidOperationException("Orphan native rows cannot be attributed to a retired project lifetime during cleanup replay.");
-        }
         var projectMutations = allProjectMutations
-            .Where(record => DeserializeProjectPayload(record.PayloadJson).SourceReference == reference)
+            .Where(record => ProjectWorkbenchDeletionPayload.Read(record).SourceReference == reference)
             .ToList();
+        if (projectMutations.Any(record => ProjectWorkbenchDeletionPayload.Read(record).CompletionContext != original)) {
+            throw new InvalidOperationException("A retained cleanup for this lifetime belongs to another or legacy deletion completion. Explicit reconciliation is required.");
+        }
         var existingMutation = projectMutations
             .Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)
             .OrderByDescending(record => record.CreatedAtUtc)
@@ -121,7 +136,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
 
         var existingPayload = existingMutation is null
             ? null
-            : DeserializeProjectPayload(existingMutation.PayloadJson);
+            : ProjectWorkbenchDeletionPayload.Read(existingMutation);
         if (existingMutation?.Status == ProjectCrossModuleMutationStatus.Completed &&
             !hasNewDeletionWork &&
             outstandingMutationIds.Length == 0)
@@ -170,7 +185,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
                 managedStorageObjects,
                 managedStorageOutcomes,
                 outstandingMutationIds,
-                managedStorageCandidates, reference),
+                managedStorageCandidates, reference, original),
             JsonOptions);
 
         var durableMutation = existingMutation;
@@ -240,9 +255,11 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
                     $"Workbench project cleanup '{preparation.RecoveryId:D}' does not belong to project '{preparation.ProjectId:D}'.");
             }
 
-            payload = DeserializeProjectPayload(mutation.PayloadJson);
+            payload = ProjectWorkbenchDeletionPayload.Read(mutation);
         }
 
+        await mutationProcessor.RequireProjectDeletionReleaseAsync(preparation.ProjectId, preparation.RecoveryId,
+            payload, cancellationToken);
         await RequireNoResidualProjectStateAsync(
             preparation.ProjectId,
             preparation.RecoveryId,
@@ -283,7 +300,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
                         record.Id == preparation.RecoveryId &&
                         record.ProjectId == preparation.ProjectId,
                     cancellationToken);
-            payload = DeserializeProjectPayload(completedMutation.PayloadJson);
+            payload = ProjectWorkbenchDeletionPayload.Read(completedMutation);
         }
 
         var completionWarnings = await LoadRetainedCompletionWarningsAsync(
@@ -344,16 +361,65 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
             dbContext,
             clock,
             cancellationToken);
-        return mutations
-            .Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)
-            .Select(record => new ProjectDeletionParticipantRecovery(
-                record.ProjectId,
-                record.Id,
-                MapRecoveryStatus(record.Status),
-                CanRetryNow(record, now, processingOptions.LeaseDuration),
-                ResolveRetryAvailableAtUtc(record, processingOptions.LeaseDuration),
-                "Retry the exact durable project-cleanup operation after resolving the storage or assignment failure."))
-            .ToArray();
+        var recoveries = new List<ProjectDeletionParticipantRecovery>();
+        foreach (var record in mutations.Where(record => record.Status != ProjectCrossModuleMutationStatus.Completed)) {
+            var payload = ProjectWorkbenchDeletionPayload.Read(record);
+            var released = payload.CompletionContext is not null &&
+                await mutationProcessor.ObserveProjectDeletionReleaseAsync(record.ProjectId, record.Id, payload, cancellationToken)
+                    is ProjectDeletionCompletionObservation.Released;
+            recoveries.Add(new(record.ProjectId, record.Id, MapRecoveryStatus(record.Status),
+                released && CanRetryNow(record, now, processingOptions.LeaseDuration),
+                released ? ResolveRetryAvailableAtUtc(record, processingOptions.LeaseDuration) : null,
+                released ? "Retry the exact durable project-cleanup operation after resolving the storage or assignment failure."
+                    : "Retain the original recovery. Deletion owner release or explicit legacy reconciliation is required before retry."));
+        }
+        return recoveries;
+    }
+
+    public async Task<ProjectDeletionParticipantObservation> ObserveCompletionAsync(ProjectDeletionPreparationContext original,
+        Guid recoveryId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(original);
+        if (recoveryId == Guid.Empty) {
+            throw new ArgumentException("Exact deletion completion observation requires a recovery identity.", nameof(recoveryId));
+        }
+        var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        Exception? readFailure = null;
+        ProjectCrossModuleMutationRecord? record;
+        try {
+            if (context.Database.CurrentTransaction is not null || System.Transactions.Transaction.Current is not null ||
+                    context.Database.IsRelational() && System.Transactions.TransactionsDatabaseFacadeExtensions.GetEnlistedTransaction(context.Database) is not null ||
+                    context.ChangeTracker.Entries().Any()) {
+                throw new InvalidOperationException("Deletion participant observation requires an independent read context.");
+            }
+            coordinatedTransaction.RequireOwnerProfile(context);
+            record = await context.Set<ProjectCrossModuleMutationRecord>().AsNoTracking()
+                .SingleOrDefaultAsync(row => row.Id == recoveryId, cancellationToken);
+        } catch (Exception failure) {
+            readFailure = failure;
+            throw;
+        } finally {
+            try {
+                await context.DisposeAsync();
+            } catch (Exception cleanupFailure) when (readFailure is not null) {
+                throw new AggregateException("Deletion participant observation and context disposal both failed.", readFailure, cleanupFailure);
+            }
+        }
+        if (record is null) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.MissingRecord);
+        }
+        if (record.ProjectId != original.Project.ProjectId || record.MutationKind != ProjectCrossModuleMutationKind.DeleteProject) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.OriginalBindingMismatch);
+        }
+        var payload = ProjectWorkbenchDeletionPayload.Read(record);
+        if (!ProjectWorkbenchDeletionPayload.Matches(payload, original)) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.OriginalBindingMismatch);
+        }
+        if (!Enum.IsDefined(record.Status)) {
+            return new ProjectDeletionParticipantObservation.Unavailable(ProjectDeletionParticipantObservationFailure.InvalidStoredState);
+        }
+        return record.Status == ProjectCrossModuleMutationStatus.Completed
+            ? new ProjectDeletionParticipantObservation.Completed(new(recoveryId, MapCompletionWarnings(payload.ManagedStorageOutcomes)))
+            : new ProjectDeletionParticipantObservation.Pending(MapRecoveryStatus(record.Status));
     }
 
     public async Task<IReadOnlyList<ProjectDeletionParticipantCompletionNotice>> ListCompletionNoticesAsync(
@@ -416,7 +482,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
             ProjectCrossModuleMutationKind.DeleteSubtree =>
                 DeserializeSubtreePayload(mutation.PayloadJson).ManagedStorageOutcomes ?? [],
             ProjectCrossModuleMutationKind.DeleteProject =>
-                DeserializeProjectPayload(mutation.PayloadJson).ManagedStorageOutcomes ?? [],
+                ProjectWorkbenchDeletionPayload.Read(mutation).ManagedStorageOutcomes ?? [],
             _ => []
         };
     }
@@ -496,7 +562,7 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
                 DeserializeSubtreePayload(mutation.PayloadJson).ManagedStorageOutcomes?.Any(
                     outcome => outcome.Kind != ProjectManagedStorageDeletionOutcomeKind.DeletedOrAlreadyAbsent) == true,
             ProjectCrossModuleMutationKind.DeleteProject =>
-                DeserializeProjectPayload(mutation.PayloadJson).ManagedStorageOutcomes?.Any(
+                ProjectWorkbenchDeletionPayload.Read(mutation).ManagedStorageOutcomes?.Any(
                     outcome => outcome.Kind != ProjectManagedStorageDeletionOutcomeKind.DeletedOrAlreadyAbsent) == true,
             ProjectCrossModuleMutationKind.MoveDescendants or
                 ProjectCrossModuleMutationKind.MoveSelectedNodes => false,
@@ -582,15 +648,6 @@ internal sealed class ProjectWorkbenchDeletionParticipant(
         dbContext.RemoveRange(analytics);
         dbContext.RemoveRange(projectLeases);
         dbContext.RemoveRange(projectObjects);
-    }
-
-    private static DeleteProjectMutationPayload DeserializeProjectPayload(string payloadJson)
-    {
-        return JsonSerializer.Deserialize<DeleteProjectMutationPayload>(
-                   string.IsNullOrWhiteSpace(payloadJson) ? "{}" : payloadJson,
-                   JsonOptions)
-               ?? throw new InvalidOperationException(
-                   "Unable to deserialize the durable Workbench project-deletion payload.");
     }
 
     private static IReadOnlyList<ProjectManagedStorageDeletionCandidate> ResolveDeletionCandidates(

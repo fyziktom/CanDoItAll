@@ -1,0 +1,68 @@
+@page "/simple-chat-dialogs"
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
+
+<PageTitle>Simple Chat dialog sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Medium" Class="p-6">
+    <PageHeader Title="Simple Chat dialogs" Description="Actual Start, Rename and Archive forms with independent sample owners." Compact="true" />
+    <Cluster Gap="LayoutGap.Small">
+        @foreach (var scenario in Enum.GetValues<DialogScenario>()) {
+            <Button Text="@scenario.ToString()" Click="@(() => Apply(scenario))" data-testid="@($"dialog-scenario-{scenario}")" />
+        }
+    </Cluster>
+    <output aria-live="polite" data-testid="dialog-intent">@intentText</output>
+    <output data-testid="dialog-current">@state.Origin.Kind / @state.Title</output>
+    <output data-testid="dialog-neighbor">@neighbor.Origin.Kind / @neighbor.Title</output>
+</Stack>
+<LlmChatConversationDialogSurface Presentation="state" Intent="CurrentIntent" />
+<LlmChatConversationDialogSurface Presentation="neighbor" Intent="NeighborIntent" />
+<Tooltip />
+
+@code {
+    [SupplyParameterFromQuery(Name = "scenario")] public string? Scenario { get; set; }
+    private enum DialogScenario { Start, Empty, Loading, Busy, Rename, Archive, Independent }
+    private ConversationDialogPresentation state = new(new(0, ConversationDialogKind.None));
+    private ConversationDialogPresentation neighbor = new(new(0, ConversationDialogKind.None));
+    private long generation;
+    private string intentText = "No intent yet.";
+
+    protected override void OnParametersSet()
+        => Apply(Enum.TryParse<DialogScenario>(Scenario, true, out var parsed) && Enum.IsDefined(parsed) ? parsed : DialogScenario.Start);
+
+    private void Apply(DialogScenario scenario) {
+        var kind = scenario switch {
+            DialogScenario.Rename or DialogScenario.Independent => ConversationDialogKind.Rename,
+            DialogScenario.Archive => ConversationDialogKind.Archive,
+            _ => ConversationDialogKind.Start
+        };
+        state = new(new(++generation, kind, kind == ConversationDialogKind.Start ? null : DefinitionCatalogSandboxFixture.DefinitionA),
+            kind == ConversationDialogKind.Start ? "" : "Retained conversation", Definitions: [DefinitionCatalogSandboxFixture.Card()], HasMoreDefinitions: true);
+        state = scenario switch {
+            DialogScenario.Empty => state with { Definitions = [], HasMoreDefinitions = false },
+            DialogScenario.Loading => state with { Definitions = [], IsLoading = true },
+            DialogScenario.Busy => state with { IsMutating = true, Title = "Starting conversation", SelectedDefinitionId = DefinitionCatalogSandboxFixture.DefinitionA },
+            _ => state
+        };
+        neighbor = new(new(++generation, scenario == DialogScenario.Independent ? ConversationDialogKind.Rename : ConversationDialogKind.None,
+            DefinitionCatalogSandboxFixture.DefinitionB), "Independent conversation");
+    }
+
+    private void CurrentIntent(ConversationDialogIntent intent) => state = Accept(state, intent);
+    private void NeighborIntent(ConversationDialogIntent intent) => neighbor = Accept(neighbor, intent);
+
+    private ConversationDialogPresentation Accept(ConversationDialogPresentation current, ConversationDialogIntent intent) {
+        if (current.Origin != intent.Origin) {
+            return current;
+        }
+        intentText = $"Sample {intent.Action}: opening {intent.Origin.Generation}, conversation {intent.Origin.ConversationId}, definition {intent.DefinitionId}. No native effect.";
+        return intent.Action switch {
+            ConversationDialogAction.TitleChanged => current with { Title = intent.Text ?? "" },
+            ConversationDialogAction.SelectDefinition => current with { SelectedDefinitionId = intent.DefinitionId, Title = "Research conversation" },
+            ConversationDialogAction.LoadMoreDefinitions => current with {
+                Definitions = current.Definitions.Add(DefinitionCatalogSandboxFixture.Card(DefinitionCatalogSandboxFixture.DefinitionB) with { Name = "Independent researcher" }),
+                HasMoreDefinitions = false, IsLoading = false
+            },
+            ConversationDialogAction.Close or ConversationDialogAction.Confirm => current with { Origin = current.Origin with { Generation = ++generation, Kind = ConversationDialogKind.None } },
+            _ => current
+        };
+    }
+}

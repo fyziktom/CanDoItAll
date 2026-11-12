@@ -22,7 +22,7 @@ public sealed class AgentVoiceDriverFactory(ProviderRuntimeVoiceDriver providerR
     {
         if (driverKind != AgentVoiceDriverKind.OpenAi)
         {
-            throw new InvalidOperationException($"{capabilityName} driver '{driverKind}' is not registered.");
+            throw new AgentVoiceException(AgentVoiceFailureKind.CapabilityUnavailable, $"{capabilityName} driver '{driverKind}' is not registered.");
         }
     }
 }

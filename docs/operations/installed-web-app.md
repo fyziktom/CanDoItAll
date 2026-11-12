@@ -28,6 +28,10 @@ Run the canonical installer from the repository root:
 The default install root is `%LOCALAPPDATA%\CanDoItAll\WebApp`. The legacy
 `tools\Install-CanDoItAllWebApp.ps1` path forwards to the canonical script.
 
+Installation can run from Windows PowerShell or PowerShell 7. Background startup uses
+Windows PowerShell with its own module discovery, so an inherited PowerShell 7 module
+path does not prevent it from reading the protected database credential.
+
 The web installer calls the database installer automatically. Run the database-only entry
 point when repairing or validating an existing installation:
 
@@ -182,7 +186,7 @@ copy it out:
 ```powershell
 $databaseRoot = Join-Path $env:LOCALAPPDATA "CanDoItAll\WebApp\runtime\database"
 $manifest = Get-Content (Join-Path $databaseRoot "database-manifest.json") -Raw | ConvertFrom-Json
-$securePassword = Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw | ConvertTo-SecureString
+$securePassword = (Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw).Trim() | ConvertTo-SecureString
 $credential = [pscredential]::new($manifest.appUsername, $securePassword)
 $plainPassword = $null
 $pgPassLine = $null
@@ -229,7 +233,7 @@ application credential without printing it:
 ```powershell
 $databaseRoot = Join-Path $env:LOCALAPPDATA "CanDoItAll\WebApp\runtime\database"
 $manifest = Get-Content (Join-Path $databaseRoot "database-manifest.json") -Raw | ConvertFrom-Json
-$securePassword = Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw | ConvertTo-SecureString
+$securePassword = (Get-Content (Join-Path $databaseRoot $manifest.appPasswordFile) -Raw).Trim() | ConvertTo-SecureString
 $credential = [pscredential]::new($manifest.appUsername, $securePassword)
 $pgDump = Join-Path $databaseRoot (Join-Path $manifest.native.binPath "pg_dump.exe")
 $hadPgPassword = Test-Path Env:\PGPASSWORD

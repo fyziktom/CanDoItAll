@@ -39,6 +39,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
             projects,
             scope.ServiceProvider.GetRequiredService<IWorkspacePathAccessGuard>());
         var before = await capture.CaptureAsync(projectId);
+        var originalGraph = ProjectStructureGraphStateGuard.Capture(await workbench.GetStructureAsync(projectId));
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
             Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
@@ -88,7 +89,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
                 ["projectId"] = projectId,
                 ["request"] = new ProjectStructureNodesCopyInput(
                     [fixture.SourceRoot.Id, fixture.SourceAsset.Id],
-                    fixture.Destination.Id)
+                    fixture.Destination.Id) { ExpectedGraph = originalGraph }
             });
         var after = await capture.CaptureAsync(projectId);
 
@@ -238,6 +239,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
             projects,
             scope.ServiceProvider.GetRequiredService<IWorkspacePathAccessGuard>());
         var before = await capture.CaptureAsync(projectId);
+        var originalGraph = ProjectStructureGraphStateGuard.Capture(await workbench.GetStructureAsync(projectId));
         var tools = await CreateToolsAsync(scope.ServiceProvider, projectId);
         var copyTool = Assert.IsAssignableFrom<AIFunction>(
             Assert.Single(tools, tool => tool.Name == ProjectStructureToolPolicy.ProjectStructureNodesCopy));
@@ -250,7 +252,7 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
                     ["projectId"] = projectId,
                     ["request"] = new ProjectStructureNodesCopyInput(
                         [source.Id],
-                        destination.Id)
+                        destination.Id) { ExpectedGraph = originalGraph }
                 }));
 
         Assert.Equal("NodeCopyTaskAuthorityRequired", exception.ErrorCode);
@@ -287,12 +289,14 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
                 project.Id);
         }
 
+        var originalGraphRead = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest { IncludeMutationGraph = true });
         var result = await PostAndReadAsync<ProjectStructureNodesCopyResult>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/nodes/copy",
             new ProjectStructureNodesCopyInput(
                 [fixture.SourceRoot.Id],
-                fixture.Destination.Id));
+                fixture.Destination.Id) { ExpectedGraph = originalGraphRead.ExpectedGraph });
         var copiedAssetId = Assert.Single(
             result.NodeMappings,
             mapping => mapping.SourceNodeId == fixture.SourceAsset.Id).CopiedNodeId;
@@ -327,11 +331,13 @@ public sealed class ProjectStructureNodeCopyBoundaryTests
             rejectionScope.ServiceProvider.GetRequiredService<IWorkspacePathAccessGuard>());
         var beforeRejectedCopy = await capture.CaptureAsync(project.Id);
 
+        var rejectedGraphRead = await PostAndReadAsync<ProjectStructureReadResponse>(host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read", new ProjectStructureReadRequest { IncludeMutationGraph = true });
         using var rejectedCopyResponse = await host.Client.PostAsJsonAsync(
             $"/api/project-structure/projects/{project.Id:D}/nodes/copy",
             new ProjectStructureNodesCopyInput(
                 [taskSource.Id],
-                fixture.Destination.Id));
+                fixture.Destination.Id) { ExpectedGraph = rejectedGraphRead.ExpectedGraph });
         var rejectedCopyBody = await rejectedCopyResponse.Content.ReadFromJsonAsync<ProjectStructureCopyApiError>();
 
         Assert.Equal(System.Net.HttpStatusCode.Conflict, rejectedCopyResponse.StatusCode);

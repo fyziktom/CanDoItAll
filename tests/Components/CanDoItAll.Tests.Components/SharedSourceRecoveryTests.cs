@@ -22,7 +22,7 @@ public sealed class SharedSourceRecoveryTests {
         Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-source-unresolved']"));
         Assert.Equal(1, proxy.Writes);
         Assert.Contains("Add shared provider source", cut.Markup, StringComparison.Ordinal);
-        Assert.False(cut.FindComponents<Button>().Single(button => button.Instance.Text == "Save source").Instance.IsBusy);
+        Assert.False(cut.FindComponents<Button>().Single(button => button.FindAll("[data-testid='shared-provider-source-save']").Count == 1).Instance.IsBusy);
     }
 
     [Fact]
@@ -38,11 +38,13 @@ public sealed class SharedSourceRecoveryTests {
         var reopened = Render(harness, proxy, changes);
         Assert.True(reopened.WaitForElement("[data-testid='shared-provider-source-add']").HasAttribute("disabled"));
         await reopened.Find("[data-testid='shared-provider-source-verify']").ClickAsync();
-        Assert.Empty(reopened.FindAll("[data-testid='shared-provider-source-unresolved']"));
-        Assert.False(reopened.Find("[data-testid='shared-provider-source-add']").HasAttribute("disabled"));
+        Assert.NotEmpty(reopened.FindAll("[data-testid='shared-provider-source-unresolved']"));
+        Assert.True(reopened.Find("[data-testid='shared-provider-source-add']").HasAttribute("disabled"));
+        await reopened.Find("[data-testid='shared-source-review-pending']").ClickAsync();
+        Assert.NotNull(reopened.Find("[data-testid='shared-source-comparison-apply']"));
         Assert.Equal(candidate, Assert.Single(proxy.Sources).Source.Id);
         Assert.Equal(1, proxy.Writes);
-        Assert.Single(changes, change => change.CommitState == SharedProviderCommitState.Committed);
+        Assert.DoesNotContain(changes, change => change.CommitState == SharedProviderCommitState.Committed);
     }
 
     [Fact]
@@ -60,25 +62,22 @@ public sealed class SharedSourceRecoveryTests {
     }
 
     [Fact]
-    public async Task Classified_source_verification_clears_errors_and_unlocks() {
+    public async Task Missing_source_readback_keeps_the_unconfirmed_create_blocked() {
         var service = CreateService(out var proxy);
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddSingleton(service));
         var cut = Render(harness, proxy);
         await StartCreateAsync(cut);
-        var candidate = proxy.Request!.Id;
         await cut.Find("[data-testid='shared-provider-source-verify']").ClickAsync();
         Assert.Equal(1, proxy.Writes);
-        await cut.Find("[data-testid='shared-provider-source-retry-verified']").ClickAsync();
-        Assert.Equal(2, proxy.Writes);
-        Assert.Equal(candidate, proxy.Request.Id);
-        Assert.Equal(candidate, Assert.Single(proxy.Sources).Source.Id);
-        Assert.Empty(cut.FindAll("[data-testid='shared-provider-source-unresolved']"));
-        Assert.DoesNotContain("unconfirmed", cut.Markup, StringComparison.Ordinal);
-        Assert.False(cut.Find("[data-testid='shared-provider-source-add']").HasAttribute("disabled"));
+        Assert.Empty(proxy.Sources);
+        Assert.NotEmpty(cut.FindAll("[data-testid='shared-provider-source-unresolved']"));
+        Assert.Empty(cut.FindAll("[data-testid='shared-source-review-pending']"));
+        Assert.Contains("earlier outcome remains unconfirmed", cut.Markup, StringComparison.Ordinal);
+        Assert.True(cut.Find("[data-testid='shared-provider-source-add']").HasAttribute("disabled"));
     }
 
     [Fact]
-    public async Task Source_verification_publishes_committed_change_once() {
+    public async Task Matching_source_readback_does_not_publish_a_commit() {
         var service = CreateService(out var proxy);
         proxy.CommitBeforeFailure = true;
         var changes = new List<SharedProviderChange>();
@@ -90,7 +89,7 @@ public sealed class SharedSourceRecoveryTests {
         await cut.Find("[data-testid='shared-provider-connections-close']").ClickAsync();
         var reopened = Render(harness, proxy, changes);
         reopened.WaitForElement("[data-testid='shared-provider-source-add']");
-        Assert.Single(changes, change => change.CommitState == SharedProviderCommitState.Committed);
+        Assert.DoesNotContain(changes, change => change.CommitState == SharedProviderCommitState.Committed);
         Assert.Equal(1, proxy.Writes);
     }
 
@@ -150,8 +149,8 @@ public sealed class SharedSourceRecoveryTests {
 
     private static async Task StartCreateAsync(IRenderedComponent<SharedProviderSourcesDialog> cut) {
         await cut.WaitForElement("[data-testid='shared-provider-source-add']").ClickAsync();
-        cut.Find("[data-testid='shared-provider-source-name']").Change("Recovery source");
-        cut.Find("[data-testid='shared-provider-source-uri']").Change("https://source.example.test/");
+        cut.Find("[data-testid='shared-provider-source-name']").Input("Recovery source");
+        cut.Find("[data-testid='shared-provider-source-uri']").Input("https://source.example.test/");
         await cut.Find("[data-testid='shared-provider-source-save']").ClickAsync();
     }
 

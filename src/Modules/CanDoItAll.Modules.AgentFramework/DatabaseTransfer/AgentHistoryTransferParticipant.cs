@@ -9,6 +9,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 public sealed class AgentHistoryTransferParticipant(DatabaseTransferOwnerSessionRunner sessions,
     IProjectTransferReferenceQuery projects) : IHistoryTransferParticipant {
     public HistorySourceKind Kind => HistorySourceKind.AgentConversation;
+    public IReadOnlyCollection<Type> TargetEntityTypes { get; } = [typeof(AgentHistoryLocator), .. projects.TargetEntityTypes];
 
     public async Task ValidateTargetAsync(DatabaseTransferOwnerRequest transfer, CancellationToken cancellationToken) {
         await using var target = await sessions.CreateTargetAsync<AgentHistoryDbContext>(transfer, static options => new AgentHistoryDbContext(options), cancellationToken);

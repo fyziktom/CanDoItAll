@@ -2,3 +2,7 @@
     min-width: 0;
     overflow-wrap: anywhere;
 }
+
+.history-results-surface ::deep button {
+    white-space: nowrap;
+}

@@ -4554,6 +4554,7 @@ public sealed class AgentToolInvocationPolicyTests
         var expectedReadTools = new[]
         {
             ProjectStructureToolPolicy.ProjectStructureProjectsList,
+            ProjectStructureToolPolicy.ProjectStructureProjectDefinitionGet,
             ProjectStructureToolPolicy.ProjectStructureHierarchyGet,
             ProjectStructureToolPolicy.ProjectStructureRead,
             ProjectStructureToolPolicy.ProjectStructureNodeCatalog,
@@ -4930,12 +4931,14 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
     [InlineData(ToolContractCatalog.BrowserWaitFor)]
+    [InlineData(ToolContractCatalog.BrowserClose)]
+    [InlineData(ToolContractCatalog.BrowserHover)]
     public async Task EvaluateAsync_denies_browser_tools_without_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            ToolInvocationClassification.Read,
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
@@ -4959,12 +4962,14 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(ToolContractCatalog.BrowserPressKey)]
     [InlineData(ToolContractCatalog.BrowserType)]
     [InlineData(ToolContractCatalog.BrowserWaitFor)]
+    [InlineData(ToolContractCatalog.BrowserClose)]
+    [InlineData(ToolContractCatalog.BrowserHover)]
     public async Task EvaluateAsync_allows_browser_tools_with_capture_runtime_proof_operation(string toolName)
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
             toolName,
-            ToolInvocationClassification.Read,
+            AgentToolInvocationPolicyMetadata.Classify(toolName, ProductToolPolicies),
             isKnownTool: true,
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,

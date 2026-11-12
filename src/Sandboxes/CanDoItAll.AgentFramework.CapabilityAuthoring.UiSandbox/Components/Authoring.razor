@@ -1,0 +1,96 @@
+@page "/"
+@page "/authoring/{Scenario}"
+@implements IDisposable
+
+<PageTitle>Capability authoring sandbox</PageTitle>
+<div class="authoring-sandbox" data-testid="authoring-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
+<Stack GapScale="LayoutGap.Medium">
+    <Cluster Gap="LayoutGap.Medium">
+        <h1>Capability authoring sandbox</h1>
+        <label>Scenario
+            <select value="@selected" @onchange="SelectScenario" class="cda-input" data-testid="authoring-scenario">
+                @foreach (var value in Enum.GetValues<AuthoringScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </select>
+        </label>
+        <Button Text="Open dialog" Click="() => dialogOpen = true" data-testid="authoring-open-dialog" />
+        <Button Text="Second editor" Click="() => secondOpen = true" data-testid="authoring-second-editor" />
+        <Button Text="Replace editor" Click="Replace" data-testid="authoring-replace" />
+        <Button Text="Release held operation" Click="fixture.Release" data-testid="authoring-release" />
+    </Cluster>
+    <Alert AlertStyle="AlertStyle.Info">Independent deterministic fixtures. Setup counters here represent simulated responses; native process, HTTP, MCP and owner authority are validated in the application journeys.</Alert>
+    <p role="status" data-testid="authoring-fixture-state">Definitions: @fixture.DefinitionCount; saves: @fixture.Saves; setups: @fixture.Setups; accepted: @accepted</p>
+    <SurfaceCard>
+        <CapabilityAuthoringForm @key="activation" Operations="fixture.Operations" Mode="fixture.Mode" CapabilityId="fixture.CapabilityId" InitialKind="fixture.InitialKind"
+                                 OwnerCancellationToken="lifetime.Token" Completed="Saved" Cancelled="Replace" TagSuggestions="Tags" />
+    </SurfaceCard>
+</Stack>
+</div>
+@if (dialogOpen) {
+    <Dialog IsOpen="true" Title="Capability authoring" Size="ModalSize.Wide" DenseChrome="true" OnClose="() => dialogOpen = false" TestId="authoring-dialog">
+        <ChildContent>
+            <CapabilityAuthoringForm Operations="fixture.Operations" Mode="fixture.Mode" CapabilityId="fixture.CapabilityId" InitialKind="fixture.InitialKind"
+                                     Completed="id => DialogSaved(id)" Cancelled="() => dialogOpen = false" />
+        </ChildContent>
+    </Dialog>
+}
+@if (secondOpen) {
+    <Dialog IsOpen="true" Title="Independent second editor" Size="ModalSize.Wide" DenseChrome="true" OnClose="() => secondOpen = false" TestId="authoring-second-dialog">
+        <ChildContent>
+            <CapabilityAuthoringForm Operations="second.Operations" Mode="second.Mode" CapabilityId="second.CapabilityId" InitialKind="second.InitialKind"
+                                     Completed="id => secondOpen = false" Cancelled="() => secondOpen = false" />
+        </ChildContent>
+    </Dialog>
+}
+
+@code {
+    [Parameter] public string? Scenario { get; set; }
+    private AuthoringScenario selected;
+    private CapabilityAuthoringScenario fixture = new(AuthoringScenario.NewMcp);
+    private readonly CapabilityAuthoringScenario second = new(AuthoringScenario.NewSkill);
+    private CancellationTokenSource lifetime = new();
+    private Guid activation = Guid.NewGuid();
+    private Guid? accepted;
+    private bool dialogOpen;
+    private bool secondOpen;
+    private bool interactive;
+    private static IReadOnlyList<string> Tags { get; } = ["fixture", "authoring", "review"];
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+    protected override void OnParametersSet() {
+        if (Enum.TryParse<AuthoringScenario>(Scenario, true, out var scenario) && selected != scenario) {
+            selected = scenario;
+            Replace();
+        }
+    }
+    private void SelectScenario(ChangeEventArgs args) {
+        selected = Enum.Parse<AuthoringScenario>(args.Value!.ToString()!);
+        Replace();
+    }
+    private void Replace() {
+        lifetime.Cancel();
+        lifetime.Dispose();
+        lifetime = new();
+        fixture.Release();
+        fixture = new(selected);
+        activation = Guid.NewGuid();
+        accepted = null;
+        dialogOpen = false;
+    }
+    private void Saved(Guid id) => accepted = id;
+    private void DialogSaved(Guid id) {
+        accepted = id;
+        dialogOpen = false;
+    }
+    public void Dispose() {
+        lifetime.Cancel();
+        lifetime.Dispose();
+        fixture.Release();
+        second.Release();
+    }
+}

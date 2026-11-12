@@ -14,6 +14,8 @@ public sealed partial class FileSandboxWorkspaceStore :
     ISandboxWorkspaceChatProjectionQueryStore,
     ISandboxWorkspaceChatSessionStore,
     ISandboxWorkspaceExecutionRunStore,
+    ISandboxWorkspaceProcessRunPageStore,
+    ISandboxWorkspaceProcessRunIndexPreparation,
     ISandboxWorkspaceChatRunStartStore,
     ISandboxWorkspaceExecutionRunMutationStore,
     ISandboxWorkspaceExecutionRunLeaseStore,
@@ -23,21 +25,29 @@ public sealed partial class FileSandboxWorkspaceStore :
     private const string ChatBackedRunCommitJournalVersion = "1.0";
     private const string GenericNewRunCommitJournalVersion = "1.0";
     private const string ExistingRunDetailCommitJournalVersion = "1.0";
-    private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly FileSandboxWorkspaceCoordinationGate gate;
     private readonly FileSandboxWorkspaceStorageLayout layout;
     private readonly FileSandboxWorkspaceJsonStore jsonStore;
+    private readonly FileSandboxWorkspaceCatalogNormalizer catalogNormalizer;
     private readonly FileSandboxWorkspaceExecutionSliceStore executionSliceStore;
     private readonly FileSandboxWorkspaceChatProjectionStore chatProjectionStore;
     private readonly FileSandboxWorkspaceCrossProcessLock crossProcessLock;
     private readonly DurableFileWriter runLeaseWriter;
+    private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
     private readonly Action<ChatBackedRunCommitStage>? chatBackedRunCommitBoundary;
     private readonly Action<GenericNewRunCommitStage>? genericNewRunCommitBoundary;
     private readonly Action<ExistingRunDetailCommitStage>? existingRunDetailCommitBoundary;
     private readonly Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary;
     private readonly IAgentCatalogMutationPolicy? catalogMutationPolicy;
+    private readonly IAgentCatalogCommitObserver? catalogCommits;
 
     public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope = null,
         IAgentCatalogMutationPolicy? catalogMutationPolicy = null)
+        : this(workspaceRoot, workspaceScope, catalogMutationPolicy, null) {
+    }
+
+    public FileSandboxWorkspaceStore(string workspaceRoot, WorkspaceScopeDescriptor? workspaceScope,
+        IAgentCatalogMutationPolicy? catalogMutationPolicy, IAgentCatalogCommitObserver? catalogCommits)
         : this(
             workspaceRoot,
             workspaceScope,
@@ -45,7 +55,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             existingRunDetailCommitBoundary: null,
             genericNewRunCommitBoundary: null,
             jsonReadDiagnostics: null,
-            catalogMutationPolicy: catalogMutationPolicy) {
+            catalogMutationPolicy: catalogMutationPolicy, catalogCommits: catalogCommits) {
     }
 
     internal FileSandboxWorkspaceStore(
@@ -99,10 +109,12 @@ public sealed partial class FileSandboxWorkspaceStore :
         FileSandboxWorkspaceJsonReadDiagnostics? jsonReadDiagnostics,
         Action<AgentDeletionCommitStage>? agentDeletionCommitBoundary = null,
         Action<FileHistoryCommitStage>? historyCommitBoundary = null,
-        IAgentCatalogMutationPolicy? catalogMutationPolicy = null) {
+        IAgentCatalogMutationPolicy? catalogMutationPolicy = null,
+        DurableFileWriter? fileWriter = null, IAgentCatalogCommitObserver? catalogCommits = null) {
         layout = new FileSandboxWorkspaceStorageLayout(workspaceRoot, workspaceScope);
-        var physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory();
-        var durableFileWriter = new DurableFileWriter(physicalPathPolicyFactory);
+        gate = new(layout.WorkspaceLockPath);
+        physicalPathPolicyFactory = new PhysicalFileSystemPathPolicyFactory(PhysicalFileSystemCaseSensitivity.Sensitive);
+        var durableFileWriter = fileWriter ?? new DurableFileWriter(physicalPathPolicyFactory);
         runLeaseWriter = durableFileWriter;
         jsonStore = new FileSandboxWorkspaceJsonStore(
             jsonReadDiagnostics,
@@ -110,6 +122,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             durableFileWriter,
             layout.RootPath,
             new FileProviderHistoryJournal(layout, historyCommitBoundary));
+        catalogNormalizer = new(jsonStore.RequiresSave, jsonStore.CanRetainCatalogSnapshot);
         executionSliceStore = new FileSandboxWorkspaceExecutionSliceStore(layout, jsonStore);
         jsonStore.UsageIndex = new FileProviderUsageIndex(layout, jsonStore);
         chatProjectionStore = new FileSandboxWorkspaceChatProjectionStore(layout, jsonStore);
@@ -122,6 +135,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         this.existingRunDetailCommitBoundary = existingRunDetailCommitBoundary;
         this.agentDeletionCommitBoundary = agentDeletionCommitBoundary;
         this.catalogMutationPolicy = catalogMutationPolicy;
+        this.catalogCommits = catalogCommits;
     }
 
     public async Task<SandboxWorkspaceDocument> LoadAsync(CancellationToken cancellationToken = default)
@@ -129,16 +143,13 @@ public sealed partial class FileSandboxWorkspaceStore :
 
     public async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotAsync(CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
-            return await LoadSnapshotCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            return await LoadSnapshotCoreAsync(operation, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -149,35 +160,29 @@ public sealed partial class FileSandboxWorkspaceStore :
             return await LoadCatalogWithoutWorkspaceLockAsync(cancellationToken);
         }
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureCatalogReadCoreAsync(cancellationToken);
-            return await LoadNormalizedCatalogCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken);
+            return await LoadNormalizedCatalogCoreAsync(operation, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<SandboxWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureCatalogReadCoreAsync(cancellationToken);
-            var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken);
+            var catalog = await LoadNormalizedCatalogCoreAsync(operation, cancellationToken);
             return new SandboxWorkspaceCatalogSnapshot(
                 catalog,
                 catalog.CatalogDataRevision);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -195,6 +200,15 @@ public sealed partial class FileSandboxWorkspaceStore :
         return await UpdateCatalogOnlyAsync(update, expectedRevision: null, cancellationToken);
     }
 
+    public Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
+        Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
+        Action<SandboxWorkspaceCatalog> validatePublication,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(update);
+        ArgumentNullException.ThrowIfNull(validatePublication);
+        return UpdateCatalogOnlyAsync(update, expectedRevision: null, cancellationToken, validatePublication);
+    }
+
     public async Task<SandboxWorkspaceCatalog> UpdateCatalogAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         long expectedRevision,
@@ -205,11 +219,74 @@ public sealed partial class FileSandboxWorkspaceStore :
         return await UpdateCatalogOnlyAsync(update, expectedRevision, cancellationToken);
     }
 
+    public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, Action validateCurrentContext,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(validateCurrentContext);
+        var publication = new AgentPolicyPublication(command, DateTimeOffset.UtcNow);
+        try {
+            if (command.Expectation.Workspace.WorkspaceScope != layout.Scope) {
+                throw new AgentDecisionDataPolicyContextChangedException();
+            }
+            validateCurrentContext();
+            await using (var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(
+                gate, crossProcessLock, layout, runLeaseWriter, cancellationToken)) {
+                try {
+                    await EnsureCatalogReadCoreAsync(operation, cancellationToken);
+                    var current = await LoadCatalogCoreAsync(cancellationToken);
+                    if (current.CatalogDataRevision != command.Expectation.CatalogRevision) {
+                        throw new SandboxWorkspaceCatalogConcurrencyException(
+                            command.Expectation.CatalogRevision, current.CatalogDataRevision);
+                    }
+                    var original = current.Agents.SingleOrDefault(agent => agent.Id == command.Expectation.AgentId)
+                        ?? throw new KeyNotFoundException("The original Agent no longer exists.");
+                    var target = current with {
+                        Agents = current.Agents.Select(agent => agent.Id == original.Id
+                            ? agent with { UpdatedAtUtc = AgentConfigurationVersion.NextRevision(original.UpdatedAtUtc, DateTimeOffset.UtcNow) }
+                            : agent).ToArray()
+                    };
+                    await SaveCatalogCoreAsync(operation, current, catalogExists: true, target, cancellationToken,
+                        _ => validateCurrentContext(), publication, CatalogPublicationDependencies.CatalogOnly);
+                    var index = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+                    await SaveWorkspaceIndexCoreAsync(new WorkspaceStorageIndex(
+                        checked(index.Revision + 1L), DateTimeOffset.UtcNow), cancellationToken);
+                } catch (Exception failure) {
+                    operation.RetainFailure(failure);
+                    throw;
+                }
+            }
+            return publication.Acknowledgement
+                ?? throw new InvalidOperationException("Agent policy publication returned without acknowledgement.");
+        } catch (Exception failure) {
+            var diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.Publication, failure);
+            if (publication.Acknowledgement is { } accepted) {
+                return new AgentDecisionDataPolicySaveOutcome.Accepted(command, accepted.Snapshot, followupRequired: true, diagnostic);
+            }
+            if (publication.WriteEntered) {
+                return new AgentDecisionDataPolicySaveOutcome.Unconfirmed(command, diagnostic);
+            }
+            var reason = failure switch {
+                AgentDecisionDataPolicyContextChangedException => AgentDecisionDataPolicyRejection.ContextChanged,
+                SandboxWorkspaceCatalogConcurrencyException or SandboxWorkspacePublicationConflictException
+                    => AgentDecisionDataPolicyRejection.Conflict,
+                KeyNotFoundException => AgentDecisionDataPolicyRejection.NotFound,
+                AgentDecisionDataPolicyMetadataException => AgentDecisionDataPolicyRejection.InvalidMetadata,
+                AgentDecisionDataPolicyReceiptCapacityException => AgentDecisionDataPolicyRejection.ReceiptCapacityExceeded,
+                AgentDecisionDataPolicyReceiptConflictException => AgentDecisionDataPolicyRejection.Conflict,
+                OperationCanceledException => AgentDecisionDataPolicyRejection.Cancelled,
+                _ => AgentDecisionDataPolicyRejection.Unavailable
+            };
+            return new AgentDecisionDataPolicySaveOutcome.Rejected(reason, diagnostic);
+        }
+    }
+
     private async Task<SandboxWorkspaceCatalog> SaveCatalogOnlyAsync(
         SandboxWorkspaceCatalog catalog,
         long? expectedRevision,
         CancellationToken cancellationToken)
     {
+        catalog = FileSandboxWorkspacePreparedValues.Freeze(catalog);
         return await UpdateCatalogOnlyAsync(
             _ => catalog,
             expectedRevision,
@@ -219,13 +296,13 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<SandboxWorkspaceCatalog> UpdateCatalogOnlyAsync(
         Func<SandboxWorkspaceCatalog, SandboxWorkspaceCatalog> update,
         long? expectedRevision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<SandboxWorkspaceCatalog>? validatePublication = null)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureCatalogReadCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        SandboxWorkspaceCatalog? accepted = null;
+        try {
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken);
             var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
             if (expectedRevision.HasValue && workspaceIndex.Revision != expectedRevision.Value)
             {
@@ -239,15 +316,20 @@ public sealed partial class FileSandboxWorkspaceStore :
                     ? currentCatalog.CatalogDataRevision
                     : CatalogDataRevision.Initial
             };
-            var updatedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(update(currentForUpdate));
+            var updatedCatalog = FileSandboxWorkspacePreparedValues.Freeze(
+                SandboxWorkspaceSeedFactory.NormalizeCatalog(update(FileSandboxWorkspacePreparedValues.Freeze(currentForUpdate))));
             SandboxWorkspaceDocumentInvariantValidator.Validate(
                 SandboxWorkspaceDocument.Combine(updatedCatalog, SandboxWorkspaceExecutionState.Empty));
 
-            var catalogSave = await SaveCatalogCoreAsync(
+            var catalogSave = await SaveCatalogCoreAsync(operation,
                 currentCatalog,
                 File.Exists(layout.CatalogPath),
                 updatedCatalog,
-                cancellationToken);
+                cancellationToken,
+                validatePublication,
+                dependencies: expectedRevision.HasValue ? CatalogPublicationDependencies.WholeWorkspace : CatalogPublicationDependencies.CatalogOnly);
+            accepted = catalogSave.Catalog;
+            workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
             var nextWorkspaceIndex = new WorkspaceStorageIndex(
                 Revision: catalogSave.Changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
                 UpdatedAtUtc: catalogSave.Changed ? DateTimeOffset.UtcNow : workspaceIndex.UpdatedAtUtc);
@@ -258,106 +340,98 @@ public sealed partial class FileSandboxWorkspaceStore :
                 await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
             }
 
+            await operation.DisposeAsync();
             return catalogSave.Catalog;
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            var outcome = accepted is null || failure is SandboxWorkspaceCatalogCommittedException
+                ? failure : new SandboxWorkspaceCatalogCommittedException(accepted, failure);
+            operation.RetainFailure(outcome);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(outcome).Throw();
+            throw;
         }
     }
 
     public async Task<SandboxWorkspaceExecutionState> LoadExecutionAsync(CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
-            return (await LoadSnapshotCoreAsync(cancellationToken)).Document.ToExecutionState();
-        }
-        finally
-        {
-            gate.Release();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            return (await LoadSnapshotCoreAsync(operation, cancellationToken)).Document.ToExecutionState();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<SandboxWorkspaceExecutionSummary> LoadExecutionSummaryAsync(CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureExecutionSummaryReadCoreAsync(operation, cancellationToken);
             return await LoadExecutionSummaryCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<AgentUsageProjection> LoadUsageProjectionAsync(CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureExecutionSummaryReadCoreAsync(operation, cancellationToken);
             return await LoadUsageProjectionCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<AgentProviderUsageEvidence> LoadProviderUsageEvidenceAsync(
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureExecutionSummaryReadCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureExecutionSummaryReadCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadProviderUsageEvidenceAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<AgentProviderUsageWindowEvidence> LoadProviderUsageWindowAsync(
         CanDoItAll.AgentFramework.Usage.ProviderUsageWindow window, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(window);
-        await gate.WaitAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
         try {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await RecoverPendingExecutionCommitAsync(cancellationToken);
+            await RecoverPendingExecutionCommitAsync(operation, cancellationToken);
             return await jsonStore.UsageIndex!.ReadAsync(window, cancellationToken);
-        } finally {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task EnsureReadyAsync(bool requireSummaryIndex = false, CancellationToken cancellationToken = default) {
-        await gate.WaitAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
         try {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await RecoverPendingExecutionCommitAsync(cancellationToken);
+            await RecoverPendingExecutionCommitAsync(operation, cancellationToken);
             if (!layout.ExecutionStorageExists() && (File.Exists(layout.CatalogPath) || File.Exists(layout.LegacyExecutionPath))) {
                 throw new InvalidOperationException("Legacy workspace storage needs explicit migration. Run usage-index maintenance with --migrate-legacy.");
             }
             if (requireSummaryIndex && layout.ExecutionStorageExists() && !await executionSliceStore.HasCurrentSummaryIndexAsync(cancellationToken)) {
                 throw new InvalidOperationException("The runtime summary index needs explicit repair. Run usage-index maintenance with --migrate-legacy.");
             }
-        } finally {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task SaveExecutionAsync(SandboxWorkspaceExecutionState executionState, CancellationToken cancellationToken = default)
     {
+        executionState = FileSandboxWorkspacePreparedValues.Freeze(executionState);
         await UpdateWorkspaceAsync(
             document => SandboxWorkspaceDocument.Combine(
                 document.ToCatalog(),
@@ -401,32 +475,98 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-        finally
-        {
-            gate.Release();
+    }
+
+    public async Task<ExecutionRunAdmissionSnapshot?> GetExecutionRunAdmissionSnapshotAsync(
+        Guid executionRunId, CancellationToken cancellationToken = default) {
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            return await executionSliceStore.LoadRunAdmissionSnapshotAsync(executionRunId, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunsAsync(
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.ListRunsAsync(cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-        finally
-        {
-            gate.Release();
+    }
+
+    public async Task<ProcessExecutionRunPage> ReadProcessExecutionRunPageAsync(
+        ProcessExecutionRunPageQuery query, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(query);
+        query.Validate();
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
+        try {
+            if (PendingCommitJournalPaths.Any(File.Exists)) {
+                return ProcessExecutionRunPage.Pending(ProcessExecutionRunPageStatus.PublicationPending);
+            }
+            return await new FileProcessExecutionRunPageReader(layout, jsonStore).ReadAsync(query, cancellationToken).ConfigureAwait(false);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
+    }
+
+    public async Task<ProcessExecutionRunPageStatus> PrepareProcessExecutionRunIndexAsync(CancellationToken cancellationToken = default) {
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            if (PendingCommitJournalPaths.Any(File.Exists)) {
+                return ProcessExecutionRunPageStatus.PublicationPending;
+            }
+            return await new FileProcessExecutionIndex(layout, jsonStore).PrepareAsync(cancellationToken).ConfigureAwait(false);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyList<ExecutionRunRecord>> ListExecutionRunCandidatesAsync(
+        ExecutionRunQuery query, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(query);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
+            if (query.ExecutionRunId is { } runId) {
+                var run = await executionSliceStore.LoadRunAsync(runId, cancellationToken);
+                return run is null ? [] : [run];
+            }
+            if (string.IsNullOrWhiteSpace(query.ProcessRunId) && query.ProcessRunIds.Count == 0) {
+                return await executionSliceStore.ListRunsAsync(cancellationToken);
+            }
+            var candidates = await chatProjectionStore.FindProcessRunCandidateIdsAsync(query, cancellationToken);
+            var runs = await jsonStore.ReadJsonBatchAsync<ExecutionRunRecord>(
+                candidates.Select(layout.RunPath).ToArray(), cancellationToken);
+            if (runs.Any(run => run is null)) {
+                throw new InvalidDataException("The execution index references a missing run record.");
+            }
+            return runs.Select(run => run!).ToArray();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -434,16 +574,14 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid executionRunId,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: FileSandboxWorkspaceAccessPriority.Control);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await executionSliceStore.LoadRunAsync(executionRunId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -452,12 +590,11 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(detail);
+        detail = FileSandboxWorkspacePreparedValues.Freeze(detail);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
             var previousDetail = await executionSliceStore
                 .LoadRunDetailAsync(detail.Run.Id, cancellationToken);
@@ -472,33 +609,42 @@ public sealed partial class FileSandboxWorkspaceStore :
                 ValidateExecutionRunDetailConsistency(detail);
             }
 
-            return await SaveExecutionRunDetailCoreAsync(
+            return await SaveExecutionRunDetailCoreAsync(operation,
                 previousDetail,
                 detail,
                 validatedCatalog,
                 cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
-    public async Task<ChatBackedRunStartResult> BeginChatBackedRunAsync(
+    public Task<ChatBackedRunStartResult> BeginChatBackedRunAsync(
         ChatBackedRunStartRequest request,
         Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
         CancellationToken cancellationToken = default)
-    {
+        => BeginChatBackedRunCoreAsync(request, create, reportAdmissionKnowledge: false, cancellationToken);
+
+    public Task<ChatBackedRunStartResult> BeginChatBackedRunWithAdmissionKnowledgeAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        CancellationToken cancellationToken = default)
+        => BeginChatBackedRunCoreAsync(request, create, reportAdmissionKnowledge: true, cancellationToken);
+
+    private async Task<ChatBackedRunStartResult> BeginChatBackedRunCoreAsync(
+        ChatBackedRunStartRequest request,
+        Func<ChatBackedRunStartContext, ChatBackedRunStartMutation> create,
+        bool reportAdmissionKnowledge,
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(create);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var catalog = await LoadNormalizedCatalogCoreAsync(cancellationToken);
+            var catalog = FileSandboxWorkspacePreparedValues.Freeze(await LoadNormalizedCatalogCoreAsync(operation, cancellationToken));
             if (catalog.CatalogDataRevision != request.ExpectedCatalogRevision)
             {
                 throw new SandboxWorkspaceCatalogConcurrencyException(
@@ -541,13 +687,15 @@ public sealed partial class FileSandboxWorkspaceStore :
                     blockingRun);
             }
 
+            sessionSnapshot = sessionSnapshot is null ? null : FileSandboxWorkspacePreparedValues.Freeze(sessionSnapshot);
             var context = new ChatBackedRunStartContext(
                 catalogSnapshot,
                 agent,
                 sessionSnapshot);
-            var mutation = create(context)
+            var created = create(context)
                 ?? throw new InvalidOperationException(
                     "The chat-backed run start factory returned no mutation.");
+            var mutation = created with { Detail = FileSandboxWorkspacePreparedValues.Freeze(created.Detail) };
 
             ValidateChatBackedRunStartMutation(
                 request,
@@ -563,43 +711,60 @@ public sealed partial class FileSandboxWorkspaceStore :
                     $"Execution run '{mutation.Detail.Run.Id:N}' already exists.");
             }
 
-            var persistencePlan = await executionSliceStore.PrepareNewRunAsync(
-                mutation.Detail,
-                sessionSnapshot,
-                cancellationToken);
-            var previousWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
-                cancellationToken);
-            var targetWorkspaceIndex = new WorkspaceStorageIndex(
-                previousWorkspaceIndex.Revision + 1L,
-                persistencePlan.TargetIndex.UpdatedAtUtc);
-            var journal = new ChatBackedRunCommitJournal(
-                ChatBackedRunCommitJournalVersion,
-                persistencePlan.Detail.Run.Id,
-                mutation.UserMessage.Id,
-                persistencePlan,
-                previousWorkspaceIndex,
-                targetWorkspaceIndex);
-            ValidateChatBackedRunCommitJournal(catalog, journal);
+            IAsyncDisposable acquired;
+            try {
+                var witness = await CapturePublicationWitnessAsync(cancellationToken,
+                    mutation.Detail.Run.ChatSessionId is { } publicationChatId ? [layout.SessionPath(publicationChatId)] : [],
+                    [layout.RunRoot(mutation.Detail.Run.Id)]);
+                acquired = await operation.AcquireAsync(
+                    FileSandboxWorkspaceWriteSet.Run(null, mutation.Detail.Run, readsAgent: true), witness, cancellationToken);
+            } catch (Exception conflict) when (reportAdmissionKnowledge &&
+                    conflict is SandboxWorkspaceConcurrencyException or SandboxWorkspacePublicationConflictException) {
+                throw new AgentChatAdmissionConflictException(request.AgentId, request.ChatSessionId, conflict);
+            }
+            await using var publication = acquired;
+            try {
 
-            await jsonStore.WriteJsonAtomicallyAsync(
-                PendingChatBackedRunCommitJournalPath,
-                journal,
-                cancellationToken);
-            NotifyChatBackedRunCommitBoundary(
-                ChatBackedRunCommitStage.JournalPersisted);
-            var persistedDetail = await CommitChatBackedRunJournalAsync(
-                journal,
-                catalog,
-                CancellationToken.None);
-            return new ChatBackedRunStarted(
-                catalogSnapshot,
-                agent,
-                persistedDetail,
-                mutation.UserMessage);
-        }
-        finally
-        {
-            gate.Release();
+                var persistencePlan = await executionSliceStore.PrepareNewRunAsync(
+                    mutation.Detail,
+                    sessionSnapshot,
+                    cancellationToken);
+                var previousWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
+                    cancellationToken);
+                var targetWorkspaceIndex = new WorkspaceStorageIndex(
+                    previousWorkspaceIndex.Revision + 1L,
+                    persistencePlan.TargetIndex.UpdatedAtUtc);
+                var journal = new ChatBackedRunCommitJournal(
+                    ChatBackedRunCommitJournalVersion,
+                    persistencePlan.Detail.Run.Id,
+                    mutation.UserMessage.Id,
+                    persistencePlan,
+                    previousWorkspaceIndex,
+                    targetWorkspaceIndex);
+                ValidateChatBackedRunCommitJournal(catalog, journal);
+
+                await jsonStore.WriteJsonAtomicallyAsync(
+                    PendingChatBackedRunCommitJournalPath,
+                    journal,
+                    cancellationToken);
+                NotifyChatBackedRunCommitBoundary(
+                    ChatBackedRunCommitStage.JournalPersisted);
+                var persistedDetail = await CommitChatBackedRunJournalAsync(
+                    journal,
+                    catalog,
+                    CancellationToken.None);
+                return new ChatBackedRunStarted(
+                    catalogSnapshot,
+                    agent,
+                    persistedDetail,
+                    mutation.UserMessage);
+            } catch (Exception failure) {
+                operation.RetainFailure(failure);
+                throw;
+            }
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -610,6 +775,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(candidate);
+        candidate = FileSandboxWorkspacePreparedValues.Freeze(candidate);
         if (source.RequiresBackgroundAdmission) {
             throw new InvalidOperationException("Use the explicitly admitted background reservation operation.");
         }
@@ -619,38 +785,35 @@ public sealed partial class FileSandboxWorkspaceStore :
                 "The candidate execution run does not match the requested source key.");
         }
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var sameSourceRuns = (await executionSliceStore.ListRunsAsync(cancellationToken))
-                .Where(source.Matches)
-                .OrderByDescending(run => run.UpdatedAtUtc)
-                .ToArray();
-            var completedRun = sameSourceRuns.FirstOrDefault(run =>
-                run.State == ExecutionState.Completed &&
-                run.Outcome == RunOutcome.Succeeded);
-            if (completedRun is not null)
-            {
-                return new ExecutionRunSourceReservationResult(
-                    ExecutionRunSourceDisposition.ReusedCompleted,
-                    completedRun);
-            }
-
-            var activeRun = sameSourceRuns.FirstOrDefault(run =>
-                run.State is not ExecutionState.Completed and not ExecutionState.Failed);
-            if (activeRun is not null)
-            {
-                return new ExecutionRunSourceReservationResult(
-                    ExecutionRunSourceDisposition.ExistingActive,
-                    activeRun);
+            var existing = await FindSourceReservationAsync(source, cancellationToken);
+            if (existing is not null) {
+                return existing;
             }
 
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
             ValidateExecutionRunDetail(catalog, candidate);
-            var persisted = await SaveExecutionRunDetailCoreAsync(
+            var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.RunRoot(candidate.Run.Id)]);
+            try {
+                _ = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Run(null, candidate.Run, readsAgent: true),
+                    witness, cancellationToken);
+            } catch (SandboxWorkspaceConcurrencyException conflict) {
+                try {
+                    await RequireCompletedReservationPublicationAsync(null, cancellationToken);
+                    var replay = await FindSourceReservationAsync(source, cancellationToken);
+                    if (replay is not null) {
+                        await RequireCompletedReservationPublicationAsync(replay.Run.Id, cancellationToken);
+                        return replay;
+                    }
+                } catch (Exception lookupFailure) {
+                    throw new AggregateException("Source reservation admission and original-run lookup failed.", conflict, lookupFailure);
+                }
+                throw;
+            }
+            var persisted = await SaveExecutionRunDetailCoreAsync(operation,
                 previousDetail: null,
                 candidate,
                 catalog,
@@ -658,11 +821,22 @@ public sealed partial class FileSandboxWorkspaceStore :
             return new ExecutionRunSourceReservationResult(
                 ExecutionRunSourceDisposition.Created,
                 persisted.Run);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-        finally
-        {
-            gate.Release();
+    }
+
+    private async Task<ExecutionRunSourceReservationResult?> FindSourceReservationAsync(
+        ExecutionRunSourceKey source, CancellationToken cancellationToken) {
+        var runs = (await executionSliceStore.ListRunsAsync(cancellationToken))
+            .Where(source.Matches).OrderByDescending(run => run.UpdatedAtUtc).ToArray();
+        if (runs.FirstOrDefault(run => run.State == ExecutionState.Completed && run.Outcome == RunOutcome.Succeeded) is { } completed) {
+            return new(ExecutionRunSourceDisposition.ReusedCompleted, completed);
         }
+        return runs.FirstOrDefault(run => run.State is not (ExecutionState.Completed or ExecutionState.Failed)) is { } active
+            ? new(ExecutionRunSourceDisposition.ExistingActive, active)
+            : null;
     }
 
     public ValueTask<IAsyncDisposable> AcquireToolDispatchLeaseAsync(
@@ -673,84 +847,91 @@ public sealed partial class FileSandboxWorkspaceStore :
             TimeSpan.FromMinutes(1), requirePrivateUnixMode: false, cancellationToken);
     }
 
-    public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
+    public Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<ExecutionRunDetail, ExecutionRunDetail> update,
         CancellationToken cancellationToken = default)
-    {
+        => UpdateExecutionRunDetailCoreAsync(executionRunId, update, null, cancellationToken);
+
+    public Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task> requireCurrentAuthority,
+        CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(requireCurrentAuthority);
+        return UpdateExecutionRunDetailCoreAsync(executionRunId, update, requireCurrentAuthority, cancellationToken,
+            FileSandboxWorkspaceAccessPriority.Control);
+    }
+
+    private async Task<ExecutionRunDetail> UpdateExecutionRunDetailCoreAsync(Guid executionRunId,
+        Func<ExecutionRunDetail, ExecutionRunDetail> update, Func<CancellationToken, Task>? requireCurrentAuthority,
+        CancellationToken cancellationToken, FileSandboxWorkspaceAccessPriority priority = FileSandboxWorkspaceAccessPriority.Ordinary) {
         ArgumentNullException.ThrowIfNull(update);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock =
-                await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken,
+            priority: priority);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var previousDetail = await executionSliceStore
-                .LoadRunDetailAsync(executionRunId, cancellationToken)
+            var observation = await executionSliceStore
+                .LoadRunDetailForUpdateAsync(executionRunId, cancellationToken)
                 ?? throw new InvalidOperationException(
                     $"Execution run '{executionRunId:N}' was not found.");
-            var updatedDetail = update(previousDetail)
+            var previousDetail = observation.Detail;
+            var currentForUpdate = FileSandboxWorkspacePreparedValues.Freeze(previousDetail);
+            var updatedDetail = update(currentForUpdate)
                 ?? throw new InvalidOperationException(
                     "Execution run update cannot return null.");
-            if (updatedDetail.Run.Id != executionRunId)
-            {
+            if (updatedDetail.Run.Id != executionRunId) {
                 throw new InvalidOperationException(
                     "Execution run update cannot change the run identity.");
             }
 
-            if (ReferenceEquals(previousDetail, updatedDetail))
-            {
+            if (ReferenceEquals(currentForUpdate, updatedDetail) && requireCurrentAuthority is null) {
                 return previousDetail;
             }
 
             ValidateExecutionRunDetailConsistency(updatedDetail);
-            return await SaveExecutionRunDetailCoreAsync(
+            return await SaveExecutionRunDetailCoreAsync(operation,
                 previousDetail,
                 updatedDetail,
-                cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+                cancellationToken,
+                observation.Snapshot,
+                requireCurrentAuthority);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
     public async Task<ExecutionRunDetail> UpdateExecutionRunDetailAsync(
         Guid executionRunId,
         Func<SandboxWorkspaceCatalog, ExecutionRunDetail, ExecutionRunDetail> update,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(update);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
-            var previousDetail = await executionSliceStore.LoadRunDetailAsync(executionRunId, cancellationToken)
+            var observation = await executionSliceStore.LoadRunDetailForUpdateAsync(executionRunId, cancellationToken)
                 ?? throw new InvalidOperationException($"Execution run '{executionRunId:N}' was not found.");
-            var updatedDetail = update(catalog, previousDetail)
+            var previousDetail = observation.Detail;
+            var currentForUpdate = FileSandboxWorkspacePreparedValues.Freeze(previousDetail);
+            var updatedDetail = update(FileSandboxWorkspacePreparedValues.Freeze(catalog), currentForUpdate)
                 ?? throw new InvalidOperationException("Execution run update cannot return null.");
-            if (updatedDetail.Run.Id != executionRunId)
-            {
+            if (updatedDetail.Run.Id != executionRunId) {
                 throw new InvalidOperationException("Execution run update cannot change the run identity.");
             }
 
-            if (ReferenceEquals(previousDetail, updatedDetail))
-            {
+            if (ReferenceEquals(currentForUpdate, updatedDetail)) {
                 return previousDetail;
             }
 
             ValidateExecutionRunDetail(catalog, updatedDetail);
-            return await SaveExecutionRunDetailCoreAsync(previousDetail, updatedDetail, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+            return await SaveExecutionRunDetailCoreAsync(operation, previousDetail, updatedDetail, catalog, cancellationToken, observation.Snapshot);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -758,24 +939,22 @@ public sealed partial class FileSandboxWorkspaceStore :
         SandboxWorkspaceDocument document,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            var normalizedDocument = NormalizeAndValidateDocument(document);
-            var currentRevision = await ResolveCurrentRevisionAsync(cancellationToken);
+        document = FileSandboxWorkspacePreparedValues.Freeze(document);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            var normalizedDocument = FileSandboxWorkspacePreparedValues.Freeze(NormalizeAndValidateDocument(document));
+            var currentRevision = await ResolveCurrentRevisionAsync(operation, cancellationToken);
             var previousDocument = currentRevision == 0L
                 ? SandboxWorkspaceDocument.Empty
                 : (await LoadMutationSnapshotCoreAsync(cancellationToken)).Document;
-            return await SaveCoreAsync(
+            return await SaveCoreAsync(operation,
                 previousDocument,
                 normalizedDocument,
                 currentRevision,
                 cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -794,16 +973,13 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? agentId = null,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await chatProjectionStore.ListChatSessionSummariesAsync(agentId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -811,16 +987,13 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid agentId,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await chatProjectionStore.LoadChatWorkspaceProjectionAsync(agentId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -828,16 +1001,13 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid chatSessionId,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await chatProjectionStore.GetChatSessionAsync(chatSessionId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -846,16 +1016,13 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await chatProjectionStore.ListChatRunSummariesAsync(agentId, chatSessionId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -864,16 +1031,13 @@ public sealed partial class FileSandboxWorkspaceStore :
         Guid? chatSessionId = null,
         CancellationToken cancellationToken = default)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             return await chatProjectionStore.LoadChatRuntimeSnapshotAsync(agentId, chatSessionId, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -882,12 +1046,11 @@ public sealed partial class FileSandboxWorkspaceStore :
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(session);
+        session = FileSandboxWorkspacePreparedValues.Freeze(session);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
             var catalog = await LoadCatalogCoreAsync(cancellationToken);
             ValidateChatSession(catalog, session);
@@ -898,41 +1061,41 @@ public sealed partial class FileSandboxWorkspaceStore :
                 throw new InvalidOperationException($"Chat session '{session.Id:N}' already exists.");
             }
 
-            return await SaveChatSessionCoreAsync(previousSession: null, session, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+            var witness = await CaptureChatSessionWitnessAsync(session.Id, observeSession: true, cancellationToken);
+            await using var publication = await operation.AcquireAsync(
+                FileSandboxWorkspaceWriteSet.Session(session.Id, session.AgentId), witness, cancellationToken);
+            return await SaveChatSessionCoreAsync(operation, previousSession: null, session, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
-    public async Task<ChatSessionRecord> UpdateChatSessionAsync(
-        ChatSessionRecord session,
+    public async Task<ChatSessionRecord> RenameChatSessionAsync(
+        ChatSessionTitleChange change,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(change);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
 
-            var catalog = await LoadCatalogCoreAsync(cancellationToken);
-            ValidateChatSession(catalog, session);
-
-            var existingSession = await chatProjectionStore.GetChatSessionAsync(session.Id, cancellationToken)
-                                  ?? throw new InvalidOperationException($"Chat session '{session.Id:N}' was not found.");
-            if (existingSession.AgentId != session.AgentId)
-            {
-                throw new InvalidOperationException($"Chat session '{session.Id:N}' cannot be moved to a different agent.");
+            var witness = await CaptureChatSessionWitnessAsync(change.SessionId, observeSession: false, cancellationToken);
+            await using var publication = await operation.AcquireAsync(
+                FileSandboxWorkspaceWriteSet.Session(change.SessionId, change.AgentId), witness, cancellationToken);
+            var existingSession = await chatProjectionStore.GetChatSessionAsync(change.SessionId, cancellationToken)
+                ?? throw new InvalidOperationException($"Chat session '{change.SessionId:N}' was not found.");
+            ValidateChatSession(await LoadCatalogCoreAsync(cancellationToken), existingSession);
+            var session = change.Apply(existingSession);
+            if (ReferenceEquals(session, existingSession)) {
+                return existingSession;
             }
 
-            return await SaveChatSessionCoreAsync(existingSession, session, cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+            return await SaveChatSessionCoreAsync(operation, existingSession, session, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -943,158 +1106,200 @@ public sealed partial class FileSandboxWorkspaceStore :
     {
         ArgumentNullException.ThrowIfNull(update);
 
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureSplitFilesCoreAsync(cancellationToken);
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureSplitFilesCoreAsync(operation, cancellationToken);
             var current = await LoadMutationSnapshotCoreAsync(cancellationToken);
             if (expectedRevision.HasValue && current.Revision != expectedRevision.Value)
             {
                 throw new SandboxWorkspaceConcurrencyException(expectedRevision.Value, current.Revision);
             }
 
-            var updated = NormalizeAndValidateDocument(update(current.Document));
-            return await SaveCoreAsync(
+            var updated = FileSandboxWorkspacePreparedValues.Freeze(
+                NormalizeAndValidateDocument(update(FileSandboxWorkspacePreparedValues.Freeze(current.Document))));
+            return await SaveCoreAsync(operation,
                 current.Document,
                 updated,
                 current.Revision,
                 cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
-    private async Task<SandboxWorkspaceDocument> SaveCoreAsync(
+    private async Task<SandboxWorkspaceDocument> SaveCoreAsync(FileSandboxWorkspacePublicationScope operation,
         SandboxWorkspaceDocument previousDocument,
         SandboxWorkspaceDocument document,
         long currentRevision,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
-        jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
+        document = FileSandboxWorkspacePreparedValues.Freeze(document);
+        var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.ExecutionStorageRoot]);
+        var catalogExists = File.Exists(layout.CatalogPath);
+        var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
+        var preparedCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, document.ToCatalog(), cancellationToken, mutationReason: mutationReason);
+        document = SandboxWorkspaceDocument.Combine(preparedCatalog.Catalog, document.ToExecutionState());
+        await using var publication = await operation.AcquireAsync(
+            FileSandboxWorkspaceWriteSet.Workspace(previousDocument, document), witness, cancellationToken);
+        try {
+            jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
 
-        var catalogSave = await SaveCatalogCoreAsync(document.ToCatalog(), cancellationToken);
-        var executionChanged = await SaveExecutionCoreAsync(previousDocument.ToExecutionState(), document.ToExecutionState(), cancellationToken);
-        var workspaceChanged = catalogSave.Changed || executionChanged || !File.Exists(layout.WorkspaceIndexPath);
-        if (workspaceChanged)
-        {
-            await SaveWorkspaceIndexCoreAsync(
-                new WorkspaceStorageIndex(
-                    Revision: Math.Max(1L, currentRevision + 1L),
-                    UpdatedAtUtc: DateTimeOffset.UtcNow),
-                cancellationToken);
+            var finalCatalog = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, preparedCatalog.Catalog, cancellationToken, mutationReason: mutationReason);
+            if (finalCatalog.Changed != preparedCatalog.Changed || !HasSamePayload(finalCatalog.Catalog, preparedCatalog.Catalog)) {
+                throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
+            }
+            if (preparedCatalog.Changed) {
+                await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, preparedCatalog.Catalog, cancellationToken);
+                catalogCommits?.Committed(currentCatalog, preparedCatalog.Catalog);
+            }
+            var executionChanged = await SaveExecutionCoreAsync(operation, previousDocument.ToExecutionState(), document.ToExecutionState(), cancellationToken);
+            var workspaceChanged = preparedCatalog.Changed || executionChanged || !File.Exists(layout.WorkspaceIndexPath);
+            if (workspaceChanged)
+            {
+                await SaveWorkspaceIndexCoreAsync(
+                    new WorkspaceStorageIndex(
+                        Revision: Math.Max(1L, currentRevision + 1L),
+                        UpdatedAtUtc: DateTimeOffset.UtcNow),
+                    cancellationToken);
+            }
+
+            return SandboxWorkspaceDocument.Combine(
+                preparedCatalog.Catalog,
+                document.ToExecutionState());
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-
-        return SandboxWorkspaceDocument.Combine(
-            catalogSave.Catalog,
-            document.ToExecutionState());
     }
 
-    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(
+    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(FileSandboxWorkspacePublicationScope operation,
         ExecutionRunDetail? previousDetail,
         ExecutionRunDetail detail,
-        CancellationToken cancellationToken)
-    {
-        return await SaveExecutionRunDetailCoreAsync(
+        CancellationToken cancellationToken,
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null, Func<CancellationToken, Task>? requireCurrentAuthority = null) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.save");
+        return await SaveExecutionRunDetailCoreAsync(operation,
             previousDetail,
             detail,
             validatedCatalog: null,
-            cancellationToken);
+            cancellationToken,
+            snapshot,
+            requireCurrentAuthority);
     }
 
-    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(
+    private async Task<ExecutionRunDetail> SaveExecutionRunDetailCoreAsync(FileSandboxWorkspacePublicationScope operation,
         ExecutionRunDetail? previousDetail,
         ExecutionRunDetail detail,
         SandboxWorkspaceCatalog? validatedCatalog,
-        CancellationToken cancellationToken)
-    {
-        if (previousDetail is not null)
-        {
-            if (executionSliceStore.HasSameRunDetailPayload(
-                    previousDetail,
-                    detail))
-            {
-                return previousDetail;
+        CancellationToken cancellationToken,
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null, Func<CancellationToken, Task>? requireCurrentAuthority = null) {
+        detail = detail with { ChatSession = ChatSessionTitleChange.PreserveCurrentTitle(previousDetail?.ChatSession, detail.ChatSession) };
+        detail = FileSandboxWorkspacePreparedValues.Freeze(detail);
+        var unchanged = previousDetail is not null && executionSliceStore.HasSameRunDetailPayload(previousDetail, detail);
+        if (unchanged && requireCurrentAuthority is null) {
+            return previousDetail!;
+        }
+        var chatPaths = new[] { previousDetail?.Run.ChatSessionId, detail.Run.ChatSessionId }
+            .OfType<Guid>().Select(layout.SessionPath).Distinct().ToArray();
+        var witness = previousDetail is not null && validatedCatalog is null
+            ? await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+                PendingCommitJournalPaths.Concat(chatPaths).Append(layout.RunPath(detail.Run.Id)),
+                [layout.RunRoot(detail.Run.Id)], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
+                pendingPublicationTargets: SharedPublicationPaths)
+            : await CapturePublicationWitnessAsync(cancellationToken, chatPaths, [layout.RunRoot(detail.Run.Id)]);
+        await using var publication = await operation.AcquireAsync(
+            FileSandboxWorkspaceWriteSet.Run(previousDetail?.Run, detail.Run, validatedCatalog is not null || previousDetail is null),
+            witness, cancellationToken, requireCurrentAuthority);
+        if (unchanged) {
+            return previousDetail!;
+        }
+        try {
+            if (previousDetail is not null) {
+                var persistencePlan =
+                    await executionSliceStore.PrepareExistingRunUpdateAsync(
+                        previousDetail,
+                        detail,
+                        cancellationToken);
+                var chatProjectionPlan =
+                    await chatProjectionStore.PrepareExistingRunUpdateAsync(
+                        persistencePlan,
+                        cancellationToken);
+                var previousWorkspaceIndex =
+                    await LoadWorkspaceIndexCoreAsync(cancellationToken);
+                var targetWorkspaceIndex = new WorkspaceStorageIndex(
+                    previousWorkspaceIndex.Revision + 1L,
+                    persistencePlan.TargetIndex.UpdatedAtUtc);
+                var journal = new ExistingRunDetailCommitJournal(
+                    ExistingRunDetailCommitJournalVersion,
+                    detail.Run.Id,
+                    persistencePlan,
+                    chatProjectionPlan,
+                    previousWorkspaceIndex,
+                    targetWorkspaceIndex);
+                ValidateExistingRunDetailCommitJournal(journal);
+
+                await jsonStore.WriteJsonAtomicallyAsync(
+                    PendingExistingRunDetailCommitJournalPath,
+                    journal,
+                    cancellationToken, compact: true);
+                NotifyExistingRunDetailCommitBoundary(
+                    ExistingRunDetailCommitStage.JournalPersisted);
+                return await CommitExistingRunDetailJournalAsync(
+                    journal,
+                    ExistingRunDetailCommitOrigin.Prepared,
+                    CancellationToken.None,
+                    snapshot);
             }
 
-            var persistencePlan =
-                await executionSliceStore.PrepareExistingRunUpdateAsync(
-                    previousDetail,
+            var genericPersistencePlan =
+                await executionSliceStore.PrepareGenericNewRunAsync(
                     detail,
                     cancellationToken);
-            var chatProjectionPlan =
-                await chatProjectionStore.PrepareExistingRunUpdateAsync(
-                    persistencePlan,
+            var genericChatProjectionPlan =
+                await chatProjectionStore.PrepareGenericNewRunAsync(
+                    genericPersistencePlan,
                     cancellationToken);
-            var previousWorkspaceIndex =
+            var genericPreviousWorkspaceIndex =
                 await LoadWorkspaceIndexCoreAsync(cancellationToken);
-            var targetWorkspaceIndex = new WorkspaceStorageIndex(
-                previousWorkspaceIndex.Revision + 1L,
-                persistencePlan.TargetIndex.UpdatedAtUtc);
-            var journal = new ExistingRunDetailCommitJournal(
-                ExistingRunDetailCommitJournalVersion,
+            var genericTargetWorkspaceIndex = new WorkspaceStorageIndex(
+                genericPreviousWorkspaceIndex.Revision + 1L,
+                genericPersistencePlan.TargetIndex.UpdatedAtUtc);
+            var genericJournal = new GenericNewRunCommitJournal(
+                GenericNewRunCommitJournalVersion,
                 detail.Run.Id,
-                persistencePlan,
-                chatProjectionPlan,
-                previousWorkspaceIndex,
-                targetWorkspaceIndex);
-            ValidateExistingRunDetailCommitJournal(journal);
+                genericPersistencePlan,
+                genericChatProjectionPlan,
+                genericPreviousWorkspaceIndex,
+                genericTargetWorkspaceIndex);
+            var catalog = validatedCatalog ??
+                          await LoadCatalogCoreAsync(cancellationToken);
+            ValidateGenericNewRunCommitJournal(catalog, genericJournal);
 
             await jsonStore.WriteJsonAtomicallyAsync(
-                PendingExistingRunDetailCommitJournalPath,
-                journal,
+                PendingGenericNewRunCommitJournalPath,
+                genericJournal,
                 cancellationToken);
-            NotifyExistingRunDetailCommitBoundary(
-                ExistingRunDetailCommitStage.JournalPersisted);
-            return await CommitExistingRunDetailJournalAsync(
-                journal,
-                ExistingRunDetailCommitOrigin.Prepared,
-                CancellationToken.None);
+            NotifyGenericNewRunCommitBoundary(
+                GenericNewRunCommitStage.JournalPersisted);
+            return await CommitGenericNewRunJournalAsync(
+                genericJournal,
+                validatedCatalog: catalog,
+                validatePersistedState: false,
+                cancellationToken: CancellationToken.None);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-
-        var genericPersistencePlan =
-            await executionSliceStore.PrepareGenericNewRunAsync(
-                detail,
-                cancellationToken);
-        var genericChatProjectionPlan =
-            await chatProjectionStore.PrepareGenericNewRunAsync(
-                genericPersistencePlan,
-                cancellationToken);
-        var genericPreviousWorkspaceIndex =
-            await LoadWorkspaceIndexCoreAsync(cancellationToken);
-        var genericTargetWorkspaceIndex = new WorkspaceStorageIndex(
-            genericPreviousWorkspaceIndex.Revision + 1L,
-            genericPersistencePlan.TargetIndex.UpdatedAtUtc);
-        var genericJournal = new GenericNewRunCommitJournal(
-            GenericNewRunCommitJournalVersion,
-            detail.Run.Id,
-            genericPersistencePlan,
-            genericChatProjectionPlan,
-            genericPreviousWorkspaceIndex,
-            genericTargetWorkspaceIndex);
-        var catalog = validatedCatalog ??
-                      await LoadCatalogCoreAsync(cancellationToken);
-        ValidateGenericNewRunCommitJournal(catalog, genericJournal);
-
-        await jsonStore.WriteJsonAtomicallyAsync(
-            PendingGenericNewRunCommitJournalPath,
-            genericJournal,
-            cancellationToken);
-        NotifyGenericNewRunCommitBoundary(
-            GenericNewRunCommitStage.JournalPersisted);
-        return await CommitGenericNewRunJournalAsync(
-            genericJournal,
-            validatedCatalog: catalog,
-            validatePersistedState: false,
-            cancellationToken: CancellationToken.None);
     }
 
     private async Task<ExecutionRunDetail> CommitExistingRunDetailJournalAsync(
         ExistingRunDetailCommitJournal journal,
         ExistingRunDetailCommitOrigin origin,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken,
+        FileSandboxWorkspaceRunReadSnapshot? snapshot = null) {
+        using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.run.commit");
         ValidateExistingRunDetailCommitJournal(journal);
 
         var currentWorkspaceIndex = await LoadWorkspaceIndexCoreAsync(
@@ -1104,8 +1309,7 @@ public sealed partial class FileSandboxWorkspaceStore :
                 journal.PreviousWorkspaceIndex) &&
             !HasSamePayload(
                 currentWorkspaceIndex,
-                journal.TargetWorkspaceIndex))
-        {
+                journal.TargetWorkspaceIndex)) {
             throw new InvalidDataException(
                 $"Pending execution-run update '{journal.RunId:N}' found an unexpected workspace index.");
         }
@@ -1116,13 +1320,6 @@ public sealed partial class FileSandboxWorkspaceStore :
             cancellationToken);
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.SessionPersisted);
-
-        await executionSliceStore.PersistExistingRunRecordAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.RunPersisted);
 
         await executionSliceStore.PersistExistingRunApprovalRecordsAsync(
             journal.PersistencePlan,
@@ -1136,36 +1333,28 @@ public sealed partial class FileSandboxWorkspaceStore :
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.RemainingRecordsPersisted);
 
-        await executionSliceStore.PersistExistingRunExecutionIndexAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.ExecutionIndexPersisted);
-
-        await executionSliceStore.PersistExistingRunUsageIndexAsync(
-            journal.PersistencePlan,
-            origin,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.UsageIndexPersisted);
-
-        await SaveWorkspaceIndexCoreAsync(
-            journal.TargetWorkspaceIndex,
-            cancellationToken);
-        NotifyExistingRunDetailCommitBoundary(
-            ExistingRunDetailCommitStage.WorkspaceIndexPersisted);
-
-        await chatProjectionStore.PersistExistingRunUpdateAsync(
-            journal.PersistencePlan,
-            journal.ChatProjectionPlan,
-            origin,
-            cancellationToken);
+        await Task.WhenAll(
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunRecordAsync(
+                journal.PersistencePlan, origin, cancellationToken, snapshot), ExistingRunDetailCommitStage.RunPersisted),
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunExecutionIndexAsync(
+                journal.PersistencePlan, origin, cancellationToken), ExistingRunDetailCommitStage.ExecutionIndexPersisted),
+            PersistStageAsync(() => executionSliceStore.PersistExistingRunUsageIndexAsync(
+                journal.PersistencePlan, origin, cancellationToken), ExistingRunDetailCommitStage.UsageIndexPersisted),
+            PersistStageAsync(() => SaveWorkspaceIndexCoreAsync(journal.TargetWorkspaceIndex, cancellationToken),
+                ExistingRunDetailCommitStage.WorkspaceIndexPersisted),
+            chatProjectionStore.PersistExistingRunUpdateAsync(
+                journal.PersistencePlan, journal.ChatProjectionPlan, origin, cancellationToken));
         NotifyExistingRunDetailCommitBoundary(
             ExistingRunDetailCommitStage.ChatIndexPersisted);
 
         await jsonStore.DeleteFileAsync(PendingExistingRunDetailCommitJournalPath, cancellationToken);
         return journal.PersistencePlan.TargetDetail;
+
+        async Task PersistStageAsync(Func<Task> persist, ExistingRunDetailCommitStage stage) {
+            await persist();
+            NotifyExistingRunDetailCommitBoundary(stage);
+        }
+
     }
 
     private async Task RecoverPendingExistingRunDetailCommitAsync(
@@ -1355,7 +1544,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             cancellationToken: CancellationToken.None);
     }
 
-    private async Task RecoverPendingExecutionCommitAsync(
+    private async Task RecoverPendingExecutionCommitAsync(FileSandboxWorkspacePublicationScope operation,
         CancellationToken cancellationToken)
     {
         var pendingJournalCount =
@@ -1368,17 +1557,49 @@ public sealed partial class FileSandboxWorkspaceStore :
             throw new InvalidDataException(
                 "The workspace contains conflicting pending execution transaction journals.");
         }
-
-        await RecoverPendingChatBackedRunCommitAsync(cancellationToken);
-        await RecoverPendingGenericNewRunCommitAsync(cancellationToken);
-        await RecoverPendingExistingRunDetailCommitAsync(cancellationToken);
-        await RecoverPendingAgentDeletionAsync(cancellationToken);
+        if (pendingJournalCount == 0) {
+            return;
+        }
+        var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.ExecutionStorageRoot]);
+        FileSandboxWorkspaceWriteSet writeSet;
+        if (HasPendingChatBackedRunCommit) {
+            var journal = await jsonStore.ReadJsonAsync<ChatBackedRunCommitJournal>(PendingChatBackedRunCommitJournalPath, cancellationToken)
+                ?? throw new InvalidDataException("The pending chat-backed run journal is empty.");
+            ValidateChatBackedRunCommitJournal(await LoadCatalogCoreAsync(cancellationToken), journal);
+            writeSet = FileSandboxWorkspaceWriteSet.Run(null, journal.PersistencePlan.Detail.Run, readsAgent: true);
+        } else if (HasPendingGenericNewRunCommit) {
+            var journal = await jsonStore.ReadJsonAsync<GenericNewRunCommitJournal>(PendingGenericNewRunCommitJournalPath, cancellationToken)
+                ?? throw new InvalidDataException("The pending new-run journal is empty.");
+            ValidateGenericNewRunCommitJournal(await LoadCatalogCoreAsync(cancellationToken), journal);
+            writeSet = FileSandboxWorkspaceWriteSet.Run(null, journal.PersistencePlan.Detail.Run, readsAgent: true);
+        } else if (HasPendingExistingRunDetailCommit) {
+            var journal = await jsonStore.ReadJsonAsync<ExistingRunDetailCommitJournal>(PendingExistingRunDetailCommitJournalPath, cancellationToken)
+                ?? throw new InvalidDataException("The pending run-detail journal is empty.");
+            ValidateExistingRunDetailCommitJournal(journal);
+            writeSet = FileSandboxWorkspaceWriteSet.Run(journal.PersistencePlan.PreviousDetail.Run,
+                journal.PersistencePlan.TargetDetail.Run, readsAgent: false);
+        } else {
+            var journal = await jsonStore.ReadJsonAsync<AgentDeletionCommitJournal>(PendingAgentDeletionCommitJournalPath, cancellationToken)
+                ?? throw new InvalidDataException("The pending Agent deletion journal is empty.");
+            ValidateAgentDeletionCommitJournal(journal);
+            writeSet = FileSandboxWorkspaceWriteSet.Deletion(journal);
+        }
+        await using var publication = await operation.AcquireAsync(writeSet, witness, cancellationToken);
+        try {
+            await RecoverPendingChatBackedRunCommitAsync(cancellationToken);
+            await RecoverPendingGenericNewRunCommitAsync(cancellationToken);
+            await RecoverPendingExistingRunDetailCommitAsync(cancellationToken);
+            await RecoverPendingAgentDeletionAsync(operation, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
     }
 
-    private async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotCoreAsync(CancellationToken cancellationToken)
+    private async Task<SandboxWorkspaceDocumentSnapshot> LoadSnapshotCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         var normalizedDocument = NormalizeAndValidateDocument(SandboxWorkspaceDocument.Combine(
-            await LoadNormalizedCatalogCoreAsync(cancellationToken),
+            await LoadNormalizedCatalogCoreAsync(operation, cancellationToken),
             await LoadExecutionCoreAsync(cancellationToken)));
         var index = await LoadWorkspaceIndexCoreAsync(cancellationToken);
         return new SandboxWorkspaceDocumentSnapshot(normalizedDocument, index.Revision);
@@ -1394,17 +1615,28 @@ public sealed partial class FileSandboxWorkspaceStore :
         return new SandboxWorkspaceDocumentSnapshot(normalizedDocument, index.Revision);
     }
 
-    private async Task EnsureSplitFilesCoreAsync(CancellationToken cancellationToken)
+    private async Task EnsureSplitFilesCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
-        await RecoverPendingExecutionCommitAsync(cancellationToken);
+        await RecoverPendingExecutionCommitAsync(operation, cancellationToken);
 
         if (!File.Exists(layout.CatalogPath) &&
             !File.Exists(layout.LegacyExecutionPath) &&
             !executionSliceStore.ExecutionStorageExists())
         {
             var seeded = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create());
-            await SaveCoreAsync(SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken);
+            try {
+                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, seeded, currentRevision: 0L, cancellationToken,
+                    AgentCatalogMutationReason.ReadNormalization);
+            } catch (SandboxWorkspacePublicationConflictException conflict) when (
+                conflict.Kind == SandboxWorkspacePublicationConflictKind.OriginalBytesChanged &&
+                File.Exists(layout.CatalogPath) && File.Exists(layout.ExecutionIndexPath) && File.Exists(layout.WorkspaceIndexPath)) {
+                if (await jsonStore.ReadJsonAsync<WorkspaceStorageIndex>(layout.WorkspaceIndexPath, cancellationToken)
+                    is not { Revision: > 0 }) {
+                    throw;
+                }
+                using var observation = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.initialization.existing");
+            }
             return;
         }
 
@@ -1413,7 +1645,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (!File.Exists(layout.CatalogPath))
             {
                 var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-                await SaveCatalogCoreAsync(seededCatalog, cancellationToken);
+                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
@@ -1426,7 +1658,8 @@ public sealed partial class FileSandboxWorkspaceStore :
             if (legacyDocument is not null)
             {
                 var normalized = SandboxWorkspaceSeedFactory.Normalize(legacyDocument);
-                await SaveCoreAsync(SandboxWorkspaceDocument.Empty, normalized, currentRevision: 0L, cancellationToken);
+                await SaveCoreAsync(operation, SandboxWorkspaceDocument.Empty, normalized, currentRevision: 0L, cancellationToken,
+                    AgentCatalogMutationReason.ReadNormalization);
                 return;
             }
         }
@@ -1434,7 +1667,7 @@ public sealed partial class FileSandboxWorkspaceStore :
         if (!File.Exists(layout.CatalogPath))
         {
             var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-            await SaveCatalogCoreAsync(seededCatalog, cancellationToken);
+            await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
         }
 
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
@@ -1445,38 +1678,38 @@ public sealed partial class FileSandboxWorkspaceStore :
                 ExecutionLog: [],
                 Metrics: []);
 
-        await SaveExecutionCoreAsync(
+        await SaveExecutionCoreAsync(operation,
             SandboxWorkspaceExecutionState.Empty,
             SandboxWorkspaceSeedFactory.NormalizeExecutionState(executionState),
             cancellationToken);
         await EnsureWorkspaceIndexCoreAsync(cancellationToken);
-        await PersistNormalizedWorkspaceDocumentCoreAsync(cancellationToken);
+        await PersistNormalizedWorkspaceDocumentCoreAsync(operation, cancellationToken);
     }
 
-    private async Task EnsureCatalogReadCoreAsync(CancellationToken cancellationToken)
+    private async Task EnsureCatalogReadCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
-        await RecoverPendingExecutionCommitAsync(cancellationToken);
+        await RecoverPendingExecutionCommitAsync(operation, cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())
         {
             if (!File.Exists(layout.CatalogPath))
             {
                 var seededCatalog = SandboxWorkspaceSeedFactory.Normalize(SandboxWorkspaceSeedFactory.Create()).ToCatalog();
-                await SaveCatalogCoreAsync(seededCatalog, cancellationToken);
+                await SaveCatalogCoreAsync(operation, seededCatalog, cancellationToken, AgentCatalogMutationReason.ReadNormalization);
             }
 
             await EnsureWorkspaceIndexCoreAsync(cancellationToken);
             return;
         }
 
-        await EnsureSplitFilesCoreAsync(cancellationToken);
+        await EnsureSplitFilesCoreAsync(operation, cancellationToken);
     }
 
-    private async Task EnsureExecutionSummaryReadCoreAsync(CancellationToken cancellationToken)
+    private async Task EnsureExecutionSummaryReadCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         jsonStore.EnsureDirectory(Path.GetDirectoryName(layout.CatalogPath)!);
-        await RecoverPendingExecutionCommitAsync(cancellationToken);
+        await RecoverPendingExecutionCommitAsync(operation, cancellationToken);
 
         if (executionSliceStore.ExecutionStorageExists())
         {
@@ -1484,7 +1717,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             return;
         }
 
-        await EnsureSplitFilesCoreAsync(cancellationToken);
+        await EnsureSplitFilesCoreAsync(operation, cancellationToken);
     }
 
     private async Task<SandboxWorkspaceCatalog> LoadCatalogCoreAsync(CancellationToken cancellationToken)
@@ -1501,9 +1734,7 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<SandboxWorkspaceCatalog> LoadCatalogWithoutWorkspaceLockAsync(CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
-        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        if (catalog.CatalogDataRevision.IsAssigned &&
-            !CatalogPayloadRequiresSave(catalog, normalizedCatalog))
+        if (catalogNormalizer.TryNormalizeUnchanged(catalog, out var normalizedCatalog))
         {
             return normalizedCatalog;
         }
@@ -1511,15 +1742,14 @@ public sealed partial class FileSandboxWorkspaceStore :
         return await PersistNormalizedCatalogReadAsync(cancellationToken);
     }
 
-    private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(CancellationToken cancellationToken)
+    private async Task<SandboxWorkspaceCatalog> LoadNormalizedCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         var catalog = await LoadCatalogCoreAsync(cancellationToken);
-        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
-        var catalogSave = await SaveCatalogCoreAsync(
+        var catalogSave = await SaveCatalogCoreAsync(operation,
             catalog,
             File.Exists(layout.CatalogPath),
-            normalizedCatalog,
-            cancellationToken);
+            catalog,
+            cancellationToken, mutationReason: AgentCatalogMutationReason.ReadNormalization);
         if (catalogSave.Changed)
         {
             var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
@@ -1536,16 +1766,13 @@ public sealed partial class FileSandboxWorkspaceStore :
     private async Task<SandboxWorkspaceCatalog> PersistNormalizedCatalogReadAsync(
         CancellationToken cancellationToken)
     {
-        await gate.WaitAsync(cancellationToken);
-        try
-        {
-            await using var workspaceLock = await crossProcessLock.AcquireAsync(cancellationToken);
-            await EnsureCatalogReadCoreAsync(cancellationToken);
-            return await LoadNormalizedCatalogCoreAsync(cancellationToken);
-        }
-        finally
-        {
-            gate.Release();
+        await using var operation = await FileSandboxWorkspacePublicationScope.EnterAsync(gate, crossProcessLock, layout, runLeaseWriter, cancellationToken);
+        try {
+            await EnsureCatalogReadCoreAsync(operation, cancellationToken);
+            return await LoadNormalizedCatalogCoreAsync(operation, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
     }
 
@@ -1565,75 +1792,117 @@ public sealed partial class FileSandboxWorkspaceStore :
             FailedRuns: executionIndex.FailedRunCount);
     }
 
-    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(
+    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation,
         SandboxWorkspaceCatalog catalog,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
         var catalogExists = File.Exists(layout.CatalogPath);
         var currentCatalog = await LoadCatalogCoreAsync(cancellationToken);
-        return await SaveCatalogCoreAsync(
+        return await SaveCatalogCoreAsync(operation,
             currentCatalog,
             catalogExists,
             catalog,
-            cancellationToken);
+            cancellationToken, mutationReason: mutationReason);
     }
 
-    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(
+    private async Task<CatalogSaveResult> SaveCatalogCoreAsync(FileSandboxWorkspacePublicationScope operation,
         SandboxWorkspaceCatalog currentCatalog,
         bool catalogExists,
         SandboxWorkspaceCatalog catalog,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<SandboxWorkspaceCatalog>? validatePublication = null,
+        AgentPolicyPublication? policyPublication = null,
+        CatalogPublicationDependencies dependencies = CatalogPublicationDependencies.WholeWorkspace,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand)
     {
-        var normalizedCatalog = SandboxWorkspaceSeedFactory.NormalizeCatalog(catalog);
+        var prepared = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, catalog, cancellationToken, policyPublication, mutationReason);
+        if (!prepared.Changed && validatePublication is null) {
+            return prepared;
+        }
+        var witness = dependencies == CatalogPublicationDependencies.CatalogOnly
+            ? await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+                PendingCommitJournalPaths.Append(layout.CatalogPath), [], PendingCommitJournalPaths,
+                physicalPathPolicyFactory, cancellationToken, pendingPublicationTargets: SharedPublicationPaths)
+            : await CapturePublicationWitnessAsync(cancellationToken);
+        await using var publication = await operation.AcquireAsync(
+            FileSandboxWorkspaceWriteSet.Catalog(currentCatalog, prepared.Catalog), witness, cancellationToken);
+        var committed = false;
+        try {
+            var final = await PrepareCatalogCoreAsync(currentCatalog, catalogExists, prepared.Catalog, cancellationToken, policyPublication, mutationReason);
+            if (final.Changed != prepared.Changed || !HasSamePayload(final.Catalog, prepared.Catalog)) {
+                throw new SandboxWorkspacePublicationConflictException(SandboxWorkspacePublicationConflictKind.WriteSetChanged);
+            }
+            validatePublication?.Invoke(prepared.Catalog);
+            if (prepared.Changed) {
+                policyPublication?.EnterWrite(prepared.Catalog);
+                await jsonStore.WriteJsonAtomicallyAsync(layout.CatalogPath, prepared.Catalog, cancellationToken);
+                committed = true;
+                policyPublication?.Acknowledge();
+                catalogCommits?.Committed(currentCatalog, prepared.Catalog);
+            }
+            await publication.DisposeAsync();
+            return prepared;
+        } catch (Exception failure) {
+            var outcome = committed ? new SandboxWorkspaceCatalogCommittedException(prepared.Catalog, failure) : failure;
+            operation.RetainFailure(outcome);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(outcome).Throw();
+            throw;
+        }
+    }
+
+    private enum CatalogPublicationDependencies { WholeWorkspace, CatalogOnly }
+
+    private async Task<CatalogSaveResult> PrepareCatalogCoreAsync(SandboxWorkspaceCatalog currentCatalog,
+        bool catalogExists, SandboxWorkspaceCatalog catalog, CancellationToken cancellationToken,
+        AgentPolicyPublication? policyPublication = null,
+        AgentCatalogMutationReason mutationReason = AgentCatalogMutationReason.UserCommand) {
+        _ = catalogNormalizer.TryNormalizeUnchanged(catalog, out var normalized);
+        var normalizedCatalog = FileSandboxWorkspacePreparedValues.Freeze(normalized);
         if (catalogMutationPolicy is not null) {
-            normalizedCatalog = await catalogMutationPolicy.ApplyAsync(currentCatalog, normalizedCatalog, cancellationToken);
+            normalizedCatalog = await catalogMutationPolicy.ApplyAsync(
+                FileSandboxWorkspacePreparedValues.Freeze(currentCatalog), normalizedCatalog, mutationReason, cancellationToken);
             SandboxWorkspaceDocumentInvariantValidator.Validate(
                 SandboxWorkspaceDocument.Combine(normalizedCatalog, SandboxWorkspaceExecutionState.Empty));
         }
+        normalizedCatalog = normalizedCatalog with {
+            Agents = AgentDecisionDataPolicyMetadata.Preserve(currentCatalog.Agents, normalizedCatalog.Agents),
+            AgentDecisionDataPolicyReceipts = currentCatalog.AgentDecisionDataPolicyReceipts
+        };
+        if (policyPublication is not null) {
+            normalizedCatalog = policyPublication.Apply(normalizedCatalog);
+        }
         var payloadChanged = !catalogExists ||
-                             CatalogPayloadRequiresSave(currentCatalog, normalizedCatalog);
+                             catalogNormalizer.RequiresSave(currentCatalog, normalizedCatalog);
         var revision = currentCatalog.CatalogDataRevision.IsAssigned
             ? payloadChanged
                 ? currentCatalog.CatalogDataRevision.Next()
                 : currentCatalog.CatalogDataRevision
             : CatalogDataRevision.Initial;
-        var savedCatalog = normalizedCatalog with
+        var savedCatalog = FileSandboxWorkspacePreparedValues.Freeze(normalizedCatalog) with
         {
             CatalogDataRevision = revision
         };
-        var changed = !catalogExists ||
-                      jsonStore.RequiresSave(currentCatalog, savedCatalog);
-        if (changed)
-        {
-            await jsonStore.WriteJsonAtomicallyAsync(
-                layout.CatalogPath,
-                savedCatalog,
-                cancellationToken);
-        }
-
+        var changed = payloadChanged || revision != currentCatalog.CatalogDataRevision;
         return new CatalogSaveResult(savedCatalog, changed);
     }
 
-    private bool CatalogPayloadRequiresSave(
-        SandboxWorkspaceCatalog currentCatalog,
-        SandboxWorkspaceCatalog candidateCatalog)
-    {
-        return jsonStore.RequiresSave(
-            currentCatalog with
-            {
-                CatalogDataRevision = CatalogDataRevision.Unassigned
-            },
-            candidateCatalog with
-            {
-                CatalogDataRevision = CatalogDataRevision.Unassigned
-            });
-    }
-
-    private Task<bool> SaveExecutionCoreAsync(
+    private async Task<bool> SaveExecutionCoreAsync(FileSandboxWorkspacePublicationScope operation,
         SandboxWorkspaceExecutionState previousExecutionState,
         SandboxWorkspaceExecutionState executionState,
-        CancellationToken cancellationToken)
-        => executionSliceStore.SaveAsync(previousExecutionState, executionState, cancellationToken);
+        CancellationToken cancellationToken) {
+        executionState = FileSandboxWorkspacePreparedValues.Freeze(executionState);
+        var witness = await CapturePublicationWitnessAsync(cancellationToken, directories: [layout.ExecutionStorageRoot]);
+        await using var publication = await operation.AcquireAsync(FileSandboxWorkspaceWriteSet.Workspace(
+            SandboxWorkspaceDocument.Combine(SandboxWorkspaceCatalog.Empty, previousExecutionState),
+            SandboxWorkspaceDocument.Combine(SandboxWorkspaceCatalog.Empty, executionState)), witness, cancellationToken);
+        try {
+            return await executionSliceStore.SaveAsync(previousExecutionState, executionState, cancellationToken);
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
+        }
+    }
 
     private async Task EnsureWorkspaceIndexCoreAsync(CancellationToken cancellationToken)
     {
@@ -1656,7 +1925,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             ?? new WorkspaceStorageIndex(1L, DateTimeOffset.UtcNow);
     }
 
-    private async Task PersistNormalizedWorkspaceDocumentCoreAsync(CancellationToken cancellationToken)
+    private async Task PersistNormalizedWorkspaceDocumentCoreAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         var currentDocument = SandboxWorkspaceDocument.Combine(
             await LoadCatalogCoreAsync(cancellationToken),
@@ -1670,51 +1939,63 @@ public sealed partial class FileSandboxWorkspaceStore :
         var currentRevision = File.Exists(layout.WorkspaceIndexPath)
             ? (await LoadWorkspaceIndexCoreAsync(cancellationToken)).Revision
             : 0L;
-        await SaveCoreAsync(currentDocument, normalizedDocument, currentRevision, cancellationToken);
+        await SaveCoreAsync(operation, currentDocument, normalizedDocument, currentRevision, cancellationToken,
+            AgentCatalogMutationReason.ReadNormalization);
     }
 
     private Task SaveWorkspaceIndexCoreAsync(WorkspaceStorageIndex index, CancellationToken cancellationToken)
         => jsonStore.WriteJsonAtomicallyAsync(layout.WorkspaceIndexPath, index, cancellationToken);
 
-    private async Task<ChatSessionRecord> SaveChatSessionCoreAsync(
+    private async Task<ChatSessionRecord> SaveChatSessionCoreAsync(FileSandboxWorkspacePublicationScope operation,
         ChatSessionRecord? previousSession,
         ChatSessionRecord session,
         CancellationToken cancellationToken)
     {
-        var normalizedSession = NormalizeChatSession(session);
-        var sessionExistedBefore = previousSession is not null;
-        var changed = await jsonStore.WriteJsonIfChangedAsync(
-            layout.SessionPath(normalizedSession.Id),
-            normalizedSession,
-            cancellationToken);
+        var normalizedSession = FileSandboxWorkspacePreparedValues.Freeze(NormalizeChatSession(session));
+        try {
+            var sessionExistedBefore = previousSession is not null;
+            var changed = await jsonStore.WriteJsonIfChangedAsync(
+                layout.SessionPath(normalizedSession.Id),
+                normalizedSession,
+                cancellationToken);
 
-        var currentIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
-        var nextIndex = currentIndex with
-        {
-            Revision = changed ? currentIndex.Revision + 1L : currentIndex.Revision,
-            UpdatedAtUtc = changed ? DateTimeOffset.UtcNow : currentIndex.UpdatedAtUtc,
-            SessionCount = currentIndex.SessionCount + (sessionExistedBefore ? 0 : 1)
-        };
+            var currentIndex = await executionSliceStore.LoadIndexAsync(cancellationToken);
+            var nextIndex = currentIndex with
+            {
+                Revision = changed ? currentIndex.Revision + 1L : currentIndex.Revision,
+                UpdatedAtUtc = changed ? DateTimeOffset.UtcNow : currentIndex.UpdatedAtUtc,
+                SessionCount = currentIndex.SessionCount + (sessionExistedBefore ? 0 : 1)
+            };
 
-        if (changed || !File.Exists(layout.ExecutionIndexPath) || jsonStore.RequiresSave(currentIndex, nextIndex))
-        {
-            await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, nextIndex, cancellationToken);
+            if (changed || !File.Exists(layout.ExecutionIndexPath) || jsonStore.RequiresSave(currentIndex, nextIndex))
+            {
+                await jsonStore.WriteJsonAtomicallyAsync(layout.ExecutionIndexPath, nextIndex, cancellationToken);
+            }
+
+            var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
+            var nextWorkspaceIndex = new WorkspaceStorageIndex(
+                Revision: changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
+                UpdatedAtUtc: nextIndex.UpdatedAtUtc);
+            if (changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
+            {
+                await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
+            }
+
+            await chatProjectionStore.SaveSessionAsync(previousSession, normalizedSession, nextIndex, cancellationToken);
+            if (changed) {
+                await executionSliceStore.AdvanceUsageProjectionForSessionChangeAsync(
+                    currentIndex,
+                    nextIndex,
+                    cancellationToken);
+            }
+            return normalizedSession;
+        } catch (Exception failure) {
+            operation.RetainFailure(failure);
+            throw;
         }
-
-        var workspaceIndex = await LoadWorkspaceIndexCoreAsync(cancellationToken);
-        var nextWorkspaceIndex = new WorkspaceStorageIndex(
-            Revision: changed ? workspaceIndex.Revision + 1L : workspaceIndex.Revision,
-            UpdatedAtUtc: nextIndex.UpdatedAtUtc);
-        if (changed || !File.Exists(layout.WorkspaceIndexPath) || jsonStore.RequiresSave(workspaceIndex, nextWorkspaceIndex))
-        {
-            await SaveWorkspaceIndexCoreAsync(nextWorkspaceIndex, cancellationToken);
-        }
-
-        await chatProjectionStore.SaveSessionAsync(previousSession, normalizedSession, nextIndex, cancellationToken);
-        return normalizedSession;
     }
 
-    private async Task<long> ResolveCurrentRevisionAsync(CancellationToken cancellationToken)
+    private async Task<long> ResolveCurrentRevisionAsync(FileSandboxWorkspacePublicationScope operation, CancellationToken cancellationToken)
     {
         if (!File.Exists(layout.CatalogPath) &&
             !File.Exists(layout.LegacyExecutionPath) &&
@@ -1723,7 +2004,7 @@ public sealed partial class FileSandboxWorkspaceStore :
             return 0L;
         }
 
-        await EnsureSplitFilesCoreAsync(cancellationToken);
+        await EnsureSplitFilesCoreAsync(operation, cancellationToken);
         return (await LoadWorkspaceIndexCoreAsync(cancellationToken)).Revision;
     }
 
@@ -1733,6 +2014,29 @@ public sealed partial class FileSandboxWorkspaceStore :
                File.Exists(layout.WorkspaceIndexPath) &&
                !HasPendingAgentDeletionCommit;
     }
+
+    private Task<FileSandboxWorkspaceMutationWitness> CapturePublicationWitnessAsync(CancellationToken cancellationToken,
+        IEnumerable<string>? paths = null, IEnumerable<string>? directories = null) =>
+        FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+            SharedPublicationPaths.Concat(paths ?? []), directories ?? [], PendingCommitJournalPaths,
+            physicalPathPolicyFactory, cancellationToken);
+
+    private Task<FileSandboxWorkspaceMutationWitness> CaptureChatSessionWitnessAsync(Guid sessionId,
+        bool observeSession, CancellationToken cancellationToken) =>
+        FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+            PendingCommitJournalPaths.Concat(new[] { layout.CatalogPath, layout.LegacyExecutionPath })
+                .Concat(observeSession ? [layout.SessionPath(sessionId)] : []),
+            [], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
+            pendingPublicationTargets: SharedPublicationPaths.Append(layout.SessionPath(sessionId)));
+
+    private string[] PendingCommitJournalPaths =>
+        [PendingChatBackedRunCommitJournalPath, PendingGenericNewRunCommitJournalPath,
+            PendingExistingRunDetailCommitJournalPath, PendingAgentDeletionCommitJournalPath];
+
+    private IEnumerable<string> SharedPublicationPaths =>
+        new[] { layout.CatalogPath, layout.WorkspaceIndexPath, layout.LegacyExecutionPath,
+            layout.ExecutionIndexPath, layout.ExecutionChatIndexPath, layout.ExecutionProcessIndexPath, layout.ExecutionUsageIndexPath }
+            .Concat(PendingCommitJournalPaths);
 
     private string PendingChatBackedRunCommitJournalPath
         => Path.Combine(

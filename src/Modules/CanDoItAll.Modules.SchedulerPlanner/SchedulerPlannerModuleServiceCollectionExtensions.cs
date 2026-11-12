@@ -54,6 +54,7 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
         services.AddScoped<IWorkflowScheduledAuthorityPolicy, SchedulerWorkflowAuthorityPolicy>();
         services.AddScoped<ISchedulerPlannerRunDispatcher, SchedulerPlannerRunDispatcher>();
         services.AddScoped<ISchedulerPlannerService, SchedulerPlannerService>();
+        services.AddTransient<Pages.SchedulerWorkspaceSession>();
         services.AddScoped<SchedulerAgentRuntimeAuthorizationService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<
             IAgentExecutionSourceAuthorityProvider,

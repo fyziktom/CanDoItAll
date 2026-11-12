@@ -341,7 +341,7 @@
       "key": "dotnet-app-delivery-inline-skill",
       "displayName": ".NET App Delivery Skill",
       "description": "Reusable workflow guidance for scaffolding, building, testing, running, and proving generic .NET applications.",
-      "stableId": "skill:dotnet-app-delivery:v1",
+      "stableId": "skill:dotnet-app-delivery:v2",
       "stableGuidKey": "capabilities/dotnet-app-delivery-inline-skill",
       "endpointOrPath": "inline://dotnet-app-delivery-inline-skill",
       "skillSource": "inline",

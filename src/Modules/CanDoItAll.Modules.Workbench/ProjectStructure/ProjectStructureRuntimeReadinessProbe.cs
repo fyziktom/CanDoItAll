@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Core;
 using System.Security.Authentication;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -25,13 +26,16 @@ public sealed class ProjectStructureRuntimeReadinessProbe(IHttpClientFactory htt
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(2);
 
-    public async Task<ProjectStructureRuntimeReadiness> WaitUntilServingAsync(
+    public Task<ProjectStructureRuntimeReadiness> WaitUntilServingAsync(
         IProjectStructureRuntimeLauncher runtimeLauncher,
         string nodeId,
         Uri url,
         TimeSpan timeout,
         CancellationToken cancellationToken)
-    {
+        => WaitUntilServingAsync(runtimeLauncher, nodeId, null, url, timeout, cancellationToken);
+
+    public async Task<ProjectStructureRuntimeReadiness> WaitUntilServingAsync(IProjectStructureRuntimeLauncher runtimeLauncher,
+        string nodeId, WorkspaceOwnedProcessIdentity? expected, Uri url, TimeSpan timeout, CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(runtimeLauncher);
         ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
         ArgumentNullException.ThrowIfNull(url);
@@ -47,14 +51,25 @@ public sealed class ProjectStructureRuntimeReadinessProbe(IHttpClientFactory htt
         {
             while (true)
             {
-                if (await IsServingAsync(client, url, deadline.Token).ConfigureAwait(false))
+                deadline.Token.ThrowIfCancellationRequested();
+                if (expected is not null && runtimeLauncher.GetIdentity(nodeId) != expected) {
+                    return new(ProjectStructureRuntimeReadinessStatus.Stopped, "The original runtime session exited or was replaced. Its preview was not opened.");
+                }
+                var serving = await IsServingAsync(client, url, deadline.Token).ConfigureAwait(false);
+                deadline.Token.ThrowIfCancellationRequested();
+                if (expected is not null && runtimeLauncher.GetIdentity(nodeId) != expected) {
+                    return new(ProjectStructureRuntimeReadinessStatus.Stopped, "The original runtime session changed during readiness observation.");
+                }
+                if (serving)
                 {
                     return new(
                         ProjectStructureRuntimeReadinessStatus.Serving,
                         $"The runtime is serving {url.AbsoluteUri}.");
                 }
 
-                var exit = await runtimeLauncher.WaitForExitAsync(nodeId, PollInterval, deadline.Token).ConfigureAwait(false);
+                var exit = expected is null
+                    ? await runtimeLauncher.WaitForExitAsync(nodeId, PollInterval, deadline.Token).ConfigureAwait(false)
+                    : await runtimeLauncher.WaitForExitAsync(nodeId, expected, PollInterval, deadline.Token).ConfigureAwait(false);
                 if (exit is not null)
                 {
                     return new(

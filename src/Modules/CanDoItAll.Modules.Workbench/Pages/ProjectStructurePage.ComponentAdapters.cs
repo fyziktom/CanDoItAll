@@ -1,8 +1,12 @@
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Components.Gantt;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
+using CanDoItAll.Workbench.Structure.UI;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -16,11 +20,282 @@ internal sealed class ProjectStructureNodeCreatedWithFollowUpFailureException(
 
 public partial class ProjectStructurePage
 {
+    private Guid structureContextId = Guid.NewGuid();
+    private ProjectStructureActionContext? structureContext;
+    private string? structureLoadError;
+    private ProjectStructureAuthoringOpening? textAssetOpening;
+    private (Guid ContextId, IReadOnlyList<GanttTaskId> Tasks) ganttChangeSelection = (Guid.Empty, []);
+
+    private Guid StructureContextId {
+        get {
+            if (surface?.ProjectId == ProjectId && surface.ExpectedProjectAdmission is not null) {
+                if (structureContext is null || !IsDisplayedAction(structureContext)) {
+                    structureContext = CaptureActionContext();
+                    structureContextId = Guid.NewGuid();
+                }
+            } else if (structureContext is not null) {
+                structureContext = null;
+                structureContextId = Guid.NewGuid();
+            }
+            return structureContextId;
+        }
+    }
+
+    private StructurePresentation BuildStructurePresentation() => new(StructureContextId, LoadingSkeletonSnapshot) {
+        Canvas = surface?.ProjectId == ProjectId ? canvasSurface : null,
+        UnavailableTitle = unavailableState?.Title,
+        UnavailableDescription = unavailableState?.Description,
+        Error = structureLoadError,
+        Toolbar = new() {
+            SelectionVisible = SelectionWindowState.IsVisible,
+            HealthVisible = HealthWindowState.IsVisible,
+            ObjectIndexVisible = ObjectIndexWindowState.IsVisible,
+            FilesVisible = FileBrowserWindowState.IsVisible,
+            SignalsVisible = SignalsWindowState.IsVisible,
+            AgentsVisible = ConversationShellCoordinator.Snapshot().IsCatalogVisible,
+            Mode = canvasToolMode,
+            CanConnect = selectedNode is not null,
+            CanRecompose = CanRecomposeSelectedBranch,
+            IsRecomposing = isSubtreeRecompositionInProgress
+        },
+        Toolbox = new() {
+            WindowId = ToolboxWindowKey,
+            State = ToolboxWindowState,
+            Groups = ToolboxCreateGroups,
+            Search = structureToolboxSearchText,
+            SourceLabel = ToolboxSourceLabel,
+            DefaultWidth = ToolboxWindowDefaultWidth
+        },
+        SelectionCount = selectedNodeIds.Count,
+        ShowFeedback = !SelectionWindowState.IsVisible || SelectionWindowState.IsMinimized,
+        Feedback = workflowFeedback,
+        FeedbackTone = workflowFeedbackTone,
+        HasPendingCleanup = pendingDeletionRecoveries.Count > 0,
+        IsRetryingCleanup = isRetryingDeletionCleanup
+    };
+
+    private async Task HandleStructureIntentAsync(StructureIntent intent) {
+        if (intent.ContextId != StructureContextId || deferredCompletionCts.IsCancellationRequested) {
+            return;
+        }
+        if (intent is StructureToolbarIntent { Command: StructureToolbarCommand.Retry }) {
+            await ReloadSurfaceAsync();
+            return;
+        }
+        if (intent is StructureToolbarIntent { Command: StructureToolbarCommand.Projects }) {
+            await OpenUnavailableRouteAsync();
+            return;
+        }
+        if (structureContext is null || !IsCurrentAction(structureContext)) {
+            structureLoadError = "The displayed workspace changed. Reload the project before continuing.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+        switch (intent) {
+            case StructureViewIntent view when view.Index is >= CanvasViewIndex and <= ManagerSummaryViewIndex:
+                SelectStructureView(view.Index);
+                break;
+            case StructureSelectionIntent selection:
+                await TrackAuthoringOperationAsync(HandleSelectionChangedAsync(selection.Selection));
+                break;
+            case StructureNodesMovedIntent move:
+                await TrackAuthoringOperationAsync(HandleNodesMovedAsync(move.Move));
+                break;
+            case StructureContextIntent context:
+                await TrackAuthoringOperationAsync(HandleContextActionAsync(context.Request));
+                break;
+            case StructureComposerOpenedIntent opened:
+                await CaptureComposerAsync(opened.Opening);
+                break;
+            case StructureComposerClosedIntent closed:
+                composerOpenings.Remove(closed.OpeningId);
+                if (composerOpening?.Ownership.Id == closed.OpeningId) {
+                    if (composerOpening.Session is { } session) {
+                        await session.DisposeAsync();
+                    }
+                    composerOpening = null;
+                }
+                break;
+            case StructureComposerComparisonIntent comparison:
+                await CompareComposerAsync(comparison.Draft);
+                break;
+            case StructureCreateIntent create:
+                await HandleCreateActionAsync(create.Request);
+                break;
+            case StructureNoteEditIntent edit:
+                await HandleNodeEditedAsync(edit.Request);
+                break;
+            case StructureOpenIntent open:
+                await TrackAuthoringOperationAsync(HandleNodeOpenedAsync(open.NodeId));
+                break;
+            case StructureStateIntent state:
+                await HandleCanvasStateChangedAsync(state.StateJson);
+                break;
+            case StructureClipboardIntent clipboard:
+                await HandleClipboardRequestedAsync(clipboard.Request);
+                break;
+            case StructureToolboxWindowIntent window:
+                await HandleToolboxWindowStateChangedAsync(window.State);
+                break;
+            case StructureToolboxSearchIntent search:
+                structureToolboxSearchText = search.Search;
+                break;
+            case StructureToolboxGroupIntent group:
+                ExpandToolboxGroup(group.GroupId);
+                break;
+            case StructureToolboxActionIntent action:
+                await HandleToolboxActionSelectedAsync(action.ActionId);
+                break;
+            case StructureToolbarIntent toolbar:
+                await DispatchStructureToolbarAsync(toolbar.Command);
+                break;
+        }
+    }
+
+    private Task DispatchStructureToolbarAsync(StructureToolbarCommand command) => command switch {
+        StructureToolbarCommand.Select => SelectCanvasToolAsync(),
+        StructureToolbarCommand.Dependency => EnableLinkModeAsync(),
+        StructureToolbarCommand.Delete => EnableDeleteModeAsync(),
+        StructureToolbarCommand.Inspector => ToggleSelectionWindowAsync(),
+        StructureToolbarCommand.Health => ToggleHealthWindowAsync(),
+        StructureToolbarCommand.Toolbox => ToggleToolboxWindowAsync(),
+        StructureToolbarCommand.ObjectIndex => ToggleObjectIndexWindowAsync(),
+        StructureToolbarCommand.Files => OpenProjectFileBrowserAsync(),
+        StructureToolbarCommand.Signals => ToggleSignalsWindowAsync(),
+        StructureToolbarCommand.Agents => ToggleAgentWindowAsync(),
+        StructureToolbarCommand.Gantt => OpenGanttViewAsync(),
+        StructureToolbarCommand.Recompose => TrackAuthoringOperationAsync(RecomposeSelectedBranchAsync()),
+        StructureToolbarCommand.RetryCleanup => RetryPendingDeletionCleanupAsync(),
+        _ => Task.CompletedTask
+    };
+
+    private async Task HandleStructureInboxChangedAsync() {
+        if (composerOpening?.Session is { } session) {
+            session.ObserveHint(changeInbox.LatestFor(session.Baseline.Id));
+        }
+        TaskEditingSessions.ObserveHints(surface?.ExpectedProjectAdmission, changeInbox.LatestFor);
+        if (changeInbox.CanAutoRefresh(CanAutoRefreshAgentChange)) {
+            await RefreshStructureChangesAsync(new(changeInbox.ContextId, null), automatic: true);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleStructureChangesAsync(StructureChangesIntent intent) {
+        if (intent.ContextId != changeInbox.ContextId || surface is null || surface.ProjectId != ProjectId) {
+            return;
+        }
+        if (intent is StructureChangesWindowIntent window) {
+            changeInbox.SetWindow(window.State);
+            return;
+        }
+        if (intent is StructureChangesRefreshIntent refresh) {
+            await RefreshStructureChangesAsync(refresh);
+        }
+    }
+
+    private async Task RefreshStructureChangesAsync(StructureChangesRefreshIntent refresh, bool automatic = false) {
+        if (!changeInbox.BeginRefresh(out var through)) {
+            return;
+        }
+        var contextId = changeInbox.ContextId;
+        var context = CaptureActionContext();
+        var targets = changeInbox.GetNodeIds(refresh.Sequence);
+        var requestedView = structureViewIndex;
+        var published = false;
+        try {
+            await ReloadSurfaceAsync(canPublish: () => contextId == changeInbox.ContextId && IsCurrentAction(context) &&
+                    (!automatic || changeInbox.CanAutoRefresh(CanAutoRefreshAgentChange)),
+                onPublished: () => published = true, preserveEditorDrafts: true);
+            if (!published || contextId != changeInbox.ContextId || !IsCurrentAction(context)) {
+                return;
+            }
+            var surviving = ProjectStructureChangeInbox.ResolveNodeIds(targets, surface!.Nodes);
+            var message = targets.Count > surviving.Count
+                ? "The structure is refreshed. Some changed nodes were deleted or moved outside this project."
+                : null;
+            if (refresh.Sequence.HasValue && requestedView == GanttViewIndex && IsGanttViewVisible) {
+                var survivingIds = surviving.ToHashSet(StringComparer.Ordinal);
+                var tasks = surface.Nodes.Where(node => survivingIds.Contains(node.Id) && ProjectStructureGanttProjectionAdapter.IsCanonicalTask(node))
+                    .Select(node => new GanttTaskId(node.Id)).ToArray();
+                ganttChangeSelection = (contextId, tasks);
+                if (surviving.Count > tasks.Length) {
+                    message ??= "The structure is refreshed. Gantt selection includes only changed tasks on the schedule.";
+                }
+            } else if (surviving.Count > 0 && requestedView == CanvasViewIndex && structureViewIndex == CanvasViewIndex) {
+                await SelectInsightsAsync(CurrentInsights, surviving);
+                if (contextId == changeInbox.ContextId && structureViewIndex == CanvasViewIndex && workbenchRef is not null) {
+                    await workbenchRef.SelectNodesAsync(surviving, surviving[0]);
+                }
+            }
+            if (contextId == changeInbox.ContextId) {
+                changeInbox.CompleteRefresh(through, message);
+            }
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Remote-change refresh failed for project {ProjectId}.", context.Admission.ProjectId);
+            if (contextId == changeInbox.ContextId) {
+                changeInbox.FailRefresh("The structure could not be refreshed. Your current view is retained. Try Refresh structure again.");
+            }
+        } finally {
+            if (contextId == changeInbox.ContextId && changeInbox.IsBusy) {
+                if (automatic) {
+                    changeInbox.DeferRefresh();
+                } else {
+                    changeInbox.FailRefresh("The workspace changed during refresh. Reopen the project before continuing.");
+                }
+            }
+        }
+    }
+
+    private StructureDialogsPresentation BuildStructureDialogs() => new(
+        projectHierarchyDialog is { } hierarchy ? new(hierarchy.OpeningId, hierarchy.Title, hierarchy.Copy, hierarchy.SubmitLabel,
+            hierarchy.CurrentParentProjectTitle, hierarchy.AvailableProjects.Select(project => new StructureProjectOption(project.Id, project.Name)).ToArray(),
+            hierarchy.SelectedProjectId, hierarchy.Error, hierarchy.IsBusy, hierarchy.RequiresObservation) : null,
+        blockMutationDialog is { } block ? new(block.OpeningId, block.NodeId, block.Title, block.Copy, block.SubmitLabel,
+            block.SelectionLabel, block.Options, block.SelectedActionId, block.Error, block.IsBusy, block.RequiresObservation) : null,
+        subprojectTransferDialog is { } transfer ? new(transfer.OpeningId, transfer.SourceNodeId, transfer.Title, transfer.Copy,
+            transfer.SubmitLabel, transfer.DescendantCount, transfer.ProjectName, transfer.Error, transfer.IsBusy, transfer.RequiresObservation) : null);
+
+    private Task HandleStructureDialogIntentAsync(StructureDialogIntent intent) {
+        var hierarchy = hierarchyOpening;
+        var conversion = blockOpening;
+        var transfer = transferOpening;
+        switch (intent) {
+            case StructureHierarchySelection selected when hierarchy?.Id == selected.OpeningId:
+                ChangeAuthoringDialog(hierarchy, hierarchyOpening, () => HandleProjectHierarchySelectionChanged(new() { Value = selected.ProjectId?.ToString() }));
+                break;
+            case StructureConversionSelection selected when conversion?.Id == selected.OpeningId:
+                ChangeAuthoringDialog(conversion, blockOpening, () => HandleBlockMutationSelectionChanged(new() { Value = selected.ActionId }));
+                break;
+            case StructureTransferName name when transfer?.Id == name.OpeningId:
+                ChangeAuthoringDialog(transfer, transferOpening, () => HandleSubprojectTransferNameChanged(new() { Value = name.Name }));
+                break;
+            case StructureDialogCommand { Operation: StructureDialogOperation.CloseHierarchy } when hierarchy?.Id == intent.OpeningId:
+                ChangeAuthoringDialog(hierarchy, hierarchyOpening, CloseProjectHierarchyDialog);
+                break;
+            case StructureDialogCommand { Operation: StructureDialogOperation.CloseConversion } when conversion?.Id == intent.OpeningId:
+                ChangeAuthoringDialog(conversion, blockOpening, CloseBlockMutationDialog);
+                break;
+            case StructureDialogCommand { Operation: StructureDialogOperation.CloseTransfer } when transfer?.Id == intent.OpeningId:
+                ChangeAuthoringDialog(transfer, transferOpening, CloseSubprojectTransferDialog);
+                break;
+            case StructureDialogCommand { Operation: StructureDialogOperation.SubmitHierarchy } when hierarchy?.Id == intent.OpeningId:
+                return DispatchAuthoringDialogAsync(hierarchy, hierarchyOpening, ExecuteProjectHierarchyCommandAsync);
+            case StructureDialogCommand { Operation: StructureDialogOperation.CreateProject } when hierarchy?.Id == intent.OpeningId:
+                return DispatchAuthoringDialogAsync(hierarchy, hierarchyOpening, OpenProjectCreateDialogAsync);
+            case StructureDialogCommand { Operation: StructureDialogOperation.SubmitConversion } when conversion?.Id == intent.OpeningId:
+                return DispatchAuthoringDialogAsync(conversion, blockOpening, ExecuteBlockMutationAsync);
+            case StructureDialogCommand { Operation: StructureDialogOperation.SubmitTransfer } when transfer?.Id == intent.OpeningId:
+                return DispatchAuthoringDialogAsync(transfer, transferOpening, ExecuteSubprojectTransferAsync);
+        }
+        return Task.CompletedTask;
+    }
+
     [Inject]
     private NotificationService NotificationService { get; set; } = default!;
 
     [Inject]
     private ProjectStructureCanvasTaskDialogCoordinator CanvasTaskDialogCoordinator { get; set; } = default!;
+    [Inject] private ProjectStructureTaskEditingSessions TaskEditingSessions { get; set; } = default!;
 
     [Inject]
     private ProjectStructureTextAssetCreationCoordinator TextAssetCreationCoordinator { get; set; } = default!;
@@ -91,51 +366,105 @@ public partial class ProjectStructurePage
             editModel.Request,
             deferredCompletionCts.Token);
 
-    private Task CreateTextAssetAsync(
+    private async Task CreateTextAssetAsync(
         ProjectStructureCreateLeafDefinition definition,
-        CanvasWorkbenchCreateActionRequest createRequest)
-        => TextAssetCreationCoordinator.CreateAsync(
-            new ProjectStructureTextAssetCreationContext(ProjectId, CreateTextAssetNodeAsync),
-            definition,
-            createRequest,
-            deferredCompletionCts.Token);
+        CanvasWorkbenchCreateActionRequest createRequest) {
+        var context = CaptureActionContext();
+        var source = context.Surface.Nodes.FirstOrDefault(node => node.Id == createRequest.SourceNodeId);
+        var parentId = CanvasAdapters.ProjectStructurePlacementPolicy.ResolveParentNodeId(source, createRequest)
+            ?? $"project:{context.Surface.ProjectId:D}";
+        var parent = context.Surface.Nodes.FirstOrDefault(node => node.Id == parentId)
+            ?? throw new InvalidOperationException("The original text asset parent is no longer available.");
+        var opening = new ProjectStructureAuthoringOpening(context, source ?? parent);
+        textAssetOpening = opening;
+        var original = createRequest with {
+            ParentNodeId = parentId,
+            InputValues = createRequest.InputValues?.Select(value => new CanvasWorkbenchInputValue { Key = value.Key, Value = value.Value }).ToArray(),
+            UploadedFile = createRequest.UploadedFile is { } upload ? new() {
+                FileName = upload.FileName, ContentType = upload.ContentType, Base64Data = upload.Base64Data
+            } : null
+        };
+        try {
+            await TextAssetCreationCoordinator.CreateAsync(
+                new(context.Surface.ProjectId, (capturedDefinition, submitted, media, cancellationToken) =>
+                    CreateTextAssetNodeAsync(opening, capturedDefinition, original with {
+                        Title = submitted.Title, Subtitle = submitted.Subtitle, Notes = submitted.Notes, UploadedFile = null
+                    }, media, cancellationToken)), definition, original, deferredCompletionCts.Token);
+        } finally {
+            if (ReferenceEquals(textAssetOpening, opening)) {
+                textAssetOpening = null;
+            }
+        }
+    }
 
     private async Task<ProjectStructureNode?> CreateTextAssetNodeAsync(
+        ProjectStructureAuthoringOpening opening,
         ProjectStructureCreateLeafDefinition definition,
         CanvasWorkbenchCreateActionRequest createRequest,
         ProjectObjectMediaPayload media,
-        CancellationToken cancellationToken)
-    {
-        ProjectStructureNode? committedNode = null;
-        try
-        {
-            return await CreateObjectAsync(
-                definition,
-                createRequest,
-                request => request with { Media = media },
-                cancellationToken,
-                node => committedNode = node);
+        CancellationToken cancellationToken) {
+        if (!TryBeginAuthoring(opening, textAssetOpening)) {
+            throw new ProjectStructureTextAssetSubmissionException(
+                opening.RequiresObservation ? "The original write requires observation before another create." :
+                    "The original text asset opening is no longer current. Reopen it before submitting.",
+                new InvalidOperationException("The original text asset opening cannot dispatch."), opening.RequiresObservation);
         }
-        catch (Exception exception) when (committedNode is not null)
-        {
-            throw new ProjectStructureNodeCreatedWithFollowUpFailureException(
-                committedNode,
-                exception);
+        var context = opening.Context;
+        var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
+            ProjectStructureAuthoringOperation.CreateNode, ProjectStructureAuthoringResultKind.Rejected,
+            "The text asset was not created.") { SourceNodeId = opening.Node.Id };
+        var invoked = false;
+        try {
+            cancellationToken.ThrowIfCancellationRequested();
+            invoked = true;
+            return await CreateObjectAsync(context, definition, createRequest, request => request with {
+                Media = media,
+                ExpectedProjectAdmission = context.Admission,
+                ExpectedParticipants = context.Surface.Nodes.Where(node => node.Id == opening.Node.Id || node.Id == createRequest.ParentNodeId).ToArray()
+            }, cancellationToken, node => {
+                opening.RequiresObservation = true;
+                outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed, Node = node,
+                    Message = $"{node.Title} was created ({node.Id})." };
+                RecordAuthoringOutcome(opening, outcome);
+            }, () => IsCurrentAuthoring(opening, textAssetOpening));
+        } catch (Exception exception) {
+            opening.RequiresObservation = outcome.Node is not null || invoked && !IsKnownGraphRejection(exception) &&
+                exception is not (ProjectAssetCreationException or ProjectAssetContentValidationException);
+            if (outcome.Node is { } committed) {
+                RecordAuthoringOutcome(opening, outcome with { Kind = ProjectStructureAuthoringResultKind.PartialCommit,
+                    Failure = exception, Message = $"{outcome.Message} Follow-up failed. Observe the saved node before continuing." });
+                throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, exception);
+            }
+            var message = opening.RequiresObservation
+                ? "The original file write is unconfirmed. Observe the original project before trying again."
+                : exception.Message;
+            RecordAuthoringOutcome(opening, outcome with { Kind = opening.RequiresObservation
+                ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
+                Message = message, Failure = exception });
+            throw new ProjectStructureTextAssetSubmissionException(message, exception, opening.RequiresObservation);
+        } finally {
+            opening.IsBusy = false;
+            await RenderAuthoringOutcomeAsync();
         }
     }
 
     private ProjectStructureCanvasTaskDialogContext CreateCanvasTaskDialogContext() {
-        var openedSurface = surface ?? throw new InvalidOperationException("Reload the project structure before opening the task editor.");
+        var action = CaptureActionContext();
+        var openedSurface = action.Surface;
         var owner = CreateProjectStructureUiAgentContext() with { ExpectedProjectAdmission = openedSurface.ExpectedProjectAdmission };
         ProjectAssignmentAdmission.Require(openedSurface.ProjectId, owner.ExpectedProjectAdmission);
         return new(openedSurface.ProjectId, BuildNodeOptions(ProjectObjectType.Repository),
-            (request, configure) => CreateCanvasTaskNodeAsync(openedSurface, request, configure), ReloadSurfaceAsync, owner);
+            (request, configure, authorizeCommit) => CreateCanvasTaskNodeAsync(action, request, configure, authorizeCommit),
+            (taskId, authorizeRead) => ReloadSurfaceAsync(taskId, canPublish: () => IsCurrentAction(action), authorizeRead: authorizeRead), owner) {
+            IsCurrent = () => IsCurrentAction(action)
+        };
     }
 
-    private Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
-        ProjectStructureSurface openedSurface,
+    private async Task<ProjectStructureNode?> CreateCanvasTaskNodeAsync(
+        ProjectStructureActionContext action,
         CanvasWorkbenchCreateActionRequest createRequest,
-        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest)
+        Func<ProjectObjectCreateRequest, ProjectObjectCreateRequest> configureRequest,
+        Func<CancellationToken, ValueTask> authorizeCommit)
     {
         if (!ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
                 ProjectStructureCanvasCatalog.WorkTaskActionId,
@@ -145,9 +474,16 @@ public partial class ProjectStructurePage
                 "The canonical task definition is unavailable.");
         }
 
-        return CreateObjectAsync(
-            definition,
-            createRequest,
-            configureRequest, capturedSurface: openedSurface);
+        if (!IsCurrentAction(action)) {
+            throw new InvalidOperationException("The original task editor is no longer current.");
+        }
+        ProjectStructureNode? committed = null;
+        try {
+            return await CreateObjectAsync(action, definition, createRequest, configureRequest,
+                cancellationToken: CancellationToken.None, onNodeCommitted: node => committed = node,
+                authorizeCommit: authorizeCommit);
+        } catch (Exception failure) when (committed is not null) {
+            throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, failure);
+        }
     }
 }

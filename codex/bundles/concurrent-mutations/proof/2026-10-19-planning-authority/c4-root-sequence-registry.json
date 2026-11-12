@@ -1,0 +1,1985 @@
+{
+  "candidate": "c4-root-sequence-registry",
+  "commands": [
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration-final",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:30:23.1716702+00:00",
+      "State": "Completed",
+      "RunnerPid": 50352,
+      "ChildPid": 59108,
+      "ChildStartedUtc": "2026-10-20T10:30:23.1755337Z",
+      "ExitCode": 0,
+      "Seconds": 46.7253042,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 345115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-integration",
+      "Arguments": [
+        "build",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:27:44.8034769+00:00",
+      "State": "Completed",
+      "RunnerPid": 50180,
+      "ChildPid": 4944,
+      "ChildStartedUtc": "2026-10-20T10:27:44.8073243Z",
+      "ExitCode": 0,
+      "Seconds": 44.7039058,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 345115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-persistence-final",
+      "Arguments": [
+        "build",
+        "src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:29:29.5001584+00:00",
+      "State": "Completed",
+      "RunnerPid": 50352,
+      "ChildPid": 44552,
+      "ChildStartedUtc": "2026-10-20T10:29:29.5296743Z",
+      "ExitCode": 0,
+      "Seconds": 3.6700781,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 15418,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-persistence",
+      "Arguments": [
+        "build",
+        "src/Processes/CanDoItAll.Processes.Persistence/CanDoItAll.Processes.Persistence.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:26:33.9478394+00:00",
+      "State": "Completed",
+      "RunnerPid": 50180,
+      "ChildPid": 26596,
+      "ChildStartedUtc": "2026-10-20T10:26:33.9792786Z",
+      "ExitCode": 0,
+      "Seconds": 6.0551048,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 15418,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit-final",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:29:33.2243266+00:00",
+      "State": "Completed",
+      "RunnerPid": 50352,
+      "ChildPid": 42772,
+      "ChildStartedUtc": "2026-10-20T10:29:33.2286638Z",
+      "ExitCode": 0,
+      "Seconds": 49.9292847,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 305112,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "build-unit",
+      "Arguments": [
+        "build",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1"
+      ],
+      "StartedUtc": "2026-10-20T10:26:40.0572637+00:00",
+      "State": "Completed",
+      "RunnerPid": 50180,
+      "ChildPid": 35180,
+      "ChildStartedUtc": "2026-10-20T10:26:40.0609335Z",
+      "ExitCode": 0,
+      "Seconds": 64.7285229,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 305112,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T10:28:32.0143576+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 12060,
+      "ChildStartedUtc": "2026-10-20T10:28:32.0177012Z",
+      "ExitCode": 0,
+      "Seconds": 0.1378723,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 2409,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "diff-check-final-candidate",
+      "Arguments": [
+        "diff",
+        "--check"
+      ],
+      "StartedUtc": "2026-10-20T10:31:24.8491438+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 51732,
+      "ChildStartedUtc": "2026-10-20T10:31:24.8523374Z",
+      "ExitCode": 0,
+      "Seconds": 0.1219812,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 2409,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-root-registry-sql",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back|FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Competing_reservations_have_one_winner_and_cannot_spend_the_same_remaining_work|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Held_root_commit_does_not_serialize_an_unrelated_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Lost_commit_acknowledgement_recovers_the_exact_reservation_without_spending_twice"
+      ],
+      "StartedUtc": "2026-10-20T10:31:41.6147938+00:00",
+      "State": "Completed",
+      "RunnerPid": 6632,
+      "ChildPid": 27324,
+      "ChildStartedUtc": "2026-10-20T10:31:41.6181849Z",
+      "ExitCode": 0,
+      "Seconds": 2.24346,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2130,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "discover-reviewed-root-registry-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--list-tests",
+        "--filter",
+        "FullyQualifiedName~ProcessRuntimeRootSequenceLocksTests|FullyQualifiedName~ProcessPersistenceStoreTests.Commit_writes_runtime_state_events_outbox_ledger_and_idempotency_atomically|FullyQualifiedName~ProcessPersistenceStoreTests.Duplicate_command_returns_existing_result_without_second_event_append|FullyQualifiedName~ProcessPersistenceStoreTests.Runtime_event_store_assigns_contiguous_sequences_within_append_batch|FullyQualifiedName~ProcessPersistenceStoreTests.Replay_store_reads_global_and_root_sequences_in_order"
+      ],
+      "StartedUtc": "2026-10-20T10:31:38.8115934+00:00",
+      "State": "Completed",
+      "RunnerPid": 6632,
+      "ChildPid": 18612,
+      "ChildStartedUtc": "2026-10-20T10:31:38.8496143Z",
+      "ExitCode": 0,
+      "Seconds": 2.7364308,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2234,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T10:28:24.7367869+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 20244,
+      "ChildStartedUtc": "2026-10-20T10:28:24.7393405Z",
+      "ExitCode": 0,
+      "Seconds": 7.2593862,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "documentation-final-candidate",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "tools/Validation/Test-Documentation.ps1"
+      ],
+      "StartedUtc": "2026-10-20T10:31:19.5116132+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 58700,
+      "ChildStartedUtc": "2026-10-20T10:31:19.5134565Z",
+      "ExitCode": 0,
+      "Seconds": 5.3222823,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-root-registry-sql",
+      "Arguments": [
+        "test",
+        "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back|FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Competing_reservations_have_one_winner_and_cannot_spend_the_same_remaining_work|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Held_root_commit_does_not_serialize_an_unrelated_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Lost_commit_acknowledgement_recovers_the_exact_reservation_without_spending_twice",
+        "--logger",
+        "trx;LogFileName=root-registry-sql.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry"
+      ],
+      "StartedUtc": "2026-10-20T10:33:18.9481224+00:00",
+      "State": "Completed",
+      "RunnerPid": 56308,
+      "ChildPid": 26628,
+      "ChildStartedUtc": "2026-10-20T10:33:18.9519063Z",
+      "ExitCode": 0,
+      "Seconds": 51.2563227,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 2969,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "execute-root-registry-unit",
+      "Arguments": [
+        "test",
+        "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "--configuration",
+        "Release",
+        "--no-build",
+        "--no-restore",
+        "-p:UseLocalCanDoItAllLibraries=true",
+        "/m:1",
+        "--filter",
+        "FullyQualifiedName~ProcessRuntimeRootSequenceLocksTests|FullyQualifiedName~ProcessPersistenceStoreTests.Commit_writes_runtime_state_events_outbox_ledger_and_idempotency_atomically|FullyQualifiedName~ProcessPersistenceStoreTests.Duplicate_command_returns_existing_result_without_second_event_append|FullyQualifiedName~ProcessPersistenceStoreTests.Runtime_event_store_assigns_contiguous_sequences_within_append_batch|FullyQualifiedName~ProcessPersistenceStoreTests.Replay_store_reads_global_and_root_sequences_in_order",
+        "--logger",
+        "trx;LogFileName=root-registry-unit.trx",
+        "--logger",
+        "console;verbosity=normal",
+        "--results-directory",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry"
+      ],
+      "StartedUtc": "2026-10-20T10:33:14.3913976+00:00",
+      "State": "Completed",
+      "RunnerPid": 56308,
+      "ChildPid": 31944,
+      "ChildStartedUtc": "2026-10-20T10:33:14.4234634Z",
+      "ExitCode": 0,
+      "Seconds": 4.5132974,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 3134,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 1200,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "observer-product-planning-v2",
+      "Arguments": [
+        "-NoProfile",
+        "-File",
+        "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-root-sequence-registry/Observe-BrowserV2.ps1",
+        "-DeadlineSeconds",
+        "1150"
+      ],
+      "StartedUtc": "2026-10-20T10:33:06.1353663+00:00",
+      "State": "Completed",
+      "RunnerPid": 40780,
+      "ChildPid": 59716,
+      "ChildStartedUtc": "2026-10-20T10:33:06.1537913Z",
+      "ExitCode": 0,
+      "Seconds": 64.1218194,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 54,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T10:29:39.6777196+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 34996,
+      "ChildStartedUtc": "2026-10-20T10:29:39.7115818Z",
+      "ExitCode": 0,
+      "Seconds": 0.1687083,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-baseline-tests-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_enforce_portability_baseline.py"
+      ],
+      "StartedUtc": "2026-10-20T10:26:44.2299346+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 33128,
+      "ChildStartedUtc": "2026-10-20T10:26:44.2642389Z",
+      "ExitCode": 0,
+      "Seconds": 0.1365666,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 109,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry/portability-scan-final.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T10:31:19.0406994+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 20736,
+      "ChildStartedUtc": "2026-10-20T10:31:19.0428729Z",
+      "ExitCode": 0,
+      "Seconds": 0.4597366,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-enforce-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/enforce_portability_baseline.py",
+        "--scan",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry/portability-scan.json",
+        "--baseline",
+        "tools/Validation/Portability/portability-risk-baseline.json"
+      ],
+      "StartedUtc": "2026-10-20T10:28:22.9558417+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 44608,
+      "ChildStartedUtc": "2026-10-20T10:28:22.9592770Z",
+      "ExitCode": 0,
+      "Seconds": 1.7362852,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 68,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry/portability-scan-final.json"
+      ],
+      "StartedUtc": "2026-10-20T10:29:42.9659579+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 51548,
+      "ChildStartedUtc": "2026-10-20T10:29:42.9692011Z",
+      "ExitCode": 0,
+      "Seconds": 96.061453,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 445,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-scan-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/scan_portability.py",
+        "--repo-root",
+        ".",
+        "--output",
+        ".artifacts/concurrent-mutations/validation/c4-root-sequence-registry/portability-scan.json"
+      ],
+      "StartedUtc": "2026-10-20T10:26:47.4782536+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 53188,
+      "ChildStartedUtc": "2026-10-20T10:26:47.4809142Z",
+      "ExitCode": 0,
+      "Seconds": 95.4482294,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 427,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T10:29:39.9049792+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 59824,
+      "ChildStartedUtc": "2026-10-20T10:29:39.9079445Z",
+      "ExitCode": 0,
+      "Seconds": 0.4581752,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "portability-secret-tests-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Portability/test_scan_artifacts_for_secrets.py"
+      ],
+      "StartedUtc": "2026-10-20T10:26:44.4229250+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 59828,
+      "ChildStartedUtc": "2026-10-20T10:26:44.4265728Z",
+      "ExitCode": 0,
+      "Seconds": 0.4582687,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 107,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-final-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T10:29:40.5137050+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 55864,
+      "ChildStartedUtc": "2026-10-20T10:29:40.5168884Z",
+      "ExitCode": 0,
+      "Seconds": 2.4361045,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-ready-reviewed",
+      "Arguments": [
+        "tools/Validation/Rendering/check_rendering_register.py",
+        "--repo",
+        "."
+      ],
+      "StartedUtc": "2026-10-20T10:26:45.0276964+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 9728,
+      "ChildStartedUtc": "2026-10-20T10:26:45.0308782Z",
+      "ExitCode": 0,
+      "Seconds": 2.4351277,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 115,
+      "StderrRetainedBytes": 0,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-final-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T10:29:40.3793766+00:00",
+      "State": "Completed",
+      "RunnerPid": 42440,
+      "ChildPid": 21052,
+      "ChildStartedUtc": "2026-10-20T10:29:40.3821653Z",
+      "ExitCode": 0,
+      "Seconds": 0.119652,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    },
+    {
+      "DeadlineSeconds": 900,
+      "ResourceClosure": "ParentReconciliationRequired",
+      "Name": "rendering-tests-reviewed",
+      "Arguments": [
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/Validation/Rendering",
+        "-p",
+        "test_*.py"
+      ],
+      "StartedUtc": "2026-10-20T10:26:44.8972337+00:00",
+      "State": "Completed",
+      "RunnerPid": 55656,
+      "ChildPid": 34800,
+      "ChildStartedUtc": "2026-10-20T10:26:44.9002056Z",
+      "ExitCode": 0,
+      "Seconds": 0.116017,
+      "DeadlineExceeded": false,
+      "OutputPumpFailures": [],
+      "CleanupFailures": [],
+      "DeadlineFailureType": null,
+      "StdoutRetainedBytes": 0,
+      "StderrRetainedBytes": 110,
+      "StdoutDiscardedBytes": 0,
+      "StderrDiscardedBytes": 0
+    }
+  ],
+  "tests": [
+    {
+      "executionId": "a90dc9c0-2622-4e34-9f5f-cd0ce58c7ba1",
+      "testId": "3e0bf093-6cfd-f678-d151-849cdb8cef1e",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: True, descendant: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.2449658",
+      "startTime": "2026-10-20T06:33:59.4007596-04:00",
+      "endTime": "2026-10-20T06:34:02.6454832-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a90dc9c0-2622-4e34-9f5f-cd0ce58c7ba1",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "c762d03f-ad0a-4e16-a577-22b13cd456c5",
+      "testId": "478de8ce-0b07-e731-1d8a-b3bfc4f4b60d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Held_root_commit_does_not_serialize_an_unrelated_root",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.4923812",
+      "startTime": "2026-10-20T06:33:44.5777305-04:00",
+      "endTime": "2026-10-20T06:33:48.0698437-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c762d03f-ad0a-4e16-a577-22b13cd456c5",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "49b6d9f6-cb8c-479b-a46a-d17f6fb749a2",
+      "testId": "b4d3869a-a156-110b-4d62-482e362b2a3d",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root(descendant: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.5875577",
+      "startTime": "2026-10-20T06:34:02.6460143-04:00",
+      "endTime": "2026-10-20T06:34:06.2333563-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "49b6d9f6-cb8c-479b-a46a-d17f6fb749a2",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "ac0f2f02-e27a-495d-a981-455763bc2595",
+      "testId": "a878a549-e51a-53f2-0fcb-1bec7752c40c",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: False, descendant: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8366612",
+      "startTime": "2026-10-20T06:33:51.8796763-04:00",
+      "endTime": "2026-10-20T06:33:55.7161334-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "ac0f2f02-e27a-495d-a981-455763bc2595",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "34aa1cba-b0a9-4e4e-9397-62e191366d87",
+      "testId": "32cca938-f07c-b7c0-5ed4-37a0f3d4bb56",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe(initialCommit: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.2761082",
+      "startTime": "2026-10-20T06:33:38.2325562-04:00",
+      "endTime": "2026-10-20T06:33:41.5075386-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "34aa1cba-b0a9-4e4e-9397-62e191366d87",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "88243b6a-ff11-40b0-8f78-759d4cb9dbaf",
+      "testId": "8874474c-4f0c-1489-945f-aef63066b2d4",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe(initialCommit: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:04.5122778",
+      "startTime": "2026-10-20T06:33:33.7296116-04:00",
+      "endTime": "2026-10-20T06:33:38.2312010-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "88243b6a-ff11-40b0-8f78-759d4cb9dbaf",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "4dd83f15-c4d2-4963-92bc-070fddc5a86e",
+      "testId": "ac4b2b0b-ec93-2cce-0799-e915fedfc464",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: True, descendant: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.6836884",
+      "startTime": "2026-10-20T06:33:55.7165846-04:00",
+      "endTime": "2026-10-20T06:33:59.4001897-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4dd83f15-c4d2-4963-92bc-070fddc5a86e",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "876794f0-524a-4fe2-ba00-46d0fa17d862",
+      "testId": "e6b2dcb0-e973-5e4c-5155-6ec2531037eb",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: False, descendant: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8059245",
+      "startTime": "2026-10-20T06:33:48.0733395-04:00",
+      "endTime": "2026-10-20T06:33:51.8791778-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "876794f0-524a-4fe2-ba00-46d0fa17d862",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "00f60354-6453-4245-862a-6004da67d0b8",
+      "testId": "b33c25a2-0029-f1c3-db8d-510d9924e4e1",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root(descendant: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.8176383",
+      "startTime": "2026-10-20T06:34:06.2341731-04:00",
+      "endTime": "2026-10-20T06:34:10.0514107-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "00f60354-6453-4245-862a-6004da67d0b8",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "67139d60-24f2-4e6d-8c19-d53a760f30e2",
+      "testId": "999700d4-5be7-00c6-a00a-84974477d68f",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Competing_reservations_have_one_winner_and_cannot_spend_the_same_remaining_work",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:03.0692296",
+      "startTime": "2026-10-20T06:33:41.5081668-04:00",
+      "endTime": "2026-10-20T06:33:44.5771343-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "67139d60-24f2-4e6d-8c19-d53a760f30e2",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "d2aadb88-566d-49ea-8ea1-a683ab0d7de2",
+      "testId": "d03eb871-0d9e-971e-ff4e-eb62d4a86b74",
+      "testName": "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Lost_commit_acknowledgement_recovers_the_exact_reservation_without_spending_twice",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:12.5295167",
+      "startTime": "2026-10-20T06:33:21.1803425-04:00",
+      "endTime": "2026-10-20T06:33:33.7167219-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d2aadb88-566d-49ea-8ea1-a683ab0d7de2",
+      "trx": "root-registry-sql.trx"
+    },
+    {
+      "executionId": "bb624e35-cbe3-4580-89cd-bd2000f897b5",
+      "testId": "f8a56697-98b5-0389-9ef2-ac2c481c1a4b",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Empty_roots_do_not_retain_an_entry_even_with_a_canceled_token",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0005913",
+      "startTime": "2026-10-20T06:33:18.7462597-04:00",
+      "endTime": "2026-10-20T06:33:18.7462856-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "bb624e35-cbe3-4580-89cd-bd2000f897b5",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "acb0783a-7b23-4cb4-a7c7-0b118fbe669d",
+      "testId": "549c8aa1-f53f-1acd-486b-b942af8a54dc",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Completed_high_cardinality_roots_do_not_accumulate",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0363895",
+      "startTime": "2026-10-20T06:33:18.6746618-04:00",
+      "endTime": "2026-10-20T06:33:18.7111918-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "acb0783a-7b23-4cb4-a7c7-0b118fbe669d",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "9bca9122-1cd4-4c14-a1de-65f118210b65",
+      "testId": "19aa611d-1c26-21cb-2713-11a7a7a21491",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Commit_writes_runtime_state_events_outbox_ledger_and_idempotency_atomically",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:01.1203409",
+      "startTime": "2026-10-20T06:33:17.4543067-04:00",
+      "endTime": "2026-10-20T06:33:18.5621025-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "9bca9122-1cd4-4c14-a1de-65f118210b65",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "30a68725-c437-4953-a86f-e60308fee2c1",
+      "testId": "7062c42e-bfb8-6b5d-1de4-a36e7af9a32f",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Replay_store_reads_global_and_root_sequences_in_order",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0356214",
+      "startTime": "2026-10-20T06:33:18.6372171-04:00",
+      "endTime": "2026-10-20T06:33:18.6728065-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "30a68725-c437-4953-a86f-e60308fee2c1",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "6fb45fba-c37f-4bbc-8289-4ad75c84b20c",
+      "testId": "cac9ba92-19b9-8951-e7f2-6bc093d7215d",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Concurrent_disposal_releases_a_lease_exactly_once",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0091956",
+      "startTime": "2026-10-20T06:33:18.7113823-04:00",
+      "endTime": "2026-10-20T06:33:18.7224263-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6fb45fba-c37f-4bbc-8289-4ad75c84b20c",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "6aaa548d-5cd9-4de8-a0bb-85020ddec011",
+      "testId": "e46a090c-e36d-ca6f-3687-e7f228f9fc28",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Duplicate_command_returns_existing_result_without_second_event_append",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0438077",
+      "startTime": "2026-10-20T06:33:18.5938752-04:00",
+      "endTime": "2026-10-20T06:33:18.6370485-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "6aaa548d-5cd9-4de8-a0bb-85020ddec011",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "91a2056d-4534-4072-affb-1afeb9d15bca",
+      "testId": "f1974c94-6444-048c-53b2-478ef58d66e1",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Contention_and_reversed_multi_root_orders_never_overlap(multipleRoots: False)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0078010",
+      "startTime": "2026-10-20T06:33:18.7463531-04:00",
+      "endTime": "2026-10-20T06:33:18.7514971-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "91a2056d-4534-4072-affb-1afeb9d15bca",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "c61160fd-b7c6-4293-8c1a-ab46785f34e6",
+      "testId": "6f99ba6d-00ed-eba6-64d7-e6e0d1119866",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Contention_and_reversed_multi_root_orders_never_overlap(multipleRoots: True)",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0296774",
+      "startTime": "2026-10-20T06:33:18.7516062-04:00",
+      "endTime": "2026-10-20T06:33:18.7814370-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c61160fd-b7c6-4293-8c1a-ab46785f34e6",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "cd57d52c-324a-4f55-8bb0-c3d68998f7b3",
+      "testId": "80dfe20b-787a-4a92-46db-b9c445bcb227",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Another_root_progresses_while_a_same_root_waiter_is_blocked",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0016678",
+      "startTime": "2026-10-20T06:33:18.7460823-04:00",
+      "endTime": "2026-10-20T06:33:18.7461344-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "cd57d52c-324a-4f55-8bb0-c3d68998f7b3",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "be5d195b-a1a1-42e3-9cd0-7532705345af",
+      "testId": "602b8f4e-4952-4bca-bc67-259cc5e8e229",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Canceling_a_later_root_releases_the_first_root_and_pending_reference",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0030328",
+      "startTime": "2026-10-20T06:33:18.7231647-04:00",
+      "endTime": "2026-10-20T06:33:18.7262868-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "be5d195b-a1a1-42e3-9cd0-7532705345af",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "a8ed2d7c-ae07-481f-9d0e-14ee2b84f7c5",
+      "testId": "f6cc22ae-35dd-49b0-1316-20c36e7e9a5c",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Repeated_cancellation_and_root_reuse_does_not_replace_a_live_semaphore",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0133061",
+      "startTime": "2026-10-20T06:33:18.7264322-04:00",
+      "endTime": "2026-10-20T06:33:18.7399510-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "a8ed2d7c-ae07-481f-9d0e-14ee2b84f7c5",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "1f9dbedc-147e-4f51-93bc-17d857fe6a59",
+      "testId": "511017a6-e64d-013a-5130-f64654febf1f",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Duplicate_roots_are_acquired_once_and_retired_after_the_lease",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0007246",
+      "startTime": "2026-10-20T06:33:18.7400892-04:00",
+      "endTime": "2026-10-20T06:33:18.7407366-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "1f9dbedc-147e-4f51-93bc-17d857fe6a59",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "4569a401-f982-4c4d-8a02-34f2dc37ff89",
+      "testId": "30b5b1b8-c898-1af4-9319-a136f36f737d",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Pre_canceled_acquisition_drops_its_pending_reference",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0005452",
+      "startTime": "2026-10-20T06:33:18.7836065-04:00",
+      "endTime": "2026-10-20T06:33:18.7841148-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "4569a401-f982-4c4d-8a02-34f2dc37ff89",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "76c76e63-33a0-4e98-964d-f2e05a688ce0",
+      "testId": "d943c807-d0d3-7646-7514-352e65dd27ef",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Runtime_event_store_assigns_contiguous_sequences_within_append_batch",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0308170",
+      "startTime": "2026-10-20T06:33:18.5694393-04:00",
+      "endTime": "2026-10-20T06:33:18.5932133-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "76c76e63-33a0-4e98-964d-f2e05a688ce0",
+      "trx": "root-registry-unit.trx"
+    },
+    {
+      "executionId": "c22cda7f-9cab-4f6b-bbee-78791c1e4c5e",
+      "testId": "0dcc3c8b-4698-b808-2368-253925059e42",
+      "testName": "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Canceling_one_waiter_preserves_the_holder_and_other_waiter",
+      "computerName": "LUCYSPOWER",
+      "duration": "00:00:00.0018361",
+      "startTime": "2026-10-20T06:33:18.7815739-04:00",
+      "endTime": "2026-10-20T06:33:18.7834817-04:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "c22cda7f-9cab-4f6b-bbee-78791c1e4c5e",
+      "trx": "root-registry-unit.trx"
+    }
+  ],
+  "evidence": {
+    "architecture-review.json": {
+      "beforeSnapshot": "snap-20261020101355-8624fb63",
+      "afterSnapshot": "snap-20261020103054-8624fb63",
+      "before": {
+        "projectCount": 1,
+        "typeCount": 153,
+        "memberCount": 1212,
+        "serviceRegistrationCount": 0,
+        "entityCount": 31,
+        "findingCount": 58,
+        "openQuestionCount": 0,
+        "diagnosticCount": 189
+      },
+      "after": {
+        "projectCount": 1,
+        "typeCount": 154,
+        "memberCount": 1221,
+        "serviceRegistrationCount": 0,
+        "entityCount": 31,
+        "findingCount": 58,
+        "openQuestionCount": 0,
+        "diagnosticCount": 189
+      },
+      "newFindings": [],
+      "cyclesUnchanged": true,
+      "cycles": [],
+      "review": "Existing static Process persistence root sequencer retains holder and waiter references under64 bounded short registry mutexes; actual asynchronous exclusion remains per-root. Sorted multi-root acquisition/reverse release and original owners unchanged. Atomic disposer avoids duplicate release. No new project edge/DI/public interface/transaction. Scoped154 types1221 members58 findings189 diagnostics; no cycle or new finding. Single-mutex candidate retention passed but parallel-root experiment regressed and was replaced; all raw experiments retained. New reference lifetime removes historical semaphore accumulation. Allocation cost rises for repeated fully idle same-root acquisitions; full SQL/workflow capacity is not established. Final26 cases pass with unchanged source/runtime and full64.122-second observation. Zero observed processes/database-name delta; seven unowned TEMP paths preserved. Standalone probe output deletion was rejected by automatic approval review; bin/obj remain explicitly blocked, not cleaned.",
+      "validation": {
+        "state": "PassWithFollowUp",
+        "expected": 26,
+        "actual": 26,
+        "passed": 26,
+        "failed": 0,
+        "unit": 15,
+        "integration": 11,
+        "newCases": 11,
+        "unitSeconds": 4.5132974,
+        "integrationSeconds": 51.2563227
+      }
+    },
+    "discovery-review.json": [
+      {
+        "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+        "filter": "FullyQualifiedName~ProcessRuntimeRootSequenceLocksTests|FullyQualifiedName~ProcessPersistenceStoreTests.Commit_writes_runtime_state_events_outbox_ledger_and_idempotency_atomically|FullyQualifiedName~ProcessPersistenceStoreTests.Duplicate_command_returns_existing_result_without_second_event_append|FullyQualifiedName~ProcessPersistenceStoreTests.Runtime_event_store_assigns_contiguous_sequences_within_append_batch|FullyQualifiedName~ProcessPersistenceStoreTests.Replay_store_reads_global_and_root_sequences_in_order",
+        "id": "root-registry-unit",
+        "expectedDiscovery": 15,
+        "actual": 15,
+        "names": [
+          "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Commit_writes_runtime_state_events_outbox_ledger_and_idempotency_atomically",
+          "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Duplicate_command_returns_existing_result_without_second_event_append",
+          "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Replay_store_reads_global_and_root_sequences_in_order",
+          "CanDoItAll.Tests.Unit.Processes.ProcessPersistenceStoreTests.Runtime_event_store_assigns_contiguous_sequences_within_append_batch",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Empty_roots_do_not_retain_an_entry_even_with_a_canceled_token",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Duplicate_roots_are_acquired_once_and_retired_after_the_lease",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Pre_canceled_acquisition_drops_its_pending_reference",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Another_root_progresses_while_a_same_root_waiter_is_blocked",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Canceling_a_later_root_releases_the_first_root_and_pending_reference",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Canceling_one_waiter_preserves_the_holder_and_other_waiter",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Contention_and_reversed_multi_root_orders_never_overlap(multipleRoots: False)",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Contention_and_reversed_multi_root_orders_never_overlap(multipleRoots: True)",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Concurrent_disposal_releases_a_lease_exactly_once",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Completed_high_cardinality_roots_do_not_accumulate",
+          "CanDoItAll.Tests.Unit.Processes.ProcessRuntimeRootSequenceLocksTests.Repeated_cancellation_and_root_reuse_does_not_replace_a_live_semaphore"
+        ]
+      },
+      {
+        "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+        "filter": "FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back|FullyQualifiedName~ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Competing_reservations_have_one_winner_and_cannot_spend_the_same_remaining_work|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Held_root_commit_does_not_serialize_an_unrelated_root|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe|FullyQualifiedName~ProcessDecisionBudgetPersistenceTests.Lost_commit_acknowledgement_recovers_the_exact_reservation_without_spending_twice",
+        "id": "root-registry-sql",
+        "expectedDiscovery": 11,
+        "actual": 11,
+        "names": [
+          "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe(initialCommit: False)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Failure_after_SQL_flush_rolls_back_both_accounting_and_runtime_and_retry_is_safe(initialCommit: True)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Competing_reservations_have_one_winner_and_cannot_spend_the_same_remaining_work",
+          "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Held_root_commit_does_not_serialize_an_unrelated_root",
+          "CanDoItAll.Tests.Integration.Processes.ProcessDecisionBudgetPersistenceTests.Lost_commit_acknowledgement_recovers_the_exact_reservation_without_spending_twice",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: False, descendant: False)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: True, descendant: False)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: False, descendant: True)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Project_wait_leaves_root_available_and_cancellation_rolls_back(cancel: True, descendant: True)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root(descendant: False)",
+          "CanDoItAll.Tests.Integration.Processes.ProcessProjectAdmissionPersistenceTests.Initial_Process_admission_holds_Project_before_attempting_root(descendant: True)"
+        ]
+      }
+    ],
+    "final-identity-verification.json": {
+      "sourceAndRuntimeUnchanged": true,
+      "sourceFiles": 9634,
+      "runtimeFiles": 2589,
+      "sourceSha256": "8810EE4079FC10724E4EB7BE774557D0E8DB4464D72BCAABCEBA2F8A7D84F917",
+      "runtimeSha256": "23609C322D77A952C578F539AF79163C0E92D11431BDF821856B9E6D21BAB90D"
+    },
+    "final-resource-reconciliation.json": {
+      "temporaryDeltasPreservedWithoutOwnership": [
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_31944_20261020_063314_609.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_26628_20261020_063319_133.log",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\vsj25ybf.ufh",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ymuaq5eb.cax",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\1b2bf20b-9e95-4fd2-a98c-3feec6584e37.tmp",
+          "family": "anonymous-and-package-temp-files"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\vb4jrlgy.zhj",
+          "family": "shared-temp-directory-entries"
+        },
+        {
+          "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\3bkm5zz2.1tr",
+          "family": "shared-temp-directory-entries"
+        }
+      ],
+      "remainingObservedProcesses": [],
+      "postgres": [
+        "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+        "cditall_primary_cdf76c3af0574dbd9ce299eb90002a76|0",
+        "cditall_primary_e76a5b7c828f4ec7b51c7d88b604524e|0",
+        "cditall_primary_f238f4df4e3f424bb4efe0ccf43665d9|0",
+        "postgres|1"
+      ],
+      "outcome": "All26 root registry cases pass. Initial single-mutex performance regression and matched partitioned measurements retained. Standalone probe bin/obj cleanup blocked by automatic approval review; no retry or workaround. Historical cleanup denials remain unchanged.",
+      "databaseNameDelta": [],
+      "recordedUtc": "2026-10-20T10:34:56.0420720+00:00"
+    },
+    "observation-coverage.json": {
+      "observerStartedUtc": "2026-10-20T10:33:06.1353663+00:00",
+      "observerSeconds": 64.1218194,
+      "commands": [
+        {
+          "command": "execute-root-registry-sql",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T10:33:18.9481224+00:00",
+          "seconds": 51.2563227
+        },
+        {
+          "command": "execute-root-registry-unit",
+          "entireCommandCovered": true,
+          "startedUtc": "2026-10-20T10:33:14.3913976+00:00",
+          "seconds": 4.5132974
+        }
+      ]
+    },
+    "portability-review.json": {
+      "finalEnforcement": "portability-enforce-final-final-reviewed",
+      "reviewedFindingCount": 15647,
+      "baselineDelta": 0,
+      "review": "Full final source scan and enforcement pass without baseline rewrite; no added/stale findings."
+    },
+    "observer-start-confirmation.json": {
+      "observerPid": 59716,
+      "confirmedUtc": "2026-10-20T10:33:13.8535616+00:00",
+      "observerStartedUtc": "2026-10-20T10:33:06.1537913Z",
+      "identityConfirmed": true
+    },
+    "queryPlans": [],
+    "measurements": [
+      {
+        "path": "measurements\\probe-cleanup.json",
+        "data": {
+          "cleanup": "Remove only this exact standalone probe build directory after retaining sanitized measurements; do not delete other artifacts.",
+          "status": "CleanupBlocked",
+          "path": "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\root-sequence-probe",
+          "configuration": "Release",
+          "purpose": "Matched baseline/candidate Process root sequence registry micro experiment",
+          "owner": "concurrent-mutations",
+          "createdUtc": "2026-10-20T06:14:32.6911671-04:00",
+          "cleanupBlocker": "Automatic approval review rejected the exact owned probe bin/obj removal before execution: blocked by policy. No deletion occurred; do not retry through another method.",
+          "remainingOutputs": [
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\root-sequence-probe\\bin",
+            "C:\\repositories\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\root-sequence-probe\\obj"
+          ]
+        }
+      },
+      {
+        "path": "measurements\\registry-comparison.json",
+        "data": {
+          "runs": {
+            "baseline": [
+              {
+                "recordedUtc": "2026-10-20T10:15:50.8805371+00:00",
+                "runtime": "10.0.12",
+                "processId": 29008,
+                "assemblySha256": "8546C4FFF0C269B4E11D893758540EF95CF3D7BDB8573B6CD43E3BE66DB5026B",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 48.7175,
+                    "allocatedBytes": 3050432,
+                    "retainedBefore": 1,
+                    "retainedAfter": 1
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 13.6954,
+                    "allocatedBytes": 4732776,
+                    "retainedBefore": 1,
+                    "retainedAfter": 5001
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 13.9524,
+                    "allocatedBytes": 24331232,
+                    "retainedBefore": 5001,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 9.6967,
+                    "allocatedBytes": 3075568,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 32.0053,
+                    "allocatedBytes": 34060208,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 45009
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:15:51.1083061+00:00",
+                "runtime": "10.0.12",
+                "processId": 28212,
+                "assemblySha256": "8546C4FFF0C269B4E11D893758540EF95CF3D7BDB8573B6CD43E3BE66DB5026B",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.2806,
+                    "allocatedBytes": 3050432,
+                    "retainedBefore": 1,
+                    "retainedAfter": 1
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 12.1431,
+                    "allocatedBytes": 4328680,
+                    "retainedBefore": 1,
+                    "retainedAfter": 5001
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 10.1046,
+                    "allocatedBytes": 24331232,
+                    "retainedBefore": 5001,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 10.6845,
+                    "allocatedBytes": 3076072,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 26.1193,
+                    "allocatedBytes": 34419848,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 45009
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:15:51.2832974+00:00",
+                "runtime": "10.0.12",
+                "processId": 54240,
+                "assemblySha256": "8546C4FFF0C269B4E11D893758540EF95CF3D7BDB8573B6CD43E3BE66DB5026B",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.8689,
+                    "allocatedBytes": 3050432,
+                    "retainedBefore": 1,
+                    "retainedAfter": 1
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 13.3433,
+                    "allocatedBytes": 4610808,
+                    "retainedBefore": 1,
+                    "retainedAfter": 5001
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 10.2429,
+                    "allocatedBytes": 24331232,
+                    "retainedBefore": 5001,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 11.2071,
+                    "allocatedBytes": 3077008,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 5009
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 20.1277,
+                    "allocatedBytes": 34131104,
+                    "retainedBefore": 5009,
+                    "retainedAfter": 45009
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              }
+            ],
+            "candidate": [
+              {
+                "recordedUtc": "2026-10-20T10:27:30.5329468+00:00",
+                "runtime": "10.0.12",
+                "processId": 29284,
+                "assemblySha256": "2A9194800259A3B1447446ABE2671DBC483ECC7868D84D7E135F1E34370090A4",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 11.4225,
+                    "allocatedBytes": 3690400,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 12.5763,
+                    "allocatedBytes": 3888168,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 36.1506,
+                    "allocatedBytes": 29450720,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 10.7306,
+                    "allocatedBytes": 3042208,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 49.269,
+                    "allocatedBytes": 31042184,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:27:30.8103193+00:00",
+                "runtime": "10.0.12",
+                "processId": 59352,
+                "assemblySha256": "2A9194800259A3B1447446ABE2671DBC483ECC7868D84D7E135F1E34370090A4",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 13.3575,
+                    "allocatedBytes": 3690400,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 13.138,
+                    "allocatedBytes": 3888168,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 38.6144,
+                    "allocatedBytes": 29450832,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 11.0286,
+                    "allocatedBytes": 3044312,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 34.5464,
+                    "allocatedBytes": 31042216,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:27:31.025311+00:00",
+                "runtime": "10.0.12",
+                "processId": 55368,
+                "assemblySha256": "2A9194800259A3B1447446ABE2671DBC483ECC7868D84D7E135F1E34370090A4",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 10.5544,
+                    "allocatedBytes": 3690400,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 11.3415,
+                    "allocatedBytes": 3888168,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 38.0417,
+                    "allocatedBytes": 29450720,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 8.0908,
+                    "allocatedBytes": 3044368,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 34.5114,
+                    "allocatedBytes": 31042320,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              }
+            ],
+            "partitioned": [
+              {
+                "recordedUtc": "2026-10-20T10:31:57.6006059+00:00",
+                "runtime": "10.0.12",
+                "processId": 39432,
+                "assemblySha256": "13BF63F7C101D996262A53E4C4993240BB535E58FB2B22127DB5A649D8E00612",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 84.3916,
+                    "allocatedBytes": 3970432,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.5553,
+                    "allocatedBytes": 4168168,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 10.0112,
+                    "allocatedBytes": 31689792,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 7.9313,
+                    "allocatedBytes": 3044584,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 11.4633,
+                    "allocatedBytes": 33283664,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:31:57.7433414+00:00",
+                "runtime": "10.0.12",
+                "processId": 40772,
+                "assemblySha256": "13BF63F7C101D996262A53E4C4993240BB535E58FB2B22127DB5A649D8E00612",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 8.6472,
+                    "allocatedBytes": 3970432,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.1016,
+                    "allocatedBytes": 4169032,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 12.301,
+                    "allocatedBytes": 31688928,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 7.2166,
+                    "allocatedBytes": 3044424,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 9.1851,
+                    "allocatedBytes": 33284872,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              },
+              {
+                "recordedUtc": "2026-10-20T10:31:57.8942757+00:00",
+                "runtime": "10.0.12",
+                "processId": 58124,
+                "assemblySha256": "13BF63F7C101D996262A53E4C4993240BB535E58FB2B22127DB5A649D8E00612",
+                "registryField": "Locks",
+                "rows": [
+                  {
+                    "scenario": "same-root",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.1027,
+                    "allocatedBytes": 3970432,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "unique-roots",
+                    "workers": 1,
+                    "operations": 5000,
+                    "elapsedMs": 9.919,
+                    "allocatedBytes": 4168168,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-roots",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 10.7739,
+                    "allocatedBytes": 31689848,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "contended-root",
+                    "workers": 8,
+                    "operations": 4000,
+                    "elapsedMs": 9.1895,
+                    "allocatedBytes": 3044488,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  },
+                  {
+                    "scenario": "parallel-churn",
+                    "workers": 8,
+                    "operations": 40000,
+                    "elapsedMs": 10.2666,
+                    "allocatedBytes": 33284112,
+                    "retainedBefore": 0,
+                    "retainedAfter": 0
+                  }
+                ],
+                "limitation": "Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee."
+              }
+            ]
+          },
+          "medians": [
+            {
+              "scenario": "same-root",
+              "baseline": {
+                "medianMs": 9.8689,
+                "medianAllocatedBytes": 3050432,
+                "retainedAfter": [
+                  1,
+                  1,
+                  1
+                ]
+              },
+              "candidate": {
+                "medianMs": 11.4225,
+                "medianAllocatedBytes": 3690400,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "partitioned": {
+                "medianMs": 9.1027,
+                "medianAllocatedBytes": 3970432,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            {
+              "scenario": "unique-roots",
+              "baseline": {
+                "medianMs": 13.3433,
+                "medianAllocatedBytes": 4610808,
+                "retainedAfter": [
+                  5001,
+                  5001,
+                  5001
+                ]
+              },
+              "candidate": {
+                "medianMs": 12.5763,
+                "medianAllocatedBytes": 3888168,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "partitioned": {
+                "medianMs": 9.5553,
+                "medianAllocatedBytes": 4168168,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            {
+              "scenario": "parallel-roots",
+              "baseline": {
+                "medianMs": 10.2429,
+                "medianAllocatedBytes": 24331232,
+                "retainedAfter": [
+                  5009,
+                  5009,
+                  5009
+                ]
+              },
+              "candidate": {
+                "medianMs": 38.0417,
+                "medianAllocatedBytes": 29450720,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "partitioned": {
+                "medianMs": 10.7739,
+                "medianAllocatedBytes": 31689792,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            {
+              "scenario": "contended-root",
+              "baseline": {
+                "medianMs": 10.6845,
+                "medianAllocatedBytes": 3076072,
+                "retainedAfter": [
+                  5009,
+                  5009,
+                  5009
+                ]
+              },
+              "candidate": {
+                "medianMs": 10.7306,
+                "medianAllocatedBytes": 3044312,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "partitioned": {
+                "medianMs": 7.9313,
+                "medianAllocatedBytes": 3044488,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            },
+            {
+              "scenario": "parallel-churn",
+              "baseline": {
+                "medianMs": 26.1193,
+                "medianAllocatedBytes": 34131104,
+                "retainedAfter": [
+                  45009,
+                  45009,
+                  45009
+                ]
+              },
+              "candidate": {
+                "medianMs": 34.5464,
+                "medianAllocatedBytes": 31042216,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "partitioned": {
+                "medianMs": 10.2666,
+                "medianAllocatedBytes": 33284112,
+                "retainedAfter": [
+                  0,
+                  0,
+                  0
+                ]
+              }
+            }
+          ],
+          "probeSource": [
+            {
+              "path": "Program.cs",
+              "sha256": "BA6F4E4025A3F07C6AC537E1819103D82E72ADEA57E8162B5098E6B67E53F180",
+              "text": "using System.Diagnostics;\nusing System.Reflection;\nusing System.Runtime.Loader;\nusing System.Security.Cryptography;\nusing System.Text.Json;\n\nvar assemblyPath = Path.GetFullPath(args[0]);\nvar registryField = args[1];\nvar outputPath = Path.GetFullPath(args[2]);\nif (File.Exists(outputPath)) {\n    throw new InvalidOperationException(\"Measurement already exists.\");\n}\nvar assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);\nvar owner = assembly.GetType(\"CanDoItAll.Processes.Persistence.ProcessRuntimeRootSequenceLocks\", throwOnError: true)!;\nvar method = owner.GetMethod(\"AcquireAsync\", BindingFlags.Public | BindingFlags.Static)!;\nvar acquire = method.CreateDelegate<Func<IEnumerable<Guid>, CancellationToken, Task<IDisposable>>>();\nvar registry = owner.GetField(registryField, BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;\nvar countProperty = registry.GetType().GetProperty(\"Count\")!;\nint Retained() => (int)countProperty.GetValue(registry)!;\nvar single = new[] { Guid.NewGuid() };\nfor (var i = 0; i < 2000; i++) {\n    using var lease = await acquire(single, CancellationToken.None);\n}\nvar rows = new List<object>();\nforeach (var scenario in new[] { \"same-root\", \"unique-roots\", \"parallel-roots\", \"contended-root\", \"parallel-churn\" }) {\n    var workers = scenario.StartsWith(\"parallel\", StringComparison.Ordinal) || scenario == \"contended-root\" ? 8 : 1;\n    var iterations = scenario == \"contended-root\" ? 500 : 5000;\n    var keys = Enumerable.Range(0, workers).Select(_ => new[] { Guid.NewGuid() }).ToArray();\n    var beforeCount = Retained();\n    var beforeBytes = GC.GetTotalAllocatedBytes(precise: true);\n    var elapsed = Stopwatch.StartNew();\n    await Task.WhenAll(Enumerable.Range(0, workers).Select(worker => Task.Run(async () => {\n        for (var i = 0; i < iterations; i++) {\n            var ids = scenario switch {\n                \"same-root\" or \"contended-root\" => single,\n                \"unique-roots\" or \"parallel-churn\" => new[] { Guid.NewGuid() },\n                _ => keys[worker]\n            };\n            using var lease = await acquire(ids, CancellationToken.None);\n            if (scenario == \"contended-root\") {\n                await Task.Yield();\n            }\n        }\n    })));\n    elapsed.Stop();\n    rows.Add(new {\n        scenario, workers, operations = workers * iterations, elapsedMs = elapsed.Elapsed.TotalMilliseconds,\n        allocatedBytes = GC.GetTotalAllocatedBytes(precise: true) - beforeBytes,\n        retainedBefore = beforeCount, retainedAfter = Retained()\n    });\n}\nvar proof = new {\n    recordedUtc = DateTimeOffset.UtcNow, runtime = Environment.Version.ToString(), processId = Environment.ProcessId,\n    assemblySha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assemblyPath))), registryField, rows,\n    limitation = \"Focused same-machine registry experiment; excludes SQL, provider work and sustained workload capacity. Repeat in fresh processes; raw timings are not a service throughput guarantee.\"\n};\nawait File.WriteAllTextAsync(outputPath, JsonSerializer.Serialize(proof, new JsonSerializerOptions { WriteIndented = true }));\nConsole.WriteLine(JsonSerializer.Serialize(proof));\n"
+            },
+            {
+              "path": "RootSequenceProbe.csproj",
+              "sha256": "CDD6F0B4E4B9C72196431282FC7F42508E52E0F6A10B88A948A157BBDABD220B",
+              "text": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n    <TargetFramework>net10.0</TargetFramework>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n"
+            },
+            {
+              "path": "Directory.Build.props",
+              "sha256": "17284CB74605517CBEC8A8153505DA71A685B28694B67B5EF80608CD79B1C0EA",
+              "text": "<Project />\n"
+            },
+            {
+              "path": "Directory.Build.targets",
+              "sha256": "17284CB74605517CBEC8A8153505DA71A685B28694B67B5EF80608CD79B1C0EA",
+              "text": "<Project />\n"
+            }
+          ],
+          "review": "Actual Release assemblies; identical probe/runtime/scenarios in fresh processes. All raw outliers retained. Baseline history validation and initial-candidate builds ran concurrently; final run followed builds. Exploratory registry measurements, not controlled end-to-end capacity. Single mutex rejected due independent-root slowdown;64 short partitions restore similar observed independent-root cost. Final extra184 bytes per completely idle acquire/release is accepted to eliminate unbounded retention; ordinary overlapping holders reuse entries."
+        }
+      }
+    ]
+  }
+}

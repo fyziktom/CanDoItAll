@@ -1,0 +1,7 @@
+{
+  "path": "docs/architecture/components-decoupling-register.json",
+  "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor",
+  "predecessorSha256Lf": "2068684a7cae89e8a3c098148aeb92fe949363241e2c516303bbdc2a16e97985",
+  "sha256Lf": "a45f98741b9b68081330cc7d2aa3b8f456b19e7b6de6a8c3531ae322dd202907",
+  "instruction": "Apply only this existing row hash; do not transfer unrelated managed register entries."
+}

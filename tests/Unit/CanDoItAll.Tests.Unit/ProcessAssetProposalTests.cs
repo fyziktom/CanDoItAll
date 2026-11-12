@@ -1,5 +1,6 @@
 using CanDoItAll.SharedKernel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Workbench;
@@ -8,6 +9,48 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessAssetProposalTests {
+    [Theory]
+    [InlineData(ProjectObjectType.File)]
+    [InlineData(ProjectObjectType.ImageAsset)]
+    [InlineData(ProjectObjectType.VideoAsset)]
+    public void Named_asset_types_share_the_existing_numeric_proposal_and_approval(ProjectObjectType objectType) {
+        var codec = new ProjectProcessAssetProposalCodec();
+        var input = new ProjectProcessAssetCreateProposal(Guid.NewGuid(), new(objectType, "Asset",
+            Media: new("asset.txt", "text/plain", "YQ=="), ParentNodeKey: "custom:parent"));
+        var namedOptions = new JsonSerializerOptions(ProjectProcessAssetProposalCodec.Json) {
+            Converters = { new JsonStringEnumConverter() }
+        };
+        var numeric = codec.Prepare(ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+            JsonSerializer.SerializeToElement(input, ProjectProcessAssetProposalCodec.Json));
+        var named = codec.Prepare(ProjectStructureToolPolicy.ProjectStructureAssetCreate,
+            JsonSerializer.SerializeToElement(input, namedOptions));
+
+        Assert.Equal(numeric, named);
+        Assert.Equal(objectType, codec.Read(named).Create!.ObjectType);
+    }
+
+    [Fact]
+    public void Named_non_asset_types_remain_rejected() {
+        var arguments = JsonSerializer.SerializeToElement(new {
+            projectId = Guid.NewGuid(),
+            request = new { objectType = "Note", title = "Note", parentNodeKey = "custom:parent" }
+        });
+
+        Assert.Throws<ArgumentException>(() => new ProjectProcessAssetProposalCodec().Prepare(
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate, arguments));
+    }
+
+    [Fact]
+    public void Unknown_named_asset_types_remain_rejected() {
+        var arguments = JsonSerializer.SerializeToElement(new {
+            projectId = Guid.NewGuid(),
+            request = new { objectType = "UnknownAsset", title = "Asset", parentNodeKey = "custom:parent" }
+        });
+
+        Assert.Throws<JsonException>(() => new ProjectProcessAssetProposalCodec().Prepare(
+            ProjectStructureToolPolicy.ProjectStructureAssetCreate, arguments));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -1,0 +1,6 @@
+.floating-chat-preview {
+    position: relative;
+    height: calc(100vh - 10rem);
+    min-height: 32rem;
+    margin: 0 1rem;
+}

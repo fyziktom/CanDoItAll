@@ -143,7 +143,7 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
     /// </summary>
     public const int ConnectTimeoutSeconds = 15;
 
-    private const int DatabaseMaintenanceCommandTimeoutSeconds = 60;
+    private const int DatabaseMaintenanceCommandTimeoutSeconds = 120;
     private const string CreateStrategyEnvironmentVariable = "CANDOITALL_TESTS_POSTGRES_CREATE_STRATEGY";
     private const string WalLogCreateStrategyValue = "WAL_LOG";
     private const string FileCopyCreateStrategyValue = "FILE_COPY";
@@ -189,22 +189,31 @@ public sealed class PostgresTestDatabaseLease : IAsyncDisposable
         return new PostgresTestDatabaseLease(databaseName, connectionString, adminConnectionString);
     }
 
-    public async ValueTask DisposeAsync()
-    {
+    public async ValueTask DisposeAsync() {
         // Return this lease's pooled connections before the database is dropped. A long test class leases one
         // database per fixture, and every lease keeps its own client pool; without this a run of a few dozen
         // fixtures holds more server connections than the server allows and the next fixture waits instead of
         // working.
-        await using (var pooled = new NpgsqlConnection(ConnectionString))
-        {
+        await using (var pooled = new NpgsqlConnection(ConnectionString)) {
             NpgsqlConnection.ClearPool(pooled);
         }
 
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(DatabaseMaintenanceCommandTimeoutSeconds));
         await using var connection = new NpgsqlConnection(AdminConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(cleanup.Token);
         await using var command = connection.CreateCommand();
         command.CommandText = $"""drop database if exists "{EscapeIdentifier(DatabaseName)}" with (force);""";
-        await command.ExecuteNonQueryAsync();
+        await DropDatabaseAsync(DatabaseName, () => command.ExecuteNonQueryAsync(cleanup.Token));
+    }
+
+    internal static async Task DropDatabaseAsync(string databaseName, Func<Task> execute) {
+        try {
+            await execute();
+        } catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.ObjectInUse) {
+            Console.Error.WriteLine($"Isolated test database '{databaseName}' still has active objects after forced drop " +
+                $"(SQLSTATE {exception.SqlState}); retrying once after the server's termination wait.");
+            await execute();
+        }
     }
 
     private string AdminConnectionString { get; }

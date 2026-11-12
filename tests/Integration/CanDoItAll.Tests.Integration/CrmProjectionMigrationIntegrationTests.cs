@@ -12,6 +12,7 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class CrmProjectionMigrationIntegrationTests {
     private const string PreviousMigration = "20260910183745_AddProjectLifetimes";
+    private const string ProjectionMigration = "20260910213323_AddCrmTechnicalProjectionProvenance";
     private static readonly DateTimeOffset SavedAt = new(2026, 2, 3, 4, 5, 6, TimeSpan.Zero);
 
     [Fact]
@@ -54,8 +55,10 @@ public sealed class CrmProjectionMigrationIntegrationTests {
         await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
         await SeedLegacyBindingAsync(context);
         var original = await LegacyPayloadsAsync(context);
-        await context.Database.MigrateAsync();
+        await context.GetService<IMigrator>().MigrateAsync(ProjectionMigration);
+        Assert.Equal(ProjectionMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         await context.GetService<IMigrator>().MigrateAsync(PreviousMigration);
+        Assert.Equal(PreviousMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
         Assert.Equal(original, await LegacyPayloadsAsync(context));
         await context.Database.MigrateAsync();
         Assert.Equal(original, await LegacyPayloadsAsync(context));
@@ -71,7 +74,8 @@ public sealed class CrmProjectionMigrationIntegrationTests {
         string[] original;
         await using (var provider = CreateProvider(profile)) {
             await using var context = await provider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
-            await context.Database.MigrateAsync();
+            await context.GetService<IMigrator>().MigrateAsync(ProjectionMigration);
+            Assert.Equal(ProjectionMigration, (await context.Database.GetAppliedMigrationsAsync()).Last());
             if (evidence == RetainedEvidence.EmptyCatalogCursor) {
                 context.Add(new AiTechnicalProjectionCursor {
                     DatabaseProfileId = Guid.NewGuid(), SourceScopeKind = WorkspaceScopeKind.Organization,
@@ -92,9 +96,13 @@ public sealed class CrmProjectionMigrationIntegrationTests {
             original = await ProjectionPayloadsAsync(context);
             var failure = await Assert.ThrowsAsync<PostgresException>(() => context.GetService<IMigrator>().MigrateAsync(PreviousMigration));
             Assert.Equal(PostgresErrorCodes.RaiseException, failure.SqlState);
+            Assert.Contains("CRM technical projection provenance is retained", failure.MessageText, StringComparison.Ordinal);
         }
         await using var restarted = CreateProvider(profile);
         await using var readback = await restarted.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+        Assert.Equal(original, await ProjectionPayloadsAsync(readback));
+        Assert.Equal(ProjectionMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());
+        await readback.Database.MigrateAsync();
         Assert.Equal(original, await ProjectionPayloadsAsync(readback));
         Assert.False(readback.Database.HasPendingModelChanges());
         Assert.NotEqual(PreviousMigration, (await readback.Database.GetAppliedMigrationsAsync()).Last());

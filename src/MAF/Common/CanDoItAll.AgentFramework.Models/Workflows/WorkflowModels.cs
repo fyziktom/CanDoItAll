@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace CanDoItAll.AgentFramework.Models;
@@ -652,6 +653,21 @@ public sealed record LlmCallComponent(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc)
 {
+    [Description("Opaque component revision returned by the read. Supply it as ExpectedRevision when replacing or deleting this component.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Guid Revision { get; init; }
+
+    [Description("Server-generated component lifetime retained across saves. Recreating the same identifier starts a new lifetime. Legacy bindings may omit it.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Guid LifetimeId { get; init; }
+
+    [Description("True only on an accepted save when its notifications or readback could not complete. The component and Prompt committed; retain this revision and refresh reads without repeating creation.")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RefreshRequired { get; init; }
+
+    [Description("The original accepted Prompt Gallery observation for this binding. A foreign Prompt change requires an explicit immutable-version selection before an implicit owned-Prompt update.")]
+    public DateTimeOffset? PromptUpdatedAtUtc { get; init; }
+
     /// <summary>
     /// Identifier of the Prompt Gallery item that holds the component's instructions; null for a component that was
     /// never bound, which a save binds.

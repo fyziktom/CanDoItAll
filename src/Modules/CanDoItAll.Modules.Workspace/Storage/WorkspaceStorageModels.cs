@@ -19,6 +19,9 @@ public sealed record StorageCatalogSummary(
 
 public sealed class StorageCatalogEditorModel
 {
+    public DateTimeOffset? ExpectedUpdatedAtUtc { get; set; }
+    public Guid ExpectedRoutingRevision { get; set; }
+    public IReadOnlyList<StorageUsagePurpose> OriginalDefaultPurposes { get; set; } = [];
     public Guid? Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
@@ -76,7 +79,9 @@ public sealed record StorageRoutingPreferenceSummary(
     Guid? PreferredStorageId,
     string PreferredStorageName,
     bool IsEnabled,
-    string Reason);
+    string Reason) {
+    public Guid RoutingRevision { get; init; }
+}
 
 public static class WorkspaceStorageDefaults
 {

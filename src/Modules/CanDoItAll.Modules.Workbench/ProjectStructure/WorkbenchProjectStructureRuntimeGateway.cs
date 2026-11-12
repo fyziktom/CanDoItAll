@@ -78,7 +78,7 @@ public sealed partial class WorkbenchProjectStructureRuntimeGateway(
             surface.ProjectId,
             surface.ProjectName,
             selectedNodes
-                .Select(node => MapNode(node, effectivePriorities.GetValueOrDefault(node.Id), request))
+                .Select(node => MapNode(node, effectivePriorities.GetValueOrDefault(node.Id), request, surface.ExpectedProjectAdmission))
                 .ToList(),
             links,
             warnings);
@@ -357,7 +357,8 @@ public sealed partial class WorkbenchProjectStructureRuntimeGateway(
     private ProjectStructureRuntimeNodeSummary MapNode(
         ProjectStructureNode node,
         int effectivePriority,
-        ProjectStructureRuntimeReadRequest options)
+        ProjectStructureRuntimeReadRequest options,
+        ProjectWriteAdmission? runtimeAdmission = null)
         => new(
             node.Id,
             node.ParentId,
@@ -394,7 +395,8 @@ public sealed partial class WorkbenchProjectStructureRuntimeGateway(
                 node,
                 runtimeLauncher,
                 localFileOpener,
-                ProjectStructureRuntimePathAuthorityMode.AgentExecution)));
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution,
+                runtimeAdmission is null ? null : new(runtimeAdmission, node.RecordId))));
 
     private static ProjectStructureRuntimeLinkSummary MapLink(ProjectStructureLink link)
         => new(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored);

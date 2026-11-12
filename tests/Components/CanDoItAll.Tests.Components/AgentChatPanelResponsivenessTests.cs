@@ -3,8 +3,10 @@ using Bunit;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.UI.Chat;
 using CanDoItAll.AgentFramework.Voice;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Conversations.Components;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
@@ -19,6 +21,41 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed partial class AgentChatPanelResponsivenessTests
 {
+    [Theory]
+    [InlineData(ExecutionState.Completed, false, "Completed")]
+    [InlineData(ExecutionState.Failed, false, "Failed")]
+    [InlineData(ExecutionState.Completed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Failed, true, "Updates unavailable")]
+    [InlineData(ExecutionState.Running, false, "Updates unavailable")]
+    [InlineData(ExecutionState.WaitingOnTool, false, "Updates unavailable")]
+    public async Task Unavailable_activity_keeps_a_settled_run_status_without_hiding_current_work(
+        ExecutionState state, bool isBusy, string expectedStatus) {
+        using var context = CreateContext(
+            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnexpectedCallProxy>(),
+            DispatchProxy.Create<IAgentChatExecutionOrchestrator, UnexpectedCallProxy>());
+        var agent = CreateAgent();
+        var session = CreateSession(agent.Id);
+        var run = CreateRunningRun(agent.Id, session.Id) with { State = state };
+        var stream = CreateActivityStreamId();
+        var cut = context.Render<ChatWorkspacePanel>(parameters => parameters
+            .Add(component => component.DraftPrompt, string.Empty)
+            .Add(component => component.Session, session)
+            .Add(component => component.ActiveRun, run)
+            .Add(component => component.RunStateText, state.ToString())
+            .Add(component => component.IsBusy, isBusy)
+            .Add(component => component.ActivityStreamId, stream));
+
+        cut.WaitForAssertion(() => {
+            Assert.Equal(expectedStatus, cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+            Assert.Contains("Updates unavailable", cut.Find("[data-testid='agent-execution-activity-status']").TextContent);
+        });
+
+        var activity = cut.FindComponent<AgentExecutionActivityStatus>();
+        await cut.InvokeAsync(() => activity.Instance.StateChanged.InvokeAsync(
+            new AgentActivityState(stream.OperationId, "Agent responding", "info", "Generating the response.", false)));
+        Assert.Equal("Agent responding", cut.FindComponent<AgentChatSurface>().Instance.Presentation.RunStatus?.Text);
+    }
+
     [Theory]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)]
     [InlineData(AgentChatSessionBlockReason.UnresolvedEffects, true)]
@@ -238,11 +275,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
                     "test-provider", "test-model", new InvalidOperationException("api_key=provider-secret"),
                     terminalRun.ResultSummary, AgentProviderFailureCategory.ProviderError));
             } else {
-                var result = CreateRunResult(agent.Id, session.Id);
-                completion.SetResult(result with {
-                    ExecutionRunId = terminalRun.Id,
-                    Metric = result.Metric with { ExecutionRunId = terminalRun.Id }
-                });
+                completion.SetResult(CreateRunResult(agent.Id, session.Id, terminalRun.Id));
             }
             cut.WaitForAssertion(() => {
                 var panel = cut.FindComponent<ChatWorkspacePanel>().Instance;
@@ -275,11 +308,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
             var nextRun = terminalRun with { Id = Guid.NewGuid(), State = ExecutionState.Completed, Outcome = RunOutcome.Succeeded };
             workspace.InitialRunDetail = new(nextRun, session, [], []);
             workspace.WorkspaceResponses.Enqueue(CreateWorkspace(agent.Id, session, nextRun));
-            var nextResult = CreateRunResult(agent.Id, session.Id);
-            nextCompletion.SetResult(nextResult with {
-                ExecutionRunId = nextRun.Id,
-                Metric = nextResult.Metric with { ExecutionRunId = nextRun.Id }
-            });
+            nextCompletion.SetResult(CreateRunResult(agent.Id, session.Id, nextRun.Id));
             cut.WaitForAssertion(() => {
                 Assert.False(cut.FindComponent<ChatWorkspacePanel>().Instance.IsBusy);
                 Assert.Equal(nextRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun!.Id);
@@ -329,7 +358,8 @@ public sealed partial class AgentChatPanelResponsivenessTests
             AgentProviderFailureCategory.RequestCompatibility);
 
         using var context = CreateContext(workspaceService, orchestratorService);
-        var cut = RenderFocusedChat(context, agent, session);
+        var window = RenderFocusedChatWindow(context, agent, session);
+        var cut = window.FindComponent<AgentChatPanel>();
         cut.WaitForElement("[data-testid='chat-prompt-input']")
             .Input("Use the selected project structure.");
 
@@ -338,13 +368,13 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await workspace.PostRunRefreshStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
-                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+                window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());
+            Assert.Equal(failedRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun?.Id);
             Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
-            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", window.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -400,7 +430,14 @@ public sealed partial class AgentChatPanelResponsivenessTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
+            Assert.True(cut.Find("[data-testid='agents-chat-restore-submission']").HasAttribute("disabled"));
+            var retained = Assert.Single(context.Services.GetRequiredService<AgentChatSubmissionRetention>().Snapshot());
+            Assert.Equal(AgentChatSubmissionState.Unconfirmed, retained.State);
+            Assert.Equal(agent.Id, retained.AgentId);
+            Assert.Equal(executionSession.Id, retained.SessionId);
+            Assert.Equal("Keep this failure scoped to its actual thread.", retained.Draft);
+            Assert.Equal("Keep this failure scoped to its actual thread.", retained.RequestPrompt);
             Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain(unrelatedSession.Title, cut.Markup, StringComparison.Ordinal);
             Assert.DoesNotContain(unrelatedRun.ResultSummary, cut.Markup, StringComparison.Ordinal);
@@ -524,20 +561,21 @@ public sealed partial class AgentChatPanelResponsivenessTests
             AgentProviderFailureCategory.ProviderError);
 
         using var context = CreateContext(workspaceService, orchestratorService);
-        var cut = RenderFocusedChat(context, agent, session);
+        var window = RenderFocusedChatWindow(context, agent, session);
+        var cut = window.FindComponent<AgentChatPanel>();
 
         await cut.WaitForElement("[data-testid='chat-approve-once-button']")
             .ClickAsync(new MouseEventArgs())
             .WaitAsync(TimeSpan.FromSeconds(2));
 
         await orchestrator.ApprovalStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        cut.WaitForAssertion(() =>
-        {
+        cut.WaitForAssertion(() => {
             Assert.Equal(
                 "Failed",
-                cut.Find("[data-testid='agent-chat-run-state']").TextContent.Trim());
+                window.Find("header [data-testid='floating-agent-chat-run-state']").TextContent.Trim());
+            Assert.Equal(failedRun.Id, cut.FindComponent<ChatWorkspacePanel>().Instance.ActiveRun?.Id);
             Assert.Contains(failedRun.Id, workspace.ExecutionRunDetailRequests);
-            Assert.DoesNotContain("provider-secret", cut.Markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("provider-secret", window.Markup, StringComparison.Ordinal);
         });
     }
 
@@ -650,8 +688,10 @@ public sealed partial class AgentChatPanelResponsivenessTests
         {
             Assert.False(cut.Find("[data-testid='chat-send-button']").HasAttribute("disabled"));
             Assert.Contains(executionSession.Title, cut.Markup, StringComparison.Ordinal);
+            var assistantMessage = orchestrator.Result.AssistantMessage;
+            Assert.NotNull(assistantMessage);
             Assert.DoesNotContain(
-                orchestrator.Result.AssistantMessage.Content,
+                assistantMessage.Content,
                 cut.Markup,
                 StringComparison.Ordinal);
             Assert.DoesNotContain(
@@ -825,6 +865,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         Assert.False(workspace.PostRunWorkspace.Task.IsCompleted);
 
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
@@ -946,16 +987,18 @@ public sealed partial class AgentChatPanelResponsivenessTests
             StringComparison.Ordinal);
 
         var result = CreateRunResult(agent.Id, session.Id);
+        var assistantMessage = result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
             {
-                Messages = [result.AssistantMessage],
-                UpdatedAtUtc = result.AssistantMessage.CreatedAtUtc
+                Messages = [assistantMessage],
+                UpdatedAtUtc = assistantMessage.CreatedAtUtc
             }));
         workspace.SendResult.SetResult(result);
 
-        cut.WaitForAssertion(() => Assert.Contains(result.AssistantMessage.Content, cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains(assistantMessage.Content, cut.Markup, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -986,6 +1029,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         Assert.False(workspace.PostRunWorkspace.Task.IsCompleted);
 
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         workspace.PostRunWorkspace.SetResult(CreateWorkspace(
             agent.Id,
             session with
@@ -1015,6 +1059,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         using var context = CreateContext(workspaceService, orchestratorService);
         var cut = RenderFocusedChat(context, agent, session);
         var assistantMessage = orchestrator.Result.AssistantMessage;
+        Assert.NotNull(assistantMessage);
         var completedRun = externalRun with
         {
             State = ExecutionState.Completed,
@@ -1064,6 +1109,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<AgentChatSubmissionRetention>();
         context.Services.AddSingleton<AgentToolPolicyCatalog>();
         context.Services.AddSingleton<IAgentExecutionProfileGenerationSource>(new FixedAgentExecutionProfileGenerationSource(new(0)));
         context.Services.AddStubProviderRuntimeAdministration();
@@ -1074,6 +1120,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         context.Services.AddSingleton(DispatchProxy.Create<IAgentVoiceService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IAgentChatAttachmentStagingService, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IFloatingAgentChatCoordinator, UnexpectedCallProxy>());
+        context.Services.AddSingleton(DispatchProxy.Create<IAgentChatLauncher, UnexpectedCallProxy>());
         context.Services.AddSingleton(DispatchProxy.Create<IPromptGalleryService, UnexpectedCallProxy>());
         return context;
     }
@@ -1138,6 +1185,21 @@ public sealed partial class AgentChatPanelResponsivenessTests
             .Add(component => component.PreferredAgent, agent)
             .Add(component => component.PreferredSessionId, session.Id)
             .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating));
+
+    private static IRenderedComponent<ConversationFloatingWindow> RenderFocusedChatWindow(
+        BunitContext context,
+        AgentDefinition agent,
+        ChatSessionRecord session)
+        => context.Render<ConversationFloatingWindow>(parameters => parameters
+            .Add(component => component.WindowId, session.Id.ToString("N"))
+            .Add(component => component.Title, agent.Name)
+            .Add(component => component.AriaLabel, "Agent chat")
+            .Add(component => component.State, new() { IsVisible = true })
+            .AddChildContent<AgentChatPanel>(chat => chat
+                .Add(component => component.PreferredAgentId, agent.Id)
+                .Add(component => component.PreferredAgent, agent)
+                .Add(component => component.PreferredSessionId, session.Id)
+                .Add(component => component.DisplayMode, AgentChatPanelDisplayMode.FocusedFloating)));
 
     private static Task RerenderFocusedChatAsync(
         IRenderedComponent<AgentChatPanel> cut,
@@ -1312,10 +1374,9 @@ public sealed partial class AgentChatPanelResponsivenessTests
             PendingApprovals: []);
     }
 
-    internal static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId)
-    {
+    internal static AgentChatRunResult CreateRunResult(Guid agentId, Guid sessionId, Guid? executionRunId = null) {
         var now = DateTimeOffset.UtcNow;
-        var runId = Guid.NewGuid();
+        var runId = executionRunId ?? Guid.NewGuid();
         return new AgentChatRunResult(
             sessionId,
             new ChatMessageRecord(
@@ -1552,7 +1613,7 @@ public sealed partial class AgentChatPanelResponsivenessTests
         public AgentExecutionActivityStreamId? LastStreamId { get; private set; }
 
         public List<(Guid AgentId, Guid SessionId, Guid RunId, AgentExecutionActivityStreamId StreamId)> RecoveryRequests { get; } = [];
-        public TaskCompletionSource<ExecutionRunResult> RecoveryCompletion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<ExecutionRunResult> RecoveryCompletion { get; set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource RecoveryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)

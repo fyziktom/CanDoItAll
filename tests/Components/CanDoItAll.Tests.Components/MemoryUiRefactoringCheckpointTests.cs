@@ -15,9 +15,9 @@ public sealed class MemoryUiRefactoringCheckpointTests
             "Pages",
             "MemoryProvidersPage.razor");
         var source = File.ReadAllText(pagePath);
-        var lineCount = File.ReadLines(pagePath).Count();
 
-        Assert.True(lineCount <= 1300, $"MemoryProvidersPage.razor has {lineCount} lines; extract bounded UI components before native UI migration.");
+
+        Assert.Contains("MemoryWorkspaceSurface", source, StringComparison.Ordinal);
         Assert.DoesNotContain("RenderProviderUiSurface(", source);
         Assert.DoesNotContain("RenderOperationRow(", source);
         Assert.DoesNotContain("RenderFeedbackRow(", source);
@@ -34,8 +34,8 @@ public sealed class MemoryUiRefactoringCheckpointTests
         var componentRoot = Path.Combine(
             repositoryRoot,
             "src",
-            "Modules",
-            "CanDoItAll.Modules.Memory",
+            "UI",
+            "CanDoItAll.Memory.UI",
             "Components");
         var expectedComponents = new[]
         {

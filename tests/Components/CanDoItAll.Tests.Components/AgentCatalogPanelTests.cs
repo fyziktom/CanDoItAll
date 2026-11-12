@@ -5,6 +5,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.AspNetCore.Components;
@@ -85,12 +86,9 @@ public sealed class AgentCatalogPanelTests
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
         var spoofedAgent = CreateAgent(Guid.NewGuid(), "Spoofed HR Agent", HrAgentIdentity.TemplateKey);
         var launcher = new RecordingAgentChatLauncher(hrAgent);
-        using var context = CreateCatalogTestContext(launcher);
+        using var context = CreateCatalogTestContext(launcher, spoofedAgent, hrAgent);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { spoofedAgent, hrAgent })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         var openButtons = cut.WaitForElements("[data-testid='agents-hr-agent-open']");
@@ -118,12 +116,9 @@ public sealed class AgentCatalogPanelTests
             "Spoofed Prompts Curator",
             PromptsCuratorAgentIdentity.TemplateKey);
         var launcher = new RecordingAgentChatLauncher(curator);
-        using var context = CreateCatalogTestContext(launcher);
+        using var context = CreateCatalogTestContext(launcher, spoofedCurator, curator);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         var openButton = Assert.Single(cut.WaitForElements("[data-testid='agents-prompts-curator-open']"));
@@ -150,12 +145,9 @@ public sealed class AgentCatalogPanelTests
             "Spoofed Workflow Curator",
             WorkflowCuratorAgentIdentity.TemplateKey);
         var launcher = new RecordingAgentChatLauncher(curator);
-        using var context = CreateCatalogTestContext(launcher);
+        using var context = CreateCatalogTestContext(launcher, spoofedCurator, curator);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { spoofedCurator, curator })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         var cardOpenButton = Assert.Single(cut.WaitForElements("[data-testid='agents-workflow-curator-open']"));
@@ -181,12 +173,9 @@ public sealed class AgentCatalogPanelTests
             "Spoofed Scheduler Agent",
             SchedulerAgentIdentity.TemplateKey);
         var launcher = new RecordingAgentChatLauncher(schedulerAgent);
-        using var context = CreateCatalogTestContext(launcher);
+        using var context = CreateCatalogTestContext(launcher, spoofedAgent, schedulerAgent);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { spoofedAgent, schedulerAgent })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         var openButton = Assert.Single(cut.WaitForElements("[data-testid='agents-scheduler-agent-open']"));
@@ -205,12 +194,9 @@ public sealed class AgentCatalogPanelTests
     public void Catalog_toolbar_uses_icon_reset_tooltip_and_single_line_team_header()
     {
         var hrAgent = CreateAgent(HrAgentIdentity.AgentId, "HR Agent", HrAgentIdentity.TemplateKey);
-        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(hrAgent));
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(hrAgent), hrAgent);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { hrAgent })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         var resetButton = cut.Find("[data-testid='agents-catalog-reset']");
@@ -239,12 +225,9 @@ public sealed class AgentCatalogPanelTests
         var first = CreateAgent(Guid.NewGuid(), "First agent", string.Empty);
         var second = CreateAgent(Guid.NewGuid(), "Second agent", string.Empty);
         AgentDefinition? selected = null;
-        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first));
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(first), first, second);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { first, second })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true)
             .Add(component => component.SelectedAgentChanged,
                 EventCallback.Factory.Create<AgentDefinition?>(this, value => selected = value)));
@@ -260,12 +243,8 @@ public sealed class AgentCatalogPanelTests
     public void Catalog_marks_card_selection_as_handled_for_requested_dialog_echo()
     {
         var agent = CreateAgent(Guid.NewGuid(), "Selected agent", string.Empty);
-        using var context = CreateCatalogTestContext(
-            new RecordingAgentChatLauncher(agent));
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(agent), agent);
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { agent })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true));
 
         cut.Find("[data-testid='agents-catalog-card']").Click();
@@ -280,20 +259,10 @@ public sealed class AgentCatalogPanelTests
     {
         var deleted = CreateAgent(Guid.NewGuid(), "Deleted agent", string.Empty);
         var survivor = CreateAgent(Guid.NewGuid(), "Surviving agent", string.Empty);
-        var workspaceService = DispatchProxy.Create<
-            IAgentFrameworkWorkspaceService,
-            CatalogReloadWorkspaceServiceProxy>();
-        var workspaceProxy = (CatalogReloadWorkspaceServiceProxy)(object)workspaceService;
-        workspaceProxy.Agents = [survivor];
         var selections = new List<AgentDefinition?>();
-        using var context = CreateCatalogTestContext(
-            new RecordingAgentChatLauncher(deleted),
-            workspaceService);
+        using var context = CreateCatalogTestContext(new RecordingAgentChatLauncher(deleted), deleted, survivor);
 
         var cut = context.Render<AgentCatalogHost>(parameters => parameters
-            .Add(component => component.InitialAgents, new[] { deleted, survivor })
-            .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>())
-            .Add(component => component.InitialTeams, Array.Empty<AgentTeamDefinition>())
             .Add(component => component.SkipCatalogRepair, true)
             .Add(component => component.SelectedAgentChanged,
                 EventCallback.Factory.Create<AgentDefinition?>(this, selections.Add)));
@@ -305,6 +274,7 @@ public sealed class AgentCatalogPanelTests
         deletedCard.QuerySelector("[data-testid='agents-catalog-card']")!.DoubleClick();
         var dialogs = context.Services.GetRequiredService<DialogService>();
         cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
+        ((CatalogReloadWorkspaceServiceProxy)context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>()).Agents = [survivor];
         await cut.InvokeAsync(() => dialogs.CloseAsync(new AgentDetailsDialogResult(deleted.Id, Deleted: true)));
 
         cut.WaitForAssertion(() => Assert.Null(selections.Last()));
@@ -315,18 +285,20 @@ public sealed class AgentCatalogPanelTests
 
     private static BunitContext CreateCatalogTestContext(
         IAgentChatLauncher launcher,
-        IAgentFrameworkWorkspaceService? workspaceService = null)
+        params AgentDefinition[] agents)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
-        context.Services.AddAgentFrameworkUi();
+        context.Services.AddAgentConfigurationFixture();
+        context.Services.AddSingleton<IDatabaseSwitchNotificationService, DatabaseSwitchNotificationService>();
         context.Services.AddStubProviderRuntimeAdministration();
-        context.Services.AddSingleton(
-            workspaceService ??
-            DispatchProxy.Create<IAgentFrameworkWorkspaceService, UnusedWorkspaceServiceProxy>());
+        var workspace = DispatchProxy.Create<IAgentFrameworkWorkspaceService, CatalogReloadWorkspaceServiceProxy>();
+        ((CatalogReloadWorkspaceServiceProxy)workspace).Agents = agents;
+        context.Services.AddSingleton(workspace);
         context.Services.AddSingleton<IAgentFrameworkOrganizationCatalogRepairService, UnusedOrganizationCatalogRepairService>();
         context.Services.AddSingleton(launcher);
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         return context;
     }
 
@@ -397,13 +369,6 @@ public sealed class AgentCatalogPanelTests
     {
         public Task EnsureCurrentOrganizationCatalogAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;
-    }
-
-    private class UnusedWorkspaceServiceProxy : DispatchProxy
-    {
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
-            => throw new InvalidOperationException(
-                $"Workspace service member '{targetMethod?.Name}' was not expected in this component test.");
     }
 
     private class CatalogReloadWorkspaceServiceProxy : DispatchProxy

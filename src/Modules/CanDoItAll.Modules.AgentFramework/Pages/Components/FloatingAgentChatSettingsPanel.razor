@@ -1,20 +1,37 @@
+@using CanDoItAll.Editing
+@inject AgentConfigurationChanges ConfigurationChanges
+@inject WorkflowChanges WorkflowChanges
 @using CanDoItAll.AgentFramework.UI.Settings
 @using Microsoft.Extensions.Logging
 @inject IFloatingAgentChatSettingsService SettingsService
 @inject IFloatingAgentChatCoordinator Coordinator
 @inject NotificationService NotificationService
 @inject ILogger<FloatingAgentChatSettingsSession> Logger
-@implements IDisposable
+@implements IAsyncDisposable
 
-<FloatingChatSettingsSurface Presentation="session.Presentation" Intent="HandleIntentAsync" />
+<CanDoItAll.Editing.UI.DraftNavigationGuard EditorName="settings" MustRetain="session.MustRetain" IsBusy="session.Presentation.IsBusy" OutcomeUnknown="session.Presentation.Editor.OutcomeUnknown" />
+<FloatingChatSettingsSurface Presentation="session.Presentation" Intent="HandleIntentAsync" DraftChanged="Refresh" />
 
 @code {
     private FloatingAgentChatSettingsSession session = default!;
     private bool disposed;
+    private AgentSettingsOpening opening = default!;
     protected override async Task OnInitializedAsync() {
-        session = new(SettingsService, Coordinator.ApplySettings, Logger);
+        opening = new(ConfigurationChanges, WorkflowChanges, EditingOwner.FloatingChatSettings, () => !disposed);
+        session = new(SettingsService, Coordinator.ApplySettings, Logger, opening);
         session.Changed += Refresh;
-        await session.LoadAsync();
+        if (RendererInfo.IsInteractive) {
+            await OpenAsync();
+        }
+    }
+    private async Task OpenAsync() {
+        try {
+            await opening.StartAsync(() => InvokeAsync(session.Hint), () => InvokeAsync(session.Retire));
+            await session.LoadAsync();
+        } catch (Exception failure) when (failure is not OutOfMemoryException) {
+            Logger.LogWarning("Settings editor could not open original access ({FailureType}).", failure.GetType().Name);
+            session.Retire();
+        }
     }
     private async Task HandleIntentAsync(FloatingChatSettingsIntent intent) {
         if (!session.IsCurrent(intent.Generation) || session.Presentation.IsBusy) {
@@ -37,11 +54,14 @@
             _ = InvokeAsync(StateHasChanged);
         }
     }
-    public void Dispose() {
+    public async ValueTask DisposeAsync() {
         disposed = true;
         if (session is not null) {
             session.Changed -= Refresh;
             session.Dispose();
+        }
+        if (opening is not null) {
+            await opening.DisposeAsync();
         }
     }
 }

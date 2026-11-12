@@ -1,0 +1,90 @@
+@page "/"
+@implements IAsyncDisposable
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+
+<PageTitle>Resources UI sandbox</PageTitle>
+<SurfaceCard>
+    <TextBlock TextStyle="TextStyle.Subtitle1" Value="Resources development sandbox" />
+    <TextBlock Value="Synthetic owner metadata and bounded in-memory files. FTP/IPFS labels do not use live transports. Local actions record intent without launching applications. Downloads contain only fixture text." />
+    <Cluster Wrap="FlexWrap.Wrap">
+        <InputSelect @bind-Value="scenario" class="cda-input" style="width: 20rem" data-testid="resources-scenario-select">
+            @foreach (var option in Enum.GetValues<ResourceScenario>()) {
+                <option value="@option">@option</option>
+            }
+        </InputSelect>
+        <Button Text="Reset scenario" Click="ResetAsync" data-testid="resources-reset-scenario" />
+        <InputSelect @bind-Value="lane" class="cda-input" style="width: 12rem" data-testid="resources-hold-lane">
+            @foreach (var option in Enum.GetValues<ResourceScenarioLane>()) {
+                <option value="@option">@option</option>
+            }
+        </InputSelect>
+        <Button Text="Hold next operation" Click="() => store.HoldNext(lane)" data-testid="resources-hold" />
+        <Button Text="Release pending" Click="store.ReleaseAll" data-testid="resources-release" />
+        <Button Text="Fail next read" Click="() => store.FailNextRead = true" />
+        <Button Text="Remove selected resource" Click="RemoveAsync" />
+    </Cluster>
+    <TextBlock Value="@($"Scenario: {store.Scenario}; stored resources: {store.Records.Count}; writes: {store.Writes.Count}; promotions: {store.PromotionCommands.Count}; pending: {store.PendingCount}")" data-testid="resources-scenario-state" />
+    @if (retired.Count > 0) {
+        <details data-testid="resources-retired-stores">
+            <summary>Retired scenario stores</summary>
+            @foreach (var previous in retired) {
+                <TextBlock Value="@($"{previous.Scenario}: writes {previous.Writes.Count}, promotions {previous.PromotionCommands.Count}, pending {previous.PendingCount}")" />
+            }
+        </details>
+    }
+</SurfaceCard>
+<ResourcesWorkspaceSurface Registry="registry" Browse="browse" />
+
+@code {
+    private ResourceScenario scenario;
+    private ResourceScenarioLane lane;
+    private ResourceScenarioStore store = null!;
+    private ResourceRegistryController registry = null!;
+    private ResourceBrowseController browse = null!;
+    private bool disposed;
+    private readonly List<ResourceScenarioStore> retired = [];
+    protected override Task OnInitializedAsync() => ResetAsync();
+    private async Task ResetAsync() {
+        if (registry is not null) {
+            registry.Dispose();
+            var disposal = browse.DisposeAsync();
+            store.ReleaseAll();
+            await disposal;
+            retired.Add(store);
+            if (retired.Count > 8) {
+                var completed = retired.FirstOrDefault(s => s.PendingCount == 0);
+                if (completed is not null) {
+                    retired.Remove(completed);
+                }
+            }
+        }
+        store = new(scenario);
+        registry = new(store);
+        browse = new(store, new(JSRuntime)) { Promoted = _ => registry.RefreshAfterPromotionAsync() };
+        registry.Changed += RefreshScenarioState;
+        browse.Changed += RefreshScenarioState;
+        await registry.LoadRouteAsync(store.Records.Keys.FirstOrDefault() is var id && id != Guid.Empty ? id : null, null);
+        await browse.RefreshAsync();
+    }
+    private async Task RemoveAsync() {
+        if (registry.Draft.Editor.Id is { } id) {
+            store.Records.Remove(id);
+            await registry.RefreshAsync();
+        }
+    }
+    private void RefreshScenarioState() {
+        if (!disposed) {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+    public async ValueTask DisposeAsync() {
+        disposed = true;
+        registry.Dispose();
+        var disposal = browse.DisposeAsync();
+        store.ReleaseAll();
+        await disposal;
+        foreach (var previous in retired) {
+            previous.ReleaseAll();
+        }
+    }
+}

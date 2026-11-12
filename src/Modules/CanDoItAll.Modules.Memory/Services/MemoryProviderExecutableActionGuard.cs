@@ -4,6 +4,7 @@ using CanDoItAll.Memory.Application;
 namespace CanDoItAll.Modules.Memory.Services;
 
 public sealed class MemoryProviderExecutableActionGuard(
+    MemoryUiProfileOrigin origin,
     IMemoryProviderProfileStore providerStore,
     IMemoryOperationLedgerStore operationStore)
 {
@@ -12,18 +13,25 @@ public sealed class MemoryProviderExecutableActionGuard(
         MemoryCapabilityId capability,
         CancellationToken cancellationToken)
     {
+        origin.RequireCurrent();
         if (string.IsNullOrWhiteSpace(providerInstanceId))
         {
-            throw new InvalidOperationException("Select a provider before running this action.");
+            throw new MemoryActionRefusedException("Select a provider before running this action.");
         }
 
         var providerId = MemoryProviderInstanceId.Parse(providerInstanceId);
-        var provider = await providerStore.GetAsync(providerId, cancellationToken);
+        MemoryProviderProfile? provider;
+        try {
+            provider = await providerStore.GetAsync(providerId, cancellationToken);
+        } catch (Exception) {
+            throw new MemoryActionRefusedException("The provider could not be verified. No provider action was dispatched.");
+        }
         if (provider is null)
         {
-            throw new InvalidOperationException($"Memory provider '{providerId}' was not found.");
+            throw new MemoryActionRefusedException($"Memory provider '{providerId}' was not found.");
         }
 
+        origin.RequireCurrent();
         EnsureCanExecute(provider, capability);
     }
 
@@ -32,8 +40,15 @@ public sealed class MemoryProviderExecutableActionGuard(
         MemoryCapabilityId capability,
         CancellationToken cancellationToken)
     {
-        var operation = await operationStore.GetAsync(operationId, cancellationToken)
-            ?? throw new InvalidOperationException($"Memory operation '{operationId}' was not found.");
+        MemoryOperationRecord? operation;
+        try {
+            operation = await operationStore.GetAsync(operationId, cancellationToken);
+        } catch (Exception) {
+            throw new MemoryActionRefusedException("The operation could not be verified. No provider action was dispatched.");
+        }
+        if (operation is null) {
+            throw new MemoryActionRefusedException($"Memory operation '{operationId}' was not found.");
+        }
         await EnsureProviderCanExecuteAsync(
             operation.ProviderInstanceId.Value,
             capability,
@@ -42,7 +57,7 @@ public sealed class MemoryProviderExecutableActionGuard(
 
     public static void RejectOperationCancellation()
     {
-        throw new InvalidOperationException(
+        throw new MemoryActionRefusedException(
             "Operation cancellation is not executable by the currently shipped memory provider drivers.");
     }
 
@@ -52,7 +67,7 @@ public sealed class MemoryProviderExecutableActionGuard(
     {
         if (!provider.IsEnabled || provider.HealthState != MemoryProviderHealthState.Healthy)
         {
-            throw new InvalidOperationException(
+            throw new MemoryActionRefusedException(
                 $"Memory provider '{provider.InstanceId}' is not enabled and healthy.");
         }
 
@@ -60,7 +75,7 @@ public sealed class MemoryProviderExecutableActionGuard(
             item.Supported && item.Id == capability);
         if (!claimsCapability || !MemoryProviderCapabilityPolicy.CanExecute(provider.DriverKind, capability))
         {
-            throw new InvalidOperationException(
+            throw new MemoryActionRefusedException(
                 $"Memory provider driver '{provider.DriverKind}' cannot execute capability '{capability}'.");
         }
     }

@@ -23,7 +23,7 @@ internal static class ProcessExecutionClaimEvidenceReader {
         }
         disposition = ProcessExecutionAuthorityDisposition.Bound;
         return new(run.Id, run.AgentId, new(runId), new(stepId), claim.Value, run.SourceId, run.CreatedAtUtc,
-            run.State is (ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool) && run.Outcome is null ||
+            run.State is (ExecutionState.Preparing or ExecutionState.Running or ExecutionState.WaitingOnTool or ExecutionState.Persisting) && run.Outcome is null ||
             run.State == ExecutionState.Failed && run.Outcome == RunOutcome.Failed &&
                 run.ToolAdmission is { Support: AgentToolAdmissionSupport.Recoverable, BackgroundInput: not null });
     }

@@ -97,6 +97,13 @@ public sealed class CrmHrHomeSandboxFixture
             case CrmHrHomeIntent.Retry retry:
                 IntentLog = $"Retry ignored: generation {retry.Generation}";
                 break;
+            case CrmHrHomeIntent.Refresh refresh when refresh.Generation == Presentation.Generation && Presentation.Phase == CrmHrHomePhase.Ready:
+                IntentLog = $"Refresh: generation {refresh.Generation}";
+                Presentation = Build(++generation);
+                break;
+            case CrmHrHomeIntent.Refresh refresh:
+                IntentLog = $"Refresh ignored: generation {refresh.Generation}";
+                break;
         }
     }
 

@@ -57,7 +57,10 @@ public sealed class FileToolsHostActionRunner(IJSRuntime jsRuntime) : IAsyncDisp
     {
         ArgumentNullException.ThrowIfNull(authorizeDownload);
         await using IFileToolsDownloadLease download = await authorizeDownload(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
         await using FileContentLease content = await download.OpenReadAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         using var contentReference = new DotNetStreamReference(content.Stream, leaveOpen: true);
         string fileName = Path.GetFileName(download.FileName.Replace('\\', '/'));
         if (string.IsNullOrWhiteSpace(fileName))
@@ -80,6 +83,8 @@ public sealed class FileToolsHostActionRunner(IJSRuntime jsRuntime) : IAsyncDisp
             ModulePath);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
             await module.InvokeVoidAsync(
                 "downloadFileFromStream",
                 cancellationToken,

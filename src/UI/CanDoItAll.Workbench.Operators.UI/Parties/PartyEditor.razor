@@ -1,0 +1,185 @@
+@namespace CanDoItAll.Workbench.Operators.UI.Parties
+@{
+    var state = State;
+    var draft = state.Draft;
+    var participant = state.Kind == PartyEditorKind.Participant;
+    var disabled = !CanEdit(state);
+}
+<SectionCard Title="@(participant ? "Participant directory sync" : "Meeting party assignments")"
+             Description="@(participant ? "Link a reusable directory identity or keep this participant project-local." : "Choose the directory parties attending this meeting.")">
+    <EditForm @key="state.OpeningId" EditContext="@state.EditContext" OnSubmit="@(_ => SaveAsync(state))">
+        <Stack GapScale="LayoutGap.Medium" class="operator-party" data-testid="project-structure-party-editor">
+            <SurfaceCard Soft="true">
+                <Cluster>
+                    <StatusBadge Tone="@(participant ? draft.KeepLocal || draft.Participant is null ? "neutral" : "mint" : draft.MeetingParties.Count == 0 ? "neutral" : "mint")"
+                                 Text="@(participant ? draft.KeepLocal ? "Project local" : draft.Participant is null ? "Choose a party" : "Directory selected" : $"{draft.MeetingParties.Count} selected")" />
+                    @if (participant && state.Choices.FirstOrDefault(choice => choice.Id == draft.Participant) is { } linked) {
+                        <Pill Tone="PillTone.Info" Text="@linked.Name" />
+                    }
+                    <TextBlock Value="@state.Title" TextStyle="TextStyle.Subtitle1" />
+                </Cluster>
+                <TextBlock Value="The canvas node and its reusable directory record have separate save outcomes." TextStyle="TextStyle.Note" />
+            </SurfaceCard>
+            @if (state.IsLoading) {
+                <TextBlock Value="Loading party relationships for the selected node." data-testid="project-structure-party-editor-loading" />
+            } else if (state.IsUnavailable) {
+                <Alert AlertStyle="AlertStyle.Warning">Directory relationships could not be loaded. Existing references have not been removed.</Alert>
+            }
+            @if (!string.IsNullOrWhiteSpace(state.Message)) {
+                <Alert AlertStyle="AlertStyle.Info" data-testid="project-structure-party-editor-message">@state.Message</Alert>
+            }
+            @if (state.Created is { } created) {
+                <TextBlock Value="@($"Accepted directory party {created.Id:D}. Participant assignment is a separate save.")" TextStyle="TextStyle.Caption" />
+            }
+            @if (state.Receipt is { } receipt) {
+                <SurfaceCard Soft="true" data-testid="operator-party-receipt">
+                    <TextBlock Value="@receipt.Message" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Assignments: {string.Join(", ", receipt.AssignmentIds)}; node: {receipt.NodeId ?? "not confirmed"}.")" />
+                </SurfaceCard>
+            }
+            @if (state.Created is not null || state.Receipt is not null || state.IsUnavailable) {
+                <Button Text="@(state.Created is not null ? "Reload created party" : "Reload relationships")" Disabled="@(state.IsBusy || state.IsRetired)"
+                        data-testid="project-structure-party-retry" Click="@(() => Retry.InvokeAsync())" />
+            }
+            @if (!state.IsLoading && participant) {
+                <label class="operator-party__choice">
+                    <InputCheckbox @bind-Value="draft.KeepLocal" disabled="@disabled" data-testid="project-structure-participant-local-only" />
+                    <span>Keep project-local only</span>
+                </label>
+                @if (!draft.KeepLocal) {
+                    <ResourceCardPicker TItem="Guid" Options="@Options(state)" SelectionChanged="@(id => Select(state, id))"
+                        SearchPlaceholder="Search people, agents, and organizations" EmptyTitle="No parties match the current search"
+                        DataTestId="project-structure-participant-party" />
+                    <Button Text="Clear selection" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Disabled="@(disabled || draft.Participant is null)"
+                        data-testid="project-structure-participant-party-clear" Click="@(() => Select(state, null))" />
+                    <SurfaceCard Soft="true">
+                        <Stack GapScale="LayoutGap.Medium">
+                            <TextBlock Value="Quick create" TextStyle="TextStyle.Subtitle1" />
+                            <TextBlock Value="Create a directory record when nothing reusable exists. An AI-agent party does not create a runtime Agent configuration." TextStyle="TextStyle.Note" />
+                            <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+                                <FormField Text="Kind">
+                                    <InputSelect @bind-Value="draft.Kind" disabled="@disabled" class="cda-input" data-testid="project-structure-participant-quick-kind">
+                                        @foreach (var kind in Enum.GetValues<PartyQuickCreateKind>()) {
+                                            <option value="@kind">@KindLabel(kind)</option>
+                                        }
+                                    </InputSelect>
+                                </FormField>
+                                <FormField Text="Name">
+                                    <TextBox Value="@draft.Name" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Name), () => draft.Name = value ?? string.Empty))" data-testid="project-structure-participant-quick-name" />
+                                </FormField>
+                                <FormField Text="Email">
+                                    <TextBox Value="@draft.Email" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Email), () => draft.Email = value ?? string.Empty))" data-testid="project-structure-participant-quick-email" />
+                                </FormField>
+                                <FormField Text="Phone">
+                                    <TextBox Value="@draft.Phone" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Phone), () => draft.Phone = value ?? string.Empty))" data-testid="project-structure-participant-quick-phone" />
+                                </FormField>
+                            </Grid>
+                            <FormField Text="Summary">
+                                <TextArea Value="@draft.Summary" Immediate="true" Rows="3" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Summary), () => draft.Summary = value ?? string.Empty))" data-testid="project-structure-participant-quick-summary" />
+                            </FormField>
+                            <Button Text="Create party" ButtonStyle="ButtonStyle.Light" Disabled="@(disabled || state.Created is not null)"
+                                data-testid="project-structure-participant-quick-create" Click="@(() => CreateAsync(state))" />
+                        </Stack>
+                    </SurfaceCard>
+                }
+                <Button Text="Save participant sync" Disabled="@disabled" data-testid="project-structure-participant-save" Click="@(() => SaveAsync(state))" />
+            } else if (!state.IsLoading && !participant) {
+                <Button Text="Use project defaults" ButtonStyle="ButtonStyle.Light" Disabled="@disabled" data-testid="project-structure-meeting-project-defaults" Click="@(() => Defaults(state))" />
+                <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+                    @foreach (var choice in state.Choices) {
+                        <label class="operator-party__choice" data-testid="project-structure-meeting-party-option">
+                            <input type="checkbox" checked="@draft.MeetingParties.Contains(choice.Id)" disabled="@disabled"
+                                   data-testid="project-structure-meeting-party-checkbox" @onchange="args => Toggle(state, choice.Id, args.Value is true)" />
+                            <span>@choice.Name · @choice.Kind @(choice.IsMissing ? "(missing; retained until explicitly removed)" : "")</span>
+                        </label>
+                    }
+                </Grid>
+                <Button Text="Save meeting parties" Disabled="@disabled" data-testid="project-structure-meeting-save" Click="@(() => SaveAsync(state))" />
+            }
+        </Stack>
+    </EditForm>
+</SectionCard>
+
+@code {
+    [Parameter, EditorRequired] public PartyEditorState State { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PartyQuickCreateInput, Task> Create { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<PartySelection, Task> Save { get; set; } = default!;
+    [Parameter] public EventCallback Retry { get; set; }
+    private PartyEditorState? submitting;
+    private bool CanEdit(PartyEditorState state) => state.CanEdit && !ReferenceEquals(submitting, state);
+
+    private void Change(PartyEditorState state, string field, Action change) {
+        if (!ReferenceEquals(State, state) || !CanEdit(state)) {
+            return;
+        }
+        change();
+        state.EditContext.NotifyFieldChanged(new(state.Draft, field));
+    }
+
+    private void Select(PartyEditorState state, Guid? id) => Change(state, nameof(PartyEditorDraft.Participant), () => {
+        state.Draft.Participant = id;
+        state.Draft.KeepLocal = false;
+    });
+
+    private void Toggle(PartyEditorState state, Guid id, bool selected) => Change(state, nameof(PartyEditorDraft.MeetingParties), () => {
+        if (selected) {
+            state.Draft.MeetingParties.Add(id);
+        } else {
+            state.Draft.MeetingParties.Remove(id);
+        }
+    });
+
+    private void Defaults(PartyEditorState state) => Change(state, nameof(PartyEditorDraft.MeetingParties), () => {
+        state.Draft.MeetingParties.Clear();
+        state.Draft.MeetingParties.UnionWith(state.ProjectDefaults);
+        state.Message = "Project-level parties copied into the meeting editor.";
+    });
+
+    private Task CreateAsync(PartyEditorState state) {
+        if (!ReferenceEquals(State, state) || !CanEdit(state) || state.Created is not null) {
+            return Task.CompletedTask;
+        }
+        if (string.IsNullOrWhiteSpace(state.Draft.Name)) {
+            state.Message = "Display name is required.";
+            return Task.CompletedTask;
+        }
+        var input = state.Draft.QuickCreate();
+        return DispatchAsync(state, () => Create(input));
+    }
+
+    private Task SaveAsync(PartyEditorState state)
+        => ReferenceEquals(State, state) && CanEdit(state) ? DispatchAsync(state, () => Save(state.Draft.Selection())) : Task.CompletedTask;
+
+    private async Task DispatchAsync(PartyEditorState state, Func<Task> operation) {
+        submitting = state;
+        try {
+            await operation();
+        } catch {
+            state.RequiresObservation = true;
+            state.Message = "The operation returned no confirmed outcome. Inspect the original native record before submitting again.";
+        } finally {
+            if (ReferenceEquals(submitting, state)) {
+                submitting = null;
+            }
+        }
+    }
+
+    private static string KindLabel(PartyQuickCreateKind kind) => kind switch {
+        PartyQuickCreateKind.OrganizationUnit => "Organization unit",
+        PartyQuickCreateKind.AiAgent => "AI agent",
+        _ => kind.ToString()
+    };
+
+    private static IReadOnlyList<ResourceCardPickerOption<Guid>> Options(PartyEditorState state)
+        => state.Choices.Select(choice => new ResourceCardPickerOption<Guid>(choice.Id, choice.Name, choice.Kind) {
+            Subtitle = choice.IsMissing ? "Missing saved party" : choice.IsSensitive ? "Contact details hidden" : choice.PublicContact,
+            Meta = choice.IsSensitive ? string.Empty : choice.PublicPhone,
+            Icon = choice.Icon,
+            VisualKind = choice.UsesAvatar ? ResourceCardPickerVisualKind.Avatar : ResourceCardPickerVisualKind.Icon,
+            AdditionalSearchText = choice.IsSensitive ? choice.Kind : string.Join(' ', choice.PublicContact, choice.PublicPhone),
+            IsSelected = state.Draft.Participant == choice.Id,
+            IsDisabled = !state.CanEdit || choice.IsMissing,
+            DisabledReason = choice.IsMissing ? "The saved identity is retained. Remove it explicitly to unlink." : string.Empty,
+            TestId = $"project-structure-participant-party-option-{choice.Id:N}"
+        }).ToArray();
+}

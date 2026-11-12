@@ -7,6 +7,8 @@ public sealed class HistoryPartitionStore(
     IDbContextFactory<ProviderHistoryDbContext> factory,
     DbContextOptions<ProviderHistoryDbContext> options,
     CoordinatedDatabaseTransaction transactions) : IProviderHistoryPartition {
+    public const long InitializationLockKey = 724091824013;
+
     public async Task<HistoryPartition> GetAsync(CancellationToken cancellationToken) {
         await using var db = await factory.CreateDbContextAsync(cancellationToken);
         var existing = await ReadAsync(db, cancellationToken);
@@ -49,7 +51,7 @@ public sealed class HistoryPartitionStore(
             return ToPartition(existing);
         }
         if (ownerContext.Database.IsRelational()) {
-            await ownerContext.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(724091824013)", cancellationToken);
+            await ownerContext.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({InitializationLockKey})", cancellationToken);
             existing = await ReadAsync(ownerContext, cancellationToken);
             if (existing is not null) {
                 return ToPartition(existing);

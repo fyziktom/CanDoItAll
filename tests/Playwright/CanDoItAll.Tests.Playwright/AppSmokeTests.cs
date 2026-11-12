@@ -7,6 +7,7 @@ using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.SharedKernel;
 using Microsoft.Playwright;
 using Microsoft.EntityFrameworkCore;
@@ -103,6 +104,35 @@ public sealed partial class AppSmokeTests
         Assert.NotNull(calendarResponse);
         Assert.True(calendarResponse!.Ok, $"Expected calendar route to return 2xx, got {(int)calendarResponse.Status}.");
         await page.WaitForSelectorAsync("text=Project calendar");
+        // The resolved view and date become explicit in the URL, so a copied link reproduces the same range.
+        await Assertions.Expect(page).ToHaveURLAsync(new Regex(@"/calendar\?view=week&date=\d{4}-\d{2}-\d{2}$"));
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
+    public async Task Url_state_written_while_a_page_becomes_interactive_stays_client_side()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        var page = await context.NewPageAsync();
+        var pageLoads = new List<string>();
+        page.Request += (_, request) =>
+        {
+            if (request.ResourceType is "document" or "fetch" && new Uri(request.Url).AbsolutePath == "/agents")
+            {
+                pageLoads.Add(request.Url);
+            }
+        };
+
+        // The legacy tab token is canonicalized with Replace while the page becomes interactive. Before client-side
+        // navigation is on, that write would make blazor.web.js fetch and render the whole page again.
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/agents?tab=AGENTS");
+        Assert.NotNull(response);
+        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await Assertions.Expect(page).ToHaveURLAsync($"{fixture.BaseUrl}/agents?tab=agents");
+        await page.GetByTestId("agents-shell-tabs").WaitForAsync();
+        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+
+        Assert.Equal([$"{fixture.BaseUrl}/agents?tab=AGENTS"], pageLoads);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -163,8 +193,12 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("providers-new").WaitForAsync();
         await page.GetByTestId("providers-new").ClickAsync();
         await Assertions.Expect(page.GetByTestId("agents-provider-profiles-panel")).ToContainTextAsync("Draft provider profile.");
+        await page.GetByTestId("providers-base-url-input").FillAsync("https://previous-provider.invalid/");
+        await page.GetByTestId("providers-model-input").FillAsync("previous-model");
         await page.GetByTestId("providers-kind-select").SelectOptionAsync("Ollama");
-        await Assertions.Expect(page.Locator("body")).ToContainTextAsync("Connection, models, prices and provider metadata were cleared.");
+        await Assertions.Expect(page.GetByTestId("providers-base-url-input")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("providers-model-input")).ToHaveValueAsync(string.Empty);
+        await Assertions.Expect(page.GetByTestId("providers-config-json")).ToHaveValueAsync("{}");
         await page.GetByTestId("providers-name-input").FillAsync("Playwright Ollama");
         await page.GetByTestId("providers-base-url-input").FillAsync("http://127.0.0.1:11434");
         await page.GetByTestId("providers-model-input").FillAsync("llama3.1");
@@ -183,7 +217,7 @@ public sealed partial class AppSmokeTests
         await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).ToContainTextAsync("Select a stored source credential.");
         await page.GetByTestId("shared-provider-source-dialog").GetByRole(AriaRole.Button, new() { Name = "Cancel", Exact = true }).ClickAsync();
         await Assertions.Expect(page.GetByTestId("shared-provider-source-dialog")).Not.ToBeVisibleAsync();
-        await page.GetByTestId("shared-provider-connections-close").ClickAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
         await Assertions.Expect(page.GetByTestId("shared-provider-connections-dialog")).Not.ToBeVisibleAsync();
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -1357,18 +1391,26 @@ public sealed partial class AppSmokeTests
         var settingsButtonText = await settingsButton.TextContentAsync();
         Assert.DoesNotContain("cfg", settingsButtonText ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
-        var toolbarBounds = await page.Locator(".cw-toolbar").BoundingBoxAsync();
-        Assert.NotNull(toolbarBounds);
         await settingsButton.ClickAsync();
 
         var settingsOverlay = page.GetByTestId("canvas-settings-overlay");
         var settingsDialog = settingsOverlay.GetByRole(AriaRole.Dialog, new() { Name = "Canvas settings" });
         await settingsDialog.WaitForAsync();
-        var settingsBounds = await settingsDialog.BoundingBoxAsync();
-        Assert.NotNull(settingsBounds);
+        var geometry = await settingsDialog.EvaluateAsync<CanvasSettingsGeometry>("""
+            dialog => {
+                const toolbar = dialog.closest('.cw-workbench-frame').querySelector('.cw-toolbar');
+                if (!toolbar) {
+                    throw new Error('The settings dialog has no owning canvas toolbar.');
+                }
+                return {
+                    DialogTop: dialog.getBoundingClientRect().top,
+                    ToolbarBottom: toolbar.getBoundingClientRect().bottom
+                };
+            }
+            """);
         Assert.True(
-            settingsBounds!.Y >= toolbarBounds!.Y + toolbarBounds.Height - 1,
-            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={settingsBounds.Y}, ToolbarBottom={toolbarBounds.Y + toolbarBounds.Height}.");
+            geometry.DialogTop >= geometry.ToolbarBottom - 1,
+            $"Expected settings dialog to render below the toolbar safe zone. DialogTop={geometry.DialogTop}, ToolbarBottom={geometry.ToolbarBottom}.");
         await CaptureLocatorAsync(settingsDialog, Path.Combine(artifactsDir, "03-settings-safe-zone.png"));
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
@@ -1378,22 +1420,24 @@ public sealed partial class AppSmokeTests
     [Trait("Category", "Quarantined")]
     public async Task Project_structure_export_image_capture_generates_i18_artifacts()
     {
+        var exportFixture = new PlaywrightAppFixture {
+            RuntimeConfiguration = new Dictionary<string, string?> {
+                ["Api:Authorization:Enabled"] = "true",
+                ["Api:Authorization:SigningKey"] = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+            }
+        };
+        try {
+            await exportFixture.InitializeAsync();
+            await new AppSmokeTests(exportFixture).CaptureExportedImageEvidenceAsync();
+        } finally {
+            await exportFixture.DisposeAsync();
+        }
+    }
+
+    private async Task CaptureExportedImageEvidenceAsync() {
         var repoRoot = GetRepoRoot();
         var i18Root = Path.Combine(repoRoot, "artifacts", "screenshots", "i18");
         ResetDirectory(i18Root);
-
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-freeze-before-fix.png"),
-            Path.Combine(i18Root, "01-primary-state.png"),
-            overwrite: true);
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-after-fix.png"),
-            Path.Combine(i18Root, "02-secondary-state.png"),
-            overwrite: true);
-        File.Copy(
-            Path.Combine(repoRoot, "output", "playwright", "structure-after-fix.png"),
-            Path.Combine(i18Root, "03-interaction-result.png"),
-            overwrite: true);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -1406,10 +1450,12 @@ public sealed partial class AppSmokeTests
         });
 
         var page = await context.NewPageAsync();
-        await CreateProjectAsync(page, "Playwright Export Image", "Validation");
+        var projectId = await CreateProjectAsync(page, "Playwright Export Image", "Validation");
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "01-primary-state.png"));
         await FocusCanvasRootAsync(page);
         var rootSelectionWindow = page.GetByTestId("project-structure-selection-window");
         await rootSelectionWindow.WaitForAsync();
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "02-secondary-state.png"));
         await rootSelectionWindow.GetByRole(AriaRole.Button, new() { Name = "Export image", Exact = true }).ClickAsync();
 
         var exportedTitle = "Playwright Export Image mindmap image";
@@ -1434,6 +1480,7 @@ public sealed partial class AppSmokeTests
         Assert.DoesNotContain("could not be captured", exportImageFeedback ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         var exportedImageNodeId = await FindNodeIdByTitleAsync(page, exportedTitle);
+        await CaptureWorkbenchShellAsync(page, Path.Combine(i18Root, "03-interaction-result.png"));
         Assert.False(string.IsNullOrWhiteSpace(fixture.DatabaseConnectionString), "Expected the Playwright fixture to expose the database connection string.");
         AppDbContextModelRegistry.ConfigureAssemblies(
         [
@@ -1443,9 +1490,9 @@ public sealed partial class AppSmokeTests
         ]);
 
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(fixture.DatabaseConnectionString)
-            .Options;
-        await using var dbContext = new AppDbContext(dbOptions);
+            .UseNpgsql(fixture.DatabaseConnectionString);
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(dbOptions);
+        await using var dbContext = new AppDbContext(dbOptions.Options);
         var exportedRecord = await dbContext.Set<ProjectObjectRecord>()
             .SingleAsync(item => item.NodeKey == exportedImageNodeId);
         var exportedBinding = await dbContext.Set<ProjectNodeBindingRecord>()
@@ -1453,11 +1500,24 @@ public sealed partial class AppSmokeTests
 
         if (!string.IsNullOrWhiteSpace(exportedBinding.Route))
         {
-            var exportedImageResponse = await context.APIRequest.GetAsync($"{fixture.BaseUrl}{exportedBinding.Route}");
+            var imageUrl = $"{fixture.BaseUrl}/api/project-structure/projects/{projectId:D}/assets/{Uri.EscapeDataString(exportedImageNodeId)}/content";
+            var anonymousResponse = await context.APIRequest.GetAsync(imageUrl);
+            Assert.Equal(401, anonymousResponse.Status);
+            var token = await SharedProviderNativeDefaultsUiTests.IssueTokenAsync(page, fixture.BaseUrl, shared: false,
+                additionalScopes: [ApiAccessScopeNames.ReadProjects, ApiAccessScopeNames.WriteProjectStructure]);
+            var exportedImageResponse = await context.APIRequest.GetAsync(imageUrl, new() {
+                Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer " + token }
+            });
             Assert.True(exportedImageResponse.Ok, $"Expected the exported mindmap image route to return 2xx, got {exportedImageResponse.Status}.");
+            var content = JsonSerializer.Deserialize<ProjectStructureAssetContentDescriptor>(await exportedImageResponse.TextAsync(),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web) { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } });
+            Assert.NotNull(content);
+            Assert.False(content.Base64DataOmitted);
+            var bytes = Convert.FromBase64String(content.Base64Data);
+            Assert.Equal(content.ContentLength, bytes.LongLength);
             await File.WriteAllBytesAsync(
                 Path.Combine(i18Root, "04-exported-mindmap-image.png"),
-                await exportedImageResponse.BodyAsync());
+                bytes);
         }
         else
         {
@@ -1553,10 +1613,10 @@ public sealed partial class AppSmokeTests
         ]);
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(connectionString)
-            .Options;
+            .UseNpgsql(connectionString);
+        AppDbContextOptionsConfigurator.ConfigureModelCacheKey(options);
 
-        await using var dbContext = new AppDbContext(options);
+        await using var dbContext = new AppDbContext(options.Options);
 
         if (!await dbContext.Set<ProviderProfile>().AnyAsync(profile => profile.Name == "OpenAI API"))
         {
@@ -1564,6 +1624,7 @@ public sealed partial class AppSmokeTests
             {
                 Name = "OpenAI API",
                 ProviderKind = ProviderKind.OpenAi,
+                ConnectorPluginKey = ProviderConnectorKeys.OpenAi,
                 BaseUrl = "https://api.openai.com/v1",
                 DefaultModel = ProviderConnectorDefaults.OpenAiModel,
                 TimeoutSeconds = 45,
@@ -1582,6 +1643,7 @@ public sealed partial class AppSmokeTests
             {
                 Name = "Local Ollama",
                 ProviderKind = ProviderKind.OllamaLocal,
+                ConnectorPluginKey = ProviderConnectorKeys.Ollama,
                 BaseUrl = "http://127.0.0.1:11434",
                 DefaultModel = "llama3.1",
                 TimeoutSeconds = 45,
@@ -1872,6 +1934,7 @@ public sealed partial class AppSmokeTests
 
     private static async Task<ILocator> OpenInlineNoteEditorAsync(IPage page)
     {
+        await page.WaitForFunctionAsync("() => typeof document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.handlers?.keyDown === 'function'");
         await page.Locator(".cw-canvas-host").FocusAsync();
         await page.Locator(".cw-canvas-host").PressAsync("Tab");
         var noteEditor = page.Locator(".cw-note-editor__input");
@@ -2078,28 +2141,16 @@ public sealed partial class AppSmokeTests
         Assert.True(selected, $"Expected runtime selection bridge to select '{selector}'.");
     }
 
-    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title)
-    {
+    private static async Task SelectStructureOutlineNodeAsync(IPage page, string title) {
         await EnsureStructureObjectIndexWindowExpandedAsync(page);
-
         var outlineItem = page.GetByTestId("project-structure-object-index-window")
             .Locator(".cda-treeview__row")
-            .Filter(new LocatorFilterOptions
-            {
-                HasText = title
-            })
-            .First;
-
-        await outlineItem.WaitForAsync();
+            .Filter(new() { Has = page.GetByText(title, new() { Exact = true }) });
+        await Assertions.Expect(outlineItem).ToHaveCountAsync(1);
         await outlineItem.ClickAsync();
-        await page.WaitForFunctionAsync(
-            @"expectedTitle => {
-                const selectionWindow = document.querySelector('[data-testid=""project-structure-selection-window""]');
-                return !!selectionWindow && (selectionWindow.textContent || '').includes(expectedTitle);
-            }",
-            title);
+        await Assertions.Expect(page.GetByTestId("project-structure-selection-window")
+            .Locator(".cw-floating-window__title")).ToHaveTextAsync(title);
     }
-
     private static async Task FocusCanvasRootAsync(IPage page)
     {
         var button = page.GetByRole(AriaRole.Button, new() { Name = "Focus root", Exact = true });
@@ -3177,7 +3228,8 @@ public sealed partial class AppSmokeTests
                         nodeCount: nodes.length,
                         titles: nodes.map(node => node?.title || '').filter(title => !!title),
                         selectedNodeIds: Array.from(state?.selectedIds || []),
-                        errorUiVisible: !!document.querySelector('#blazor-error-ui[style*=""display: block""]')
+                        errorUiVisible: !!document.querySelector('#blazor-error-ui[style*=""display: block""]'),
+                        feedback: document.querySelector('.project-structure-inline-feedback')?.textContent || ''
                     };
                 }");
             throw new InvalidOperationException(
@@ -3185,7 +3237,7 @@ public sealed partial class AppSmokeTests
                 $"NodeCount={failureSnapshot?.NodeCount ?? 0}, " +
                 $"Selected={string.Join(", ", failureSnapshot?.SelectedNodeIds ?? [])}, " +
                 $"Titles={string.Join(" | ", failureSnapshot?.Titles ?? [])}, " +
-                $"BlazorErrorUiVisible={failureSnapshot?.ErrorUiVisible ?? false}.");
+                $"BlazorErrorUiVisible={failureSnapshot?.ErrorUiVisible ?? false}, Feedback={failureSnapshot?.Feedback}.");
         }
         var createdNodeId = await FindNodeIdByTitleAsync(page, title);
         try
@@ -3922,7 +3974,10 @@ public sealed partial class AppSmokeTests
             await page.WaitForTimeoutAsync(120);
         }
 
-        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'.");
+        var lastScene = lastSnapshot is null
+            ? "none"
+            : string.Join(", ", lastSnapshot.Nodes.Select(node => $"'{node.DisplayTitle}'{(node.Selected ? " (selected)" : string.Empty)}"));
+        throw new InvalidOperationException($"Timed out waiting for scene snapshot condition '{description}'. Last scene: {lastScene}.");
     }
 
     private static async Task WaitForSceneNodeTitleAsync(IPage page, string title, bool selectedOnly = false, int timeoutMs = 6_000)
@@ -5100,6 +5155,8 @@ public sealed partial class AppSmokeTests
         public string[] SelectedNodeIds { get; set; } = [];
 
         public bool ErrorUiVisible { get; set; }
+
+        public string Feedback { get; set; } = string.Empty;
     }
 
     private sealed class SelectionFailureSnapshot
@@ -5233,6 +5290,12 @@ public sealed partial class AppSmokeTests
         public int BackdropZIndex { get; set; }
 
         public bool DialogOwnsCenterPoint { get; set; }
+    }
+
+    private sealed class CanvasSettingsGeometry {
+        public double DialogTop { get; set; }
+
+        public double ToolbarBottom { get; set; }
     }
 
     private sealed record CanvasInputValueSeed(string Key, string Value);

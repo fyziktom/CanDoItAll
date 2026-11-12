@@ -25,7 +25,8 @@ public sealed partial class ProjectWriteAdmissionService(
     IDbContextFactory<ProjectsDbContext> dbContextFactory,
     DbContextOptions<ProjectsDbContext> contextOptions,
     CoordinatedDatabaseTransaction coordinatedTransaction,
-    ICanonicalRuntimeDatabase canonicalDatabase) {
+    ICanonicalRuntimeDatabase canonicalDatabase,
+    DatasetActivationService activation) {
     public Guid DatabaseProfileId => canonicalDatabase.Profile.Profile.Id;
 
     internal ProjectWriteAdmission Capture(Project project) => new(canonicalDatabase.Profile.Profile.Id, project.Id, project.LifetimeId);

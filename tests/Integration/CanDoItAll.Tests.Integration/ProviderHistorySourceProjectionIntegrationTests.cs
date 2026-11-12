@@ -17,7 +17,7 @@ public sealed partial class ProviderHistorySourceProjectionIntegrationTests {
         await using (var ownerDb = fixture.Factory.CreateDbContext()) {
             await using var transaction = await ownerDb.Database.BeginTransactionAsync();
             using var participation = fixture.Transactions.Enter(ownerDb);
-            ownerDb.Add(new WorkspaceSettings { DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
+            ownerDb.Add(new WorkspaceSettings { IsCurrent = true, DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
             await fixture.Outbox.StageAsync(mutation, default);
             await ownerDb.SaveChangesAsync();
             await transaction.RollbackAsync();
@@ -29,7 +29,7 @@ public sealed partial class ProviderHistorySourceProjectionIntegrationTests {
         await using (var ownerDb = fixture.Factory.CreateDbContext()) {
             await using var transaction = await ownerDb.Database.BeginTransactionAsync();
             using var participation = fixture.Transactions.Enter(ownerDb);
-            ownerDb.Add(new WorkspaceSettings { DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
+            ownerDb.Add(new WorkspaceSettings { IsCurrent = true, DefaultProviderProfileId = Guid.NewGuid(), UpdatedAtUtc = fixture.Clock.Now });
             await fixture.Outbox.StageAsync(mutation, default);
             await ownerDb.SaveChangesAsync();
             await transaction.CommitAsync();

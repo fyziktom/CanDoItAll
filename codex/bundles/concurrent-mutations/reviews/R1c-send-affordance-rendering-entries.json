@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "state": "SourceReviewOnly",
+  "merge": "Upsert only these three identities; no historical-native entries.",
+  "entries": [
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+      "sha256_lf": "f7d4bbeb738d365597696aa43fc855379fe2a596794a072e3ad26b2bd0a843a7",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor"
+      ],
+      "native_owner": "Native conversation selection, durable runs, cancel/recover and transcript reads; ChatWorkspacePanel and AgentChatActionsSurface render",
+      "visual_owner": "CanDoItAll.AgentFramework.UI/Chat/AgentChatActionsSurface; existing native chat orchestration",
+      "descendants": [
+        "AgentChatActionsSurface",
+        "AgentChatRecoverySurface",
+        "ChatWorkspacePanel",
+        "PromptGalleryChatComposerButton"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Optional typed send-blocked presentation carries the native decision independently of busy state; draft editing and the native dispatch guard remain unchanged."
+    },
+    {
+      "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
+      "sha256_lf": "b969f2411219543b6416959762755c6e1bd789499c57550ec2d7bb08e894c32c",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",
+      "project": "src/MAF/Common/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
+        "src/Modules/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceShell.razor"
+      ],
+      "native_owner": "Native redaction, attachment staging/grants, voice, runtime and approval adapters; AgentChatSurface and AgentImageAttachmentPicker render",
+      "visual_owner": "CanDoItAll.AgentFramework.UI/Chat/AgentImageAttachmentPicker; existing AgentChatSurface",
+      "descendants": [
+        "AgentChatSurface",
+        "AgentExecutionActivityStatus",
+        "AgentImageAttachmentPicker"
+      ],
+      "assets": "CanDoItAll.AgentFramework.Components",
+      "scenario": "CanDoItAll.AgentFramework.Components",
+      "evidence": "CanDoItAll.AgentFramework.Components",
+      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution. Active work masks consumed approval projections and reports Working; approval execution remains with the native host. Optional typed send-blocked presentation carries the native decision independently of busy state; draft editing and the native dispatch guard remain unchanged.",
+      "excluded_non_rendering_type_uses": [
+        {
+          "type": "ChatWorkspacePanel",
+          "lines": [
+            5
+          ],
+          "reason": "Typed ILogger injection references the owning component; it is not a rendered or dynamically activated child."
+        }
+      ]
+    },
+    {
+      "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
+      "sha256_lf": "4993ffc1458ff37b955a88a5120d71f05016ed1035b840f4a2c8360b0a11892c",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.AgentFramework.UI.Chat.ChatWorkspaceSurface",
+      "project": "src/UI/CanDoItAll.AgentFramework.UI/CanDoItAll.AgentFramework.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentChatSurface.razor"
+      ],
+      "native_owner": "Callers above own effects and authority",
+      "visual_owner": "CanDoItAll.AgentFramework.UI",
+      "descendants": [
+        "ConversationComposer",
+        "ConversationHeader",
+        "ConversationTranscript",
+        "ConversationWorkspacePanel"
+      ],
+      "assets": "CanDoItAll.AgentFramework.UI",
+      "scenario": "CanDoItAll.AgentFramework.UI",
+      "evidence": "CanDoItAll.AgentFramework.UI",
+      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction. Optional typed send-blocked presentation carries the native decision independently of busy state; draft editing and the native dispatch guard remain unchanged."
+    }
+  ]
+}

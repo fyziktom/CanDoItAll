@@ -1,0 +1,230 @@
+[
+  {
+    "id": "F01",
+    "title": "Projects original content condition absent",
+    "source": "SRC-03",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-02",
+    "decision": "D02",
+    "phase": "P02",
+    "tests": [
+      "T004",
+      "T019",
+      "T020"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F02",
+    "title": "Project collection replacement and matching cost",
+    "source": "SRC-03",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-03",
+    "decision": "D11",
+    "phase": "P03",
+    "tests": [
+      "T049",
+      "T050",
+      "T051"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F03",
+    "title": "Shared agent/owner write path requires adapter conversion",
+    "source": "SRC-08",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-01",
+    "decision": "D01",
+    "phase": "P02",
+    "tests": [
+      "T001",
+      "T020"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F04",
+    "title": "Multi-query editor requires coherent new stamp",
+    "source": "SRC-03",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-04",
+    "decision": "D04",
+    "phase": "P01",
+    "tests": [
+      "T006"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F05",
+    "title": "Project projection separately ordered after released source scope",
+    "source": "SRC-03",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-14",
+    "decision": "D08",
+    "phase": "P02",
+    "tests": [
+      "T036",
+      "T037",
+      "T038"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F06",
+    "title": "64 local lock stripes also on relational helper path",
+    "source": "SRC-04",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-15",
+    "decision": "D05",
+    "phase": "P01",
+    "tests": [
+      "T013",
+      "T088"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F07",
+    "title": "Per-key advisory SQL and validation fan-out",
+    "source": "SRC-04",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-15",
+    "decision": "D20",
+    "phase": "P01",
+    "tests": [
+      "T003",
+      "T063",
+      "T088"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F08",
+    "title": "Specialized authorized source path and order",
+    "source": "SRC-06",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-16",
+    "decision": "D06",
+    "phase": "P01",
+    "tests": [
+      "T012",
+      "T093"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F09",
+    "title": "Existing task expected-state semantics to preserve",
+    "source": "SRC-09",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-05",
+    "decision": "D16",
+    "phase": "P05",
+    "tests": [
+      "T066"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F10",
+    "title": "Existing submitted/live UI reconciliation to reuse",
+    "source": "SRC-02",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-13",
+    "decision": "D09",
+    "phase": "P02",
+    "tests": [
+      "T030",
+      "T031",
+      "T035"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F11",
+    "title": "Existing bounded bulk admission/enlisted facts",
+    "source": "SRC-10",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-19",
+    "decision": "D01",
+    "phase": "P01",
+    "tests": [
+      "T063",
+      "T067"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F12",
+    "title": "Full hierarchy and structure materialization",
+    "source": "SRC-03",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-15",
+    "decision": "D20",
+    "phase": "P01",
+    "tests": [
+      "T003",
+      "T088"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F13",
+    "title": "Creation receipt not durable operation replay",
+    "source": "SRC-15",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-12",
+    "decision": "D07",
+    "phase": "P02",
+    "tests": [
+      "T024",
+      "T025",
+      "T027"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F14",
+    "title": "Collaboration extraction not owner protocol upgrade",
+    "source": "SRC-13",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-19",
+    "decision": "D16",
+    "phase": "P05",
+    "tests": [
+      "T068",
+      "T070"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F15",
+    "title": "Actual transaction enlistment/lifetime exists",
+    "source": "SRC-05",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-16",
+    "decision": "D06",
+    "phase": "P01",
+    "tests": [
+      "T014",
+      "T018"
+    ],
+    "status": "requires-design-and-validation"
+  },
+  {
+    "id": "F16",
+    "title": "Tracked stamp helper does not infer aggregate boundary",
+    "source": "SRC-07",
+    "evidence_status": "Static selected observation or documented boundary; not reproduced incident",
+    "invariant": "INV-03",
+    "decision": "D03",
+    "phase": "P01",
+    "tests": [
+      "T005",
+      "T016"
+    ],
+    "status": "requires-design-and-validation"
+  }
+]

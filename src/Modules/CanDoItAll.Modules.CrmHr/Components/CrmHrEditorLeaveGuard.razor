@@ -1,0 +1,78 @@
+@implements IDisposable
+@using Microsoft.AspNetCore.Components.Routing
+@inject NotificationService Notifications
+
+@if (ObserveNavigation) {
+    <NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="@(HasInput || IsBusy() || Unknown)" />
+}
+<Dialog IsOpen="@(decision is not null)" Title="Keep your unsaved draft?" Size="ModalSize.Compact" CloseOnBackdrop="false" OnClose="@(() => Complete(false))" TestId="@($"{TestIdPrefix}-dirty-close")">
+    <ChildContent><TextBlock Value="Continue editing or discard the local changes and leave this record." /></ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="@($"{TestIdPrefix}-dirty-continue")" />
+            <Button Text="Discard draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="@($"{TestIdPrefix}-dirty-discard")" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    private TaskCompletionSource<bool>? decision;
+    private long? approvedRevision;
+    private long configuredOpening;
+    private bool disposed;
+    [Parameter, EditorRequired] public Func<bool> HasLocalChanges { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, bool> IsSameEditorRoute { get; set; } = default!;
+    [Parameter] public long InputRevision { get; set; }
+    [Parameter] public long Opening { get; set; }
+    [Parameter] public bool HasInput { get; set; }
+    [Parameter, EditorRequired] public Func<bool> IsBusy { get; set; } = default!;
+    [Parameter] public bool Unknown { get; set; }
+    [Parameter] public bool ObserveNavigation { get; set; } = true;
+    [Parameter] public string TestIdPrefix { get; set; } = "crmhr-party";
+
+    protected override void OnParametersSet() {
+        if (configuredOpening != Opening) {
+            configuredOpening = Opening;
+            approvedRevision = null;
+            Complete(false);
+        }
+    }
+
+    public async Task<bool> RequestLeaveAsync() {
+        if (disposed) {
+            return false;
+        }
+        if (IsBusy() || Unknown) {
+            Notifications.Warning("Draft retained", "Wait for the operation to finish. An unknown save outcome requires observation before leaving.");
+            return false;
+        }
+        if (!HasLocalChanges() || approvedRevision == InputRevision) {
+            return true;
+        }
+        var revision = InputRevision;
+        decision ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
+        StateHasChanged();
+        if (!await decision.Task || revision != InputRevision) {
+            return false;
+        }
+        approvedRevision = revision;
+        return true;
+    }
+
+    private void Complete(bool discard) {
+        var current = decision;
+        decision = null;
+        current?.TrySetResult(discard);
+    }
+
+    private async Task BeforeNavigationAsync(LocationChangingContext context) {
+        if (!IsSameEditorRoute(context.TargetLocation) && !await RequestLeaveAsync()) {
+            context.PreventNavigation();
+        }
+    }
+
+    public void Dispose() {
+        disposed = true;
+        Complete(false);
+    }
+}

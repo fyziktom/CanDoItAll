@@ -1,6 +1,7 @@
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -236,29 +237,12 @@ public partial class ProjectStructurePage
                 action.Tone))
             .ToList();
 
-    private async Task ExecuteOutlineContextActionAsync(ProjectStructureSupportPanelContextActionRequest request)
-    {
-        if (string.Equals(request.ActionId, "delete", StringComparison.OrdinalIgnoreCase) &&
-            request.TargetNodeIds is { Count: > 1 } targetNodeIds)
-        {
-            await DeleteNodesAsync(targetNodeIds);
-            return;
-        }
-
-        var node = ResolveNode(request.NodeId);
-        if (node is null)
-        {
-            return;
-        }
-
-        var actionContext = CaptureActionContext(request.ActionId, node);
-        await SelectNodeAsync(node.Id);
-        await ExecuteInspectorActionAsync(node, request.ActionId, actionContext);
-    }
-
     private async Task ExecuteInspectorActionAsync(ProjectStructureNode node, string actionId,
         ProjectStructureActionContext? capturedContext = null) {
-        var actionContext = capturedContext ?? CaptureActionContext(actionId, node);
+        var actionContext = capturedContext ?? CaptureActionContext();
+        if (!IsCurrentAction(actionContext)) {
+            return;
+        }
         if (await TryHandleFileBrowserActionAsync(actionId, node.Id))
         {
             return;
@@ -274,16 +258,16 @@ public partial class ProjectStructurePage
                 await InvokeAsync(StateHasChanged);
                 break;
             case "runtime:open":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Direct);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Direct, actionContext);
                 break;
             case "runtime:terminal":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Terminal);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Terminal, actionContext);
                 break;
             case "runtime:admin":
-                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Elevated);
+                await LaunchRuntimeAsync(node, ProjectStructureRuntimeLaunchMode.Elevated, actionContext);
                 break;
             case "runtime:stop":
-                await StopRuntimeAsync(node);
+                await StopRuntimeAsync(node, CurrentRuntimeIdentity(node, actionContext), actionContext);
                 break;
             case RuntimePreviewActionId:
                 if (TryResolveRuntimePreviewLink(node, out var runtimePreviewLink))
@@ -299,22 +283,22 @@ public partial class ProjectStructurePage
                 await OpenArtifactInNewTabAsync(node.Route);
                 break;
             case "command:open":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Open, node.Id, capturedContext: actionContext);
                 break;
             case "command:wizard":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Wizard, node.Id, capturedContext: actionContext);
                 break;
             case "command:branch":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Branch, node.Id, capturedContext: actionContext);
                 break;
             case "command:mark-used":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.MarkUsed, node.Id, capturedContext: actionContext);
                 break;
             case "command:skip":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Skip, node.Id, capturedContext: actionContext);
                 break;
             case "command:test":
-                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id);
+                await ExecuteCommandAsync(ProjectStructureCommandKind.Test, node.Id, capturedContext: actionContext);
                 break;
             case "copy-id":
             case "copy-info":
@@ -357,7 +341,7 @@ public partial class ProjectStructurePage
                 await BeginReconnectAsync(node.Id);
                 break;
             case "disconnect":
-                await DisconnectNodeAsync(node.Id);
+                await DisconnectNodeAsync(node.Id, actionContext);
                 break;
             case "move-descendants-to-subproject":
                 await OpenMoveDescendantsToSubprojectDialogAsync(node);
@@ -384,7 +368,7 @@ public partial class ProjectStructurePage
                 await OpenTranscriptActionAsync(ProjectLlmActionKind.FindOthersDeliveries, node.Id, actionContext);
                 break;
             case "delete":
-                await DeleteNodeAsync(node.Id);
+                await DeleteNodeAsync(node.Id, actionContext);
                 break;
         }
     }
@@ -461,7 +445,11 @@ public partial class ProjectStructurePage
     {
         if (ResolveNodeAuthoringRoute(node) is { } route)
         {
-            Navigation.NavigateTo(route);
+            // A project node opens its dashboard as a dedicated Workbench tab, like the Projects dashboard command.
+            Navigation.NavigateTo(route, new NavigationOptions
+            {
+                HistoryEntryState = node.ProjectRole != ProjectStructureProjectRole.None ? WorkbenchNavigation.OpenTabHistoryState : null
+            });
             return;
         }
 
@@ -479,7 +467,7 @@ public partial class ProjectStructurePage
             var projectId = node.RelatedProjectId ?? ProjectId;
             return projectId == Guid.Empty
                 ? null
-                : $"/projects?projectId={projectId:D}";
+                : CanDoItAll.Modules.Projects.Pages.ProjectsUrlCodec.Dashboard(projectId);
         }
 
         if (string.IsNullOrWhiteSpace(node.Route))
@@ -499,30 +487,6 @@ public partial class ProjectStructurePage
         => node.ObjectType == ProjectObjectType.WorkItem &&
            string.Equals(node.ObjectSubtype, "task", StringComparison.OrdinalIgnoreCase) &&
            !node.IsSystemManaged;
-
-    private async Task<bool> TryApplyNodeEditAsync(CanvasWorkbenchCreateActionRequest request)
-    {
-        if (!TryResolveEditAction(request.ActionId, out var createActionId) ||
-            !ProjectStructureCanvasCatalog.TryResolveCreateDefinition(createActionId, out var definition) ||
-            surface?.Nodes.FirstOrDefault(node => string.Equals(node.Id, request.SourceNodeId, StringComparison.Ordinal)) is not { } targetNode)
-        {
-            return false;
-        }
-
-        var update = ProjectStructureNodeEditor.ComposeUpdate(definition, targetNode, request);
-        var updated = await ProjectWorkbenchService.UpdateObjectAsync(ProjectId, targetNode.Id, update);
-        if (updated is null)
-        {
-            workflowFeedback = "The selected node could not be updated.";
-            workflowFeedbackTone = "warn";
-            return true;
-        }
-
-        await ApplySurfaceNodeUpdatesAsync([updated]);
-        workflowFeedback = $"{updated.Title} was updated.";
-        workflowFeedbackTone = "mint";
-        return true;
-    }
 
     private bool TryBuildNodeEditModel(ProjectStructureNode node, out ProjectStructureNodeEditModel model)
     {

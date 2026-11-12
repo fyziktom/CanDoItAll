@@ -1,0 +1,21 @@
+{
+  "kind": "Parent-authorized XML comment compliance and test terminal-drain successor before edits",
+  "predecessorInventory": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-handoff-source-inventory.json",
+  "predecessorSha256": "EFE97FFCE69A7ADAF79E0BF26B68075532046DCE01ECD414E645FFA299DE8F7D",
+  "entries": [
+    {
+      "path": "src/App/CanDoItAll.Web/Api/ProjectsApi.cs",
+      "sha256": "6273EDDD6D9636356D13B4988700A9E8861E04AA5D3EEFAB9DCECBE835A2AC2D",
+      "bytes": 30592,
+      "backup": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-api-before-compliance.cs.txt"
+    },
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ProjectDeletionIntegrationTests.FreshSnapshot.cs",
+      "sha256": "20C70E8C291B7B6640E302C34559472236DE706DCB0001CB24D0622DE0953C10",
+      "bytes": 28404,
+      "backup": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-owner-before-terminal-finally.cs.txt"
+    }
+  ],
+  "newMarkdown": "docs/architecture/concurrent-mutations/09-project-deletion-completion.md",
+  "countsUnchanged": true
+}

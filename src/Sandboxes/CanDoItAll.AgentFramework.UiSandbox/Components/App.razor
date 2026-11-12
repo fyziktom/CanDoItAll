@@ -7,16 +7,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/material-symbols.css"]" />
     <link rel="stylesheet" href="@Assets["_content/CanDoItAll.Components.BaseLib/css/output.css"]" />
     <link rel="stylesheet" href="@Assets[CatalogAssets.ThemePath]" />
     <link rel="stylesheet" href="@Assets["sandbox.css"]" />
     <link rel="stylesheet" href="@Assets["CanDoItAll.AgentFramework.UiSandbox.styles.css"]" />
     <ImportMap />
+    <CanDoItAll.Components.OverlayLib.OverlayLibHeadAssets />
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <CanDoItAll.Components.OverlayLib.OverlayLibBodyAssets IncludeRuntimeAssets="true" />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 </html>

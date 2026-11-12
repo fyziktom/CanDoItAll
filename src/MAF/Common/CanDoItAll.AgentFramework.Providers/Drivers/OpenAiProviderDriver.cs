@@ -81,7 +81,7 @@ public sealed class OpenAiProviderDriver(
                 new ProviderModelCatalogRequest(provider, AgentProviderCapabilityKind.ChatCompletion),
                 cancellationToken).ConfigureAwait(false);
             var suggestedModels = models.Select(model => model.Model).ToList();
-            var model = ResolveHealthModel(provider, suggestedModels, "gpt-4o-mini");
+            var model = ResolveHealthModel(provider, suggestedModels, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
             var result = await CompleteChatAsync(
                 CreateHealthChatRequest(provider, model),
                 cancellationToken).ConfigureAwait(false);

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Data;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -59,6 +60,7 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var facade = scope.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
         var request = Request(seed, participation.Id);
+        request.Original = Assert.Single(await facade.ListAssignmentsDetailedAsync(seed.ProjectId)).Original;
         var work = await facade.SaveAssignmentAsync(request);
         Assert.True(work.IsSuccess);
         Assert.Equal(participation.Id, work.Value);
@@ -68,7 +70,9 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
             Assert.Equal(participation.PhaseName, saved.PhaseName);
             Assert.Equal(participation.OpportunityId, saved.OpportunityId);
         }
+        request.Original = (await scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(participation.Id))!.Original;
         request.Role = ProjectPartyAssignmentRole.Manager;
+        request.PrimaryOriginal = await facade.ReadPrimaryObservationAsync(seed.Admission, request.Role, seed.NodeKey);
         Assert.True((await facade.SaveAssignmentAsync(request)).IsSuccess);
         await using var verified = await CanonicalAsync(app);
         Assert.False(await verified.Set<ProjectWorkAssignmentRecord>().AnyAsync(item => item.Id == participation.Id));
@@ -85,6 +89,8 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         var seed = await SeedAsync(app);
         await using var scope = app.Services.CreateAsyncScope();
         var commands = scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var feed = scope.ServiceProvider.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
         var id = Guid.NewGuid();
         await Assert.ThrowsAsync<InvalidOperationException>(() => commands.StageSaveAsync(Request(seed), id));
         await using var owner = await app.Services.GetRequiredService<IDbContextFactory<CrmHrDbContext>>().CreateDbContextAsync();
@@ -97,12 +103,14 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
             Assert.Equal(id, saved.Value);
             Assert.Equal(id, (await commands.GetForMutationAsync(id))!.Id);
             Assert.Null(await commands.GetAsync(id));
+            Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
             await using var independent = await CanonicalAsync(app);
             Assert.False(await independent.Set<ProjectWorkAssignmentRecord>().AnyAsync(item => item.Id == id));
         }
         await transaction.RollbackAsync();
         Assert.Null(await commands.GetAsync(id));
         Assert.Equal(0, await RevisionAsync(app, seed));
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
         await Assert.ThrowsAsync<InvalidOperationException>(() => commands.GetForMutationAsync(id));
     }
 
@@ -205,17 +213,24 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         await using var scope = app.Services.CreateAsyncScope();
         var manager = scope.ServiceProvider.GetRequiredService<PartyDirectoryManagementService>();
         var queries = scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>();
+        var mergePreview = await manager.PreviewMergeAsync(seed.PartyId, merged.Id);
+        Assert.True(mergePreview.IsSuccess);
+        var mergeOriginal = mergePreview.Value!.Original;
+        var feed = scope.ServiceProvider.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
         failure.Enabled = true;
-        await Assert.ThrowsAsync<InjectedMergeFailure>(() => manager.MergePartyAsync(seed.PartyId, merged.Id, "test", "Merge duplicate"));
+        await Assert.ThrowsAsync<InjectedMergeFailure>(() => manager.MergePartyAsync(seed.PartyId, merged.Id, "test", "Merge duplicate", original: mergeOriginal));
         failure.Enabled = false;
         Assert.Equal(Fact(work), await queries.GetAsync(work.Id));
         Assert.Equal(0, await RevisionAsync(app, seed));
-        Assert.True((await manager.MergePartyAsync(seed.PartyId, merged.Id, "test", "Merge duplicate")).IsSuccess);
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
+        Assert.True((await manager.MergePartyAsync(seed.PartyId, merged.Id, "test", "Merge duplicate", original: mergeOriginal)).IsSuccess);
         Assert.Equal(Fact(work) with {
             PartyId = seed.PartyId,
             PartyOrganizationAffiliationId = withAffiliations ? retainedAffiliation.Id : null
         }, await queries.GetAsync(work.Id));
         Assert.Equal(1, await RevisionAsync(app, seed));
+        Assert.Equal(seed.NodeKey, Assert.Single(Assert.Single(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes).Nodes).NodeId);
         await using var verified = await CanonicalAsync(app);
         Assert.False(await verified.Set<Party>().AnyAsync(item => item.Id == merged.Id));
         Assert.Single(await verified.Set<CrmHrAuditEntry>().Where(item => item.EntityId == seed.PartyId && item.Action == "MergedDuplicate").ToListAsync());
@@ -224,6 +239,39 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
             verified.Remove(await verified.Set<PartyOrganizationAffiliation>().SingleAsync(item => item.Id == retainedAffiliation.Id));
             await Assert.ThrowsAsync<DbUpdateException>(() => verified.SaveChangesAsync());
         }
+    }
+
+    [Fact]
+    public async Task Party_merge_rejects_a_native_work_assignment_change_after_preview() {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var parties = services.GetRequiredService<PartyDirectoryService>();
+        var created = await parties.SavePartyAsync(new PartyEditorModel { PartyType = PartyType.Person, DisplayName = "Observed work duplicate" });
+        Assert.True(created.IsSuccess);
+        var facade = services.GetRequiredService<ProjectPartyIntegrationService>();
+        var assignment = await facade.SaveAssignmentAsync(Request(seed));
+        Assert.True(assignment.IsSuccess);
+        var manager = services.GetRequiredService<PartyDirectoryManagementService>();
+        var original = (await manager.PreviewMergeAsync(seed.PartyId, created.Value)).Value!.Original;
+        await using var peer = app.Services.CreateAsyncScope();
+        var peerFacade = peer.ServiceProvider.GetRequiredService<ProjectPartyIntegrationService>();
+        var request = Request(seed, assignment.Value);
+        request.Original = (await peer.ServiceProvider.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(assignment.Value))!.Original;
+        request.PrimaryOriginal = await peerFacade.ReadPrimaryObservationAsync(seed.Admission, request.Role, seed.NodeKey);
+        request.Notes = "Independent native Work change";
+        Assert.True((await peerFacade.SaveAssignmentAsync(request)).IsSuccess);
+        var revision = await RevisionAsync(app, seed);
+
+        var result = await manager.MergePartyAsync(seed.PartyId, created.Value, "work-preflight-test", "Must reject", original: original);
+
+        Assert.True(result.IsFailure);
+        Assert.Contains(result.Errors, error => error.Code == CrmHrEditingErrorCodes.PartyMergeConflict);
+        Assert.NotNull(await parties.GetPartyAsync(created.Value));
+        Assert.Empty((await parties.GetPartyAsync(seed.PartyId))!.Notes);
+        Assert.Equal(revision, await RevisionAsync(app, seed));
+        Assert.Equal(request.Notes, (await services.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(assignment.Value))!.Notes);
     }
 
     [Fact]
@@ -254,6 +302,197 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         Assert.Equal(2, count.AllocationCount);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_work_assignment_commit_publishes_the_affected_node_to_structure_polling(bool throughCrm) {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var feed = services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+        var result = throughCrm
+            ? await services.GetRequiredService<ProjectPartyIntegrationService>().SaveAssignmentAsync(Request(seed))
+            : await services.GetRequiredService<IProjectWorkAssignmentCommands>().SaveAsync(Request(seed));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, await RevisionAsync(app, seed));
+        var batch = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor);
+        Assert.False(batch.RequiresRefresh);
+        var committed = Assert.Single(batch.Changes);
+        Assert.Equal(services.GetRequiredService<ProjectStructureChangeSession>().Id, committed.SessionId);
+        Assert.Equal(seed.ProjectId, committed.ProjectId);
+        var node = Assert.Single(committed.Nodes);
+        Assert.Equal(seed.NodeKey, node.NodeId);
+        Assert.Equal("Canonical task", node.Title);
+        Assert.Equal(ProjectStructureChangeKind.Updated, node.Kind);
+        Assert.Empty(feed.Read(Guid.NewGuid(), [seed.ProjectId], cursor).Changes);
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [Guid.NewGuid()], cursor).Changes);
+        var commands = services.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var update = Request(seed, result.Value);
+        update.Original = (await commands.GetAsync(result.Value))!.Original;
+        update.PrimaryOriginal = await commands.ReadPrimaryObservationAsync(seed.Admission, seed.NodeKey);
+        update.Notes = "Independent current Work update";
+        cursor = batch.Cursor;
+        var updated = throughCrm
+            ? await services.GetRequiredService<ProjectPartyIntegrationService>().SaveAssignmentAsync(update)
+            : await commands.SaveAsync(update);
+        Assert.True(updated.IsSuccess);
+        Assert.Equal(2, await RevisionAsync(app, seed));
+        batch = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor);
+        Assert.Equal(seed.NodeKey, Assert.Single(Assert.Single(batch.Changes).Nodes).NodeId);
+        var original = (await commands.GetAsync(result.Value))!.Original;
+        cursor = batch.Cursor;
+        if (throughCrm) {
+            await services.GetRequiredService<ProjectPartyIntegrationService>().DeleteAssignmentAsync(result.Value,
+                expectedReference: ProjectAssignmentReference.From(seed.Admission), original: original);
+        } else {
+            await commands.DeleteAsync(result.Value, expectedReference: ProjectAssignmentReference.From(seed.Admission), original: original);
+        }
+        Assert.Null(await commands.GetAsync(result.Value));
+        Assert.Equal(3, await RevisionAsync(app, seed));
+        var deletedAssignmentNode = Assert.Single(Assert.Single(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes).Nodes);
+        Assert.Equal(seed.NodeKey, deletedAssignmentNode.NodeId);
+        Assert.Equal(ProjectStructureChangeKind.Updated, deletedAssignmentNode.Kind);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_failing_work_receipt_receiver_cannot_suppress_the_committed_node_change(bool throughCrm) {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var feed = services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+        ProjectAssignmentSaveReceipt? receipt = null;
+        void Accepted(ProjectAssignmentSaveReceipt value) {
+            receipt = value;
+            throw new InvalidOperationException("Owned receipt receiver failure after commit.");
+        }
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => throughCrm
+            ? services.GetRequiredService<ProjectPartyIntegrationService>().SaveAssignmentAsync(Request(seed), onCommitted: Accepted)
+            : services.GetRequiredService<IProjectWorkAssignmentCommands>().SaveAsync(Request(seed), onCommitted: Accepted));
+
+        Assert.NotNull(receipt);
+        Assert.NotNull(await services.GetRequiredService<IProjectWorkAssignmentQueries>().GetAsync(receipt.Id));
+        var node = Assert.Single(Assert.Single(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes).Nodes);
+        Assert.Equal(seed.NodeKey, node.NodeId);
+        Assert.Equal("Canonical task", node.Title);
+    }
+
+    [Fact]
+    public async Task Work_node_capture_requires_a_held_owner_and_rejects_unbounded_or_foreign_batches() {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var commands = scope.ServiceProvider.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var feed = scope.ServiceProvider.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commands.ReadExistingNodeChangesForMutationAsync([(seed.ProjectId, seed.NodeKey)]));
+        await Assert.ThrowsAsync<ArgumentException>(() => commands.ReadExistingNodeChangesForMutationAsync(
+            Enumerable.Range(0, 5001).Select(_ => (seed.ProjectId, seed.NodeKey)).ToArray()));
+        Assert.Throws<InvalidOperationException>(() => commands.PublishCommittedNodeChanges([
+            new(Guid.NewGuid(), seed.ProjectId, seed.NodeKey, "Foreign profile label") ]));
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Native_work_replacement_publishes_one_node_and_stale_replacement_publishes_nothing(bool throughCrm) {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var commands = services.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var facade = services.GetRequiredService<ProjectPartyIntegrationService>();
+        var feed = services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+        Task<Result> Replace() => throughCrm
+            ? facade.ReplaceNodeAssignmentsIfCurrentAsync(seed.ProjectId, new(seed.NodeKey), [Request(seed)],
+                [ProjectPartyAssignmentRole.WorkItemAssignee], [], new ProjectWorkItemDirectAssignmentRevision(0), expectedProjectAdmission: seed.Admission)
+            : commands.ReplaceAsync(seed.ProjectId, new(seed.NodeKey), [Request(seed)], [], new(0), expectedProjectAdmission: seed.Admission);
+
+        Assert.True((await Replace()).IsSuccess);
+        Assert.Equal(1, await RevisionAsync(app, seed));
+        var batch = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor);
+        Assert.Equal(seed.NodeKey, Assert.Single(Assert.Single(batch.Changes).Nodes).NodeId);
+        cursor = batch.Cursor;
+        Assert.True((await Replace()).IsFailure);
+        Assert.Equal(1, await RevisionAsync(app, seed));
+        Assert.Single(await commands.ListForProjectsAsync([seed.ProjectId]));
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
+    }
+
+    [Fact]
+    public async Task Native_work_replacement_rechecks_current_authority_after_SQL_and_emits_no_node_on_rollback() {
+        var revoked = false;
+        var gate = new WorkRevocationGate(() => revoked = true);
+        await using var app = await TestApplication.CreateAsync(new() {
+            ConfigureServices = services => {
+                services.RemoveAll<IDbContextFactory<WorkbenchDbContext>>();
+                services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(provider =>
+                    new WorkRevocationFactory(provider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>(), gate));
+            }
+        });
+        var seed = await SeedAsync(app);
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var commands = services.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var feed = services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+        using var authority = services.GetRequiredService<ProjectAssignmentChanges>().EnterUiWrite(_ => revoked
+            ? ValueTask.FromException(new UnauthorizedAccessException("Owned Work grant revoked after SQL.")) : ValueTask.CompletedTask);
+        gate.Armed = true;
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => commands.ReplaceAsync(seed.ProjectId, new(seed.NodeKey),
+            [Request(seed)], [], new(0), expectedProjectAdmission: seed.Admission));
+
+        Assert.True(gate.Triggered);
+        Assert.True(gate.ObservedTransaction);
+        Assert.Empty(await commands.ListForProjectsAsync([seed.ProjectId]));
+        Assert.Equal(0, await RevisionAsync(app, seed));
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cleaning_an_orphan_work_assignment_does_not_invent_a_changed_structure_node(bool throughCrm) {
+        await using var app = await TestApplication.CreateAsync();
+        var seed = await SeedAsync(app);
+        var orphan = new ProjectWorkAssignmentRecord {
+            ProjectId = seed.ProjectId, ProjectLifetimeId = seed.Admission.LifetimeId,
+            PartyId = seed.PartyId, NodeKey = $"task:{Guid.NewGuid():N}"
+        };
+        await using (var fixture = await CanonicalAsync(app)) {
+            fixture.Add(orphan);
+            await fixture.SaveChangesAsync();
+        }
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var commands = services.GetRequiredService<IProjectWorkAssignmentCommands>();
+        var original = (await commands.GetAsync(orphan.Id))!.Original;
+        var feed = services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId]).Cursor;
+
+        if (throughCrm) {
+            await services.GetRequiredService<ProjectPartyIntegrationService>().DeleteAssignmentAsync(orphan.Id,
+                expectedReference: ProjectAssignmentReference.From(seed.Admission), original: original);
+        } else {
+            await commands.DeleteAsync(orphan.Id, expectedReference: ProjectAssignmentReference.From(seed.Admission), original: original);
+        }
+
+        Assert.Null(await commands.GetAsync(orphan.Id));
+        Assert.Equal(0, await RevisionAsync(app, seed));
+        Assert.Empty(feed.Read(seed.Admission.DatabaseProfileId, [seed.ProjectId], cursor).Changes);
+    }
+
     private static async Task<Seed> SeedAsync(TestApplication app) {
         var project = new Project { Name = "Work owner project", Slug = Guid.NewGuid().ToString("N") };
         var party = new Party { PartyType = PartyType.Person, DisplayName = "Retained person" };
@@ -272,7 +511,8 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
 
     private static ProjectPartyAssignmentUpsertRequest Request(Seed seed, Guid? id = null) => new() {
         AssignmentId = id, ProjectId = seed.ProjectId, ExpectedProjectAdmission = seed.Admission, PartyId = seed.PartyId, Role = ProjectPartyAssignmentRole.WorkItemAssignee,
-        NodeKey = seed.NodeKey, IsPrimary = true, AllocationPercent = 37m, StartsOn = new(2026, 4, 5), EndsOn = new(2026, 4, 7), Source = "Work owner proof"
+        NodeKey = seed.NodeKey, IsPrimary = true,
+        PrimaryOriginal = new(seed.ProjectId, seed.Admission.LifetimeId, ProjectPartyAssignmentRole.WorkItemAssignee, seed.NodeKey, System.Collections.Immutable.ImmutableArray<Guid>.Empty), AllocationPercent = 37m, StartsOn = new(2026, 4, 5), EndsOn = new(2026, 4, 7), Source = "Work owner proof"
     };
 
     private static Task<AppDbContext> CanonicalAsync(TestApplication app) =>
@@ -299,6 +539,26 @@ public sealed class WorkAssignmentOwnerPersistenceTests {
         row.StartsAtUtc, row.EndsAtUtc, row.IsPrimary, row.Source, row.Notes, row.ProjectLifetimeId);
 
     private sealed record Seed(Guid ProjectId, Guid PartyId, Guid NodeId, string NodeKey, ProjectWriteAdmission Admission);
+
+    private sealed class WorkRevocationGate(Action revoke) : SaveChangesInterceptor {
+        public bool Armed { get; set; }
+        public bool Triggered { get; private set; }
+        public bool ObservedTransaction { get; private set; }
+        public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default) {
+            if (Armed) {
+                Armed = false;
+                Triggered = true;
+                ObservedTransaction = eventData.Context?.Database.CurrentTransaction is not null;
+                revoke();
+            }
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class WorkRevocationFactory(DbContextOptions<WorkbenchDbContext> options, IInterceptor gate) : IDbContextFactory<WorkbenchDbContext> {
+        public WorkbenchDbContext CreateDbContext() => new(new DbContextOptionsBuilder<WorkbenchDbContext>(options).AddInterceptors(gate).Options);
+        public Task<WorkbenchDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
+    }
 
     private sealed class InjectedMergeFailure() : Exception("Injected CRM save failure after Work staging.");
 

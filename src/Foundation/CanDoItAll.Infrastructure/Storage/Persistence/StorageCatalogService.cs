@@ -41,7 +41,17 @@ public sealed partial class StorageCatalogService(
 
     public async Task<StorageCatalogSnapshot> SaveAsync(StorageCatalogSaveRequest request, CancellationToken cancellationToken = default) {
         ArgumentNullException.ThrowIfNull(request);
-        return (await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken, request.Configuration is null)).ToSnapshot();
+        var result = await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), request.ExpectedUpdatedAtUtc, cancellationToken,
+            request.Configuration is null, routing: request.DefaultRouting);
+        return result.Catalog.ToSnapshot();
+    }
+
+    public async Task<StorageCatalogEditorSave> SaveEditorAsync(StorageCatalogSaveRequest request, bool isNew, StorageDefaultRoutingWrite? routing,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        var result = await SaveCoreAsync(StorageCatalogMapping.CreateDraft(request), request.ExpectedUpdatedAtUtc, cancellationToken,
+            request.Configuration is null, isNew, routing);
+        return new(result.Catalog.ToSnapshot(), result.RoutingRevision);
     }
 
     public async Task<IReadOnlyList<StorageRoutingRuleSnapshot>> ListRulesAsync(CancellationToken cancellationToken = default) =>
@@ -52,17 +62,29 @@ public sealed partial class StorageCatalogService(
         return (await SaveRuleCoreAsync(StorageCatalogMapping.CreateDraft(request), cancellationToken, request.AlternativeStorageIds is null)).ToSnapshot();
     }
 
-    internal async Task SaveConnectionResultAsync(StorageDriverInput original, StorageConnectionTestResult result,
+    public async Task<bool> SaveConnectionResultAsync(StorageDriverInput original, StorageConnectionTestResult result,
         bool updateCapabilities, CancellationToken cancellationToken) {
-        var record = original.ToRecord();
+        await using var database = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(database, CatalogMutationKey(original.Id), cancellationToken);
+        var record = await database.Set<StorageCatalogRecord>().SingleOrDefaultAsync(row => row.Id == original.Id, cancellationToken);
+        if (record is null || !SameConnection(record, original) ||
+            record.LastTestedAtUtc >= result.TestedAtUtc) {
+            return false;
+        }
         record.LastTestedAtUtc = result.TestedAtUtc;
         record.HealthStatus = result.HealthStatus;
         record.LastHealthMessage = result.Message;
         if (updateCapabilities) {
             record.CapabilityMask = result.CapabilityMask;
         }
-        await SaveCoreAsync(record, cancellationToken);
+        await database.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
+        return true;
     }
+
+    private static bool SameConnection(StorageCatalogRecord current, StorageDriverInput observed) =>
+        current.ConnectionMode == observed.ConnectionMode && current.IsReadOnly == observed.IsReadOnly &&
+        current.IsEnabled == observed.IsEnabled && current.ToDriverInput().BuildContentSourceFingerprint() == observed.BuildContentSourceFingerprint();
 
     public async Task<bool> HasProjectRoutingForMutationAsync(Guid projectId, CancellationToken cancellationToken = default) {
         if (projectId == Guid.Empty) {
@@ -147,7 +169,7 @@ public sealed partial class StorageCatalogService(
         if (existingStorage is not null)
         {
             EnsureAuthoritativeBootstrapStorage(systemDefaults, existingStorage, workspaceRoot);
-            RefreshBootstrapStorage(existingStorage, workspaceRoot);
+            RefreshBootstrapStorage(dbContext, existingStorage, workspaceRoot);
             await dbContext.SaveChangesAsync(cancellationToken);
             await MigrateLegacyRootBindingsAsync(dbContext, workspaceRoot, cancellationToken);
             await EnsureBootstrapRuleAsync(dbContext, existingStorage, cancellationToken);
@@ -343,7 +365,9 @@ public sealed partial class StorageCatalogService(
         return storage.ToSnapshot();
     }
 
-    private async Task<StorageCatalogRecord> SaveCoreAsync(StorageCatalogRecord record, CancellationToken cancellationToken = default, bool preserveConfiguration = false)
+    private async Task<(StorageCatalogRecord Catalog, Guid? RoutingRevision)> SaveCoreAsync(StorageCatalogRecord record,
+        DateTimeOffset? expectedUpdatedAtUtc, CancellationToken cancellationToken, bool preserveConfiguration = false,
+        bool? editorCreate = null, StorageDefaultRoutingWrite? routing = null)
     {
         ArgumentNullException.ThrowIfNull(record);
         StorageJson.ParseProviderConfiguration(record.ConfigJson);
@@ -351,13 +375,33 @@ public sealed partial class StorageCatalogService(
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var key = CatalogMutationKey(record.Id);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext,
+            routing is null ? [key] : [key, RoutingMutationKey], cancellationToken);
         var entity = await dbContext.Set<StorageCatalogRecord>()
             .FirstOrDefaultAsync(item => item.Id == record.Id, cancellationToken);
 
+        if (editorCreate.HasValue) {
+            if (entity?.IsSystemDefault == true || record.IsSystemDefault) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Protected);
+            }
+            if (!editorCreate.Value && entity is null) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Missing);
+            }
+            if (editorCreate.Value && entity is not null) {
+                throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.AlreadyExists);
+            }
+        }
+        if (entity?.UpdatedAtUtc != expectedUpdatedAtUtc) {
+            throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Changed);
+        }
+
+        var existing = entity is not null;
         if (entity is null)
         {
             entity = new StorageCatalogRecord
             {
+                Id = record.Id,
                 CreatedAtUtc = clock.GetUtcNow()
             };
             await dbContext.Set<StorageCatalogRecord>().AddAsync(entity, cancellationToken);
@@ -367,6 +411,8 @@ public sealed partial class StorageCatalogService(
             record.ConfigJson = entity.ConfigJson;
             StorageJson.ParseProviderConfiguration(record.ConfigJson);
         }
+
+        var preserveHealth = editorCreate.HasValue && existing && SameConnection(entity, record.ToDriverInput());
 
         entity.Name = string.IsNullOrWhiteSpace(record.Name) ? $"Storage {record.ProviderKind}" : record.Name.Trim();
         entity.ProviderKind = record.ProviderKind;
@@ -378,12 +424,14 @@ public sealed partial class StorageCatalogService(
         entity.EndpointOrRoot = record.EndpointOrRoot?.Trim() ?? string.Empty;
         entity.ConfigJson = preserveConfiguration ? record.ConfigJson
             : string.IsNullOrWhiteSpace(record.ConfigJson) ? "{}" : record.ConfigJson;
-        entity.CapabilityMask = record.CapabilityMask;
-        entity.HealthStatus = record.HealthStatus;
-        entity.LastTestedAtUtc = record.LastTestedAtUtc;
-        entity.LastHealthMessage = record.LastHealthMessage?.Trim() ?? string.Empty;
+        if (!preserveHealth) {
+            entity.CapabilityMask = record.CapabilityMask;
+            entity.HealthStatus = editorCreate.HasValue ? StorageHealthStatus.Unknown : record.HealthStatus;
+            entity.LastTestedAtUtc = editorCreate.HasValue ? null : record.LastTestedAtUtc;
+            entity.LastHealthMessage = editorCreate.HasValue ? string.Empty : record.LastHealthMessage?.Trim() ?? string.Empty;
+        }
         entity.CredentialSecretId = record.CredentialSecretId;
-        entity.UpdatedAtUtc = clock.GetUtcNow();
+        entity.UpdatedAtUtc = NextRevision(entity.UpdatedAtUtc);
         if (entity.ProviderKind == StorageProviderKind.FileSystem)
         {
             string configuredRoot = string.IsNullOrWhiteSpace(entity.EndpointOrRoot)
@@ -398,20 +446,46 @@ public sealed partial class StorageCatalogService(
             ClearRootBinding(entity);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return entity;
+        Guid? routingRevision = routing is null ? null : await StageDefaultPurposesAsync(dbContext, record.Id, routing, cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Changed);
+        }
+        return (entity, routingRevision);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
+    private static string CatalogMutationKey(Guid id) => $"storage-catalog:{id:D}";
+
+    private DateTimeOffset NextRevision(DateTimeOffset previous) {
+        const long precision = TimeSpan.TicksPerMicrosecond;
+        var now = clock.GetUtcNow().UtcTicks / precision * precision;
+        return new(Math.Max(now, previous.UtcTicks + precision), TimeSpan.Zero);
+    }
+
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => DeleteCoreAsync(id, false, null, cancellationToken);
+
+    public Task DeleteEditorAsync(Guid id, DateTimeOffset? expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => DeleteCoreAsync(id, true, expectedUpdatedAtUtc, cancellationToken);
+
+    private async Task DeleteCoreAsync(Guid id, bool exactEditor, DateTimeOffset? expectedUpdatedAtUtc, CancellationToken cancellationToken) {
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, [CatalogMutationKey(id), RoutingMutationKey], cancellationToken);
         var storage = await dbContext.Set<StorageCatalogRecord>()
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (storage is null || storage.IsSystemDefault)
         {
+            if (exactEditor) {
+                throw new StorageCatalogEditorRefusedException(storage is null
+                    ? StorageCatalogEditorRefusal.Missing : StorageCatalogEditorRefusal.Protected);
+            }
             return;
+        }
+        if (exactEditor && storage.UpdatedAtUtc != expectedUpdatedAtUtc) {
+            throw new StorageCatalogEditorRefusedException(StorageCatalogEditorRefusal.Changed);
         }
 
         var rules = await dbContext.Set<StorageRoutingRule>()
@@ -424,6 +498,7 @@ public sealed partial class StorageCatalogService(
 
         dbContext.Remove(storage);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
     }
 
     internal async Task<IReadOnlyList<StorageRoutingRule>> ListRoutingRuleRecordsAsync(CancellationToken cancellationToken = default)
@@ -445,12 +520,14 @@ public sealed partial class StorageCatalogService(
         await EnsureBootstrapFileSystemStorageAsync(cancellationToken);
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, RoutingMutationKey, cancellationToken);
         var entity = await dbContext.Set<StorageRoutingRule>()
             .FirstOrDefaultAsync(item => item.Id == rule.Id, cancellationToken);
         if (entity is null)
         {
             entity = new StorageRoutingRule
             {
+                Id = rule.Id,
                 CreatedAtUtc = clock.GetUtcNow()
             };
             await dbContext.Set<StorageRoutingRule>().AddAsync(entity, cancellationToken);
@@ -480,9 +557,10 @@ public sealed partial class StorageCatalogService(
             ? "[]"
             : rule.AlternativeStorageIdsJson;
         entity.Reason = rule.Reason?.Trim() ?? string.Empty;
-        entity.UpdatedAtUtc = clock.GetUtcNow();
+        entity.UpdatedAtUtc = NextRevision(entity.UpdatedAtUtc);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await mutation.CommitAsync(cancellationToken);
         return entity;
     }
 
@@ -552,7 +630,7 @@ public sealed partial class StorageCatalogService(
         }
 
         EnsureAuthoritativeBootstrapStorage(systemDefaults, storage, workspaceRoot);
-        RefreshBootstrapStorage(storage, workspaceRoot);
+        RefreshBootstrapStorage(dbContext, storage, workspaceRoot);
         await dbContext.SaveChangesAsync(cancellationToken);
         await EnsureBootstrapRuleAsync(dbContext, storage, cancellationToken);
         return storage;
@@ -598,7 +676,7 @@ public sealed partial class StorageCatalogService(
         }
     }
 
-    private void RefreshBootstrapStorage(StorageCatalogRecord storage, string workspaceRoot)
+    private void RefreshBootstrapStorage(StorageDbContext dbContext, StorageCatalogRecord storage, string workspaceRoot)
     {
         var capabilityMask =
             StorageCapability.Read |
@@ -618,11 +696,15 @@ public sealed partial class StorageCatalogService(
         storage.IsSystemDefault = true;
         storage.ConnectionMode = StorageConnectionMode.Local;
         storage.EndpointOrRoot = workspaceRoot;
-        StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        StorageCatalogHostBindingPolicy.BindCurrent(storage, workspaceRoot, storage.RootLastValidatedAtUtc ?? now);
         storage.CapabilityMask = capabilityMask;
         storage.HealthStatus = StorageHealthStatus.Healthy;
         storage.LastHealthMessage = "Bootstrap workspace storage";
-        storage.UpdatedAtUtc = clock.GetUtcNow();
+        if (dbContext.Entry(storage).State == EntityState.Modified) {
+            storage.RootLastValidatedAtUtc = now;
+            storage.UpdatedAtUtc = now;
+        }
     }
 
     private static void ClearRootBinding(StorageCatalogRecord storage)

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Editing;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +38,8 @@ public sealed class PromptGallerySeedImporter(
     PromptGallerySeedLoader loader,
     IClock clock,
     IPromptGalleryProjectionCoordinator projectionCoordinator,
-    ILogger<PromptGallerySeedImporter> logger)
+    ILogger<PromptGallerySeedImporter> logger,
+    PromptGalleryChanges changes)
 {
     public async Task<PromptGallerySeedImportResult> ImportAsync(CancellationToken cancellationToken = default)
     {
@@ -47,6 +49,7 @@ public sealed class PromptGallerySeedImporter(
             .ToArray();
         var sourceIds = pack.Components.Select(component => component.Id).ToArray();
         var createdCount = 0;
+        var createdIds = new List<Guid>();
         var conflicts = new List<PromptGallerySeedConflict>();
         var existingCount = 0;
 
@@ -167,9 +170,18 @@ public sealed class PromptGallerySeedImporter(
             existingBySourceKey[component.Key] = artifact;
             existingById[component.Id] = artifact;
             createdCount++;
+            createdIds.Add(artifact.Id);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var id in createdIds) {
+            try {
+                changes.Publish(id, EditingChangeKind.Created);
+            } catch (Exception exception) {
+                logger.LogError(exception, "Seed prompt {PromptId} committed, but its creation hint could not be published.", id);
+            }
+        }
 
         if (createdCount > 0)
         {

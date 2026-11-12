@@ -51,6 +51,29 @@ public sealed class ProjectStructureTaskUpdateAgentInputTests
         Assert.DoesNotContain("(Parameter", rejected.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Initial_schedule_is_forwarded_without_constructing_a_previous_interval() {
+        var function = CreateTool();
+        var arguments = ToArguments(CreateJson("2026-09-23T17:00:00Z"));
+        var input = ((JsonElement)arguments["request"]!).Deserialize<ProjectStructureTaskUpdateAgentInput>(function.JsonSerializerOptions)!;
+        var initial = new ProjectStructureInitialTaskSchedule(null, null, null,
+            new(2027, 2, 5, 9, 0, 0, TimeSpan.Zero), new(2027, 2, 5, 10, 0, 0, TimeSpan.Zero));
+        var request = (input with { ScheduleChange = null, InitialSchedule = initial }).ToRequest();
+        Assert.Same(initial, request.InitialSchedule);
+        Assert.Null(request.ScheduleChange);
+    }
+
+    [Fact]
+    public void Initial_schedule_cannot_be_combined_with_a_schedule_move() {
+        var function = CreateTool();
+        var arguments = ToArguments(CreateJson("2026-09-23T17:00:00Z"));
+        var input = ((JsonElement)arguments["request"]!).Deserialize<ProjectStructureTaskUpdateAgentInput>(function.JsonSerializerOptions)!;
+        var initial = new ProjectStructureInitialTaskSchedule(null, null, null,
+            new(2027, 2, 5, 9, 0, 0, TimeSpan.Zero), new(2027, 2, 5, 10, 0, 0, TimeSpan.Zero));
+        var rejected = Assert.Throws<ProjectStructureAgentException>(() => (input with { InitialSchedule = initial }).ToRequest());
+        Assert.Equal("TaskUpdateRequestInvalid", rejected.ErrorCode);
+    }
+
     private static AIFunction CreateTool()
         => AIFunctionFactory.Create(
             (Guid projectId, ProjectStructureTaskUpdateAgentInput request) => request.TaskId,

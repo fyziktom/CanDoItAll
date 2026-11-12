@@ -51,6 +51,10 @@ public sealed class OpenAiRequestCompatibilityPolicyTests
 
     [Theory]
     [InlineData(OpenAiModelIds.Gpt54Mini)]
+    [InlineData(OpenAiModelIds.Gpt6Sol)]
+    [InlineData(OpenAiModelIds.Gpt6Luna)]
+    [InlineData("gpt-6-sol-2026-08-27")]
+    [InlineData("gpt-6-luna-2026-08-27")]
     [InlineData("gpt-5.4-mini-2026-08-01")]
     [InlineData("gpt-5.6-luna-2026-08-01")]
     [InlineData("gpt-5.6-terra-2026-08-01")]

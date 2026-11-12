@@ -340,7 +340,7 @@ public sealed class CrmHrDirectoryLifecycleJourneyTests
                     Notes = personRelationshipNotes
                 }
             ],
-            CrmHrDirectoryJourneySupport.Actor);
+            CrmHrDirectoryJourneySupport.Actor, original: new([]));
         Assert.True(personRelationship.IsSuccess, string.Join(" ", personRelationship.Errors.Select(error => error.Message)));
 
         var duplicateRelationship = await managementService.SaveRelationshipsAsync(
@@ -354,7 +354,7 @@ public sealed class CrmHrDirectoryLifecycleJourneyTests
                     Notes = duplicateRelationshipNotes
                 }
             ],
-            CrmHrDirectoryJourneySupport.Actor);
+            CrmHrDirectoryJourneySupport.Actor, original: new([]));
         Assert.True(duplicateRelationship.IsSuccess, string.Join(" ", duplicateRelationship.Errors.Select(error => error.Message)));
 
         var affiliation = await affiliationService.UpsertAsync(

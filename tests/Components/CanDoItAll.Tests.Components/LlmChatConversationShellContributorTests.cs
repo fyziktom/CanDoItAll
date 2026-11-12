@@ -16,6 +16,123 @@ namespace CanDoItAll.Tests.Components.LlmChats;
 public sealed class LlmChatConversationShellContributorTests
 {
     [Fact]
+    public async Task Unknown_command_history_has_an_accessible_acknowledgment_and_never_executes_the_command() {
+        var conversations = new LlmChatConversationWorkspaceTests.StubConversationGateway();
+        using var context = LlmChatConversationWorkspaceTests.CreateContext(conversations, new LlmChatConversationWorkspaceTests.StubOperationGateway());
+        context.SetRendererInfo(new Microsoft.AspNetCore.Components.RendererInfo("Server", true));
+        var host = context.Render<DialogHost>();
+        var dialogs = context.Services.GetRequiredService<DialogService>();
+        var completion = dialogs.OpenAsync<LlmChatFloatingHistoryDialog>("Review conversation history", new Dictionary<string, object?> {
+            [nameof(LlmChatFloatingHistoryDialog.RequiresAcknowledgement)] = true
+        });
+        try {
+            var checkbox = host.WaitForElement("[data-testid='floating-simple-chat-history-acknowledge']");
+            var labelId = checkbox.GetAttribute("aria-labelledby");
+            Assert.False(string.IsNullOrWhiteSpace(labelId));
+            Assert.Contains("I inspected this history", host.Find($"[id='{labelId}']").TextContent, StringComparison.Ordinal);
+            Assert.True(host.Find("[data-testid='floating-simple-chat-history-reviewed']").HasAttribute("disabled"));
+            await checkbox.ChangeAsync(true);
+            await host.Find("[data-testid='floating-simple-chat-history-reviewed']").ClickAsync();
+            Assert.Equal(LlmChatFloatingHistoryResolution.CommandsReviewed,
+                Assert.IsType<LlmChatFloatingHistoryResolution>(await completion));
+            Assert.Equal(0, conversations.CreateCalls + conversations.ArchiveCalls);
+        } finally {
+            foreach (var dialog in dialogs.Dialogs.ToArray()) {
+                await dialog.CloseAsync(false);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Original_catalog_access_retirement_hides_cached_content_without_rebinding_or_reading_another_dataset() {
+        var definition = new LlmChatDefinitionListItem(Guid.NewGuid(), "Protected definition", "", "",
+            LlmChatDefinitionStatus.Active, 1, 1, DateTimeOffset.UnixEpoch, []);
+        var definitions = new StubDefinitionGateway(definition);
+        var conversations = new StubConversationGateway(null);
+        using var context = LlmChatConversationWorkspaceTests.CreateContext(conversations, new LlmChatConversationWorkspaceTests.StubOperationGateway());
+        var access = (LlmChatConversationWorkspaceTests.StubConversationEditorAccess)context.Services.GetRequiredService<ILlmChatConversationEditorAccess>();
+        await using var contributor = new LlmChatConversationShellContributor(definitions, conversations, new AllowAllAuthorization(),
+            new LlmChatDefinitionCatalogInvalidationHub(), context.Services.GetRequiredService<IConversationShellCoordinator>(),
+            context.Services.GetRequiredService<DialogService>(), context.Services.GetRequiredService<NotificationService>(), access,
+            NullLogger<LlmChatConversationShellContributor>.Instance);
+        await contributor.InitializeAsync();
+        Assert.Single(contributor.Snapshot().Available);
+        access.Epoch++;
+
+        await contributor.Snapshot().Refresh!(CancellationToken.None);
+
+        Assert.Empty(contributor.Snapshot().Available);
+        Assert.Empty(contributor.Snapshot().Active);
+        Assert.Empty(contributor.Snapshot().Windows);
+        Assert.Contains("Original conversation access changed", contributor.Snapshot().FailureMessage, StringComparison.Ordinal);
+        Assert.Equal(1, definitions.ListCalls);
+        Assert.Equal(1, conversations.ListCalls);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Retiring_a_contributor_cancels_only_its_open_dialog_without_archiving_or_focusing(bool archive) {
+        var definition = new LlmChatDefinitionListItem(Guid.NewGuid(), "Same name", string.Empty, string.Empty,
+            LlmChatDefinitionStatus.Active, 1, 1, DateTimeOffset.UnixEpoch, []);
+        var conversation = new LlmChatConversationListItem(Guid.NewGuid(), definition.DefinitionId, 1, "Same name", definition.Name,
+            new LlmConversationProviderSnapshot(Guid.NewGuid(), "Pinned", ProviderKind.OpenAi, "model"),
+            LlmChatConversationStatus.Active, LlmChatConversationOrigin.Application, 1, 0, null, DateTimeOffset.UnixEpoch);
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
+        var dialogs = context.Services.GetRequiredService<DialogService>();
+        var shell = context.Services.GetRequiredService<IConversationShellCoordinator>();
+        await using var contributor = new LlmChatConversationShellContributor(new StubDefinitionGateway(definition),
+            new StubConversationGateway(conversation), new AllowAllAuthorization(), new LlmChatDefinitionCatalogInvalidationHub(),
+            shell, dialogs, context.Services.GetRequiredService<NotificationService>(), new LlmChatConversationWorkspaceTests.StubConversationEditorAccess(), NullLogger<LlmChatConversationShellContributor>.Instance);
+        await contributor.InitializeAsync();
+        var participant = Assert.Single(contributor.Snapshot().Available).Presentation;
+        await contributor.HandleParticipantActionAsync(new(participant.Participant.Key,
+            participant.Actions.Single(action => action.Key.Value == "new-chat").Key));
+        var active = Assert.Single(contributor.Snapshot().Active).Presentation;
+        await contributor.HandleWindowCloseAsync(Assert.Single(contributor.Snapshot().Windows).Key.WindowId);
+        var actionTask = archive
+            ? contributor.HandleActiveActionAsync(new(active.Key, active.Actions.Single(action => action.Key.Value == "archive").Key, active.Version))
+            : contributor.HandleParticipantActionAsync(new(participant.Participant.Key,
+                participant.Actions.Single(action => action.Key.Value == "history").Key));
+        Assert.Single(dialogs.Dialogs);
+        var second = dialogs.OpenAsync<LlmChatFloatingHistoryDialog>("Unrelated");
+        await contributor.DisposeAsync();
+        await actionTask.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Null(shell.Snapshot().FocusedWindow);
+        Assert.Single(dialogs.Dialogs);
+        Assert.False(second.IsCompleted);
+        await dialogs.Dialogs.Single().CloseAsync();
+        await second;
+    }
+
+    [Fact]
+    public async Task Retired_contributor_does_not_start_the_second_catalog_read_or_publish_late_definitions() {
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var definitions = new StubDefinitionGateway(new(Guid.NewGuid(), "Held", string.Empty, string.Empty,
+            LlmChatDefinitionStatus.Active, 1, 1, DateTimeOffset.UtcNow, [])) { Delay = release.Task };
+        var conversations = new StubConversationGateway(null);
+        using var context = new BunitContext();
+        context.Services.AddLogging();
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddConversationShell();
+        await using var contributor = new LlmChatConversationShellContributor(definitions, conversations,
+            new AllowAllAuthorization(), new LlmChatDefinitionCatalogInvalidationHub(),
+            context.Services.GetRequiredService<IConversationShellCoordinator>(), context.Services.GetRequiredService<DialogService>(),
+            context.Services.GetRequiredService<NotificationService>(), new LlmChatConversationWorkspaceTests.StubConversationEditorAccess(), NullLogger<LlmChatConversationShellContributor>.Instance);
+        var initialization = contributor.InitializeAsync();
+        Assert.Equal(1, definitions.ListCalls);
+        await contributor.DisposeAsync();
+        release.TrySetResult();
+        var failure = await Record.ExceptionAsync(() => initialization.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.True(failure is null or OperationCanceledException);
+        Assert.Equal(0, conversations.ListCalls);
+        Assert.Empty(contributor.Snapshot().Available);
+    }
+
+    [Fact]
     public async Task Create_hide_and_reopen_use_durable_conversation_identity_without_ambient_context()
     {
         var definitionId = Guid.NewGuid();
@@ -63,7 +180,7 @@ public sealed class LlmChatConversationShellContributorTests
             shell,
             context.Services.GetRequiredService<DialogService>(),
             context.Services.GetRequiredService<NotificationService>(),
-            NullLogger<LlmChatConversationShellContributor>.Instance);
+            new LlmChatConversationWorkspaceTests.StubConversationEditorAccess(), NullLogger<LlmChatConversationShellContributor>.Instance);
 
         await contributor.InitializeAsync();
 
@@ -80,6 +197,22 @@ public sealed class LlmChatConversationShellContributorTests
         Assert.Equal(definitionId, conversations.CreatedDefinitionId);
         var open = contributor.Snapshot();
         var window = Assert.Single(open.Windows);
+        var staleArchive = contributor.HandleActiveActionAsync(new(open.Active[0].Presentation.Key,
+            open.Active[0].Presentation.Actions.Single(action => action.Key.Value == "archive").Key,
+            open.Active[0].Presentation.Version + 1));
+        try {
+            Assert.True(staleArchive.IsCompleted);
+            Assert.Empty(context.Services.GetRequiredService<DialogService>().Dialogs);
+        } finally {
+            foreach (var dialog in context.Services.GetRequiredService<DialogService>().Dialogs.ToArray()) {
+                await dialog.CloseAsync(false);
+            }
+            await staleArchive;
+        }
+        conversations.ListedConversations = [createdConversation with { Title = "Peer renamed conversation", ConcurrencyToken = 5 }];
+        await contributor.Snapshot().Refresh!(CancellationToken.None);
+        Assert.Equal("Peer renamed conversation", Assert.Single(contributor.Snapshot().Active).Presentation.DisplayName);
+        Assert.Equal(5, Assert.Single(contributor.Snapshot().Active).Presentation.Version);
         Assert.Equal(conversationId, window.Parameters[nameof(LlmChatFloatingConversationContent.ConversationId)]);
         Assert.Single(window.Parameters);
         Assert.Equal(
@@ -92,18 +225,18 @@ public sealed class LlmChatConversationShellContributorTests
 
         var hidden = contributor.Snapshot();
         var active = Assert.Single(hidden.Active);
-        Assert.Empty(hidden.Windows);
+        Assert.True(Assert.Single(hidden.Windows).KeepContentMounted);
         Assert.Null(shell.Snapshot().FocusedWindow);
 
         var openAction = active.Presentation.Actions.Single(action => action.Key.Value == "open");
-        await contributor.HandleActiveActionAsync(new(active.Presentation.Key, openAction.Key));
+        await contributor.HandleActiveActionAsync(new(active.Presentation.Key, openAction.Key, active.Presentation.Version));
 
         Assert.Single(contributor.Snapshot().Windows);
         Assert.NotNull(shell.Snapshot().FocusedWindow);
     }
 
     [Fact]
-    public async Task Definition_catalog_invalidation_exposes_a_newly_activated_chat_without_reinitializing()
+    public async Task Definition_hint_marks_the_catalog_stale_until_an_explicit_bounded_refresh()
     {
         var definition = new LlmChatDefinitionListItem(
             Guid.NewGuid(),
@@ -130,7 +263,7 @@ public sealed class LlmChatConversationShellContributorTests
             context.Services.GetRequiredService<IConversationShellCoordinator>(),
             context.Services.GetRequiredService<DialogService>(),
             context.Services.GetRequiredService<NotificationService>(),
-            NullLogger<LlmChatConversationShellContributor>.Instance);
+            new LlmChatConversationWorkspaceTests.StubConversationEditorAccess(), NullLogger<LlmChatConversationShellContributor>.Instance);
 
         await contributor.InitializeAsync();
         Assert.Empty(contributor.Snapshot().Available);
@@ -147,10 +280,16 @@ public sealed class LlmChatConversationShellContributorTests
         catalogInvalidator.Invalidate(definitions.Definition);
         await refreshed.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        var available = Assert.Single(contributor.Snapshot().Available);
-        Assert.Equal(definition.Name, available.Presentation.Participant.DisplayName);
+        Assert.Empty(contributor.Snapshot().Available);
+        Assert.True(contributor.Snapshot().UpdatesAvailable);
         Assert.Equal(1, definitions.ListCalls);
         Assert.Equal(1, conversations.ListCalls);
+        await contributor.Snapshot().Refresh!(CancellationToken.None);
+        var available = Assert.Single(contributor.Snapshot().Available);
+        Assert.Equal(definition.Name, available.Presentation.Participant.DisplayName);
+        Assert.Equal(2, definitions.ListCalls);
+        Assert.Equal(2, conversations.ListCalls);
+        Assert.False(contributor.Snapshot().UpdatesAvailable);
     }
 
     private sealed class AllowAllAuthorization : ILlmChatUiAuthorizationFacade
@@ -172,14 +311,15 @@ public sealed class LlmChatConversationShellContributorTests
 
         public int ListCalls { get; private set; }
 
-        public Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
+        public Task Delay { get; init; } = Task.CompletedTask;
+
+        public async Task<LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>> ListPageAsync(
             LlmChatDefinitionQuery query,
             CancellationToken cancellationToken = default)
         {
             ListCalls++;
-            return Task.FromResult(
-                LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(
-                    new([Definition], null)));
+            await Delay;
+            return LlmChatUiResult<LlmChatPage<LlmChatDefinitionListItem, LlmChatDefinitionCursor>>.Success(new([Definition], null));
         }
 
         public Task<LlmChatUiResult<LlmChatDefinitionListItem>> GetAsync(
@@ -218,6 +358,7 @@ public sealed class LlmChatConversationShellContributorTests
         public Guid? CreatedDefinitionId { get; private set; }
 
         public int ListCalls { get; private set; }
+        public IReadOnlyList<LlmChatConversationListItem> ListedConversations { get; set; } = [];
 
         public Task<LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>> ListPageAsync(
             LlmChatConversationQuery query,
@@ -226,7 +367,7 @@ public sealed class LlmChatConversationShellContributorTests
             ListCalls++;
             return Task.FromResult(
                 LlmChatUiResult<LlmChatPage<LlmChatConversationListItem, LlmChatConversationCursor>>.Success(
-                    new([], null)));
+                    new(ListedConversations, null)));
         }
 
         public Task<LlmChatUiResult<LlmChatConversationView>> GetAsync(

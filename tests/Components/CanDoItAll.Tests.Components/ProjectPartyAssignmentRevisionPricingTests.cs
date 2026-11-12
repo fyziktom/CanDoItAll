@@ -20,6 +20,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             services.GetRequiredService<ProjectWorkbenchService>();
         var bridge =
             services.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var owner = services.GetRequiredService<ProjectPartyIntegrationService>();
         var projectId = await CreateProjectAsync(projectsService);
         var admission = Assert.IsType<ProjectWriteAdmission>(
             await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
@@ -36,7 +37,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             "Generic save task",
             manualCostAmount: 999m);
         var saveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(admission, saveTask.Id, personA));
+            await CreateAssignmentAsync(owner, admission, saveTask.Id, personA));
         Assert.True(saveResult.IsSuccess);
         AssertClearedWithRevision(
             await ReadStateAsync(
@@ -50,8 +51,9 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             projectId,
             "Generic delete task");
         var deleteSaveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(admission, deleteTask.Id, personA));
+            await CreateAssignmentAsync(owner, admission, deleteTask.Id, personA));
         Assert.True(deleteSaveResult.IsSuccess);
+        var shownDelete = Assert.Single(await ReadAssignmentsAsync(bridge, projectId, deleteTask.Id));
         await SetAuthoritativePersonPricingAsync(
             workbenchService,
             projectId,
@@ -59,7 +61,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             personA);
         await bridge.DeleteAssignmentAsync(
             deleteSaveResult.Value,
-            expectedReference: ProjectAssignmentReference.From(admission));
+            expectedReference: ProjectAssignmentReference.From(admission), original: shownDelete.Original);
         AssertClearedWithRevision(
             await ReadStateAsync(
                 workbenchService,
@@ -76,8 +78,9 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             projectId,
             "Generic replace task");
         var replaceSaveResult = await bridge.SaveAssignmentAsync(
-            CreateAssignment(admission, replaceTask.Id, personA));
+            await CreateAssignmentAsync(owner, admission, replaceTask.Id, personA));
         Assert.True(replaceSaveResult.IsSuccess);
+        var shownReplacement = (await ReadAssignmentsAsync(bridge, projectId, replaceTask.Id)).Select(ProjectPartyAssignmentConcurrencySnapshot.From).ToArray();
         await SetAuthoritativePersonPricingAsync(
             workbenchService,
             projectId,
@@ -87,13 +90,13 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             projectId,
             new ProjectNodeReference(replaceTask.Id),
             [
-                CreateAssignment(
-                    admission,
+                await CreateAssignmentAsync(
+                    owner, admission,
                     replaceTask.Id,
                     personB)
             ],
             [ProjectPartyAssignmentRole.WorkItemAssignee],
-            expectedProjectAdmission: admission);
+            expectedProjectAdmission: admission, expectedAssignments: shownReplacement);
         Assert.True(replaceResult.IsSuccess);
         AssertClearedWithRevision(
             await ReadStateAsync(
@@ -178,7 +181,8 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
                     })));
     }
 
-    private static ProjectPartyAssignmentUpsertRequest CreateAssignment(
+    private static async Task<ProjectPartyAssignmentUpsertRequest> CreateAssignmentAsync(
+        ProjectPartyIntegrationService owner,
         ProjectWriteAdmission admission,
         string taskNodeId,
         Guid partyId)
@@ -191,6 +195,7 @@ public sealed class ProjectPartyAssignmentRevisionPricingTests
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = taskNodeId,
             IsPrimary = true,
+            PrimaryOriginal = await owner.ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.WorkItemAssignee, taskNodeId),
             Source = "generic-assignment-test"
         };
     }

@@ -1,0 +1,70 @@
+{
+  "passed": 4,
+  "scope": "Actual interactive and Process definition and hierarchy receipt recovery after original seed exit; no ordinary background execution activation or capacity claim",
+  "observedUtc": "2026-10-18T20:31:57.9944898+00:00",
+  "discovered": 4,
+  "cleanup": [
+    {
+      "owner": "AgentHistoricalReceiptRestartTests",
+      "nonce": "3fffe422-027e-4e59-8f64-412df59e9dd5",
+      "kind": 0,
+      "phase": "cleanup",
+      "observedAtUtc": "2026-10-18T16:29:47.2089071-04:00",
+      "evidence": {
+        "workloadFailureType": null,
+        "cleanupSucceeded": true,
+        "allocationMayRequireManifestReconciliation": false,
+        "failureTypes": []
+      }
+    },
+    {
+      "owner": "AgentHistoricalReceiptRestartTests",
+      "nonce": "5d9e315e-0b64-4d75-9648-4f4756ea46b0",
+      "kind": 2,
+      "phase": "cleanup",
+      "observedAtUtc": "2026-10-18T16:29:10.0140216-04:00",
+      "evidence": {
+        "workloadFailureType": null,
+        "cleanupSucceeded": true,
+        "allocationMayRequireManifestReconciliation": false,
+        "failureTypes": []
+      }
+    },
+    {
+      "owner": "AgentHistoricalReceiptRestartTests",
+      "nonce": "560153e9-acfc-4ae6-8e50-32d6ff960305",
+      "kind": 1,
+      "phase": "cleanup",
+      "observedAtUtc": "2026-10-18T16:30:37.8766025-04:00",
+      "evidence": {
+        "workloadFailureType": null,
+        "cleanupSucceeded": true,
+        "allocationMayRequireManifestReconciliation": false,
+        "failureTypes": []
+      }
+    },
+    {
+      "owner": "AgentHistoricalReceiptRestartTests",
+      "nonce": "06b91f83-2364-4c74-bcd7-f068aecc56ca",
+      "kind": 3,
+      "phase": "cleanup",
+      "observedAtUtc": "2026-10-18T16:28:26.0242122-04:00",
+      "evidence": {
+        "workloadFailureType": null,
+        "cleanupSucceeded": true,
+        "allocationMayRequireManifestReconciliation": false,
+        "failureTypes": []
+      }
+    }
+  ],
+  "executed": 4,
+  "sourceRuntime": {
+    "sourceAndRuntimeUnchanged": true,
+    "sourceFiles": 9082,
+    "runtimeFiles": 4182,
+    "sourceSha256": "ABC55FE4BD41A61173EE501AB5188D814ECBE0A5CE23E5AF2CFFB5E787C59406",
+    "runtimeSha256": "472FC8D84E71EF8BF4FF82615B5CF256BD30E00F04B6122C2C1F6A74B3EF4022"
+  },
+  "failed": 0,
+  "evidenceRoot": ".artifacts/concurrent-mutations/validation/p03-hierarchy-restart-repair-validation"
+}

@@ -13,6 +13,10 @@ namespace CanDoItAll.Modules.Processes;
 /// </summary>
 public sealed class ProcessToolInvocationPolicyContextContributor : IToolInvocationPolicyContextContributor
 {
+    public IReadOnlyList<ToolInputConstraint> ContributeToolInputConstraints(string toolName,
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope) =>
+        string.IsNullOrWhiteSpace(auditScope?.ProcessRunId) ? [] : ProcessBrowserToolConstraints.For(toolName);
+
     public ToolInvocationPolicyContext Contribute(
         ToolInvocationPolicyContext context,
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)

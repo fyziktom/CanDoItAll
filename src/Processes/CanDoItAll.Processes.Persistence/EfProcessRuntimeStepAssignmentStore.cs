@@ -204,6 +204,9 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
 
     internal static ProcessRuntimeStepAssignmentEntity ToEntity(ProcessRuntimeStepAssignment assignment)
     {
+        if (assignment.DecisionDataPolicy is { } policy && policy.StepInstanceId != assignment.StepInstanceId) {
+            throw new InvalidDataException("The Process decision policy belongs to another logical step.");
+        }
         return new ProcessRuntimeStepAssignmentEntity
         {
             RunId = assignment.RunId.Value,
@@ -230,6 +233,8 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             OperationTargetScope = assignment.OperationTargetScope,
             LaunchVariablesJson = SerializeLaunchVariables(assignment.LaunchVariables),
             CapabilityScopeJson = SerializeCapabilityScope(assignment.CapabilityScope),
+            DecisionDataPolicyJson = assignment.DecisionDataPolicy is { } admission
+                ? ProcessDecisionDataPolicyAdmissionCodec.Serialize(admission) : null,
             BranchGateSourceStepKey = assignment.BranchGate?.SourceStepKey,
             BranchGateRequiredOutcomeKey = assignment.BranchGate?.RequiredOutcomeKey,
             CreatedAtUtc = assignment.CreatedAtUtc
@@ -309,6 +314,7 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             string.Equals(existing.OperationTargetScope, proposed.OperationTargetScope, StringComparison.Ordinal) &&
             string.Equals(normalizedExistingLaunchVariables, proposed.LaunchVariablesJson, StringComparison.Ordinal) &&
             string.Equals(normalizedExistingCapabilityScope, proposed.CapabilityScopeJson, StringComparison.Ordinal) &&
+            string.Equals(existing.DecisionDataPolicyJson, proposed.DecisionDataPolicyJson, StringComparison.Ordinal) &&
             string.Equals(existing.BranchGateSourceStepKey, proposed.BranchGateSourceStepKey, StringComparison.Ordinal) &&
             string.Equals(existing.BranchGateRequiredOutcomeKey, proposed.BranchGateRequiredOutcomeKey, StringComparison.Ordinal) &&
             existing.CreatedAtUtc == proposed.CreatedAtUtc)
@@ -341,6 +347,10 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
 
     internal static ProcessRuntimeStepAssignment ToAssignment(ProcessRuntimeStepAssignmentEntity entity)
     {
+        var policy = entity.DecisionDataPolicyJson is { } json ? ProcessDecisionDataPolicyAdmissionCodec.Deserialize(json) : null;
+        if (policy is not null && policy.StepInstanceId.Value != entity.StepInstanceId) {
+            throw new InvalidDataException("The saved Process decision policy belongs to another logical step.");
+        }
         var branchGate = string.IsNullOrWhiteSpace(entity.BranchGateSourceStepKey) ||
             string.IsNullOrWhiteSpace(entity.BranchGateRequiredOutcomeKey)
                 ? null
@@ -369,7 +379,8 @@ public sealed class EfProcessRuntimeStepAssignmentStore(ProcessPersistenceDbCont
             entity.CreatedAtUtc)
         {
             WorkflowBinding = ToWorkflowBinding(entity),
-            CapabilityScope = DeserializeCapabilityScope(entity.CapabilityScopeJson)
+            CapabilityScope = DeserializeCapabilityScope(entity.CapabilityScopeJson),
+            DecisionDataPolicy = policy
         };
     }
 

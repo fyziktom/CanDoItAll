@@ -21,12 +21,19 @@ internal sealed class ProjectStructureKnownFileInteractionSlot(
         }
     }
 
-    public async ValueTask<ProjectStructureKnownFileInteraction?> OpenAsync(
+    public ValueTask<ProjectStructureKnownFileInteraction?> OpenAsync(
         Guid projectId,
         string nodeId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nodeId);
+        return OpenAsync(token => openInteraction(projectId, nodeId, token), cancellationToken);
+    }
+
+    public async ValueTask<ProjectStructureKnownFileInteraction?> OpenAsync(
+        Func<CancellationToken, ValueTask<ProjectStructureKnownFileInteraction>> open,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(open);
         var operation = new OpenOperation(
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
         OpenOperation? replacedOperation;
@@ -50,7 +57,7 @@ internal sealed class ProjectStructureKnownFileInteractionSlot(
                 await replacedInteraction.DisposeAsync();
             }
 
-            opened = await openInteraction(projectId, nodeId, operation.Token);
+            opened = await open(operation.Token);
             ProjectStructureKnownFileInteraction? accepted = null;
             lock (gate)
             {
@@ -108,10 +115,16 @@ internal sealed class ProjectStructureKnownFileInteractionSlot(
             await interaction.DisposeAsync();
         }
 
-        if (operation is not null)
-        {
-            await operation.Completion.Task;
+    }
+
+    public async ValueTask CloseIfCurrentAsync(ProjectStructureKnownFileInteraction expected) {
+        lock (gate) {
+            if (!ReferenceEquals(current, expected)) {
+                return;
+            }
+            current = null;
         }
+        await expected.DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

@@ -167,9 +167,7 @@ internal static class LlmChatConversationEndpoints
     ///
     /// Creation is not idempotent: every successful request creates another conversation. After an ambiguous failure,
     /// list the definition's conversations (<c>GET /api/llm-conversations</c> with the <c>definitionId</c> query
-    /// parameter) before sending the request again. When the provider profile or model of the definition's current
-    /// revision is no longer usable, creation currently fails with HTTP 500 without a Problem Details body; compare the
-    /// definition with <c>GET /api/llm-chats/provider-options</c>.
+    /// parameter) before sending the request again.
     ///
     /// Authority: when API authorization is enabled, a bearer token with the exact scope <c>api.llm-chats.manage</c>;
     /// the broad <c>api</c> scope is not accepted. With authorization disabled (the development default) the route is
@@ -220,12 +218,12 @@ internal static class LlmChatConversationEndpoints
             return body.Error;
         }
 
-        var result = await service.CreateAsync(
+        var result = await LlmChatApiResults.WriteAsync(() => service.CreateAsync(
             new CreateLlmChatConversationCommand(
                 id,
                 body.Value!.Title,
                 LlmChatConversationOrigin.Api),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken), response).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors);
@@ -389,13 +387,13 @@ internal static class LlmChatConversationEndpoints
             return tokenError!;
         }
 
-        var result = await service.RenameAsync(
+        var result = await LlmChatApiResults.WriteAsync(() => service.RenameAsync(
             new RenameLlmChatConversationCommand(
                 id,
                 body.Value.Title,
                 expectedToken,
                 body.Value.ExpectedTranscriptRevision),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken), response).ConfigureAwait(false);
         return ConversationMutationResult(result, response);
     }
 
@@ -474,9 +472,9 @@ internal static class LlmChatConversationEndpoints
             return tokenError!;
         }
 
-        var result = await service.ArchiveAsync(
+        var result = await LlmChatApiResults.WriteAsync(() => service.ArchiveAsync(
             new ArchiveLlmChatConversationCommand(id, expectedToken),
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken), response).ConfigureAwait(false);
         return ConversationMutationResult(result, response);
     }
 

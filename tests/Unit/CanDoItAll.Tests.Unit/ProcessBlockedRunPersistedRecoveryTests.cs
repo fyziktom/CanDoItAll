@@ -937,7 +937,6 @@ public sealed class ProcessBlockedRunPersistedRecoveryTests
         var operatorService = new ProcessRuntimeOperatorApplicationService(
             clock,
             store,
-            store,
             assignmentStore,
             runtimeUnitOfWork ?? store,
             dispatchQueue,

@@ -25,7 +25,7 @@ public sealed class AgentSeamFinalizationTests {
             .Add(component => component.InitialProviders, Array.Empty<ProviderProfile>()));
         await catalog.Find("[data-testid='agents-catalog-new']").ClickAsync();
         var editor = dialogs.WaitForComponent<AgentDetailsDialog>();
-        editor.WaitForElement("[data-testid='agents-catalog-name']").Change("Saved during initial catalog read");
+        editor.WaitForElement("[data-testid='agents-catalog-name']").Input("Saved during initial catalog read");
         await editor.Find("form").SubmitAsync();
         var savedId = editor.Instance.CurrentTarget.AgentId;
         Assert.NotNull(savedId);
@@ -69,7 +69,9 @@ public sealed class AgentSeamFinalizationTests {
         AgentEditorSection section, bool replaceSession) {
         await using var harness = await ComponentTestHarness.CreateAsync(services => services.AddAgentEditorReadFixture());
         var reads = harness.Context.Services.GetRequiredService<AgentEditorReadFixture>();
-        reads.Load = (target, _) => Task.FromResult(reads.Result(new() { Id = target.AgentId, Name = "Nested dialog owner" }));
+        reads.Load = (target, _) => Task.FromResult(reads.Result(new() {
+            Id = target.AgentId, ExpectedUpdatedAtUtc = DateTimeOffset.UnixEpoch, Name = "Nested dialog owner"
+        }));
         var dialogs = harness.Context.Services.GetRequiredService<DialogService>();
         var unrelated = dialogs.OpenAsync<AgentTeamDetailsDialog>("Independent team editor");
         var editor = harness.Context.Render<AgentDetailsDialog>(parameters => parameters
@@ -86,7 +88,7 @@ public sealed class AgentSeamFinalizationTests {
         if (replaceSession) {
             editor.Render(parameters => parameters.Add(component => component.AgentId, Guid.NewGuid()));
         } else {
-            await editor.InvokeAsync(editor.Instance.Dispose);
+            await editor.InvokeAsync(() => editor.Instance.DisposeAsync().AsTask());
         }
 
         try {

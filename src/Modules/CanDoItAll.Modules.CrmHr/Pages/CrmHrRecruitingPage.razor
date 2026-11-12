@@ -1,835 +1,560 @@
 @using static CanDoItAll.CrmHr.UI.Recruiting.CrmHrRecruitingWorkspacePresentation
 @page "/crm-hr/recruiting"
-@implements IDisposable
-@using CanDoItAll.Components.BaseLib
+@implements IAsyncDisposable
+@using CanDoItAll.Editing
+@using CanDoItAll.Infrastructure.Editing
 @using CanDoItAll.SharedKernel
-@using Microsoft.Extensions.Logging
 @inject RecruitingService RecruitingService
+@inject IRecruitmentApplicationEditing ApplicationOwner
+@inject CrmHrChanges Changes
+@inject EditingChangeFeed EditingFeed
+@inject IEditingUiAccess EditingAccess
+@inject ILogger<EditingObservation> ObservationLogger
+@inject ILogger<RecruitmentApplicationSession> ApplicationLogger
+@inject ILogger<RecruitmentRecordsSession> RecordsLogger
 @inject NavigationManager Navigation
+@inject IAppNavigationHistory History
 @inject NotificationService NotificationService
 @inject ILogger<CrmHrRecruitingPage> Logger
 
 <PageTitle>CRM / HR Recruiting</PageTitle>
-
-<AgentChatContextSurfaceProvider Surface="@AgentChatSurface"
-                                 ContextNavigationIdentity="@AgentChatNavigationFence"
-                                 ContextAccessState="@agentChatContextAccessState" />
-
-<CrmHrRecruitingWorkspaceSurface View="this">
-    <SecondaryNavigation>
-        <CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" />
-    </SecondaryNavigation>
+<CrmHrEditorLeaveGuard @ref="leaveGuard" TestIdPrefix="crmhr-recruiting" HasLocalChanges="HasChanges" IsSameEditorRoute="IsSameEditorRoute"
+    Opening="applicationEditing.Opening" InputRevision="inputRevision" HasInput="HasChanges()" IsBusy="@(() => IsBusy)" Unknown="IsUnknown" />
+<CrmHrLiveCatalog Owner="EditingOwner.CrmRecruitmentApplication" Ignore="applicationEditing.IsOwn" Changed="@(() => applicationCatalogRefreshVersion++)">
+<AgentChatContextSurfaceProvider Surface="@AgentChatSurface" ContextNavigationIdentity="@AgentChatNavigationFence" ContextAccessState="@agentChatContextAccessState" />
+<CrmHrRecruitingWorkspaceSurface View="this" CatalogRefreshVersion="applicationCatalogRefreshVersion" WritesDisabled="@(IsBusy || IsUnknown)"
+    ApplicationSaveDisabled="@(!applicationEditing.CanSave || records.IsBusy || records.IsUnknown)" RetainedCandidateInput="applicationEditing.State.CandidateInputRetained"
+    InterviewSaveDisabled="@(!records.CanWrite || !records.Drafts.Interview.CanSave)" TaskSaveDisabled="@(!records.CanWrite || !records.Drafts.Task.CanSave)"
+    SupportSaveDisabled="@(!records.CanWrite || !records.Drafts.SupportComparison.CanSave)"
+    ConversionSaveDisabled="@(!records.CanWrite || !records.Drafts.ConversionComparison.CanSave || applicationEditing.State.IsDirty || !applicationEditing.State.CanSave)"
+    ApplicationInputChanged="ApplicationInputAsync" InterviewInputChanged="InterviewInputAsync" TaskInputChanged="TaskInputAsync"
+    SupportInputChanged="SupportInputAsync" ConversionInputChanged="ConversionInputAsync">
+    <SecondaryNavigation><CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" /></SecondaryNavigation>
+    <RecordUpdates>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Refresh saved information" ButtonStyle="ButtonStyle.Light" Disabled="readingContext" Click="RefreshContextAsync" data-testid="crmhr-recruiting-refresh" />
+            @if (contextOutdated) { <StatusBadge Text="Saved information changed" Tone="warning" /> }
+        </Cluster>
+        @if (records.Message is not null || IsUnknown) {
+            <Alert AlertStyle="@(records.RequiresAttention || IsUnknown ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-recruiting-record-outcome">
+                <TextBlock Value="@(IsUnknown ? "A save or delete outcome is unknown. The submission and later input are retained; repeating writes is blocked." : records.Message)" />
+            </Alert>
+        }
+        @if (records.Drafts.HasPendingInput) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-recruiting-pending-input"><TextBlock Value="Complete the date, number or reference selection before saving. Your raw input is retained." /></Alert>
+        }
+    </RecordUpdates>
+    <ApplicationEditing>
+        <RecruitmentApplicationEditing State="applicationEditing.State" Message="@applicationEditing.Message" Attention="applicationEditing.RequiresAttention" Reading="applicationEditing.Reading"
+            PartyName="applicationEditing.PartyName" ReviewRequested="applicationEditing.ReviewAsync" ApplyRequested="ApplyApplicationAsync" UndoRequested="UndoApplicationAsync"
+            Cancelled="CancelApplicationReviewAsync" Changed="ReviewChanged" UseCandidateRequested="UseSavedCandidateAsync" />
+    </ApplicationEditing>
+    <SupportEditing>
+        <RecruitmentSupportEditing State="records.Drafts.SupportComparison" Reading="readingContext" PartyName="ReferenceName"
+            ReviewRequested="ReviewSupportAsync" ApplyRequested="ApplySupportAsync" UndoRequested="UndoSupportAsync" Cancelled="CancelSupportReviewAsync" Changed="ReviewChanged" />
+    </SupportEditing>
+    <ConversionEditing>
+        <RecruitmentConversionEditing State="records.Drafts.ConversionComparison" Reading="readingContext" PartyName="ReferenceName"
+            ReviewRequested="ReviewConversionAsync" ApplyRequested="ApplyConversionAsync" UndoRequested="UndoConversionAsync" Cancelled="CancelConversionReviewAsync" Changed="ReviewChanged" />
+    </ConversionEditing>
     <AgentEvidence>
-        @if (currentWorkspace is { } recruitmentWorkspace)
-        {
-            <AgentRecruitingEvidencePanel CandidateAgentId="recruitmentWorkspace.CandidateTechnicalAgentId"
-                                          RecruitmentApplicationId="recruitmentWorkspace.Application.Id"
-                                          ReadinessChanged="HandleAssessmentReadinessChangedAsync"
-                                          RequestTraining="OpenTrainingAsync" />
+        @if (currentWorkspace is { } workspace) {
+            <AgentRecruitingEvidencePanel @key="workspace.Application.Id" CandidateAgentId="workspace.CandidateTechnicalAgentId" RecruitmentApplicationId="workspace.Application.Id"
+                ReadinessChanged="HandleAssessmentReadinessChangedAsync" RequestTraining="OpenTrainingAsync" />
         }
     </AgentEvidence>
 </CrmHrRecruitingWorkspaceSurface>
+</CrmHrLiveCatalog>
 
 @code {
-    [SupplyParameterFromQuery]
-    private Guid? ApplicationId { get; set; }
+    private long applicationCatalogRefreshVersion;
+    // Triggers only: the binding reads the complete location, so these values are never parsed here.
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.ApplicationKey)]
+    public string? ApplicationIdQuery { get; set; }
 
-    [SupplyParameterFromQuery]
-    private Guid? PartyId { get; set; }
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.PartyKey)]
+    public string? PartyIdQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.DialogKey)]
+    public string? DialogQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.SectionKey)]
+    public string? SectionQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.SearchKey)]
+    public string? SearchQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.StageKey)]
+    public string? StageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = RecruitingUrlCodec.PageKey)]
+    public string? PageQuery { get; set; }
+
+    private UrlStateBinding<RecruitingUrlState> url = default!;
+    private RecruitmentApplicationSession applicationEditing = default!;
+    private RecruitmentRecordsSession records = default!;
     private RecruitmentWorkspaceModel? currentWorkspace;
-    private RecruitmentApplicationEditorModel applicationEditor = new();
-    private RecruitmentInterviewEditorModel interviewEditor = new();
-    private LifecycleTaskEditorModel taskEditor = new();
-    private RecruitmentSupportAssignmentsEditorModel supportEditor = new();
-    private RecruitmentConversionEditorModel conversionEditor = new();
+    private RecruitmentApplicationEditorModel applicationEditor => applicationEditing.State.Draft;
+    private RecruitmentInterviewEditorModel interviewEditor => records.Drafts.Interview.Draft;
+    private LifecycleTaskEditorModel taskEditor => records.Drafts.Task.Draft;
+    private RecruitmentSupportAssignmentsEditorModel supportEditor => records.Drafts.Support.Draft;
+    private RecruitmentConversionEditorModel conversionEditor => records.Drafts.Conversion.Draft;
+    private CrmHrEditorLeaveGuard? leaveGuard;
     private AgentRecruitingCandidateReadiness? assessmentReadiness;
     private RecruitmentApplicationSummary applicationSummary = new(0, 0, 0);
-    private int applicationBrowserRevision;
     private AgentChatContextAccessState agentChatContextAccessState = AgentChatContextAccessState.Loading;
-    private long agentChatContextLoadGeneration;
-    private long recruitmentActionGeneration;
-    private readonly CrmHrMutationGate mutationGate = new();
-    private readonly CrmHrDraftReconciler drafts = new();
-    private const string ApplicationDraft = "application";
-    private const string InterviewDraft = "interview";
-    private const string TaskDraft = "task";
-    private const string SupportDraft = "support";
-    private const string ConversionDraft = "conversion";
-    private Guid? committedApplicationId;
-    private Guid? committedPartyId;
-    private RecruitingRecordTab selectedRecruitingTab = RecruitingRecordTab.Application;
-    private bool hasCommittedRecruitmentRoute;
+    private int applicationBrowserRevision;
+    private long loadGeneration;
+    private long inputRevision;
+    private long contextRevision;
+    private bool contextOutdated;
+    private bool readingContext;
     private bool isRecruitmentDialogOpen;
-    private bool openNewApplicationAfterRouteReset;
     private bool isDisposed;
-
+    private readonly Dictionary<Guid, string> referenceNames = [];
+    private bool IsBusy => applicationEditing.State.IsSaving || records.IsBusy;
+    private bool IsUnknown => applicationEditing.State.IsUnknown || records.IsUnknown;
+    private bool HasChanges() => applicationEditing.State.IsDirty || records.Drafts.IsDirty ||
+        applicationEditing.State.Review is not null || records.Drafts.SupportComparison.Review is not null || records.Drafts.ConversionComparison.Review is not null;
     private Guid? SelectedPartyId => currentWorkspace?.HasSelectedApplication == true ? currentWorkspace.Application.PartyId : null;
-
-    private Error? ConversionEligibilityError => currentWorkspace?.HasSelectedApplication == true
-        ? RecruitmentConversionPolicy.Evaluate(
-            applicationEditor.Stage,
-            applicationEditor.Decision,
-            assessmentRequired: currentWorkspace.CandidatePartyType == PartyType.AiAgent,
-            assessmentReady: assessmentReadiness?.ReadyForProduction == true)
+    private Error? ConversionEligibilityError => currentWorkspace is { HasSelectedApplication: true } workspace
+        ? RecruitmentConversionPolicy.Evaluate(workspace.Application.Stage, workspace.Application.Decision,
+            assessmentRequired: workspace.CandidatePartyType == PartyType.AiAgent, assessmentReady: assessmentReadiness?.ReadyForProduction == true)
         : Error.Validation("Save or select an application first.");
+    private PagedRecordSelection<Guid>? ApplicationSelection => currentWorkspace?.Application.Id is { } id ? new(id) : null;
+    private int SelectedRecruitingTabIndex => (int)url.State.Section;
+    private PagedRecordQueryState<RecruitmentApplicationScope> CatalogQuery => url.State.Catalog.ToQuery();
+    private string RecruitmentDialogTitle => currentWorkspace is { HasSelectedApplication: true } workspace && !string.IsNullOrWhiteSpace(workspace.CandidateDisplayName)
+        ? workspace.CandidateDisplayName : "New recruitment application";
+    private AgentChatContextSurface AgentChatSurface => agentChatContextAccessState == AgentChatContextAccessState.Ready &&
+        currentWorkspace is { HasSelectedApplication: true } workspace &&
+        RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(url.State.ApplicationId, url.State.PartyId, workspace)
+            ? CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface(workspace.Application.Id, workspace.Application.Stage, workspace.Application.Decision,
+                workspace.Application.PartyId, workspace.CandidateDisplayName)
+            : CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface();
+    private AgentChatNavigationIdentity AgentChatNavigationFence => CrmHrNavigationFence.Create(Navigation, url);
 
-    private PagedRecordSelection<Guid>? ApplicationSelection => currentWorkspace?.Application.Id is { } applicationId
-        ? new PagedRecordSelection<Guid>(applicationId)
-        : null;
-
-    private int SelectedRecruitingTabIndex => (int)selectedRecruitingTab;
-
-    private string RecruitmentDialogTitle
-        => currentWorkspace?.HasSelectedApplication == true &&
-           !string.IsNullOrWhiteSpace(currentWorkspace.CandidateDisplayName)
-            ? currentWorkspace.CandidateDisplayName
-            : "New recruitment application";
-
-    private AgentChatContextSurface AgentChatSurface
-    {
-        get
-        {
-            if (agentChatContextAccessState != AgentChatContextAccessState.Ready ||
-                currentWorkspace is not { HasSelectedApplication: true } workspace ||
-                !RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
-                    ApplicationId,
-                    PartyId,
-                    workspace))
-            {
-                return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface();
-            }
-
-            return CrmHrAgentChatSurfaceBuilder.BuildRecruitingSurface(
-                workspace.Application.Id,
-                workspace.Application.Stage,
-                workspace.Application.Decision,
-                workspace.Application.PartyId,
-                workspace.CandidateDisplayName);
-        }
-    }
-
-    private AgentChatNavigationIdentity AgentChatNavigationFence
-        => AgentChatNavigationIdentity.CreateForLocation(
-            Navigation.BaseUri,
-            Navigation.Uri,
-            [
-                new("applicationId", ApplicationId?.ToString("D")),
-                new("partyId", PartyId?.ToString("D"))
-            ]);
-
-    protected override async Task OnParametersSetAsync()
-    {
-        var requestedApplicationId = ApplicationId;
-        var requestedPartyId = PartyId;
-        if (!hasCommittedRecruitmentRoute ||
-            committedApplicationId != requestedApplicationId ||
-            committedPartyId != requestedPartyId)
-        {
-            InvalidateRecruitmentActions();
-            isRecruitmentDialogOpen = false;
-        }
-
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync(RecruitingEditor committed = RecruitingEditor.None)
-    {
-        var loadGeneration = Interlocked.Increment(ref agentChatContextLoadGeneration);
-        var requestedApplicationId = ApplicationId;
-        var requestedPartyId = PartyId;
-        var previousApplicationId = currentWorkspace?.Application.Id;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        try
-        {
-            var workspaceTask = RecruitingService.GetRecruitmentWorkspaceAsync(
-                requestedApplicationId,
-                requestedPartyId);
-            var summaryTask = RecruitingService.GetRecruitmentApplicationSummaryAsync();
-            await Task.WhenAll(workspaceTask, summaryTask);
-            if (!IsCurrentAgentChatContextLoad(loadGeneration))
-            {
-                return;
-            }
-
-            var loadedWorkspace = await workspaceTask;
-            currentWorkspace = loadedWorkspace;
-            applicationSummary = await summaryTask;
-            ApplyWorkspace(
-                loadedWorkspace,
-                applicationChanged: previousApplicationId != loadedWorkspace.Application.Id,
-                committed);
-            committedApplicationId = requestedApplicationId;
-            committedPartyId = requestedPartyId;
-            hasCommittedRecruitmentRoute = true;
-            if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(
-                    requestedApplicationId,
-                    requestedPartyId,
-                    loadedWorkspace))
-            {
+    protected override void OnInitialized() {
+        applicationEditing = new(ApplicationOwner, Changes, EditingFeed, EditingAccess, ObservationLogger, ApplicationLogger) {
+            Dispatch = work => InvokeAsync(work), Changed = ApplicationChanged,
+            Retired = () => {
+                Interlocked.Increment(ref loadGeneration);
                 isRecruitmentDialogOpen = false;
+                currentWorkspace = null;
+                records.Clear();
+                referenceNames.Clear();
                 agentChatContextAccessState = AgentChatContextAccessState.Failed;
-                return;
-            }
-
-            if (previousApplicationId != loadedWorkspace.Application.Id)
-            {
-                selectedRecruitingTab = RecruitingRecordTab.Application;
-            }
-
-            var shouldOpenNewApplication =
-                openNewApplicationAfterRouteReset &&
-                !requestedApplicationId.HasValue &&
-                !requestedPartyId.HasValue &&
-                !loadedWorkspace.HasSelectedApplication;
-            openNewApplicationAfterRouteReset = false;
-            isRecruitmentDialogOpen =
-                shouldOpenNewApplication ||
-                (loadedWorkspace.HasSelectedApplication &&
-                 (requestedApplicationId.HasValue || requestedPartyId.HasValue));
-            agentChatContextAccessState = AgentChatContextAccessState.Ready;
-        }
-        catch when (!IsCurrentAgentChatContextLoad(loadGeneration))
-        {
-        }
-        catch
-        {
-            agentChatContextAccessState = AgentChatContextAccessState.Failed;
-            throw;
-        }
-    }
-
-    private bool IsCurrentAgentChatContextLoad(long loadGeneration)
-        => !isDisposed &&
-           loadGeneration == Volatile.Read(ref agentChatContextLoadGeneration);
-
-    // A reload of the application already on screen (another editor's commit, a deleted interview or task, an agent
-    // refresh) keeps what the operator typed into the editors it did not commit. Closing the record and starting a new
-    // application discard every draft.
-    private void ApplyWorkspace(
-        RecruitmentWorkspaceModel workspace,
-        bool applicationChanged,
-        RecruitingEditor committed = RecruitingEditor.None)
-    {
-        assessmentReadiness = null;
-        applicationEditor = drafts.Reconcile(
-            ApplicationDraft,
-            applicationEditor,
-            () => CloneApplication(workspace.Application),
-            applicationChanged,
-            committed.HasFlag(RecruitingEditor.Application));
-        interviewEditor = drafts.Reconcile(
-            InterviewDraft,
-            interviewEditor,
-            () => workspace.HasSelectedApplication && workspace.Application.Id.HasValue
-                ? CreateInterviewDraft(workspace.Application.Id.Value)
-                : new RecruitmentInterviewEditorModel(),
-            applicationChanged,
-            committed.HasFlag(RecruitingEditor.Interview));
-        taskEditor = drafts.Reconcile(
-            TaskDraft,
-            taskEditor,
-            () => workspace.HasSelectedApplication && workspace.Application.PartyId.HasValue
-                ? CreateTaskDraft(workspace.Application.PartyId.Value)
-                : new LifecycleTaskEditorModel(),
-            applicationChanged,
-            committed.HasFlag(RecruitingEditor.Task));
-        supportEditor = drafts.Reconcile(
-            SupportDraft,
-            supportEditor,
-            () => workspace.HasSelectedApplication
-                ? new RecruitmentSupportAssignmentsEditorModel
-                {
-                    PartyId = workspace.SupportAssignments.PartyId,
-                    ManagerPartyId = workspace.SupportAssignments.ManagerPartyId,
-                    BuddyPartyId = workspace.SupportAssignments.BuddyPartyId,
-                    MentorPartyId = workspace.SupportAssignments.MentorPartyId
+            },
+            Notice = () => NotificationService.Warning("Recruitment application requires attention", applicationEditing.Message ?? "Review the current application."),
+            ContextChanged = area => {
+                contextRevision++;
+                contextOutdated = true;
+                if (area is RecruitmentWriteArea.Application or RecruitmentWriteArea.Context) {
+                    records.Drafts.HintConversion();
+                } else if (area == RecruitmentWriteArea.Support) {
+                    records.Drafts.HintSupport();
+                    records.Drafts.HintConversion();
                 }
-                : new RecruitmentSupportAssignmentsEditorModel(),
-            applicationChanged,
-            committed.HasFlag(RecruitingEditor.Support));
-        conversionEditor = drafts.Reconcile(
-            ConversionDraft,
-            conversionEditor,
-            () => CloneConversion(workspace.Conversion),
-            applicationChanged,
-            committed.HasFlag(RecruitingEditor.Conversion));
+            }
+        };
+        records = new(RecruitingService, applicationEditing, Changes, RecordsLogger) { Changed = StateHasChanged };
+        url = new(Navigation, RecruitingUrlCodec.Instance, History, typeof(CrmHrRecruitingPage));
     }
 
-    private Task HandleAssessmentReadinessChangedAsync(
-        AgentRecruitingCandidateReadiness? value)
-    {
+    protected override async Task OnParametersSetAsync() {
+        var change = url.Apply(canonicalize: RendererInfo.IsInteractive);
+        if (!change.IsChanged) {
+            return;
+        }
+        if (change.IsInitial || IsOtherRecord(change.Previous, change.Current)) {
+            if (!change.Current.IsRecordOpen) {
+                await RetireRecordAsync();
+            }
+            if (isRecruitmentDialogOpen && applicationEditor.Id is { } acceptedId && change.Current.ApplicationId == acceptedId &&
+                change.Previous.Dialog == RecruitingDialog.NewApplication) {
+                await LoadAsync(opening: false);
+            } else {
+                await LoadAsync(opening: true);
+            }
+        }
+    }
+
+    private static bool IsOtherRecord(RecruitingUrlState previous, RecruitingUrlState current) =>
+        previous.ApplicationId != current.ApplicationId || previous.PartyId != current.PartyId || previous.Dialog != current.Dialog;
+
+    private async Task<bool> LoadAsync(bool opening, bool explicitPull = false, RecruitmentWriteArea? review = null) {
+        var request = Interlocked.Increment(ref loadGeneration);
+        var route = url.State;
+        var editorOpening = applicationEditing.Opening;
+        var applicationEpoch = applicationEditing.Epoch;
+        var writeEpoch = records.Epoch;
+        var readContext = contextRevision;
+        var applicationHint = applicationEditing.State.HintRevision;
+        var conversionHint = records.Drafts.ConversionComparison.HintRevision;
+        var supportHint = records.Drafts.SupportComparison.HintRevision;
+        readingContext = true;
+        if (opening) {
+            isRecruitmentDialogOpen = false;
+            agentChatContextAccessState = AgentChatContextAccessState.Loading;
+        }
+        bool Current() => !isDisposed && request == Volatile.Read(ref loadGeneration) &&
+            (opening || editorOpening == applicationEditing.Opening && applicationEpoch == applicationEditing.Epoch && writeEpoch == records.Epoch);
+        try {
+            var read = await applicationEditing.ReadWithAccessAsync(route.ApplicationId, async token => {
+                var workspaceTask = RecruitingService.GetRecruitmentWorkspaceAsync(route.ApplicationId, route.PartyId, token);
+                var summaryTask = RecruitingService.GetRecruitmentApplicationSummaryAsync(token);
+                await Task.WhenAll(workspaceTask, summaryTask);
+                var workspace = await workspaceTask;
+                var names = new Dictionary<Guid, string>();
+                if (!opening && workspace.Application.Id is { } id) {
+                    var ids = records.Drafts.SupportComparison.ReferenceIds(model => [model.ManagerPartyId, model.BuddyPartyId, model.MentorPartyId])
+                        .Concat(records.Drafts.ConversionComparison.ReferenceIds(model => [model.HomeUnitPartyId, model.ManagerPartyId]))
+                        .Concat(new Guid?[] { workspace.Conversion.HomeUnitPartyId, workspace.Conversion.ManagerPartyId,
+                            workspace.SupportAssignments.ManagerPartyId, workspace.SupportAssignments.BuddyPartyId, workspace.SupportAssignments.MentorPartyId }.OfType<Guid>())
+                        .Distinct().ToArray();
+                    foreach (var batch in ids.Chunk(16)) {
+                        var named = await ApplicationOwner.ReadApplicationAsync(id, batch, token);
+                        if (named is null) {
+                            throw new InvalidOperationException("The application disappeared while reading its comparison labels.");
+                        }
+                        foreach (var pair in named.Names) {
+                            names[pair.Key] = pair.Value;
+                        }
+                    }
+                }
+                return (Workspace: workspace, Summary: await summaryTask, Names: names);
+            }, default);
+            if (!Current()) {
+                return false;
+            }
+            var workspace = read.Workspace;
+            if (!RecruitmentWorkspaceContextSelection.MatchesRequestedApplication(route.ApplicationId, route.PartyId, workspace)) {
+                if (opening) {
+                    await applicationEditing.CloseAsync();
+                    records.Clear();
+                    currentWorkspace = null;
+                    agentChatContextAccessState = AgentChatContextAccessState.Failed;
+                } else {
+                    applicationEditing.State.Unavailable();
+                }
+                NotificationService.Warning("Recruitment application unavailable", "The requested application no longer exists or is no longer available. Your open draft is retained.");
+                return false;
+            }
+            if (opening && route.IsRecordOpen) {
+                if (!await applicationEditing.OpenAsync(workspace.Application) || !Current()) {
+                    return false;
+                }
+                records.Open(workspace);
+                assessmentReadiness = null;
+                if (applicationEditing.State.IsOutdated) {
+                    records.Drafts.HintConversion();
+                }
+            } else if (!opening) {
+                applicationEditing.Observe(workspace.Application, applicationHint, explicitPull);
+                records.Drafts.Observe(workspace, explicitPull, conversionHint, supportHint);
+                if (review == RecruitmentWriteArea.Support) {
+                    records.Drafts.SupportComparison.Compare(RecruitmentRecordDrafts.FromSupport(workspace.SupportAssignments), supportHint);
+                } else if (review == RecruitmentWriteArea.Context) {
+                    records.Drafts.ConversionComparison.Compare(workspace.Conversion, conversionHint);
+                }
+            }
+            currentWorkspace = workspace with { Application = applicationEditing.CurrentApplication ?? workspace.Application };
+            applicationSummary = read.Summary;
+            RememberNames(workspace);
+            foreach (var pair in read.Names) {
+                referenceNames[pair.Key] = pair.Value;
+            }
+            contextOutdated = readContext != contextRevision;
+            isRecruitmentDialogOpen = route.IsRecordOpen;
+            agentChatContextAccessState = AgentChatContextAccessState.Ready;
+            if (route.PartyId is not null && workspace.Application.Id is { } resolvedId) {
+                url.Navigate(url.State with { ApplicationId = resolvedId, PartyId = null }, UrlHistoryMode.Replace);
+            }
+            return true;
+        } catch (Exception exception) when (!Current()) {
+            Logger.LogDebug(exception, "Retired recruiting read ignored.");
+            return false;
+        } catch (UnauthorizedAccessException exception) {
+            Logger.LogWarning(exception, "Recruitment read access expired for {ApplicationId}.", route.ApplicationId);
+            await RetireRecordAsync();
+            agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            return false;
+        } catch (Exception exception) {
+            Logger.LogWarning(exception, "Recruiting context read failed for {ApplicationId}; opening {Opening}.", route.ApplicationId, opening);
+            contextOutdated = true;
+            if (opening) {
+                agentChatContextAccessState = AgentChatContextAccessState.Failed;
+            }
+            NotificationService.Warning("Recruiting information unavailable", "The saved information could not be refreshed. Your current draft and any accepted write are retained.");
+            return false;
+        } finally {
+            if (request == Volatile.Read(ref loadGeneration)) {
+                readingContext = false;
+            }
+        }
+    }
+
+    private void ApplicationChanged() {
+        if (currentWorkspace is { } workspace && applicationEditing.CurrentApplication is { } current &&
+            (workspace.Application.Id == current.Id || !workspace.HasSelectedApplication)) {
+            currentWorkspace = workspace with {
+                Application = current.Snapshot(),
+                HasSelectedApplication = current.Id.HasValue,
+                CandidateDisplayName = current.CandidateName,
+                CandidatePrimaryEmail = current.CandidateEmail,
+                CandidatePrimaryPhone = current.CandidatePhone,
+                CandidateSummary = current.CandidateSummary
+            };
+        }
+        if (!isDisposed) {
+            StateHasChanged();
+        }
+    }
+
+    private async Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(PagedRecordRequest<RecruitmentApplicationScope> request, CancellationToken cancellationToken) {
+        if (request.Tags.Count > 0) {
+            throw new InvalidOperationException("Recruitment application tag filtering is not supported.");
+        }
+        var result = await applicationEditing.ReadWithAccessAsync(null,
+            token => RecruitingService.SearchRecruitmentApplicationsAsync(new(request.SearchText, request.Filter, request.PageIndex, request.PageSize), token), cancellationToken);
+        return new(result.Items.Select(ToApplicationOption).ToList(), result.PageIndex, result.PageSize, result.TotalCount);
+    }
+    private Task HandleCatalogQueryChangedAsync(PagedRecordQueryChange<RecruitmentApplicationScope> change) {
+        url.Navigate(url.State with { Catalog = RecruitingUrlCodec.Catalog.FromQuery(change.Query) }, CrmHrCatalogUrlCodec<RecruitmentApplicationScope>.HistoryMode(change.Kind));
+        return Task.CompletedTask;
+    }
+    private Task HandleApplicationPageLoadFailed(Exception exception) {
+        Logger.LogWarning(exception, "Recruitment catalog read failed.");
+        NotificationService.Error("Recruitment applications unavailable", "The application list could not be loaded. Try again.");
+        return Task.CompletedTask;
+    }
+    private async Task SelectApplicationAsync(Guid id) {
+        if (!await RequestLeaveAsync()) {
+            return;
+        }
+        url.OpenOverlay(url.State.WithoutRecord() with { ApplicationId = id });
+        await LoadAsync(opening: true);
+    }
+    private async Task CreateNewApplicationAsync() {
+        if (!await RequestLeaveAsync()) {
+            return;
+        }
+        url.OpenOverlay(url.State.WithoutRecord() with { Dialog = RecruitingDialog.NewApplication });
+        await LoadAsync(opening: true);
+    }
+    private async Task CloseRecruitmentDialogAsync() {
+        if (!isRecruitmentDialogOpen || !await RequestLeaveAsync()) {
+            return;
+        }
+        await RetireRecordAsync();
+        await url.CloseOverlayAsync(url.State.WithoutRecord());
+        await LoadAsync(opening: true);
+    }
+    private async Task RetireRecordAsync() {
+        Interlocked.Increment(ref loadGeneration);
+        isRecruitmentDialogOpen = false;
+        readingContext = false;
+        currentWorkspace = null;
+        referenceNames.Clear();
+        assessmentReadiness = null;
+        records.Clear();
+        await applicationEditing.CloseAsync();
+        agentChatContextAccessState = AgentChatContextAccessState.Loading;
+    }
+    private Task<bool> RequestLeaveAsync() => !HasChanges() && !IsBusy && !IsUnknown ? Task.FromResult(true)
+        : (leaveGuard ?? throw new InvalidOperationException("An active recruitment draft requires its leave guard.")).RequestLeaveAsync();
+    private bool IsSameEditorRoute(string target) {
+        var destination = Navigation.ToAbsoluteUri(target);
+        var next = RecruitingUrlCodec.Instance.Read(destination.AbsoluteUri);
+        return destination.AbsolutePath == new Uri(Navigation.Uri).AbsolutePath && !IsOtherRecord(url.State, next);
+    }
+    private Task HandleRecruitingTabChangedAsync(int selectedIndex) {
+        if (Enum.IsDefined((RecruitingSection)selectedIndex)) {
+            url.Navigate(url.State with { Section = (RecruitingSection)selectedIndex }, UrlHistoryMode.Replace);
+        }
+        return Task.CompletedTask;
+    }
+    private async Task SaveApplicationAsync() {
+        var creating = applicationEditor.Id is null;
+        if (records.IsBusy || records.IsUnknown || !await applicationEditing.SaveAsync(applicationEditor)) {
+            return;
+        }
+        applicationBrowserRevision++;
+        if (applicationEditor.Id is { } id && url.State.ApplicationId != id) {
+            url.Navigate(url.State with { ApplicationId = id, PartyId = null, Dialog = null }, UrlHistoryMode.Replace);
+            if (applicationEditor.PartyId is { } partyId) {
+                records.Drafts.RetargetCreated(id, partyId);
+            }
+        }
+        records.Drafts.HintConversion();
+        await LoadAsync(opening: false, explicitPull: creating);
+    }
+    private async Task SaveInterviewAsync() {
+        if (await records.SaveInterviewAsync()) {
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task SaveTaskAsync() {
+        if (await records.SaveTaskAsync()) {
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task SaveSupportAssignmentsAsync() {
+        if (await records.SaveSupportAsync()) {
+            records.Drafts.HintConversion();
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task ConvertCandidateAsync() {
+        if (ConversionEligibilityError is null && await records.ConvertAsync()) {
+            applicationBrowserRevision++;
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task DeleteInterviewAsync(RecruitmentInterviewItemModel row) {
+        if (await records.DeleteInterviewAsync(row)) {
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task DeleteTaskAsync(LifecycleTaskItemModel row) {
+        if (await records.DeleteTaskAsync(row)) {
+            await LoadAsync(opening: false);
+        }
+    }
+    private async Task ResetApplicationAsync() {
+        if (await RequestLeaveAsync()) {
+            applicationEditing.State.DiscardLocal();
+            inputRevision++;
+        }
+    }
+    private async Task ResetInterviewAsync() {
+        if (await RequestLeaveAsync()) {
+            records.Drafts.Interview.Open(RecruitmentRecordDrafts.NewInterview(applicationEditor.Id ?? Guid.Empty));
+            inputRevision++;
+        }
+    }
+    private async Task ResetTaskAsync() {
+        if (await RequestLeaveAsync()) {
+            records.Drafts.Task.Open(RecruitmentRecordDrafts.NewTask(applicationEditor.PartyId ?? Guid.Empty));
+            inputRevision++;
+        }
+    }
+    private async Task OpenTrainingAsync(RecruitmentTrainingRequest request) {
+        if (applicationEditor.PartyId is not { } partyId || !await RequestLeaveAsync()) {
+            return;
+        }
+        records.Drafts.Task.Open(RecruitmentRecordDrafts.NewTask(partyId));
+        taskEditor.TaskKind = LifecycleTaskKind.Training;
+        taskEditor.Title = $"{FormatClassification(request.Classification)} development plan";
+        taskEditor.Notes = $"Assessment {request.InterviewId:D}; attempt {request.AttemptId:D}. " +
+            (request.Gaps.Count == 0 ? "No structured gaps were supplied." : $"Target gaps: {string.Join(", ", request.Gaps)}.");
+        records.Drafts.Task.Input(new(RecruitmentTaskField.Title));
+        inputRevision++;
+        url.Navigate(url.State with { Section = RecruitingSection.Development }, UrlHistoryMode.Replace);
+    }
+    private async Task OpenWorkforceAsync() {
+        if (SelectedPartyId is { } id && await RequestLeaveAsync()) {
+            Navigation.NavigateTo(WorkforceUrlCodec.Instance.Href(CrmHrRouteCatalog.Get(CrmHrWorkspaceArea.Workforce).Route, WorkforceUrlCodec.Default with { PartyId = id }));
+        }
+    }
+    private Task HandleAssessmentReadinessChangedAsync(AgentRecruitingCandidateReadiness? value) {
         assessmentReadiness = value;
         return Task.CompletedTask;
     }
-
-    private async Task<PagedRecordPage<Guid>> LoadApplicationPageAsync(
-        PagedRecordRequest<RecruitmentApplicationScope> request,
-        CancellationToken cancellationToken)
-    {
-        if (request.Tags.Count > 0)
-        {
-            throw new InvalidOperationException("Recruitment application tag filtering is not supported.");
+    private Task RefreshContextAsync() => LoadAsync(opening: false, explicitPull: true);
+    private Task ReviewSupportAsync() => LoadAsync(opening: false, review: RecruitmentWriteArea.Support);
+    private Task ReviewConversionAsync() => LoadAsync(opening: false, review: RecruitmentWriteArea.Context);
+    private async Task ChangeRecordReviewAsync(RecruitmentWriteArea area, Action change) {
+        var opening = applicationEditing.Opening;
+        try {
+            await applicationEditing.CaptureAdmission(area, write: true)(default);
+            if (opening == applicationEditing.Opening) {
+                change();
+                inputRevision++;
+            }
+        } catch (UnauthorizedAccessException exception) {
+            Logger.LogWarning(exception, "Recruitment comparison write access retired for {Area}.", area);
+            NotificationService.Warning("Draft retained", "Current write access is required before applying or undoing this comparison.");
         }
-
-        var result = await RecruitingService.SearchRecruitmentApplicationsAsync(
-            new RecruitmentApplicationQuery(
-                request.SearchText,
-                request.Filter,
-                request.PageIndex,
-                request.PageSize),
-            cancellationToken);
-        return new PagedRecordPage<Guid>(
-            result.Items.Select(ToApplicationOption).ToList(),
-            result.PageIndex,
-            result.PageSize,
-            result.TotalCount);
     }
-
-    private Task SelectApplicationAsync(Guid applicationId)
-    {
-        if (currentWorkspace?.Application.Id == applicationId &&
-            (ApplicationId == applicationId || PartyId == currentWorkspace.Application.PartyId))
-        {
-            isRecruitmentDialogOpen = true;
-            return Task.CompletedTask;
-        }
-
-        InvalidateRecruitmentActions();
-        Interlocked.Increment(ref agentChatContextLoadGeneration);
-        isRecruitmentDialogOpen = false;
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={applicationId:D}");
+    private Task ApplySupportAsync() => ChangeRecordReviewAsync(RecruitmentWriteArea.Support, () => records.Drafts.SupportComparison.Apply());
+    private Task UndoSupportAsync() => ChangeRecordReviewAsync(RecruitmentWriteArea.Support, records.Drafts.SupportComparison.Undo);
+    private Task ApplyConversionAsync() => ChangeRecordReviewAsync(RecruitmentWriteArea.Context, () => records.Drafts.ConversionComparison.Apply());
+    private Task UndoConversionAsync() => ChangeRecordReviewAsync(RecruitmentWriteArea.Context, records.Drafts.ConversionComparison.Undo);
+    private async Task ApplyApplicationAsync() {
+        await applicationEditing.ApplyAsync();
+        inputRevision++;
+    }
+    private async Task UndoApplicationAsync() {
+        await applicationEditing.UndoAsync();
+        inputRevision++;
+    }
+    private Task CancelApplicationReviewAsync() {
+        applicationEditing.State.CancelReview();
         return Task.CompletedTask;
     }
-
-    private Task HandleApplicationPageLoadFailed(Exception exception)
-    {
-        Logger.LogError(exception, "Failed to load the server-paged recruitment application directory.");
-        NotificationService.Error(
-            "Recruitment applications unavailable",
-            "The application list could not be loaded. Try again.");
+    private Task CancelSupportReviewAsync() {
+        records.Drafts.SupportComparison.Cancel();
         return Task.CompletedTask;
     }
-
-    private Task CreateNewApplicationAsync()
-    {
-        if (ApplicationId.HasValue || PartyId.HasValue)
-        {
-            openNewApplicationAfterRouteReset = true;
-            InvalidateRecruitmentActions();
-            Interlocked.Increment(ref agentChatContextLoadGeneration);
-            isRecruitmentDialogOpen = false;
-            agentChatContextAccessState = AgentChatContextAccessState.Loading;
-            Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
-            return Task.CompletedTask;
-        }
-
-        if (currentWorkspace is null)
-        {
-            openNewApplicationAfterRouteReset = true;
-            return Task.CompletedTask;
-        }
-
-        if (currentWorkspace.HasSelectedApplication)
-        {
-            return Task.CompletedTask;
-        }
-
-        InvalidateRecruitmentActions();
-        selectedRecruitingTab = RecruitingRecordTab.Application;
-        ApplyWorkspace(currentWorkspace, applicationChanged: true);
-        isRecruitmentDialogOpen = true;
+    private Task CancelConversionReviewAsync() {
+        records.Drafts.ConversionComparison.Cancel();
         return Task.CompletedTask;
     }
-
-    private Task CloseRecruitmentDialogAsync()
-    {
-        if (!isRecruitmentDialogOpen)
-        {
-            return Task.CompletedTask;
-        }
-
-        InvalidateRecruitmentActions();
-        openNewApplicationAfterRouteReset = false;
-        isRecruitmentDialogOpen = false;
-        selectedRecruitingTab = RecruitingRecordTab.Application;
-        if (currentWorkspace is { } workspace)
-        {
-            ApplyWorkspace(workspace, applicationChanged: true);
-            agentChatContextAccessState = AgentChatContextAccessState.Ready;
-            return Task.CompletedTask;
-        }
-
-        Interlocked.Increment(ref agentChatContextLoadGeneration);
-        currentWorkspace = null;
-        drafts.Reset();
-        applicationEditor = new();
-        interviewEditor = new();
-        taskEditor = new();
-        supportEditor = new();
-        conversionEditor = new();
-        agentChatContextAccessState = AgentChatContextAccessState.Loading;
-        Navigation.NavigateTo("/crm-hr/recruiting", replace: true);
+    private Task UseSavedCandidateAsync() {
+        applicationEditing.State.UseSavedCandidateDetails();
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private Task HandleRecruitingTabChangedAsync(int selectedIndex)
-    {
-        var requestedTab = (RecruitingRecordTab)selectedIndex;
-        if (Enum.IsDefined(requestedTab))
-        {
-            selectedRecruitingTab = requestedTab;
-        }
-
+    private void ReviewChanged() => inputRevision++;
+    private Task ApplicationInputAsync(RecordInput<RecruitmentApplicationField> input) {
+        applicationEditing.State.Input(input);
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private async Task SaveApplicationAsync()
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        var result = await RecruitingService.SaveRecruitmentApplicationAsync(
-            drafts.Submit(ApplicationDraft, applicationEditor, static editor => editor.Snapshot()));
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            drafts.Retire(ApplicationDraft);
-            return;
-        }
-
-        if (!result.IsSuccess)
-        {
-            // Nothing was written: the draft stays as the operator left it and owns all of its fields again.
-            drafts.Retire(ApplicationDraft);
-            SetError(result.Errors);
-            return;
-        }
-
-        NotificationService.Success("Recruitment application saved", "Recruitment application saved.");
-        applicationBrowserRevision++;
-        if (ApplicationId != result.Value)
-        {
-            InvalidateRecruitmentActions();
-            Interlocked.Increment(ref agentChatContextLoadGeneration);
-            isRecruitmentDialogOpen = false;
-            agentChatContextAccessState = AgentChatContextAccessState.Loading;
-            Navigation.NavigateTo($"/crm-hr/recruiting?applicationId={result.Value:D}");
-            return;
-        }
-
-        await RefreshAfterCommitAsync(RecruitingEditor.Application);
-    }
-
-    private Task ResetApplicationAsync()
-    {
-        applicationEditor = drafts.Replace(
-            ApplicationDraft,
-            currentWorkspace?.HasSelectedApplication == true ? CloneApplication(currentWorkspace.Application) : new RecruitmentApplicationEditorModel());
+    private Task InterviewInputAsync(RecordInput<RecruitmentInterviewField> input) {
+        records.Drafts.Interview.Input(input);
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private async Task SaveInterviewAsync()
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
-        {
-            SetError([Error.Validation("Save or select an application first.")]);
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        interviewEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.SaveRecruitmentInterviewAsync(
-            drafts.Submit(InterviewDraft, interviewEditor, static editor => editor.Snapshot()));
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            drafts.Retire(InterviewDraft);
-            return;
-        }
-
-        if (!result.IsSuccess)
-        {
-            drafts.Retire(InterviewDraft);
-            SetError(result.Errors);
-            return;
-        }
-
-        NotificationService.Success("Interview saved", "Interview saved.");
-        // The create editor starts over once the owner accepted it, unless the operator already typed the next
-        // interview into it while the write was in flight; that draft is theirs and survives the read-back whole.
-        var interviewStartsOver = !drafts.ChangedAfterSubmission(InterviewDraft, interviewEditor);
-        drafts.Retire(InterviewDraft);
-        await RefreshAfterCommitAsync(interviewStartsOver ? RecruitingEditor.Interview : RecruitingEditor.None);
-    }
-
-    private Task ResetInterviewAsync()
-    {
-        interviewEditor = drafts.Replace(
-            InterviewDraft,
-            currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.Id.HasValue
-                ? CreateInterviewDraft(currentWorkspace.Application.Id.Value)
-                : new RecruitmentInterviewEditorModel());
+    private Task TaskInputAsync(RecordInput<RecruitmentTaskField> input) {
+        records.Drafts.Task.Input(input);
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private async Task DeleteInterviewAsync(Guid interviewId)
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        await RecruitingService.DeleteRecruitmentInterviewAsync(interviewId);
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        NotificationService.Warning("Interview deleted", "Interview deleted.");
-        await RefreshAfterCommitAsync(RecruitingEditor.None);
-    }
-
-    private async Task SaveTaskAsync()
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
-        {
-            SetError([Error.Validation("Save or select an application first.")]);
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        taskEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveLifecycleTaskAsync(
-            drafts.Submit(TaskDraft, taskEditor, static editor => editor.Snapshot()));
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            drafts.Retire(TaskDraft);
-            return;
-        }
-
-        if (!result.IsSuccess)
-        {
-            drafts.Retire(TaskDraft);
-            SetError(result.Errors);
-            return;
-        }
-
-        NotificationService.Success("Lifecycle task saved", "Lifecycle task saved.");
-        var taskStartsOver = !drafts.ChangedAfterSubmission(TaskDraft, taskEditor);
-        drafts.Retire(TaskDraft);
-        await RefreshAfterCommitAsync(taskStartsOver ? RecruitingEditor.Task : RecruitingEditor.None);
-    }
-
-    private Task ResetTaskAsync()
-    {
-        taskEditor = drafts.Replace(
-            TaskDraft,
-            currentWorkspace?.HasSelectedApplication == true && currentWorkspace.Application.PartyId.HasValue
-                ? CreateTaskDraft(currentWorkspace.Application.PartyId.Value)
-                : new LifecycleTaskEditorModel());
+    private Task SupportInputAsync(RecordInput<RecruitmentSupportField> input) {
+        records.Drafts.Support.Input(input);
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private Task OpenTrainingAsync(RecruitmentTrainingRequest request)
-    {
-        if (currentWorkspace?.HasSelectedApplication != true ||
-            !currentWorkspace.Application.PartyId.HasValue)
-        {
-            SetError([Error.Validation("Save or select an application first.")]);
-            return Task.CompletedTask;
-        }
-
-        // The prefilled plan is unsaved content like anything typed: it is tracked from the empty draft, so a reload
-        // of the same application keeps it.
-        taskEditor = drafts.Replace(TaskDraft, CreateTaskDraft(currentWorkspace.Application.PartyId.Value));
-        taskEditor.TaskKind = LifecycleTaskKind.Training;
-        taskEditor.Title = $"{FormatClassification(request.Classification)} development plan";
-        taskEditor.Notes =
-            $"Assessment {request.InterviewId:D}; attempt {request.AttemptId:D}. " +
-            (request.Gaps.Count == 0
-                ? "No structured gaps were supplied."
-                : $"Target gaps: {string.Join(", ", request.Gaps)}.");
-        selectedRecruitingTab = RecruitingRecordTab.Development;
+    private Task ConversionInputAsync(RecordInput<RecruitmentConversionField> input) {
+        records.Drafts.Conversion.Input(input);
+        inputRevision++;
         return Task.CompletedTask;
     }
-
-    private async Task DeleteTaskAsync(Guid taskId)
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        await RecruitingService.DeleteLifecycleTaskAsync(taskId);
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        NotificationService.Warning("Lifecycle task deleted", "Lifecycle task deleted.");
-        await RefreshAfterCommitAsync(RecruitingEditor.None);
+    private Task SetConversionHomeUnitAsync(Guid? id) {
+        conversionEditor.HomeUnitPartyId = id;
+        return ConversionInputAsync(new(RecruitmentConversionField.HomeUnit));
     }
-
-    private async Task SaveSupportAssignmentsAsync()
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
-        }
-
-        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.PartyId.HasValue)
-        {
-            SetError([Error.Validation("Save or select an application first.")]);
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        supportEditor.PartyId = currentWorkspace.Application.PartyId.Value;
-        var result = await RecruitingService.SaveSupportAssignmentsAsync(
-            drafts.Submit(SupportDraft, supportEditor, static editor => editor.Snapshot()));
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            drafts.Retire(SupportDraft);
-            return;
-        }
-
-        if (!result.IsSuccess)
-        {
-            drafts.Retire(SupportDraft);
-            SetError(result.Errors);
-            return;
-        }
-
-        NotificationService.Success("Support assignments saved", "Support assignments saved.");
-        await RefreshAfterCommitAsync(RecruitingEditor.Support);
+    private Task SetConversionManagerAsync(Guid? id) {
+        conversionEditor.ManagerPartyId = id;
+        return ConversionInputAsync(new(RecruitmentConversionField.Manager));
     }
-
-    private async Task ConvertCandidateAsync()
-    {
-        var action = CaptureRecruitmentAction();
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            return;
+    private string ReferenceName(Guid? id) => id is { } key ? referenceNames.GetValueOrDefault(key) ?? applicationEditing.PartyName(id) : "None";
+    private void RememberNames(RecruitmentWorkspaceModel workspace) {
+        referenceNames.Clear();
+        void Add(Guid? id, string name) {
+            if (id.HasValue && !string.IsNullOrWhiteSpace(name)) {
+                referenceNames[id.Value] = name;
+            }
         }
-
-        if (currentWorkspace?.HasSelectedApplication != true || !currentWorkspace.Application.Id.HasValue)
-        {
-            SetError([Error.Validation("Save or select an application first.")]);
-            return;
-        }
-
-        using var admission = mutationGate.TryEnter(action.Generation);
-        if (admission is null)
-        {
-            return;
-        }
-
-        conversionEditor.ApplicationId = currentWorkspace.Application.Id.Value;
-        var result = await RecruitingService.ConvertCandidateAsync(
-            drafts.Submit(ConversionDraft, conversionEditor, static editor => editor.Snapshot()));
-        if (!IsCurrentRecruitmentAction(action))
-        {
-            drafts.Retire(ConversionDraft);
-            return;
-        }
-
-        if (!result.IsSuccess)
-        {
-            drafts.Retire(ConversionDraft);
-            SetError(result.Errors);
-            return;
-        }
-
-        NotificationService.Success("Candidate converted", "Candidate converted to workforce.");
-        applicationBrowserRevision++;
-        await RefreshAfterCommitAsync(RecruitingEditor.Conversion);
+        Add(workspace.Application.PartyId, workspace.CandidateDisplayName);
+        Add(workspace.Application.RecruiterPartyId, workspace.RecruiterDisplayName);
+        Add(workspace.Application.HiringManagerPartyId, workspace.HiringManagerDisplayName);
+        Add(workspace.SupportAssignments.ManagerPartyId, workspace.SupportAssignments.ManagerName);
+        Add(workspace.SupportAssignments.BuddyPartyId, workspace.SupportAssignments.BuddyName);
+        Add(workspace.SupportAssignments.MentorPartyId, workspace.SupportAssignments.MentorName);
     }
-
-    // The owner committed. A failed read-back is a warning: it never repeats the write and never discards the
-    // committed identity; the operator can reload to reconcile the view.
-    private async Task RefreshAfterCommitAsync(RecruitingEditor committed)
-    {
-        try
-        {
-            await LoadAsync(committed);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            Logger.LogWarning(exception, "The recruiting workspace could not be refreshed after a committed change.");
-            NotificationService.Warning(
-                "Saved, refresh failed",
-                "The change was saved, but the workspace could not be refreshed. Reload the page to see the current state.");
-        }
-    }
-
-    private Task SetConversionHomeUnitAsync(Guid? partyId)
-    {
-        conversionEditor.HomeUnitPartyId = partyId;
-        return Task.CompletedTask;
-    }
-
-    private Task SetConversionManagerAsync(Guid? partyId)
-    {
-        conversionEditor.ManagerPartyId = partyId;
-        return Task.CompletedTask;
-    }
-
-    private Task OpenWorkforceAsync()
-    {
-        if (SelectedPartyId.HasValue)
-        {
-            InvalidateRecruitmentActions();
-            Navigation.NavigateTo($"/crm-hr/workforce?partyId={SelectedPartyId.Value:D}");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private RecruitmentActionStamp CaptureRecruitmentAction()
-        => new(
-            Volatile.Read(ref recruitmentActionGeneration),
-            ApplicationId,
-            PartyId,
-            currentWorkspace?.Application.Id,
-            isRecruitmentDialogOpen);
-
-    private bool IsCurrentRecruitmentAction(RecruitmentActionStamp action)
-        => !isDisposed &&
-           action.Generation == Volatile.Read(ref recruitmentActionGeneration) &&
-           action.RouteApplicationId == ApplicationId &&
-           action.RoutePartyId == PartyId &&
-           action.SelectedApplicationId == currentWorkspace?.Application.Id &&
-           action.DialogWasOpen &&
-           isRecruitmentDialogOpen;
-
-    private void InvalidateRecruitmentActions()
-        => Interlocked.Increment(ref recruitmentActionGeneration);
-
-    private void SetError(IReadOnlyList<Error> errors)
-    {
-        NotificationService.Error(
-            "Recruiting update failed",
-            errors.Count == 0 ? "The operation failed." : string.Join(" ", errors.Select(item => item.Message)));
-    }
-
-    private static RecruitmentApplicationEditorModel CloneApplication(RecruitmentApplicationEditorModel source)
-    {
-        return new RecruitmentApplicationEditorModel
-        {
-            Id = source.Id,
-            PartyId = source.PartyId,
-            CandidateName = source.CandidateName,
-            CandidateEmail = source.CandidateEmail,
-            CandidatePhone = source.CandidatePhone,
-            CandidateSummary = source.CandidateSummary,
-            TargetUnitPartyId = source.TargetUnitPartyId,
-            RecruiterPartyId = source.RecruiterPartyId,
-            HiringManagerPartyId = source.HiringManagerPartyId,
-            DesiredRole = source.DesiredRole,
-            Source = source.Source,
-            Stage = source.Stage,
-            AvailableFrom = source.AvailableFrom,
-            Decision = source.Decision,
-            StageNotes = source.StageNotes,
-            Notes = source.Notes,
-            LastChangedBy = source.LastChangedBy
-        };
-    }
-
-    private static RecruitmentConversionEditorModel CloneConversion(RecruitmentConversionEditorModel source)
-    {
-        return new RecruitmentConversionEditorModel
-        {
-            ApplicationId = source.ApplicationId,
-            WorkforceKind = source.WorkforceKind,
-            JobTitle = source.JobTitle,
-            Discipline = source.Discipline,
-            Seniority = source.Seniority,
-            HomeUnitPartyId = source.HomeUnitPartyId,
-            ManagerPartyId = source.ManagerPartyId,
-            StartDate = source.StartDate,
-            Location = source.Location,
-            TimeZone = source.TimeZone,
-            CapacityHoursPerWeek = source.CapacityHoursPerWeek,
-            Status = source.Status,
-            Notes = source.Notes,
-            LastChangedBy = source.LastChangedBy
-        };
-    }
-
-    private static RecruitmentInterviewEditorModel CreateInterviewDraft(Guid applicationId)
-    {
-        return new RecruitmentInterviewEditorModel
-        {
-            ApplicationId = applicationId,
-            ScheduledAtLocal = DateTime.Today.AddHours(9),
-            InterviewType = RecruitmentInterviewType.Screening,
-            Outcome = RecruitmentInterviewOutcome.Pending
-        };
-    }
-
-    private static LifecycleTaskEditorModel CreateTaskDraft(Guid partyId)
-    {
-        return new LifecycleTaskEditorModel
-        {
-            PartyId = partyId,
-            TaskKind = LifecycleTaskKind.Onboarding,
-            Status = LifecycleTaskStatus.NotStarted,
-            DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7))
-        };
-    }
-
     private static PagedRecordOption<Guid> ToApplicationOption(
         RecruitmentApplicationListItemModel item)
     {
@@ -956,43 +681,13 @@
         };
     }
 
-    // The editors of the recruitment record; a reload names the one whose commit caused it.
-    [Flags]
-    private enum RecruitingEditor
-    {
-        None = 0,
-        Application = 1,
-        Interview = 2,
-        Task = 4,
-        Support = 8,
-        Conversion = 16
-    }
-
-    private enum RecruitingRecordTab
-    {
-        Application,
-        Interviews,
-        Assessments,
-        Development,
-        Conversion
-    }
-
-    private readonly record struct RecruitmentActionStamp(
-        long Generation,
-        Guid? RouteApplicationId,
-        Guid? RoutePartyId,
-        Guid? SelectedApplicationId,
-        bool DialogWasOpen);
-
-    public void Dispose()
-    {
-        if (isDisposed)
-        {
+    public async ValueTask DisposeAsync() {
+        if (isDisposed) {
             return;
         }
-
         isDisposed = true;
-        InvalidateRecruitmentActions();
-        Interlocked.Increment(ref agentChatContextLoadGeneration);
+        Interlocked.Increment(ref loadGeneration);
+        records.Clear();
+        await applicationEditing.DisposeAsync();
     }
 }

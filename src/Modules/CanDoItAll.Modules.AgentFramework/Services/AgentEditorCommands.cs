@@ -8,7 +8,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public abstract record AgentEditorSaveOutcome {
     private AgentEditorSaveOutcome() { }
-    public sealed record Committed(Guid AgentId, string? Warning = null) : AgentEditorSaveOutcome;
+    public sealed record Committed(Guid AgentId, string? Warning = null, AgentDefinition? Accepted = null) : AgentEditorSaveOutcome;
     public sealed record Rejected(string Message, bool IsConflict = false) : AgentEditorSaveOutcome;
     public sealed record Unconfirmed(string Message) : AgentEditorSaveOutcome;
 }
@@ -21,6 +21,8 @@ public interface IAgentEditorCommands {
     Task<AgentEditorCatalogRefresh> ReconcileAsync(Guid agentId, IReadOnlyList<ProviderProfile> providers,
         CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid agentId, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This agent editor owner does not support conditional deletion.");
     Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
 }
 
@@ -34,13 +36,18 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
             return new AgentEditorSaveOutcome.Rejected("External workspace roots could not be prepared. Review the selected paths and bindings.");
         }
         try {
-            return new AgentEditorSaveOutcome.Committed(await workspace.SaveAgentAsync(request, cancellationToken));
+            var accepted = await workspace.SaveAgentDefinitionAsync(request, cancellationToken);
+            return new AgentEditorSaveOutcome.Committed(accepted.Id, Accepted: accepted);
         } catch (AgentDirectoryProjectionSynchronizationException exception) {
-            return new AgentEditorSaveOutcome.Committed(exception.AgentId, exception.Message);
+            return new AgentEditorSaveOutcome.Committed(exception.AgentId, exception.Message, exception.AcceptedDefinition);
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            return new AgentEditorSaveOutcome.Committed(exception.Accepted.Id, exception.Message, exception.Accepted);
         } catch (AgentCatalogConcurrencyException exception) {
             return new AgentEditorSaveOutcome.Rejected(exception.Message, IsConflict: true);
         } catch (AgentEditorValidationException exception) {
             return new AgentEditorSaveOutcome.Rejected(exception.Message);
+        } catch (UnauthorizedAccessException) {
+            return new AgentEditorSaveOutcome.Rejected("The original editor no longer has access to save this agent. Reopen it with current access.");
         } catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             throw;
         } catch (Exception) {
@@ -50,7 +57,7 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
 
     public async Task<AgentEditorCatalogRefresh> ReconcileAsync(Guid agentId, IReadOnlyList<ProviderProfile> providers,
         CancellationToken cancellationToken = default) {
-        var agents = await workspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agents = await workspace.ListAgentsAsync(includeTemplates: true, cancellationToken);
         var capabilities = await workspace.ListCapabilitiesAsync(cancellationToken);
         var definition = agents.FirstOrDefault(agent => agent.Id == agentId)
             ?? throw new InvalidOperationException("The saved agent is not available in the refreshed catalog.");
@@ -61,6 +68,9 @@ public sealed class AgentEditorCommands(IAgentFrameworkWorkspaceService workspac
 
     public Task DeleteAsync(Guid agentId, CancellationToken cancellationToken = default)
         => workspace.DeleteAgentAsync(agentId, cancellationToken);
+
+    public Task DeleteAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => workspace.DeleteAgentAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
 
     public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default)
         => workspace.VerifyCapabilityAsync(agentId, capabilityId, cancellationToken);

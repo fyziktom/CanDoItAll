@@ -1,6 +1,8 @@
 using CanDoItAll.Memory.SourceGateway;
 using CanDoItAll.FileTools.Integration;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Infrastructure.FileSystem;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Core.Execution;
@@ -23,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace CanDoItAll.Modules.Processes;
@@ -66,6 +69,9 @@ public static class ProcessesModuleServiceCollectionExtensions
             ServiceLifetime.Scoped);
 
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddScoped<IProcessOriginalReceiptAuthorityReader, ProcessOriginalReceiptAuthorityReader>();
+        services.TryAddScoped<IProcessExecutionStopper, AgentFrameworkProcessExecutionStopper>();
+        services.TryAddScoped<IProcessExecutionRecovery, AgentFrameworkProcessExecutionRecovery>();
         services.TryAddScoped<IWorkspaceExecutionRunProcessLeaseCleaner>(serviceProvider =>
         {
             var executionRunStore =
@@ -101,7 +107,66 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<IProcessProjectionClock, SystemProcessProjectionClock>();
         services.TryAddSingleton(ProcessProjectionJsonCodec.Default);
         services.TryAddSingleton<ProcessTemplatePackLoader>();
+        services.TryAddSingleton<EditingChangeFeed>();
+        services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
+        services.TryAddScoped<Func<ProcessEditingSession>>(provider => {
+            var database = provider.GetRequiredService<ICanonicalRuntimeDatabase>();
+            var changes = provider.GetRequiredService<EditingChangeFeed>();
+            var access = provider.GetRequiredService<IEditingUiAccess>();
+            var logger = provider.GetRequiredService<ILogger<EditingObservation>>();
+            return () => new(changes, access,
+                () => new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation), logger);
+        });
+        services.TryAddScoped<ProcessAuthoringAdmissionPolicy>();
+        services.TryAddScoped<IProcessAuthoringAdmissionPolicy>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
+        services.TryAddScoped<IProcessAuthoringContext>(provider => provider.GetRequiredService<ProcessAuthoringAdmissionPolicy>());
+        services.TryAddScoped<IProcessAuthoringCommitObserver, ProcessAuthoringChanges>();
+        services.TryAddScoped<IProcessAuthoringStore, EfProcessAuthoringStore>();
+        services.TryAddScoped<IProcessCancellationRecoveryQueue, EfProcessCancellationRecoveryQueue>();
+        services.TryAddScoped<IProcessDecisionRefreshDeliveryQueue, EfProcessDecisionRefreshDeliveryQueue>();
+        services.TryAddScoped<IProcessCancellationProgressReader, EfProcessCancellationProgressReader>();
+        services.TryAddScoped<IProcessCancellationRuntimeReader, EfProcessCancellationRuntimeReader>();
+        services.TryAddScoped<ProcessCancellationRuntimeRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationQuiescenceReader, EfProcessCancellationQuiescenceReader>();
+        services.TryAddScoped<ProcessCancellationQuiescenceRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationDecisionReader, EfProcessCancellationDecisionReader>();
+        services.TryAddScoped<ProcessCancellationDecisionRecoveryStep>();
+        services.TryAddScoped<ProcessCancellationScopeRecoveryStep>();
+        services.TryAddScoped<IProcessCancellationRecoveryStep, ProcessCancellationRecoveryDispatcher>();
+        services.TryAddScoped<ProcessCancellationRecoveryCoordinator>();
+        services.TryAddScoped<ProcessAuthoringWorkspace>();
+        services.TryAddScoped<ProcessExecutableDefinitionResolver>();
+        services.TryAddScoped<ProcessDefinitionAuthoringAdapter>();
+        services.TryAddScoped<ProcessRoleAuthoringAdapter>();
+        services.TryAddScoped<ProcessStepAuthoringAdapter>();
+        services.TryAddScoped<ProcessCanvasAuthoringAdapter>();
+        services.TryAddScoped<ProcessTemplateAuthoringAdapter>();
         services.TryAddScoped<EfProcessExecutionAuthorityQuery>();
+        services.TryAddScoped<IProcessDecisionDispatchAuthorityQuery>(provider => provider.GetRequiredService<EfProcessExecutionAuthorityQuery>());
+        services.TryAddScoped<EfProcessDecisionChildQuery>();
+        services.TryAddScoped<IProcessDecisionChildReader>(provider => provider.GetRequiredService<EfProcessDecisionChildQuery>());
+        services.TryAddScoped<IProcessDecisionResultQuery, EfProcessDecisionResultQuery>();
+        services.TryAddScoped<ProcessDecisionResultCoordinator>();
+        services.TryAddScoped<ProcessDecisionReviewCoordinator>();
+        services.TryAddScoped<IProcessDecisionRefreshReceiptReader, EfProcessDecisionRefreshReceiptReader>();
+        services.TryAddScoped<IProcessDecisionRefreshAuthorityReader, EfProcessDecisionRefreshAuthorityReader>();
+        services.TryAddScoped<ProcessDecisionRefreshCoordinator>();
+        services.TryAddScoped<ProcessDecisionRefreshAccountingCoordinator>();
+        services.TryAddScoped<IProcessDecisionRefreshCaptureQuery, EfProcessDecisionRefreshCaptureQuery>();
+        services.TryAddScoped<IProcessDecisionRefreshCaptureStore, EfProcessDecisionRefreshCaptureStore>();
+        services.TryAddScoped<ProcessDecisionRefreshCaptureCoordinator>();
+        services.TryAddScoped<ProcessDecisionRefreshDeliveryCoordinator>();
+        services.TryAddScoped<ProcessDecisionTerminalAccountingCoordinator>();
+        services.TryAddScoped<ProcessDecisionFinalizationCoordinator>();
+        services.TryAddScoped<IProcessDecisionRootQuery, EfProcessDecisionRootQuery>();
+        services.TryAddScoped<IProcessRootCancellationBarrierReader, EfProcessRootCancellationBarrierReader>();
+        services.TryAddScoped<IProcessDecisionStepQuery, EfProcessDecisionStepQuery>();
+        services.TryAddScoped<IProcessAcceptedExecutionInputReader, EfProcessAcceptedExecutionInputReader>();
+        services.TryAddScoped<ProcessDecisionStepPreparationCoordinator>();
+        services.TryAddScoped<ProcessDecisionRootPreparationCoordinator>();
+        services.TryAddScoped<ProcessDecisionLaunchAdmissionCoordinator>();
+        services.TryAddScoped<ProcessDecisionChildMaterialReader>();
+        services.TryAddScoped<IProcessDecisionPublicationFence, EfProcessDecisionPublicationFence>();
         services.TryAddScoped<ProcessExecutionProjectAuthorityReader>();
         services.TryAddScoped<IProcessExecutionProjectAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
         services.TryAddScoped<IProcessExecutionDispatchAuthorityReader>(provider => provider.GetRequiredService<ProcessExecutionProjectAuthorityReader>());
@@ -114,6 +179,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessPreparedLaunchStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<IProcessLaunchLinkReceiptStore>(provider => provider.GetRequiredService<EfProcessPreparedLaunchStore>());
         services.TryAddScoped<EfProcessRuntimeUnitOfWork>();
+        services.TryAddScoped<IProcessDecisionMaterialReader, EfProcessDecisionMaterialStore>();
         services.TryAddScoped<IProcessRuntimeUnitOfWork>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeStateStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
         services.TryAddScoped<IProcessRuntimeActivityStore>(serviceProvider => serviceProvider.GetRequiredService<EfProcessRuntimeUnitOfWork>());
@@ -235,6 +301,13 @@ public static class ProcessesModuleServiceCollectionExtensions
             ProcessExecutionRunCriticalityPolicy>());
         services.Configure<ProcessRuntimeDispatchQueueOptions>(
             configuration.GetSection(ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName));
+        services.AddOptions<ProcessCancellationRecoveryOptions>()
+            .Bind(configuration.GetSection(ProcessCancellationRecoveryOptions.ConfigurationSectionName))
+            .Validate(ProcessCancellationRecoveryOptions.IsValid, "Process cancellation recovery options are invalid.")
+            .ValidateOnStart();
+        services.TryAddSingleton(provider => new ProcessRootCancellationAvailability(backgroundWorkersEnabled &&
+            provider.GetRequiredService<IOptions<ProcessCancellationRecoveryOptions>>().Value.Enabled));
+        services.TryAddScoped<ProcessRootCancellationAdmissionService>();
         services.AddOptions<ProcessRuntimeDispatchOptions>()
             .Bind(configuration.GetSection(ProcessRuntimeDispatchOptions.ConfigurationSectionName))
             .Validate(
@@ -255,6 +328,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, AgentFrameworkProcessExecutionClaimRecoveryWorker>());
         if (backgroundWorkersEnabled)
         {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessCancellationRecoveryWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessLaunchContinuationWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRuntimeProjectionReplayBackgroundWorker>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ProcessRunRecordBackgroundWorker>());

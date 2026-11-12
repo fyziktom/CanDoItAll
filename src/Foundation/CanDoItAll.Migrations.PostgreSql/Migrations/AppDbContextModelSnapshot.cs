@@ -8,10 +8,13 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CanDoItAll.Migrations.PostgreSql.Migrations {
+namespace CanDoItAll.Migrations.PostgreSql.Migrations
+{
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot {
-        protected override void BuildModel(ModelBuilder modelBuilder) {
+    partial class AppDbContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.4")
@@ -19,7 +22,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
@@ -61,7 +65,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_Conversations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionCreateReceiptRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionCreateReceiptRow", b =>
+                {
                     b.Property<string>("Producer")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
@@ -105,7 +110,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_DefinitionCreateReceipts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b =>
+                {
                     b.Property<Guid>("DefinitionId")
                         .HasColumnType("uuid");
 
@@ -202,7 +208,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_DefinitionRevisions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -245,7 +252,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_Definitions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b =>
+                {
                     b.Property<Guid>("DefinitionId")
                         .HasColumnType("uuid");
 
@@ -260,7 +268,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_DefinitionTags", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b =>
+                {
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uuid");
 
@@ -364,7 +373,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_InvocationRecords", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b =>
+                {
                     b.Property<Guid>("EntryId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -414,7 +424,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_Messages", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b =>
+                {
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uuid");
 
@@ -475,7 +486,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_OperationEvents", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -584,7 +596,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_Operations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", b =>
+                {
                     b.Property<Guid>("ConversationId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -673,7 +686,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("LlmChats_Transcripts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryCheckpointRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryCheckpointRow", b =>
+                {
                     b.Property<Guid>("PartitionId")
                         .HasColumnType("uuid");
 
@@ -709,7 +723,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_Checkpoints", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryDetailRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryDetailRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -768,12 +783,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsUnique()
                         .HasFilter("\"Part\" = 0");
 
-                    b.ToTable("ProviderHistory_Details", null, t => {
+                    b.ToTable("ProviderHistory_Details", null, t =>
+                        {
                             t.HasCheckConstraint("CK_ProviderHistory_DetailPart", "(\"Part\" = 0 AND \"EntryId\" IS NULL) OR (\"Part\" = 1 AND \"EntryId\" IS NOT NULL)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -965,14 +982,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsDescending(false, false, false, true, true)
                         .HasFilter("\"ExternalReferenceValue\" IS NOT NULL");
 
-                    b.ToTable("ProviderHistory_Entries", null, t => {
+                    b.ToTable("ProviderHistory_Entries", null, t =>
+                        {
                             t.HasCheckConstraint("CK_ProviderHistory_Granularity", "(\"Granularity\" = 0 AND \"AttemptId\" IS NOT NULL AND \"StartedAtUtc\" IS NOT NULL) OR \"Granularity\" = 1");
 
                             t.HasCheckConstraint("CK_ProviderHistory_Tokens", "(\"InputTokens\" IS NULL OR \"InputTokens\" >= 0) AND (\"OutputTokens\" IS NULL OR \"OutputTokens\" >= 0) AND (\"Amount\" IS NULL OR \"Amount\" >= 0)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryHostLeaseRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryHostLeaseRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -990,7 +1009,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_HostLeases", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1022,7 +1042,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_Outbox", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOwnerRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOwnerRow", b =>
+                {
                     b.Property<Guid>("SourceId")
                         .HasColumnType("uuid");
 
@@ -1047,7 +1068,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_Owners", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1065,7 +1087,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_Partitions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyAuditRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyAuditRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1098,7 +1121,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_PolicyAudit", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyRow", b =>
+                {
                     b.Property<Guid>("PartitionId")
                         .HasColumnType("uuid");
 
@@ -1132,12 +1156,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("PartitionId");
 
-                    b.ToTable("ProviderHistory_Policies", null, t => {
+                    b.ToTable("ProviderHistory_Policies", null, t =>
+                        {
                             t.HasCheckConstraint("CK_ProviderHistory_Quota", "\"UsedDetailBytes\" >= 0 AND \"DetailQuotaBytes\" > 0 AND \"MetadataRetentionDays\" BETWEEN 1 AND 3650 AND \"DetailRetentionDays\" BETWEEN 1 AND \"MetadataRetentionDays\" AND \"MaximumTextBytes\" BETWEEN 1 AND 131072 AND \"BatchSize\" BETWEEN 1 AND 1000");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistorySourceRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistorySourceRow", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1179,7 +1205,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_Sources", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryStorageIdentity", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryStorageIdentity", b =>
+                {
                     b.Property<int>("Id")
                         .HasColumnType("integer");
 
@@ -1193,7 +1220,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("ProviderHistory_StorageIdentity", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Infrastructure.BackgroundJobs.BackgroundJobRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Infrastructure.BackgroundJobs.BackgroundJobRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1234,7 +1262,124 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Infrastructure_BackgroundJobRecords", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Infrastructure.Search.SearchDocument", b => {
+            modelBuilder.Entity("CanDoItAll.Infrastructure.ControlPlane.DatasetLifecycleRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GuardProtocol")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaintenanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Infrastructure_DatasetLifecycle", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Maintenance", "\"MaintenanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Singleton", "\"Id\" = 1");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_State", "\"State\" IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_DatasetLifecycle_Versions", "\"SchemaVersion\" > 0 AND \"GuardProtocol\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Persistence.FiniteOperationEpochRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("AdmissionClosesAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MutationDeadlineMilliseconds")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ReplayRetentionSeconds")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("NamespaceId", "PoolId", "Epoch");
+
+                    b.HasIndex("NamespaceId", "PoolId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 1");
+
+                    b.ToTable("Infrastructure_FiniteOperationEpochs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationEpoch_Deadline", "\"MutationDeadlineMilliseconds\" > 0 AND \"ReplayRetentionSeconds\" > 0 AND \"AdmissionClosesAtUtc\" > \"OpenedAtUtc\"");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationEpoch_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationEpoch_Number", "\"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationEpoch_Pool", "\"PoolId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationEpoch_State", "(\"State\" = 1 AND \"ClosedAtUtc\" IS NULL) OR (\"State\" = 2 AND \"ClosedAtUtc\" IS NOT NULL AND \"ClosedAtUtc\" >= \"OpenedAtUtc\")");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Persistence.FiniteOperationStateRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CurrentEpoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RetentionProtocolVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("RetiredThroughEpoch")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("NamespaceId", "PoolId");
+
+                    b.ToTable("Infrastructure_FiniteOperationState", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationState_Epoch", "\"CurrentEpoch\" > 0 AND \"RetiredThroughEpoch\" >= 0 AND \"RetiredThroughEpoch\" < \"CurrentEpoch\"");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationState_Namespace", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationState_Pool", "\"PoolId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Infrastructure_FiniteOperationState_Protocol", "\"RetentionProtocolVersion\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Search.SearchDocument", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1286,7 +1431,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Infrastructure_SearchDocuments", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageCatalogRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageCatalogRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1364,6 +1510,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -1376,7 +1523,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Storage_Catalog", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StoragePlacementIntentRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StoragePlacementIntentRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1427,7 +1575,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Storage_PlacementIntents", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageRoutingRule", b => {
+            modelBuilder.Entity("CanDoItAll.Infrastructure.Storage.StorageRoutingRule", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1508,7 +1657,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Storage_RoutingRules", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryEventInboxLedgerEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryEventInboxLedgerEntity", b =>
+                {
                     b.Property<Guid>("InboxRecordId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1554,7 +1704,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_EventInbox", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryEventOutboxLedgerEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryEventOutboxLedgerEntity", b =>
+                {
                     b.Property<Guid>("OutboxRecordId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1594,7 +1745,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_EventOutbox", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryFeedbackLedgerEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryFeedbackLedgerEntity", b =>
+                {
                     b.Property<Guid>("FeedbackRecordId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1632,7 +1784,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_FeedbackLedger", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryOperationLedgerEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryOperationLedgerEntity", b =>
+                {
                     b.Property<Guid>("RecordId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1684,12 +1837,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_OperationLedger", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryProviderProfileEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryProviderProfileEntity", b =>
+                {
                     b.Property<string>("InstanceId")
                         .HasMaxLength(180)
                         .HasColumnType("character varying(180)");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
@@ -1733,7 +1888,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_ProviderProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemorySourceRequestLedgerEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemorySourceRequestLedgerEntity", b =>
+                {
                     b.Property<Guid>("JobId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1763,7 +1919,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_SourceRequests", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryWorkerLeaseEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Memory.Persistence.MemoryWorkerLeaseEntity", b =>
+                {
                     b.Property<int>("Phase")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
@@ -1791,7 +1948,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Memory_WorkerLeases", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.AgentHistoryLocator", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.AgentHistoryLocator", b =>
+                {
                     b.Property<Guid>("PartitionId")
                         .HasColumnType("uuid");
 
@@ -1829,7 +1987,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_HistoryLocators", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.AgentProjectStructureAccessRevocationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.AgentProjectStructureAccessRevocationRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1839,6 +1998,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompletionNamespaceId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -1879,12 +2044,19 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("Status", "CreatedAtUtc")
                         .HasDatabaseName("IX_AF_ProjectAccessRevocations_Status");
 
-                    b.ToTable("AgentFramework_ProjectAccessRevocations", null, t => {
+                    b.HasIndex(new[] { "Id" }, "IX_AF_ProjectAccessRevocations_Unfinished")
+                        .HasFilter("\"Status\" <> 4");
+
+                    b.ToTable("AgentFramework_ProjectAccessRevocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Completion", "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR (\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND \"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
+
                             t.HasCheckConstraint("CK_AF_ProjectAccessRevocations_Lifetime", "(\"DatabaseProfileId\" IS NULL AND \"ProjectLifetimeId\" IS NULL) OR (\"DatabaseProfileId\" IS NOT NULL AND \"ProjectLifetimeId\" IS NOT NULL)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1958,7 +2130,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workspace_ProviderProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -1991,12 +2164,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("IsPublished", "UpdatedAtUtc");
 
-                    b.ToTable("Workspace_ProviderSharePublications", null, t => {
+                    b.ToTable("Workspace_ProviderSharePublications", null, t =>
+                        {
                             t.HasCheckConstraint("CK_Workspace_ProviderSharePublications_PublicIdentity", "\"PublicId\" <> \"ProviderProfileId\"");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderImport", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderImport", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2078,7 +2253,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workspace_SharedProviderImports", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderInvocationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderInvocationRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2227,14 +2403,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("PublicationId", "StartedAtUtc");
 
-                    b.ToTable("Workspace_SharedProviderInvocations", null, t => {
+                    b.ToTable("Workspace_SharedProviderInvocations", null, t =>
+                        {
                             t.HasCheckConstraint("CK_Workspace_SharedProviderInvocations_Completion", "(\"Outcome\" = 'InProgress' AND \"CompletedAtUtc\" IS NULL AND \"DurationMilliseconds\" IS NULL) OR (\"Outcome\" <> 'InProgress' AND \"CompletedAtUtc\" IS NOT NULL AND \"DurationMilliseconds\" IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_Workspace_SharedProviderInvocations_Usage", "(\"InputTokenCount\" IS NULL OR \"InputTokenCount\" >= 0) AND (\"OutputTokenCount\" IS NULL OR \"OutputTokenCount\" >= 0) AND (\"ImageCount\" IS NULL OR \"ImageCount\" BETWEEN 1 AND 16) AND ((\"UsageCompleteness\" = 'Unavailable' AND \"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NULL AND \"ImageCount\" IS NULL AND \"Operation\" IN ('ChatCompletions', 'Responses', 'ImageGenerations')) OR (\"Operation\" IN ('ChatCompletions', 'Responses') AND \"ImageCount\" IS NULL AND ((\"UsageCompleteness\" = 'Partial' AND ((\"InputTokenCount\" IS NOT NULL AND \"OutputTokenCount\" IS NULL) OR (\"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NOT NULL))) OR (\"UsageCompleteness\" = 'Complete' AND \"InputTokenCount\" IS NOT NULL AND \"OutputTokenCount\" IS NOT NULL))) OR (\"Operation\" = 'ImageGenerations' AND \"UsageCompleteness\" = 'Complete' AND \"InputTokenCount\" IS NULL AND \"OutputTokenCount\" IS NULL AND \"ImageCount\" IS NOT NULL))");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderServiceIdentity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderServiceIdentity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2250,12 +2428,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("PublicId")
                         .IsUnique();
 
-                    b.ToTable("Workspace_SharedProviderServiceIdentity", null, t => {
+                    b.ToTable("Workspace_SharedProviderServiceIdentity", null, t =>
+                        {
                             t.HasCheckConstraint("CK_Workspace_SharedProviderServiceIdentity_Singleton", "\"Id\" = '7d5f45ad-9b13-4f1a-9284-260e2e07c92c'");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderSource", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderSource", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2323,7 +2503,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workspace_SharedProviderSources", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowArtifactRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowArtifactRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2367,7 +2548,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowArtifacts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b =>
+                {
                     b.Property<string>("Id")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -2429,7 +2611,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowBackendCheckpointPayloads", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b =>
+                {
                     b.Property<string>("Id")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -2477,7 +2660,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowBackendCheckpointSessions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowCheckpointRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowCheckpointRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2550,7 +2734,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowCheckpoints", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2587,6 +2772,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid?>("ProviderProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -2607,7 +2798,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowComponents", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b =>
+                {
                     b.Property<Guid>("WorkflowId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2639,7 +2831,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowDefinitionHeads", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionRecord", b =>
+                {
                     b.Property<Guid>("VersionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2656,7 +2849,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<string>("ExternalKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExternalNamespace")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("InstructionSnapshotSchemaVersion")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
@@ -2670,8 +2872,24 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<long>("Revision")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TemplateKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TemplatePackKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TemplatePackVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -2695,7 +2913,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowDefinitions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowEventRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowEventRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2728,7 +2947,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowEvents", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExecutorInvocationRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExecutorInvocationRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2859,7 +3079,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowExecutorInvocations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b =>
+                {
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
@@ -2897,7 +3118,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowExternalRequestBoundaries", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -2934,12 +3156,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RunId", "Id")
+                        .HasDatabaseName("IX_WorkflowRequests_ProcessRecovery")
+                        .HasFilter("\"RespondedAtUtc\" IS NULL");
+
                     b.HasIndex("RunId", "RespondedAtUtc");
 
                     b.ToTable("AgentFramework_WorkflowExternalRequests", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3055,7 +3282,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowExternalResponseOperations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowLaunchIdempotencyRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowLaunchIdempotencyRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3144,7 +3372,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowLaunchIdempotency", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3207,6 +3436,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.HasIndex("OriginProcessRunId", "OriginProcessAssignmentId")
                         .HasDatabaseName("IX_WorkflowRuns_ProcessAssignment");
 
+                    b.HasIndex("OriginProcessRunId", "RunId")
+                        .HasDatabaseName("IX_WorkflowRuns_ProcessRecovery");
+
                     b.HasIndex("State", "UpdatedAtUtc", "RunId")
                         .IsDescending(false, true, true);
 
@@ -3217,7 +3449,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowRuns", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowSettingsRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowSettingsRecord", b =>
+                {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -3227,6 +3460,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -3234,7 +3468,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowSettings", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowStructureOutputRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowStructureOutputRecord", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -3283,7 +3518,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowStructureOutputs", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowUsageObservationRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowUsageObservationRecordEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3446,7 +3682,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("AgentFramework_WorkflowUsageObservations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationInboxItemRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationInboxItemRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3501,7 +3738,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Collaboration_InboxItems", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationMessageRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationMessageRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3546,7 +3784,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Collaboration_Messages", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationParticipantRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationParticipantRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3585,7 +3824,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Collaboration_Participants", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationThreadRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Collaboration.CollaborationThreadRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3645,7 +3885,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Collaboration_Threads", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiAgentProfile", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiAgentProfile", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3699,7 +3940,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AiAgentProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiResourceBinding", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiResourceBinding", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3816,7 +4058,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AiResourceBindings", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiTechnicalProjectionCursor", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.AiTechnicalProjectionCursor", b =>
+                {
                     b.Property<Guid>("DatabaseProfileId")
                         .HasColumnType("uuid");
 
@@ -3844,7 +4087,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AiTechnicalProjectionCursors", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CapacityBlock", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CapacityBlock", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3880,7 +4124,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_CapacityBlocks", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnection", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnection", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3919,7 +4164,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AccountStakeholders", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3943,7 +4189,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AccountConnectionProjects", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountProfile", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountProfile", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -3977,6 +4224,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -3987,7 +4235,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AccountProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrAuditEntry", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrAuditEntry", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4033,7 +4282,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_AuditEntries", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrLookupOption", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmHrLookupOption", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4070,7 +4320,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_LookupOptions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.InteractionPartyLink", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.InteractionPartyLink", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4095,7 +4346,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_InteractionParties", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.InteractionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.InteractionRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4153,7 +4405,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_Interactions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OnboardingTask", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OnboardingTask", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4196,7 +4449,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_OnboardingTasks", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.Opportunity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.Opportunity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4287,7 +4541,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_Opportunities", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OpportunityPartyLink", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OpportunityPartyLink", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4310,7 +4565,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_OpportunityParties", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OpportunityStageHistory", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.OpportunityStageHistory", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4350,7 +4606,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_OpportunityStageHistory", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.Party", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.Party", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4456,6 +4713,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("character varying(80)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -4477,7 +4735,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_Parties", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyAddress", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyAddress", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4534,7 +4793,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_PartyAddresses", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyConfidentialNote", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyConfidentialNote", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4569,7 +4829,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_ConfidentialNotes", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyContactPoint", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyContactPoint", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4622,7 +4883,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_PartyContactPoints", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4700,7 +4962,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("PersonPartyId", "OrganizationPartyId", "AffiliationKind", "ValidFromUtc", "ValidToUtc"), false);
 
-                    b.ToTable("CrmHr_PartyOrganizationAffiliations", null, t => {
+                    b.ToTable("CrmHr_PartyOrganizationAffiliations", null, t =>
+                        {
                             t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_PersonManager", "\"ManagerPartyId\" IS NULL OR \"PersonPartyId\" <> \"ManagerPartyId\"");
 
                             t.HasCheckConstraint("CK_CrmHr_PartyOrganizationAffiliations_PersonOrganization", "\"PersonPartyId\" <> \"OrganizationPartyId\"");
@@ -4711,7 +4974,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyRelationship", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyRelationship", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4740,6 +5004,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<Guid>("TargetPartyId")
                         .HasColumnType("uuid");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TargetPartyId");
@@ -4749,7 +5019,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_PartyRelationships", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyRoleAssignment", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyRoleAssignment", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4787,7 +5058,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_PartyRoles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartySkill", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartySkill", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4826,7 +5098,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_PartySkills", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignment", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignment", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4896,14 +5169,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId", "PartyId", "AssignmentKind", "NodeKey");
 
-                    b.ToTable("CrmHr_ProjectPartyAssignments", null, t => {
+                    b.ToTable("CrmHr_ProjectPartyAssignments", null, t =>
+                        {
                             t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ParticipationRole", "\"AssignmentKind\" <> 'WorkItemAssignee'");
 
                             t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignments_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignmentMoveReceipt", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignmentMoveReceipt", b =>
+                {
                     b.Property<Guid>("OperationId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4935,12 +5210,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("SourceProjectId", "TargetProjectId", "CompletedAtUtc");
 
-                    b.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", null, t => {
+                    b.ToTable("CrmHr_ProjectPartyAssignmentMoveReceipts", null, t =>
+                        {
                             t.HasCheckConstraint("CK_CrmHr_ProjectPartyAssignmentMoveReceipts_Lifetimes", "(\"DatabaseProfileId\" IS NULL AND \"SourceProjectLifetimeId\" IS NULL AND \"TargetProjectLifetimeId\" IS NULL)\nOR (\"DatabaseProfileId\" IS NOT NULL AND \"SourceProjectLifetimeId\" IS NOT NULL AND \"TargetProjectLifetimeId\" IS NOT NULL\n    AND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"SourceProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"TargetProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"SourceProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"TargetProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentApplication", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentApplication", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -4997,7 +5274,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_RecruitmentApplications", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentInterview", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.RecruitmentInterview", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5036,7 +5314,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_RecruitmentInterviews", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.SkillDefinition", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.SkillDefinition", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5066,7 +5345,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_Skills", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.StaffingRequest", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.StaffingRequest", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5121,12 +5401,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("CrmHr_StaffingRequests", null, t => {
+                    b.ToTable("CrmHr_StaffingRequests", null, t =>
+                        {
                             t.HasCheckConstraint("CK_CrmHr_StaffingRequests_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" IS NOT NULL\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.WorkforceProfile", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.WorkforceProfile", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5231,7 +5513,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("CrmHr_WorkforceProfiles", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginCapabilityGrantRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginCapabilityGrantRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5240,6 +5523,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("integer");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
@@ -5298,12 +5582,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_CapabilityGrants", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginConnectionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginConnectionRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ConnectionKey")
@@ -5353,7 +5639,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_Connections", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginInstallationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginInstallationRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5414,7 +5701,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_Installations", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginLogRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginLogRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5483,7 +5771,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_Logs", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginOAuthConnectionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginOAuthConnectionRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5497,6 +5786,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("character varying(320)");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConnectionId")
@@ -5560,7 +5850,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_OAuthConnections", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginOAuthSessionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Plugins.PluginOAuthSessionRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5574,6 +5865,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ConnectionId")
@@ -5644,10 +5936,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Plugins_OAuthSessions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.Project", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.Project", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -5660,6 +5959,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalNamespace")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<bool>("LegacyAgentAccessBindingEligible")
                         .ValueGeneratedOnAdd()
@@ -5696,15 +6003,24 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExternalNamespace", "ExternalKey")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Projects_ExternalIdentity")
+                        .HasFilter("\"ExternalNamespace\" IS NOT NULL");
+
                     b.HasIndex("Name", "Id");
 
                     b.HasIndex("UpdatedAtUtc", "Id")
                         .IsDescending(true, false);
 
-                    b.ToTable("Projects_Projects", (string)null);
+                    b.ToTable("Projects_Projects", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_ExternalIdentity", "(\"ExternalNamespace\" IS NULL AND \"ExternalKey\" IS NULL) OR\n(\"ExternalNamespace\" IS NOT NULL AND \"ExternalKey\" IS NOT NULL AND\n \"ExternalNamespace\" COLLATE \"C\" ~ '^[a-z0-9]([a-z0-9._-]{0,98}[a-z0-9])?$' AND\n \"ExternalKey\" COLLATE \"C\" ~ '^[a-z0-9]([a-z0-9._-]{0,98}[a-z0-9])?$')");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectCreationReservationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectCreationReservationRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5725,6 +6041,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("NamespaceId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ParentLifetimeId")
@@ -5753,12 +6072,159 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ParentProjectId", "State");
 
-                    b.ToTable("Projects_ProjectCreationReservations", null, t => {
+                    b.ToTable("Projects_ProjectCreationReservations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_CreationReservation_Namespace", "\"NamespaceId\" IS NULL OR \"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
                             t.HasCheckConstraint("CK_Projects_CreationReservation_Parent", "(\"ParentProjectId\" IS NULL AND \"ParentLifetimeId\" IS NULL) OR (\"ParentProjectId\" IS NOT NULL AND \"ParentLifetimeId\" IS NOT NULL)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectHierarchyLink", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectDefinitionReceiptRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CallerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("CallerKey")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("AcceptedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("AcceptedRevision")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CommandKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CreationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NormalizationVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ResultVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("SemanticDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId");
+
+                    b.ToTable("Projects_DefinitionReceipts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Caller", "\"CallerKind\" IN (1, 2, 3, 4) AND octet_length(\"CallerKey\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Creation", "(\"CommandKind\" = 1 AND \"CreationFingerprint\" IS NOT NULL AND \"CreationFingerprint\" ~ '^[0-9a-f]{64}$') OR (\"CommandKind\" <> 1 AND \"CreationFingerprint\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Digest", "octet_length(\"SemanticDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"CommandKind\" IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 2097152");
+
+                            t.HasCheckConstraint("CK_Projects_DefinitionReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"AcceptedRevision\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectDeletionCompletionRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OriginKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("RecoveryDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("RecoveryPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("ReferencePayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("ReleaseState")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ReleasedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("NamespaceId", "CompletionId");
+
+                    b.HasIndex("NamespaceId", "ProjectId", "LifetimeId")
+                        .IsUnique();
+
+                    b.HasIndex("NamespaceId", "ReleaseState", "CreatedAtUtc");
+
+                    b.HasIndex(new[] { "CompletionId" }, "IX_Projects_DeletionCompletions_Awaiting")
+                        .HasFilter("\"ReleaseState\" = 1");
+
+                    b.ToTable("Projects_DeletionCompletions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Interpretation", "\"SchemaVersion\" = 1 AND \"OriginKind\" IN (1, 2, 3, 4)");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Recovery", "octet_length(\"RecoveryPayload\") BETWEEN 1 AND 65536 AND octet_length(\"RecoveryDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_References", "octet_length(\"ReferencePayload\") BETWEEN 1 AND 16384");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Release", "isfinite(\"CreatedAtUtc\") AND ((\"ReleaseState\" = 1 AND \"ReleasedAtUtc\" IS NULL) OR (\"ReleaseState\" = 2 AND \"ReleasedAtUtc\" IS NOT NULL AND isfinite(\"ReleasedAtUtc\")))");
+
+                            t.HasCheckConstraint("CK_Projects_DeletionCompletion_Target", "\"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectHierarchyLink", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5784,7 +6250,77 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Projects_ProjectHierarchyLinks", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOptionSelection", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectLifecycleReceiptRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CallerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("CallerKey")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("AcceptedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("CommandKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NormalizationVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ResultVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("SemanticDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId");
+
+                    b.ToTable("Projects_LifecycleReceipts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Caller", "\"CallerKind\" IN (1, 2, 3, 4) AND octet_length(\"CallerKey\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Digest", "octet_length(\"SemanticDigest\") = 32");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"CommandKind\" IN (1, 2, 3, 4)");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 16384");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_Projects_LifecycleReceipt_Time", "isfinite(\"AcceptedAtUtc\")");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectOptionSelection", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5811,7 +6347,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Projects_ProjectOptionSelections", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectPhase", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectPhase", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5847,7 +6384,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Projects_ProjectPhases", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectRetirementRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Projects.ProjectRetirementRecord", b =>
+                {
                     b.Property<Guid>("LifetimeId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5868,7 +6406,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Projects_ProjectRetirements", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifact", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifact", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5978,7 +6517,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptArtifacts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b =>
+                {
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
@@ -5992,7 +6532,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptArtifactTags", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCollection", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCollection", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6011,7 +6552,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptCollections", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b =>
+                {
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
@@ -6032,7 +6574,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptCompatibilityWarningPreferences", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b =>
+                {
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
@@ -6044,7 +6587,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptSupportedConsumers", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b =>
+                {
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
@@ -6080,7 +6624,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptSupportedProviderModels", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTag", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTag", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6105,7 +6650,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptTags", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b =>
+                {
                     b.Property<Guid>("PromptArtifactId")
                         .HasColumnType("uuid");
 
@@ -6123,7 +6669,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptTemplateTokens", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6180,7 +6727,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptUsageRecords", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptVersion", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptVersion", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6241,7 +6789,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Prompts_PromptVersions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Resources.ProjectResource", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Resources.ProjectResource", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6296,6 +6845,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<int?>("ResourceKind")
                         .HasColumnType("integer");
 
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Sensitivity")
                         .HasColumnType("integer");
 
@@ -6313,10 +6866,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("Id");
 
-                    b.ToTable("Resources_ProjectResources", (string)null);
+                    b.HasIndex("ProjectId", "ProjectLifetimeId", "ConnectorPluginKey");
+
+                    b.ToTable("Resources_ProjectResources", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Resources_ProjectResources_Revision", "\"Revision\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerFireAdmissionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerFireAdmissionRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6387,7 +6946,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("SchedulerPlanner_FireAdmissions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlan", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlan", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6404,6 +6964,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired()
                         .HasMaxLength(160)
                         .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("DefinitionRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -6488,7 +7052,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("SchedulerPlanner_Plans", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlanRun", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlanRun", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6560,7 +7125,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("SchedulerPlanner_Runs", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Security.SecretRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Security.SecretRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6593,6 +7159,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -6600,7 +7167,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Security_SecretRecords", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Security.SecretReference", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Security.SecretReference", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6630,7 +7198,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Security_SecretReferences", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestCaseRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestCaseRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6660,7 +7229,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("TestLab_TestCases", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestEvidenceRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestEvidenceRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6692,7 +7262,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("TestLab_TestEvidence", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestPlan", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestPlan", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6703,6 +7274,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DefinitionRevision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Phase")
                         .IsRequired()
@@ -6736,7 +7311,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("TestLab_TestPlans", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestRunRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.TestLab.TestRunRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6764,7 +7340,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("TestLab_TestRuns", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectCrossModuleMutationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectCrossModuleMutationRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6777,6 +7354,12 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CompletionNamespaceId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -6817,10 +7400,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId", "ApprovalState", "Status", "UpdatedAtUtc");
 
-                    b.ToTable("Workbench_ProjectCrossModuleMutations", (string)null);
+                    b.HasIndex(new[] { "Id" }, "IX_Workbench_ProjectCrossModuleMutations_UnfinishedDeletion")
+                        .HasFilter("\"MutationKind\" = 4 AND \"Status\" <> 2");
+
+                    b.HasIndex(new[] { "ProjectId", "Id" }, "IX_Workbench_ProjectDeletion_Subject")
+                        .HasFilter("\"MutationKind\" = 4");
+
+                    b.ToTable("Workbench_ProjectCrossModuleMutations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workbench_ProjectMutation_CompletionBinding", "(\"CompletionNamespaceId\" IS NULL AND \"CompletionId\" IS NULL) OR (\"CompletionNamespaceId\" IS NOT NULL AND \"CompletionId\" IS NOT NULL AND \"CompletionNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"CompletionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"MutationKind\" = 4)");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6873,7 +7466,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectNodeBindings", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6934,7 +7528,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectNodeLifecycleEvents", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -6969,7 +7564,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectNodeReferences", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectLinkRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectLinkRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7006,7 +7602,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectObjectLinks", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectObjectRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7105,7 +7702,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectObjects", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectProcessAssetContributionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectProcessAssetContributionRecord", b =>
+                {
                     b.Property<Guid>("IntentId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7175,7 +7773,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProcessAssetContributions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureLeaseRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureLeaseRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7244,7 +7843,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectStructureLeases", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureOperationAnalyticsRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureOperationAnalyticsRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7333,7 +7933,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectStructureOperationAnalytics", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureProjectionLayoutRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectStructureProjectionLayoutRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7366,7 +7967,90 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ProjectProjectionLayouts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentHistoryRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectTaskPlanReceiptRecord", b =>
+                {
+                    b.Property<Guid>("NamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Epoch")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("CallerKind")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("CallerKey")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AcceptedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("AcceptedPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<long>("DecisionGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NormalizationVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OriginalDefinitionRevision")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ResultVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("SemanticDigest")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("SourceFingerprint")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("SourceKind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SourceVersion")
+                        .HasColumnType("integer");
+
+                    b.HasKey("NamespaceId", "Epoch", "CallerKind", "CallerKey", "OperationId");
+
+                    b.ToTable("Workbench_TaskPlanReceipts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Address", "\"NamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OperationId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Epoch\" > 0");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Caller", "\"CallerKind\" IN (1, 2) AND octet_length(\"CallerKey\") = 32");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Decision", "\"DecisionId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"DecisionGeneration\" > 0");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Digest", "octet_length(\"SemanticDigest\") = 32 AND octet_length(\"SourceFingerprint\") = 32");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Interpretation", "\"SchemaVersion\" > 0 AND \"NormalizationVersion\" > 0 AND \"ResultVersion\" > 0 AND \"SourceVersion\" > 0 AND \"SourceKind\" = \"CallerKind\" AND (\"CallerKind\" = 1 OR (\"SchemaVersion\" = 2 AND \"NormalizationVersion\" = 1 AND \"ResultVersion\" = 2 AND \"SourceVersion\" = 2))");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Payload", "octet_length(\"AcceptedPayload\") BETWEEN 1 AND 2097152");
+
+                            t.HasCheckConstraint("CK_Workbench_TaskPlanReceipt_Target", "\"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"LifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"OriginalDefinitionRevision\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentHistoryRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7402,7 +8086,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_WorkAssignmentHistory", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7467,12 +8152,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("ProjectId", "PartyId", "NodeKey");
 
-                    b.ToTable("Workbench_WorkAssignments", null, t => {
+                    b.ToTable("Workbench_WorkAssignments", null, t =>
+                        {
                             t.HasCheckConstraint("CK_Workbench_WorkAssignments_ProjectLifetime", "\"ProjectLifetimeId\" IS NULL OR (\n    \"ProjectLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkbenchViewStateRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkbenchViewStateRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7500,7 +8187,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_ViewStates", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowAdmissionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowAdmissionRecord", b =>
+                {
                     b.Property<Guid>("IntentId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7564,7 +8252,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_WorkflowAdmissions", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowContributionRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkflowContributionRecord", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -7619,7 +8308,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workbench_WorkflowContributionReceipts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7657,7 +8347,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workspace_ConnectorCommandAudits", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7741,10 +8432,17 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("Workspace_ConnectorCommands", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workspace.WorkspaceSettings", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.WorkspaceSettings", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("CurrencyCode")
                         .IsRequired()
@@ -7760,6 +8458,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasColumnType("character varying(40)")
                         .HasDefaultValue("en-US");
 
+                    b.Property<string>("DecisionDataPolicyJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DefaultPromptOutputFormat")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -7767,6 +8468,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.Property<Guid?>("DefaultProviderProfileId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Notes")
                         .IsRequired()
@@ -7782,10 +8486,55 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("Id");
 
-                    b.ToTable("Workspace_Settings", (string)null);
+                    b.HasIndex("IsCurrent")
+                        .IsUnique()
+                        .HasFilter("\"IsCurrent\"");
+
+                    b.ToTable("Workspace_Settings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Workspace_Settings_DecisionDataPolicyJson", "\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND 1024");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessArtifactLedgerEventEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAcceptedAssignmentSourceEntity", b =>
+                {
+                    b.Property<Guid>("AdmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("InputFingerprint")
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("InputJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("InputVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("AdmissionId", "StepInstanceId");
+
+                    b.ToTable("process_accepted_assignment_sources", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_accepted_assignment_source", "\"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND octet_length(\"PayloadJson\") BETWEEN 2 AND 1048576\nAND \"Fingerprint\" ~ '^sha256:[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("CK_process_accepted_execution_input", "(\"InputVersion\" = 0 AND \"InputJson\" IS NULL AND \"InputFingerprint\" IS NULL)\nOR (\"InputVersion\" IN (1, 2) AND \"InputJson\" IS NOT NULL\n    AND octet_length(\"InputJson\") BETWEEN 2 AND 4194304\n    AND \"InputFingerprint\" IS NOT NULL AND \"InputFingerprint\" ~ '^sha256:[0-9a-f]{64}$')");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessArtifactLedgerEventEntity", b =>
+                {
                     b.Property<Guid>("LedgerEventId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7814,7 +8563,879 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_artifact_ledger_events", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringHeadEntity", b =>
+                {
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Criticality")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Lifecycle")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("OperatingMode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("PublishedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "DefinitionKey");
+
+                    b.HasIndex("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "Lifecycle");
+
+                    b.ToTable("process_authoring_heads", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_authoring_heads_revision", "\"Revision\" > 0");
+
+                            t.HasCheckConstraint("CK_process_authoring_heads_scope", "(\"ProjectId\" = '00000000-0000-0000-0000-000000000000'::uuid) = (\"ProjectLifetimeId\" = '00000000-0000-0000-0000-000000000000'::uuid)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringPublicationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("ContentJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatabaseProfileId", "ProjectId", "ProjectLifetimeId", "DefinitionKey", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("process_authoring_publications", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAuthoringReceiptEntity", b =>
+                {
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CallerId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefinitionKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProjectLifetimeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReceiptJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.HasKey("DatabaseProfileId", "CallerId", "OperationId");
+
+                    b.ToTable("process_authoring_receipts", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoveryEntity", b =>
+                {
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BarrierCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<int>("Cycle")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<string>("IntentJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Pending")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PositionJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("ProgressRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.HasKey("RootRunId");
+
+                    b.HasIndex("Origin", "DueAtUtc", "RootRunId")
+                        .HasDatabaseName("IX_process_cancellation_recovery_due")
+                        .HasFilter("NOT \"Completed\"");
+
+                    b.ToTable("process_cancellation_recovery", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_identity", "\"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND ((\"Origin\" = 0 AND \"BarrierCommandId\" IS NOT NULL AND \"BarrierCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\n    OR (\"Origin\" = 1 AND \"BarrierCommandId\" IS NULL))");
+
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_lease", "\"LeaseGeneration\" >= 0 AND \"ProgressRevision\" >= 0 AND \"Cycle\" >= 0\nAND ((\"LeaseToken\" IS NULL AND \"LeaseExpiresAtUtc\" IS NULL)\n    OR (\"LeaseToken\" IS NOT NULL AND \"LeaseToken\" <> '00000000-0000-0000-0000-000000000000'::uuid\n        AND \"LeaseGeneration\" > 0 AND \"LeaseExpiresAtUtc\" IS NOT NULL AND \"DueAtUtc\" = \"LeaseExpiresAtUtc\" AND NOT \"Completed\"))");
+
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_payload", "octet_length(\"PositionJson\") BETWEEN 2 AND 1024\nAND (\"IntentJson\" IS NULL OR octet_length(\"IntentJson\") BETWEEN 2 AND 8192)\nAND \"Pending\" BETWEEN 0 AND 12\nAND (NOT \"Completed\" OR (\"IntentJson\" IS NULL AND \"Pending\" = 0))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoverySeedEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("LastRootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("process_cancellation_recovery_seed", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_cancellation_recovery_seed", "\"Id\" = 1 AND \"Revision\" >= 0\nAND (\"LastRootRunId\" IS NULL OR (\"LastRootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Revision\" > 0))\nAND (NOT \"Completed\" OR \"Revision\" > 0)");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Completed = false,
+                            Revision = 0L
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", b =>
+                {
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ConsumedReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("FundingAllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FundingBudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("GrantedReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("GrantedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("OwnerWorkRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("BudgetId", "AllocationId");
+
+                    b.HasIndex("FundingBudgetId", "FundingAllocationId")
+                        .IsUnique()
+                        .HasFilter("\"FundingBudgetId\" IS NOT NULL");
+
+                    b.ToTable("process_decision_budget_allocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_budget_allocations_amounts", "\"GrantedWorkTicks\" >= 0 AND \"GrantedReplans\" >= 0 AND (\"GrantedWorkTicks\" > 0 OR \"GrantedReplans\" > 0)\nAND ((\"OwnerWorkRevision\" IS NULL AND \"ConsumedWorkTicks\" IS NULL AND \"ConsumedReplans\" IS NULL)\nOR (\"OwnerWorkRevision\" IS NOT NULL AND \"OwnerWorkRevision\" > 0 AND \"ConsumedWorkTicks\" IS NOT NULL AND \"ConsumedWorkTicks\" >= 0\nAND \"ConsumedReplans\" IS NOT NULL AND \"ConsumedReplans\" >= 0))");
+
+                            t.HasCheckConstraint("CK_process_decision_budget_allocations_funding", "(\"FundingBudgetId\" IS NULL AND \"FundingAllocationId\" IS NULL)\nOR (\"FundingBudgetId\" IS NOT NULL AND \"FundingAllocationId\" IS NOT NULL AND \"FundingBudgetId\" <> \"BudgetId\")");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", b =>
+                {
+                    b.Property<Guid>("BudgetId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AdmissionCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AllocationCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ConsumedReplans")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("MaximumBasisAgeTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("MaximumReplans")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("MaximumWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("OverrunDetected")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ParentBudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ReservedReplans")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReservedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RunAdmissionJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("BudgetId");
+
+                    b.HasIndex("ParentBudgetId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("RunId")
+                        .IsUnique()
+                        .HasFilter("\"StepInstanceId\" IS NULL");
+
+                    b.HasIndex("RunId", "AdmissionCommandId");
+
+                    b.HasIndex("RunId", "StepInstanceId")
+                        .IsUnique()
+                        .HasFilter("\"StepInstanceId\" IS NOT NULL");
+
+                    b.ToTable("process_decision_budgets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_budgets_balance", "\"MaximumWorkTicks\" > 0 AND \"MaximumReplans\" >= 0 AND \"MaximumBasisAgeTicks\" > 0\nAND \"ConsumedWorkTicks\" >= 0 AND \"ReservedWorkTicks\" >= 0 AND \"ConsumedReplans\" >= 0 AND \"ReservedReplans\" >= 0\nAND \"AllocationCount\" BETWEEN 0 AND 256 AND \"Revision\" >= \"AllocationCount\" + 1\nAND (\"AllocationCount\" > 0 OR (\"ConsumedWorkTicks\" = 0 AND \"ReservedWorkTicks\" = 0 AND \"ConsumedReplans\" = 0 AND \"ReservedReplans\" = 0 AND NOT \"OverrunDetected\"))\nAND (\"OverrunDetected\" OR (\"ReservedWorkTicks\" <= \"MaximumWorkTicks\" AND \"ConsumedWorkTicks\" <= \"MaximumWorkTicks\" - \"ReservedWorkTicks\"\nAND \"ReservedReplans\" <= \"MaximumReplans\" AND \"ConsumedReplans\" <= \"MaximumReplans\" - \"ReservedReplans\"))");
+
+                            t.HasCheckConstraint("CK_process_decision_budgets_owner", "\"BudgetId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND ((\"StepInstanceId\" IS NULL AND \"RunId\" = \"RootRunId\" AND \"ParentBudgetId\" IS NULL\n    AND \"AdmissionCommandId\" IS NOT NULL AND \"RunAdmissionJson\" IS NOT NULL\n    AND octet_length(\"RunAdmissionJson\") BETWEEN 1 AND 32768)\nOR (\"StepInstanceId\" IS NOT NULL AND \"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"AdmissionCommandId\" IS NULL AND \"RunAdmissionJson\" IS NULL\n    AND (\"ParentBudgetId\" IS NULL OR \"ParentBudgetId\" <> \"BudgetId\")))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionChildEntity", b =>
+                {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ChildId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcceptedReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Owner")
+                        .HasColumnType("integer");
+
+                    b.Property<long?>("OwnerRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("DecisionId", "Generation", "ChildId");
+
+                    b.HasIndex("BudgetId", "AllocationId")
+                        .IsUnique();
+
+                    b.HasIndex("DecisionId", "ChildId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_children", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_children_closure", "\"Owner\" BETWEEN 0 AND 1\nAND ((\"OwnerRevision\" IS NULL AND \"Outcome\" IS NULL AND \"AcceptedReceiptId\" IS NULL)\nOR (\"OwnerRevision\" IS NOT NULL AND \"OwnerRevision\" > 0 AND \"Outcome\" IS NOT NULL\nAND ((\"Outcome\" = 0 AND \"AcceptedReceiptId\" IS NOT NULL) OR (\"Outcome\" = 1 AND \"AcceptedReceiptId\" IS NULL))))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", b =>
+                {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CanonicalMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CaptureAllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChildCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RefreshCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UnclosedChildCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("DecisionId", "Generation");
+
+                    b.HasIndex("CanonicalMaterialId");
+
+                    b.HasIndex("BudgetId", "CaptureAllocationId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_generations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_generations_material", "\"CanonicalMaterialId\" IS NULL OR \"CanonicalMaterialId\" = \"MaterialId\"");
+
+                            t.HasCheckConstraint("CK_process_decision_generations_refresh", "\"RefreshCommandId\" IS NULL OR (\"RefreshCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"Phase\" >= 2)");
+
+                            t.HasCheckConstraint("CK_process_decision_generations_state", "\"Generation\" BETWEEN 1 AND 32 AND \"Revision\" >= 2 * \"Generation\" - 1\nAND \"Phase\" BETWEEN 0 AND 5 AND \"ChildCount\" BETWEEN 0 AND 64\nAND \"UnclosedChildCount\" BETWEEN 0 AND \"ChildCount\" AND \"Revision\" >= 1 + 2 * \"ChildCount\" - \"UnclosedChildCount\"\nAND (\"Phase\" < 3 OR \"UnclosedChildCount\" = 0)\nAND (\"Phase\" <> 5 OR \"Generation\" < 32)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", b =>
+                {
+                    b.Property<Guid>("DecisionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SharedRunScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DecisionId");
+
+                    b.HasIndex("BudgetId")
+                        .IsUnique();
+
+                    b.HasIndex("SharedRunScopeId");
+
+                    b.HasIndex("RootRunId", "DecisionId");
+
+                    b.HasIndex("RunId", "StepInstanceId")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_heads", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_heads_version", "\"CurrentGeneration\" BETWEEN 1 AND 32 AND \"Revision\" >= 2 * \"CurrentGeneration\" - 1");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", b =>
+                {
+                    b.Property<Guid>("MaterialId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CapturedAtUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PayloadUtf8Bytes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MaterialId");
+
+                    b.HasIndex("ScopeId", "Generation")
+                        .IsUnique();
+
+                    b.ToTable("process_decision_materials", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_materials_content", "\"MaterialId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"Generation\" BETWEEN 1 AND 32\nAND \"CapturedAtUtcTicks\" BETWEEN 1 AND 3155378975999999999\nAND \"PayloadUtf8Bytes\" BETWEEN 2 AND 1048576\nAND octet_length(\"PayloadJson\") = \"PayloadUtf8Bytes\"\nAND \"Fingerprint\" ~ '^[0-9A-F]{64}$'");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", b =>
+                {
+                    b.Property<Guid>("ScopeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ContractVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DatabaseProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Executor")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaterialProtocol")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid>("OwnerRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkspaceNamespaceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ScopeId");
+
+                    b.HasIndex("OwnerRunId")
+                        .IsUnique()
+                        .HasFilter("\"StepInstanceId\" IS NULL");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("OwnerRunId", "StepInstanceId")
+                        .IsUnique()
+                        .HasFilter("\"StepInstanceId\" IS NOT NULL");
+
+                    b.ToTable("process_decision_material_scopes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_material_scopes_identity", "\"ScopeId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"DatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"WorkspaceNamespaceId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"OwnerRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND (\"StepInstanceId\" IS NULL OR \"StepInstanceId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND \"ContractId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ContractVersion\" > 0\nAND ((\"MaterialProtocol\" = 1 AND \"Executor\" IS NOT NULL AND \"Executor\" BETWEEN 0 AND 1)\n    OR (\"MaterialProtocol\" = 2 AND \"Executor\" IS NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservationCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdmissionCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("CapturedAtUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("ConsumedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DecisionGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Disposition")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("GrantedWorkTicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InputFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<Guid?>("InvocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MaterialFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("MaterialGeneration")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("OriginalBudgetRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProtocolVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SettlementCommandId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RunId", "ReservationCommandId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("ScopeId");
+
+                    b.HasIndex("BudgetId", "AllocationId")
+                        .IsUnique();
+
+                    b.HasIndex("DecisionId", "DecisionGeneration");
+
+                    b.HasIndex("RunId", "AdmissionCommandId");
+
+                    b.HasIndex("RunId", "SettlementCommandId");
+
+                    b.ToTable("process_decision_refresh_captures", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_refresh_capture_identity", "\"ProtocolVersion\" = 1 AND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"ReservationCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> \"ReservationCommandId\"\nAND \"MaterialId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"MaterialGeneration\" BETWEEN 2 AND 32\nAND \"OriginalBudgetRevision\" > 0 AND \"GrantedWorkTicks\" BETWEEN 1 AND 100000000\nAND \"InputFingerprint\" ~ '^sha256:[0-9a-f]{64}$'");
+
+                            t.HasCheckConstraint("CK_process_refresh_capture_outcome", "((\"Outcome\" IS NULL AND \"ConsumedWorkTicks\" IS NULL)\n    OR (\"Outcome\" IS NOT NULL AND \"Outcome\" BETWEEN 1 AND 7 AND \"ConsumedWorkTicks\" IS NOT NULL AND \"ConsumedWorkTicks\" >= 0))\nAND (\"Outcome\" IS NULL OR \"Outcome\" <> 7 OR \"ConsumedWorkTicks\" = 0)\nAND ((\"Outcome\" IS NOT NULL AND \"Outcome\" = 1 AND \"ConsumedWorkTicks\" <= \"GrantedWorkTicks\"\n        AND \"MaterialFingerprint\" IS NOT NULL AND \"MaterialFingerprint\" ~ '^[0-9A-F]{64}$'\n        AND \"CapturedAtUtcTicks\" IS NOT NULL AND \"CapturedAtUtcTicks\" BETWEEN 1 AND 3155378975999999999)\n    OR ((\"Outcome\" IS NULL OR \"Outcome\" <> 1) AND \"MaterialFingerprint\" IS NULL AND \"CapturedAtUtcTicks\" IS NULL))");
+
+                            t.HasCheckConstraint("CK_process_refresh_capture_phase", "(\"InvocationId\" IS NULL OR \"InvocationId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\nAND ((\"Phase\" = 1 AND \"Revision\" = 1 AND \"InvocationId\" IS NULL AND \"Outcome\" IS NULL)\n    OR (\"Phase\" = 2 AND \"Revision\" = 2 AND \"InvocationId\" IS NOT NULL AND \"Outcome\" IS NULL)\n    OR (\"Phase\" IN (3, 4) AND \"Outcome\" IS NOT NULL\n        AND ((\"InvocationId\" IS NULL AND \"Outcome\" = 7 AND \"Revision\" = \"Phase\" - 1)\n            OR (\"InvocationId\" IS NOT NULL AND \"Outcome\" BETWEEN 1 AND 6 AND \"Revision\" = \"Phase\"))))\nAND ((\"Phase\" = 4 AND \"Disposition\" IS NOT NULL AND \"Disposition\" IN (1, 2) AND \"SettlementCommandId\" IS NOT NULL\n        AND \"SettlementCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid)\n    OR (\"Phase\" <> 4 AND \"Disposition\" IS NULL AND \"SettlementCommandId\" IS NULL))\nAND (\"Disposition\" IS NULL OR \"Disposition\" <> 1 OR \"Outcome\" = 1)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCapturePayloadEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservationCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("RunId", "ReservationCommandId");
+
+                    b.ToTable("process_decision_refresh_capture_payloads", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_refresh_capture_payload", "octet_length(\"PayloadJson\") BETWEEN 2 AND 1048576");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshDeliveryEntity", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AdmissionCommandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<int>("Disposition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("LeaseGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ProgressRevision")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ProtocolVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RootRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("clock_timestamp()");
+
+                    b.Property<long>("WakeRevision")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RunId", "AdmissionCommandId");
+
+                    b.HasIndex("RootRunId");
+
+                    b.HasIndex("DueAtUtc", "RunId", "AdmissionCommandId")
+                        .HasDatabaseName("IX_process_refresh_delivery_due")
+                        .HasFilter("\"Disposition\" = 0");
+
+                    b.ToTable("process_decision_refresh_delivery", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_refresh_delivery_identity", "\"ProtocolVersion\" = 1 AND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"RootRunId\" <> '00000000-0000-0000-0000-000000000000'::uuid\nAND \"AdmissionCommandId\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_process_refresh_delivery_lease", "\"LeaseGeneration\" >= 0 AND \"ProgressRevision\" >= 0 AND \"WakeRevision\" >= 0\nAND ((\"LeaseToken\" IS NULL AND \"LeaseExpiresAtUtc\" IS NULL)\n    OR (\"LeaseToken\" IS NOT NULL AND \"LeaseToken\" <> '00000000-0000-0000-0000-000000000000'::uuid\n        AND \"LeaseGeneration\" > 0 AND \"LeaseExpiresAtUtc\" IS NOT NULL\n        AND \"DueAtUtc\" = \"LeaseExpiresAtUtc\" AND \"Disposition\" = 0))");
+
+                            t.HasCheckConstraint("CK_process_refresh_delivery_outcome", "(\"Disposition\" = 0 AND \"Reason\" BETWEEN 0 AND 4)\nOR (\"Disposition\" = 1 AND \"Reason\" = 5)\nOR (\"Disposition\" = 2 AND \"Reason\" BETWEEN 6 AND 9)\nOR (\"Disposition\" = 3 AND \"Reason\" BETWEEN 10 AND 12)");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
+                {
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BudgetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CaptureAllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("CaptureKind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CaptureMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CurrentMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CurrentMemberships")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TotalMemberships")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ScopeId");
+
+                    b.HasIndex("BudgetId")
+                        .IsUnique();
+
+                    b.HasIndex("CurrentMaterialId");
+
+                    b.HasIndex("BudgetId", "CaptureAllocationId");
+
+                    b.ToTable("process_decision_run_scopes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_decision_run_scopes_state", "\"Revision\" >= 1 + \"TotalMemberships\" AND \"Phase\" BETWEEN 0 AND 5\nAND \"TotalMemberships\" BETWEEN 0 AND 256\nAND \"CurrentMemberships\" BETWEEN 0 AND \"TotalMemberships\"\nAND (\"CurrentMaterialId\" IS NOT NULL OR (\"TotalMemberships\" = 0 AND \"Phase\" NOT IN (2, 4)))\nAND (\"Phase\" <> 0 OR \"CurrentMaterialId\" IS NULL)\nAND ((\"Phase\" = 1 AND \"CaptureAllocationId\" IS NOT NULL AND \"CaptureMaterialId\" IS NOT NULL\n    AND \"CaptureKind\" IS NOT NULL AND \"CaptureKind\" BETWEEN 0 AND 2\n    AND ((\"CurrentMaterialId\" IS NULL) = (\"CaptureKind\" = 0)))\n    OR (\"Phase\" <> 1 AND \"CaptureAllocationId\" IS NULL AND \"CaptureMaterialId\" IS NULL AND \"CaptureKind\" IS NULL))");
+                        });
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeMemberEntity", b =>
+                {
+                    b.Property<Guid>("DecisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Generation")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StepInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DecisionId", "Generation");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("RunId", "StepInstanceId");
+
+                    b.HasIndex("ScopeId", "MaterialId");
+
+                    b.ToTable("process_decision_run_scope_members", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -7859,7 +9480,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_dispatch_claims", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessInstancePlanEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessInstancePlanEntity", b =>
+                {
                     b.Property<Guid>("PlanId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7925,7 +9547,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_instance_plans", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessOutboxMessageEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessOutboxMessageEntity", b =>
+                {
                     b.Property<Guid>("MessageId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -7981,13 +9604,26 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_outbox_messages", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessPreparedLaunchEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessPreparedLaunchEntity", b =>
+                {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("AcceptedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AcceptedSourceHeaderFingerprint")
+                        .HasMaxLength(71)
+                        .HasColumnType("character varying(71)");
+
+                    b.Property<string>("AcceptedSourceHeaderJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AcceptedSourceVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<long>("AdmissionSequence")
                         .ValueGeneratedOnAdd()
@@ -8069,10 +9705,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("State", "ContinuationLeaseExpiresAtUtc", "AdmissionSequence");
 
-                    b.ToTable("process_prepared_launches", (string)null);
+                    b.ToTable("process_prepared_launches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_prepared_launch_source", "(\"AcceptedSourceVersion\" = 0 AND \"AcceptedSourceHeaderJson\" IS NULL AND \"AcceptedSourceHeaderFingerprint\" IS NULL)\nOR (\"AcceptedSourceVersion\" = 1 AND \"AcceptedAtUtc\" IS NOT NULL\n    AND \"AcceptedSourceHeaderJson\" IS NOT NULL AND octet_length(\"AcceptedSourceHeaderJson\") BETWEEN 2 AND 1048576\n    AND \"AcceptedSourceHeaderFingerprint\" IS NOT NULL AND \"AcceptedSourceHeaderFingerprint\" ~ '^sha256:[0-9a-f]{64}$')");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionDeadLetterEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionDeadLetterEntity", b =>
+                {
                     b.Property<Guid>("DeadLetterId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -8118,7 +9758,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_projection_dead_letters", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionHistoryEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionHistoryEntity", b =>
+                {
                     b.Property<string>("ProjectorName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -8172,7 +9813,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_projection_history", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionSnapshotEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectionSnapshotEntity", b =>
+                {
                     b.Property<string>("ProjectorName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -8205,7 +9847,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_projection_snapshots", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectorOffsetEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessProjectorOffsetEntity", b =>
+                {
                     b.Property<string>("ProjectorName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -8227,7 +9870,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_projector_offsets", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -8460,7 +10104,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_run_records", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordParticipantEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRunRecordParticipantEntity", b =>
+                {
                     b.Property<string>("ParticipantId")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -8475,7 +10120,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_run_record_participants", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8487,7 +10133,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_runtime_available_artifact_slots", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeEventEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeEventEntity", b =>
+                {
                     b.Property<long>("GlobalSequence")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
@@ -8560,7 +10207,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_runtime_events", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8570,6 +10218,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Property<DateTimeOffset>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DecisionBudgetReceiptJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DecisionReceiptJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DecisionRunScopeReceiptJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -8577,10 +10234,18 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("RunId", "CommandId");
 
-                    b.ToTable("process_runtime_idempotency_keys", (string)null);
+                    b.ToTable("process_runtime_idempotency_keys", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_idempotency_scope_receipt", "\"DecisionRunScopeReceiptJson\" IS NULL OR octet_length(\"DecisionRunScopeReceiptJson\") BETWEEN 1 AND 8192");
+
+                            t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision", "\"DecisionReceiptJson\" IS NULL OR octet_length(\"DecisionReceiptJson\") BETWEEN 1 AND 16384");
+
+                            t.HasCheckConstraint("CK_process_runtime_idempotency_keys_decision_budget", "\"DecisionBudgetReceiptJson\" IS NULL OR octet_length(\"DecisionBudgetReceiptJson\") BETWEEN 1 AND 8192");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeInputArtifactEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeInputArtifactEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8621,7 +10286,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_runtime_input_artifacts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -8667,19 +10333,25 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasKey("RunId");
 
-                    b.HasIndex("RootRunId");
-
                     b.HasIndex("Status");
+
+                    b.HasIndex("RootRunId", "RunId");
 
                     b.HasIndex("UpdatedAtUtc", "RunId")
                         .IsDescending();
 
-                    b.ToTable("process_runtime_states", null, t => {
+                    b.HasIndex(new[] { "RunId" }, "IX_process_runtime_states_stopped_root")
+                        .HasDatabaseName("IX_process_runtime_states_stopped_root")
+                        .HasFilter("\"RootRunId\" = \"RunId\" AND \"Status\" IN ('CancelRequested', 'Cancelled')");
+
+                    b.ToTable("process_runtime_states", null, t =>
+                        {
                             t.HasCheckConstraint("CK_process_runtime_states_project_admission", "(\"ProjectAdmissionDatabaseProfileId\" IS NULL AND \"ProjectAdmissionProjectId\" IS NULL AND \"ProjectAdmissionLifetimeId\" IS NULL)\nOR (\"ProjectAdmissionDatabaseProfileId\" IS NOT NULL AND \"ProjectAdmissionProjectId\" IS NOT NULL AND \"ProjectAdmissionLifetimeId\" IS NOT NULL\n    AND \"ProjectAdmissionDatabaseProfileId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectAdmissionProjectId\" <> '00000000-0000-0000-0000-000000000000'::uuid\n    AND \"ProjectAdmissionLifetimeId\" <> '00000000-0000-0000-0000-000000000000'::uuid)");
                         });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8709,6 +10381,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DecisionDataPolicyJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("ExecutorDisplayName")
                         .IsRequired()
@@ -8794,10 +10469,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
 
                     b.HasIndex("WorkflowId", "WorkflowVersionId");
 
-                    b.ToTable("process_runtime_step_assignments", (string)null);
+                    b.ToTable("process_runtime_step_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_process_runtime_step_assignments_decision_policy", "\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND 32768");
+                        });
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8863,7 +10542,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_runtime_steps", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b =>
+                {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uuid");
 
@@ -8920,7 +10600,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.ToTable("process_strategy_result_receipts", (string)null);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", "Id")
@@ -8934,7 +10615,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionCreateReceiptRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionCreateReceiptRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", null)
                         .WithMany()
                         .HasForeignKey("DefinitionId", "DefinitionRevision")
@@ -8943,7 +10625,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasConstraintName("FK_LlmChats_CreateReceipt_OriginalRevision");
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRevisionRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", null)
                         .WithMany()
                         .HasForeignKey("DefinitionId")
@@ -8951,7 +10634,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionTagRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatDefinitionRow", null)
                         .WithMany()
                         .HasForeignKey("DefinitionId")
@@ -8959,7 +10643,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatInvocationRecordRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", null)
                         .WithMany()
                         .HasForeignKey("OperationId")
@@ -8967,7 +10652,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatMessageRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatTranscriptRow", null)
                         .WithMany()
                         .HasForeignKey("ConversationId")
@@ -8975,7 +10661,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationEventRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", null)
                         .WithMany()
                         .HasForeignKey("OperationId")
@@ -8983,7 +10670,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatOperationRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities.LlmChatConversationRow", null)
                         .WithMany()
                         .HasForeignKey("ConversationId")
@@ -8991,7 +10679,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryCheckpointRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryCheckpointRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -8999,7 +10688,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryDetailRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryDetailRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9013,7 +10703,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9033,7 +10724,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryHostLeaseRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryHostLeaseRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9041,7 +10733,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOutboxRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9049,7 +10742,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOwnerRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryOwnerRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryEntryRow", null)
                         .WithMany()
                         .HasForeignKey("EntryId", "PartitionId")
@@ -9065,7 +10759,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyAuditRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyAuditRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9073,7 +10768,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPolicyRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9081,7 +10777,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistorySourceRow", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistorySourceRow", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9089,7 +10786,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryStorageIdentity", b => {
+            modelBuilder.Entity("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryStorageIdentity", b =>
+                {
                     b.HasOne("CanDoItAll.AgentFramework.ProviderHistory.Persistence.HistoryPartitionRow", null)
                         .WithMany()
                         .HasForeignKey("PartitionId")
@@ -9097,7 +10795,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", "ProviderProfileId")
@@ -9105,7 +10804,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderImport", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderImport", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderImport", "ProviderProfileId")
@@ -9119,7 +10819,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderInvocationRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderInvocationRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderSharePublication", null)
                         .WithMany()
                         .HasForeignKey("PublicationId", "ProviderProfileId")
@@ -9128,7 +10829,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderSource", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.ProviderManagement.SharedProviderSource", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Security.SecretRecord", null)
                         .WithMany()
                         .HasForeignKey("ApiTokenSecretId")
@@ -9136,7 +10838,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointPayloadEntity", null)
                         .WithMany()
                         .HasForeignKey("ParentCheckpointId")
@@ -9151,7 +10854,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasConstraintName("FK_WfBackendCheckpointPayloads_Sessions");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowRunRecordEntity", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowBackendCheckpointSessionEntity", "RunId")
@@ -9160,7 +10864,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasConstraintName("FK_AF_WfCheckpointSessions_Runs");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9172,7 +10877,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionHeadRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowDefinitionRecord", null)
                         .WithMany()
                         .HasForeignKey("VersionId")
@@ -9180,7 +10886,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestBoundaryEntity", "RequestId")
@@ -9189,7 +10896,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasConstraintName("FK_AF_WfRequestBoundaries_Requests");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.AgentFramework.WorkflowExternalRequestRecordEntity", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.AgentFramework.WorkflowExternalResponseOperationEntity", "RequestId")
@@ -9205,7 +10913,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .HasConstraintName("FK_AF_WfResponseOperations_Runs");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.CrmAccountConnectionProjectLink", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.CrmHr.CrmAccountConnection", null)
                         .WithMany()
                         .HasForeignKey("AccountConnectionId")
@@ -9219,7 +10928,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.CrmHr.Party", null)
                         .WithMany()
                         .HasForeignKey("ManagerPartyId")
@@ -9244,14 +10954,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignment", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.CrmHr.ProjectPartyAssignment", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", null)
                         .WithMany()
                         .HasForeignKey("PartyOrganizationAffiliationId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptArtifactTag", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9265,7 +10977,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptCompatibilityWarningPreference", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9273,7 +10986,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedConsumer", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9281,7 +10995,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptSupportedProviderModel", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9289,7 +11004,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptTemplateToken", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9297,7 +11013,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptUsageRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9305,7 +11022,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptVersion", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Prompts.PromptVersion", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Prompts.PromptArtifact", null)
                         .WithMany()
                         .HasForeignKey("PromptArtifactId")
@@ -9313,7 +11031,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlanRun", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlanRun", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.SchedulerPlanner.SchedulerPlan", null)
                         .WithMany()
                         .HasForeignKey("PlanId")
@@ -9321,7 +11040,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithOne()
                         .HasForeignKey("CanDoItAll.Modules.Workbench.ProjectNodeBindingRecord", "ProjectObjectId")
@@ -9329,7 +11049,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeLifecycleEventRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithMany()
                         .HasForeignKey("ProjectObjectId")
@@ -9337,7 +11058,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectNodeReferenceRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Workbench.ProjectObjectRecord", null)
                         .WithMany()
                         .HasForeignKey("ProjectObjectId")
@@ -9345,14 +11067,16 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workbench.ProjectWorkAssignmentRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.CrmHr.PartyOrganizationAffiliation", null)
                         .WithMany()
                         .HasForeignKey("PartyOrganizationAffiliationId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b => {
+            modelBuilder.Entity("CanDoItAll.Modules.Workspace.ConnectorCommandAuditRecord", b =>
+                {
                     b.HasOne("CanDoItAll.Modules.Workspace.ConnectorCommandRecord", null)
                         .WithMany()
                         .HasForeignKey("ConnectorCommandId")
@@ -9360,7 +11084,275 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessAcceptedAssignmentSourceEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessPreparedLaunchEntity", null)
+                        .WithMany()
+                        .HasForeignKey("AdmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessCancellationRecoveryEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("FundingBudgetId", "FundingAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_decision_allocations_parent_funding");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ParentBudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_decision_budgets_parent");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "AdmissionCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_decision_budgets_admission");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionChildEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "Generation")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CanonicalMaterialId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "CaptureAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionHeadEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("SharedRunScopeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerRunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "DecisionGeneration")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "AdmissionCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "ReservationCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_decision_refresh_captures_process_runtime_idempote~1");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "SettlementCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_decision_refresh_captures_process_runtime_idempote~2");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCapturePayloadEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshCaptureEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "ReservationCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRefreshDeliveryEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RootRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeIdempotencyEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "AdmissionCommandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_root_budget");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", null)
+                        .WithMany()
+                        .HasForeignKey("CurrentMaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_run_scope_current_material");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_material_scope");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionBudgetAllocationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("BudgetId", "CaptureAllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_process_run_scope_capture_allocation");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeMemberEntity", b =>
+                {
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionMaterialEntity", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_material");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionRunScopeEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_scope");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessDecisionGenerationEntity", null)
+                        .WithMany()
+                        .HasForeignKey("DecisionId", "Generation")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_decision");
+
+                    b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStepAssignmentEntity", null)
+                        .WithMany()
+                        .HasForeignKey("RunId", "StepInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_process_run_scope_member_assignment");
+                });
+
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessDispatchClaimEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
                         .WithMany("Claims")
                         .HasForeignKey("RunId")
@@ -9370,7 +11362,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Navigation("RuntimeState");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeAvailableArtifactSlotEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
                         .WithMany("AvailableArtifactSlots")
                         .HasForeignKey("RunId")
@@ -9380,7 +11373,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Navigation("RuntimeState");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeInputArtifactEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeInputArtifactEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
                         .WithMany("ConnectedInputArtifacts")
                         .HasForeignKey("RunId")
@@ -9390,7 +11384,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Navigation("RuntimeState");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStepEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
                         .WithMany("Steps")
                         .HasForeignKey("RunId")
@@ -9400,7 +11395,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Navigation("RuntimeState");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessStrategyResultReceiptEntity", b =>
+                {
                     b.HasOne("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", "RuntimeState")
                         .WithMany("ResultReceipts")
                         .HasForeignKey("RunId")
@@ -9410,7 +11406,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations {
                     b.Navigation("RuntimeState");
                 });
 
-            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b => {
+            modelBuilder.Entity("CanDoItAll.Processes.Persistence.ProcessRuntimeStateEntity", b =>
+                {
                     b.Navigation("AvailableArtifactSlots");
 
                     b.Navigation("Claims");

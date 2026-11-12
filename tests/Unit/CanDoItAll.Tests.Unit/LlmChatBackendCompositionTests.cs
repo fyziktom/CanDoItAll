@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence;
@@ -122,7 +123,10 @@ public sealed class LlmChatBackendCompositionTests
         services.AddSingleton<IProfileAppDbContextFactory, ProfileAppDbContextFactory>();
         services.AddScoped<DatabaseTransferOwnerSessionRunner>();
         services.AddScoped<ProjectTransferTargetInspectionRunner>();
-        services.AddScoped<DatabaseTransferOperationRunner>();
+        services.AddScoped(provider => DatabaseTransferTestSupport.Create(
+            provider.GetRequiredService<DatabaseTransferOwnerSessionRunner>(),
+            provider.GetRequiredService<IProfileAppDbContextFactory>(),
+            provider.GetRequiredService<ProjectTransferTargetInspectionRunner>()));
         services.AddDbContextFactory<ProviderHistoryDbContext>(builder =>
             builder.UseInMemoryDatabase(databaseName));
         services.AddSingleton<IDatabaseRuntimeState>(

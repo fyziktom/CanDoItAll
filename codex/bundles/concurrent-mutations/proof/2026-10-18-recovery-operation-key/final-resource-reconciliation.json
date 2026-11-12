@@ -1,0 +1,36 @@
+{
+  "outcome": "41 codec/identity regressions and one real governed owner case passed; exact caller operation exclusion captured",
+  "temporaryDeltasPreservedWithoutOwnership": [
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_55928_20261018_175100_801.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\fkpjh4pr.qfc",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\iquasogu.kt0",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\qwrydots.l5y",
+      "family": "shared-temp-directory-entries"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\Microsoft.NET.Workload_7768_20261018_175057_349.log",
+      "family": "anonymous-and-package-temp-files"
+    },
+    {
+      "path": "C:\\Users\\lucys\\AppData\\Local\\Temp\\ryx4p1bz.ulr",
+      "family": "shared-temp-directory-entries"
+    }
+  ],
+  "recordedUtc": "2026-10-18T21:52:25.5953904+00:00",
+  "postgres": [
+    "cditall_primary_67c47aa1d495479495c55deaa4fdeedf|0",
+    "postgres|1"
+  ],
+  "remainingObservedProcesses": [],
+  "databaseNameDelta": []
+}

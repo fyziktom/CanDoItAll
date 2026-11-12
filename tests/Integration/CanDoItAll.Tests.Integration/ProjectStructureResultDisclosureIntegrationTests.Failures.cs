@@ -1,3 +1,4 @@
+using CanDoItAll.Tests.Support;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
@@ -124,7 +125,7 @@ public sealed partial class ProjectStructureResultDisclosureIntegrationTests {
         var saved = await ReadProposalAsync(fixture);
         AssertKnownLookupFailure(saved, project);
         var projects = services.GetRequiredService<ProjectsService>();
-        await projects.DeleteAsync(project.ProjectId);
+        await ProjectLifecycleTestCommands.DeleteAsync(services, project.ProjectId);
         if (recreate) {
             Assert.True((await projects.CreateAsync(project.ProjectId, new() { Name = "Different current project" })).IsSuccess);
             var replacement = (await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(project.ProjectId))!;

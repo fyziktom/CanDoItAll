@@ -1,0 +1,52 @@
+@page "/floating-chat"
+@using CanDoItAll.AgentFramework.UI.Chat
+@using CanDoItAll.Components.OverlayLib
+@using CanDoItAll.Conversations.Components
+@using CanDoItAll.Conversations.Components.Presentation
+
+<PageTitle>Floating chat sandbox</PageTitle>
+<Stack GapScale="LayoutGap.Small" Class="p-4">
+    <PageHeader Title="Floating agent chat" Description="Resize, minimize and restore the real conversation components. Activity changes are simulated." Compact="true" />
+    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+        <Button Text="Using tool" Click="@(() => status = new("Waiting on tool", PresentationTone.Warning))" />
+        <Button Text="Awaiting approval" Click="@(() => status = new("Awaiting approval", PresentationTone.Warning))" />
+        <Button Text="Completed" Click="@(() => status = new("Completed", PresentationTone.Success))" />
+        <Button Text="Long scope" Click="@(() => context = context with { ContextLabel = "Project structure · Research and development planning workspace" })" />
+        <Button Text="Show window" Click="@(() => window.IsVisible = true)" />
+    </Cluster>
+</Stack>
+<div class="floating-chat-preview" data-cda-overlay-container="true">
+    <ConversationFloatingWindow WindowId="floating-chat-preview" TestId="floating-agent-chat-window"
+                                Title="Research agent" Kicker="Active agent chat" Summary="Research and planning specialist"
+                                AriaLabel="Chat with Research agent" Avatar="fixture.Presentation.Header.Avatar"
+                                DefaultWidth="760" DefaultHeight="720" MinWidth="520" MinHeight="420" MaxWidth="1100" MaxHeight="920"
+                                DefaultPlacement="top-left" State="window" StateChanged="@(value => window = value)">
+        <AgentChatSurface Presentation="@(fixture.Presentation with { RunStatus = status })" Navigation="fixture.Navigation"
+                          Intent="fixture.Apply" NavigationIntent="fixture.Navigate">
+            <HeaderContext><AgentConversationContextSurface State="context" Intent="ChangeContext" /></HeaderContext>
+            <HeaderActions>
+                <Button Icon="add_comment" aria-label="New thread" />
+                <Button Icon="terminal" aria-label="Runtime details" />
+            </HeaderActions>
+        </AgentChatSurface>
+    </ConversationFloatingWindow>
+</div>
+
+@code {
+    private readonly AgentChatSandboxFixture fixture = new();
+    private OverlayWindowState window = new();
+    private PresentationBadge status = new("Waiting on tool", PresentationTone.Warning);
+    private AgentConversationContextState context = new(
+        new(Guid.NewGuid(), new(Guid.NewGuid()), Guid.NewGuid(), null, null),
+        "Project structure · Research", true, false, "Following: Research / Canvas", null);
+
+    protected override void OnInitialized() => fixture.SetScenario(AgentChatScenario.Focused);
+
+    private void ChangeContext(AgentConversationContextIntent intent) {
+        var detached = intent.Mode == AgentConversationContextMode.Detached;
+        context = context with {
+            Detached = detached,
+            Affinity = detached ? "Detached from application context" : "Following: Research / Canvas"
+        };
+    }
+}

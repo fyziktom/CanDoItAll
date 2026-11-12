@@ -132,7 +132,7 @@ public sealed partial class ProjectStructureWorkflowAuthorityService {
         if (dispatch.SourceAuthority is { } original) {
             (processObservation as ProjectProcessLaunchAuthorityService
                 ?? throw new InvalidOperationException("Mapped Workflow admission requires the original Process source owner's held policy."))
-                .RequireHeldWorkflowSource(original, held, mutation);
+                .RequireHeldSource(original, held, mutation);
         }
     }
 

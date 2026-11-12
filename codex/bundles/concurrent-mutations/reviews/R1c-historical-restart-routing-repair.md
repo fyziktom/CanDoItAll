@@ -1,0 +1,9 @@
+# Historical restart offline routing repair
+
+Source-only successor to the frozen F30F restart candidate. The first interactive run failed while validating the parent offline service provider, before launching seed A. `AddCanDoItAllApi` registers endpoint metadata and authorization services, but a bare `ServiceCollection` does not supply routing's `EndpointDataSource`. Seed A used the same incomplete composition.
+
+Both parent `WithServicesAsync` and seed `HistoricalSeedChild.RunAsync` now call the normal `AddRouting()` registration immediately before `AddCanDoItAllApi`. This supplies the framework composite endpoint data source. `ValidateOnBuild = true` and `ValidateScopes = true` remain unchanged; the actual Web B/B2 composition, authorization, public owners and test assertions are unchanged. No fake endpoints, omitted services, disabled validation, host startup or production edits are introduced.
+
+Framework source basis: [ASP.NET Core v10.0.0 RoutingServiceCollectionExtensions](https://raw.githubusercontent.com/dotnet/aspnetcore/v10.0.0/src/Http/Routing/src/DependencyInjection/RoutingServiceCollectionExtensions.cs), `AddRouting` delegates to `AddRoutingCore`, which registers the real `CompositeEndpointDataSource` at lines 60–69.
+
+Exact predecessors were copied before editing to the owned ignored `historical-restart-routing-predecessors` directory listed in the successor inventory. Mechanical comparison confirms each source differs only by one added registration line. The old inventory and execution result remain historical evidence. This is not a successful restart result: build, exact two-row discovery and execution remain parent-owned. Counts remain two LiveProcess/HostPlatform Facts; Interactive A+B and Process A+B+B2 are unchanged. No build, test, host, database or main source action was performed for this repair.

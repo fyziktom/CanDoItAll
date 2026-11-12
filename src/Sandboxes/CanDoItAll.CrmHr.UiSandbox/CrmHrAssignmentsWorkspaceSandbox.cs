@@ -123,14 +123,71 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
 
     public ProjectPartyAssignmentRole? AllocationAssignmentRoleFilter { get; private set; }
 
-    public ProjectPartyAssignmentUpsertRequest DraftAssignment { get; private set; } = new();
+    private readonly AssignmentDrafts editorDrafts = new();
+    public ProjectPartyAssignmentUpsertRequest DraftAssignment { get => editorDrafts.Relationship.Draft; private set => editorDrafts.Relationship.Open(value); }
 
-    public ProjectPartyAssignmentUpsertRequest AllocationDraft { get; private set; } = new();
+    public ProjectPartyAssignmentUpsertRequest AllocationDraft { get => editorDrafts.Allocation.Draft; private set => editorDrafts.Allocation.Open(value); }
 
-    public StaffingRequestEditorModel StaffingRequestDraft { get; private set; } = new();
+    public StaffingRequestEditorModel StaffingRequestDraft { get => editorDrafts.Staffing.Draft; private set => editorDrafts.Staffing.Open(value); }
 
-    public WorkspaceTabsIdentity WorkspaceTabsKey => new(SelectedProjectId, AssignmentCounts.TotalCount,
-        AssignmentCounts.AllocationCount, StaffingRequestCount ?? 0, StaffingRequestCount.HasValue);
+    public AssignmentComparisons Comparisons => editorDrafts.Comparisons;
+    public Task CompareAsync(AssignmentEditorKind editor) => Task.CompletedTask;
+    public Task ApplyComparisonAsync() => Task.CompletedTask;
+    public Task UndoComparisonAsync() => Task.CompletedTask;
+    public string? EditingMessage { get; private set; }
+    public bool EditingRequiresAttention => false;
+    public bool RecordsChanged => false;
+    public bool RelationshipDirty => editorDrafts.Relationship.IsDirty;
+    public bool AllocationDirty => editorDrafts.Allocation.IsDirty;
+    public bool StaffingDirty => editorDrafts.Staffing.IsDirty;
+    public bool RelationshipSaveDisabled => !editorDrafts.Relationship.CanSave;
+    public bool AllocationSaveDisabled => !editorDrafts.Allocation.CanSave;
+    public bool StaffingSaveDisabled => !editorDrafts.Staffing.CanSave;
+    public bool WritesDisabled => false;
+    public bool HasUnknownOperation => false;
+    public bool CanDiscardReviewedUnknown => false;
+    public Task DiscardReviewedUnknownAsync() => throw new InvalidOperationException("The local scenario writer has no pending unknown operation.");
+    public Task AssignmentInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input) {
+        editorDrafts.Relationship.Input(input);
+        return Task.CompletedTask;
+    }
+    public Task AllocationInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input) {
+        editorDrafts.Allocation.Input(input);
+        return Task.CompletedTask;
+    }
+    public Task StaffingInputChangedAsync(CanDoItAll.Editing.RecordInput<StaffingField> input) {
+        editorDrafts.Staffing.Input(input);
+        return Task.CompletedTask;
+    }
+    public Task<bool> RequestDiscardAsync(AssignmentEditorKind editor) {
+        Log($"Confirm local sandbox draft discard: {editor}");
+        return Task.FromResult(true);
+    }
+    public Task RefreshRecordsAsync() {
+        RefreshProjectAssignments();
+        RefreshStaffingRequests();
+        RefreshCandidates();
+        RefreshDashboard();
+        Log("Refresh local sandbox records");
+        return Task.CompletedTask;
+    }
+    public Task RefreshSkillCatalogAsync() {
+        Log("Refresh local sandbox skill choices");
+        return Task.CompletedTask;
+    }
+    public Task<bool> ReviewRelationshipPrimaryAsync() => ReviewPrimaryAsync(DraftAssignment);
+    public Task<bool> ReviewAllocationPrimaryAsync() => ReviewPrimaryAsync(AllocationDraft);
+    private Task<bool> ReviewPrimaryAsync(ProjectPartyAssignmentUpsertRequest draft) {
+        var ids = RelationshipAssignments.Concat(AllocationAssignments).Where(row => row.ProjectId == draft.ProjectId &&
+            row.Role == draft.Role && row.NodeKey == draft.NodeKey && row.IsPrimary).Select(row => row.Id).Distinct().Order();
+        draft.PrimaryOriginal = new(draft.ProjectId, SelectedProject?.LifetimeId ?? Guid.Empty, draft.Role, draft.NodeKey,
+            System.Collections.Immutable.ImmutableArray.CreateRange(ids));
+        Log("Review local sandbox primary assignments");
+        return Task.FromResult(true);
+    }
+    public bool HasDisplayed(AssignmentSelectionData data) => !IsLoading(data);
+
+    public WorkspaceTabsIdentity WorkspaceTabsKey => new(SelectedProjectId, SelectedProject?.LifetimeId);
 
     public int? StaffingRequestCount => SelectedProjectId.HasValue ? StaffingRequestTotalCount : null;
 
@@ -278,6 +335,7 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
         }
 
         AddOrUpdateRow(DraftAssignment, isAllocation: false);
+        editorDrafts.Relationship.Rebase(DraftAssignment);
         Log("Save relationship draft");
         return Task.FromResult(true);
     }
@@ -291,6 +349,7 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
         }
 
         AddOrUpdateRow(AllocationDraft, isAllocation: true);
+        editorDrafts.Allocation.Rebase(AllocationDraft);
         Log("Save allocation draft");
         return Task.FromResult(true);
     }
@@ -315,6 +374,7 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
             StaffingRequestDraft.Status, StaffingRequestDraft.Notes));
         RefreshStaffingRequests();
         RefreshDashboard();
+        editorDrafts.Staffing.Rebase(StaffingRequestDraft);
         Log($"Save staffing request: {StaffingRequestDraft.Title}");
         return Task.FromResult(true);
     }
@@ -461,8 +521,8 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
         return Task.CompletedTask;
     }
 
-    public Task DeleteAssignmentAsync(Guid assignmentId)
-    {
+    public Task DeleteAssignmentAsync(ProjectPartyAssignmentDetail assignment) {
+        var assignmentId = assignment.Id;
         if (SelectedProjectId.HasValue)
         {
             assignmentsByProject[SelectedProjectId.Value].RemoveAll(row => row.Detail.Id == assignmentId);
@@ -473,8 +533,8 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
         return Task.CompletedTask;
     }
 
-    public Task DeleteAllocationAsync(Guid assignmentId)
-    {
+    public Task DeleteAllocationAsync(ProjectPartyAssignmentDetail assignment) {
+        var assignmentId = assignment.Id;
         if (SelectedProjectId.HasValue)
         {
             assignmentsByProject[SelectedProjectId.Value].RemoveAll(row => row.Detail.Id == assignmentId);
@@ -485,8 +545,8 @@ public sealed class CrmHrAssignmentsSandboxView(CrmHrSandboxPartyStore partyStor
         return Task.CompletedTask;
     }
 
-    public Task DeleteStaffingRequestAsync(Guid staffingRequestId)
-    {
+    public Task DeleteStaffingRequestAsync(StaffingRequestItemModel request) {
+        var staffingRequestId = request.Id;
         if (SelectedProjectId.HasValue)
         {
             GetStaffingRequests(SelectedProjectId.Value).RemoveAll(item => item.Id == staffingRequestId);

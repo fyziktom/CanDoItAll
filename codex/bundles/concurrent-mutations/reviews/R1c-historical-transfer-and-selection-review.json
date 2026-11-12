@@ -1,0 +1,1257 @@
+{
+  "schemaVersion": 1,
+  "status": "IndependentSourceReviewOnly",
+  "owner": "/root/ui_validation_architecture",
+  "mapPath": ".artifacts/concurrent-mutations/candidates/historical-transfer-preflight/guarded-transfer-map.json",
+  "mapSha256": "5B913F0CF4D325F8A5E29F3C0AB127910D676C50E2D54A814B3C3C998E9789B4",
+  "planSha256": "C33E5330A13975B15A5AF7A9563892215EDEB353483810930C14B1A38CC26BBD",
+  "requiredPaths": 94,
+  "sourceAndMainPredecessorMismatches": 0,
+  "renderingSourceLfMismatches": 0,
+  "wholeRenderingRegisterTransferForbidden": true,
+  "c3ScratchSha256": "E7EBF686B7489C9792FB9C28C6C759ED262E51E0E7A735C083771C1C373CB428",
+  "chain": [
+    {
+      "role": "catalog",
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-catalog-basis-source-inventory.json",
+      "sha256": "DA5365EC84DBFF640CD4F817BF58806BD61DCC86D97BEDF768B18E3C749C7536",
+      "inputCount": 76
+    },
+    {
+      "role": "scanner",
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-pending-scan-inventory.json",
+      "sha256": "B2EF1589B06586EF660DC3C6F5DB7B4A6C6FBF62EDC7D5D86C8467D55DEA577D",
+      "inputCount": 8
+    },
+    {
+      "role": "postgres",
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-catalog-basis-postgresql-source-inventory.json",
+      "sha256": "7E8BD5632A7516EC9B96B105EA9F8B0435F09364F1F9D75A37FCFF926F8E5721",
+      "inputCount": 3
+    },
+    {
+      "role": "http",
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-http-source-inventory.json",
+      "sha256": "AA6A956A88EB1D011C8DC514F2F217C25E1E7FB7558E93C7614C40252F42CF83",
+      "inputCount": 4
+    },
+    {
+      "role": "restart",
+      "path": "codex/bundles/concurrent-mutations/reviews/R1c-historical-restart-source-inventory.json",
+      "sha256": "F30FBCE0147771A8CCDC019F18A0274203BEF649337E2CD1EEE1586802EDF3C2",
+      "inputCount": 10
+    }
+  ],
+  "ordinaryRows": 133,
+  "newHistoricalOrdinaryRows": 25,
+  "ordinaryLanes": [
+    {
+      "family": "Unit",
+      "project": "tests/Unit/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentFramework.AgentHistoricalReceiptDeferredOwnerTests.|FullyQualifiedName~CanDoItAll.Tests.Unit.AgentHistoricalReceiptReviewContractTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 43.0,
+      "expectedRuntime": 43.0
+    },
+    {
+      "family": "Integration",
+      "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.|FullyQualifiedName~CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_interactive_four_receipts_use_two_catalog_decodes_and_preserve_final_SQL_target_fence|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_Process_four_receipts_select_actual_original_source_and_use_three_or_two_catalog_decodes|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_catalog_change_after_real_receipt_and_unexpected_source_after_seal_discard_the_entire_page|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_real_receipt_cancellation_drains_and_concurrent_pages_do_not_share_catalog_basis_or_claims|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_HTTP_pages_real_original_receipts_through_deferred_DI_and_enforces_current_read_policy|FullyQualifiedName=CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_HTTP_validates_authentication_bounded_body_and_lossless_cursor_before_owner_resolution)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 40.0,
+      "expectedRuntime": 40.0
+    },
+    {
+      "family": "Components",
+      "project": "tests/Components/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj",
+      "filter": "(FullyQualifiedName~CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.)&Category!=LongRunning&Category!=Playwright&Category!=LiveProcess&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true",
+      "expectedDiscovery": 50.0,
+      "expectedRuntime": 50.0
+    }
+  ],
+  "classes": [
+    {
+      "family": "Unit",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "4F58D6441C67DBE1C96C3BB1C41FCAED82B1AE9C2010FB18BCF9C64ED135B4CC",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "37935B26A8277A6C00CE851AB6E5C778C580365A32DAB45212FAFDBE2CA45B69",
+          "factMethods": 15,
+          "theoryMethods": 1,
+          "rows": 19.0
+        },
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.Revalidation.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "1C99AAFCD95558762A404553E25F53DC5251B05DAA0CEF6E3782B3117180D4B0",
+          "factMethods": 2,
+          "theoryMethods": 4,
+          "rows": 18.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Historical_read_preserves_original_admission_and_requires_current_source_catalog_and_host_fences",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Historical_read_requires_explicit_capability_and_never_falls_back_to_ordinary_authority",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Project_structure_mutation_comes_from_agent_configuration_not_ui_hint",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Project_structure_write_configuration_grants_mutation",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Project_structure_narrow_mutation_configuration_grants_mutation_authority",
+          "attributes": [
+            "Theory",
+            "InlineData(true, false, false, false)",
+            "InlineData(false, true, false, false)",
+            "InlineData(false, false, true, false)",
+            "InlineData(false, false, false, true)"
+          ],
+          "rows": 4,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Agent_without_project_grant_is_denied",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Forged_project_scope_is_rejected",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Inactive_agent_cannot_receive_authority",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Organization_scope_must_belong_to_the_current_profile",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Agents_surface_admits_mutation_for_tool_enabled_agent",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Agents_surface_keeps_tool_disabled_agent_read_only",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Agents_surface_rejects_published_workspace_scope",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Authority_provider_implementations_remain_with_source_owning_modules",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Source_authority_providers_are_registered_by_their_owning_modules",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Duplicate_source_authority_provider_keys_fail_deterministically",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Projects_portfolio_without_selection_remains_read_only_sandboxed",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Process_sources_preserve_durable_project_authority",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Process_sources_keep_global_surfaces_read_only_and_sandboxed",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.A_saved_sandbox_scope_is_still_rejected_as_a_new_UI_scope_claim",
+          "attributes": [
+            "Theory",
+            "InlineData(SandboxSource.Agents)",
+            "InlineData(SandboxSource.Projects)",
+            "InlineData(SandboxSource.Processes)",
+            "InlineData(SandboxSource.LiveProcesses)",
+            "InlineData(SandboxSource.Unknown)"
+          ],
+          "rows": 5,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Restored_captured_sandbox_authority_revalidates_without_publishing_a_new_UI_claim",
+          "attributes": [
+            "Theory",
+            "InlineData(SandboxSource.Agents)",
+            "InlineData(SandboxSource.Projects)",
+            "InlineData(SandboxSource.Processes)",
+            "InlineData(SandboxSource.LiveProcesses)",
+            "InlineData(SandboxSource.Unknown)"
+          ],
+          "rows": 5,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Agents_revalidation_uses_current_tool_permission_and_keeps_the_original_grant_unchanged",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Revalidation_rejects_a_changed_original_profile_or_generation",
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ],
+          "rows": 2,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Selected_project_sources_revalidate_the_exact_scope_and_current_read_grant",
+          "attributes": [
+            "Theory",
+            "InlineData(0)",
+            "InlineData(1)",
+            "InlineData(2)",
+            "InlineData(3)"
+          ],
+          "rows": 4,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.CanonicalAgentExecutionAuthorityResolverTests.Revalidation_rejects_a_retargeted_request_and_a_changed_canonical_scope",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        }
+      ],
+      "expectedDiscovery": 39.0,
+      "expectedRuntime": 39.0,
+      "newHistoricalRows": 2.0
+    },
+    {
+      "family": "Unit",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.AgentFramework.AgentHistoricalReceiptDeferredOwnerTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptDeferredOwnerTests.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "6FE7B4B10C94859D6A9EF1B2CE643F1461F351339ED7CC981DFABE28DE954BC6",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentHistoricalReceiptDeferredOwnerTests.Current_profile_construction_does_not_resolve_historical_graph_and_uninitialized_read_refuses_before_delegate",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentFramework.AgentHistoricalReceiptDeferredOwnerTests.Native_orchestrator_construction_does_not_resolve_historical_graph_and_reads_only_after_explicit_initialization",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 2.0,
+      "expectedRuntime": 2.0,
+      "newHistoricalRows": 2.0
+    },
+    {
+      "family": "Unit",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Unit.AgentHistoricalReceiptReviewContractTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptReviewContractTests.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "73D49339BD40D05C3FF83C5BB6AE7C8E859D599A39C23FB6FCCAF67002F3348C",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentHistoricalReceiptReviewContractTests.Historical_review_captures_bounded_ephemeral_observations_without_rebinding_original_admission",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Unit.AgentHistoricalReceiptReviewContractTests.Historical_claim_validates_before_owner_read_and_retires_after_failure_or_drained_cancellation",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 2.0,
+      "expectedRuntime": 2.0,
+      "newHistoricalRows": 2.0
+    },
+    {
+      "family": "Integration",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests",
+      "classAttributes": [
+        "Trait(\"Category\", \"FileSystemPortability\")"
+      ],
+      "files": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Dispositions.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "B0A245C3D9B7ED700BB98711BCCE0472833803FA08147EB27B0CA7077F50ECCD",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "5E66B240547BC771440E9B75E9F7762E5E3311637CD59EB5D00EEB4D51FC4268",
+          "factMethods": 2,
+          "theoryMethods": 1,
+          "rows": 4.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Historical.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "3CD0723A1E0F263C8465F9FCCA2C2868F294601413BD73D616D6F609F375A49F",
+          "factMethods": 6,
+          "theoryMethods": 0,
+          "rows": 6.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Origin.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "995127AC4101027BF6D42323FEF791AD3722993187669E690BE2ED57DEE8890A",
+          "factMethods": 3,
+          "theoryMethods": 0,
+          "rows": 3.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Receipts.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "5E753C493262FA8B9EB51870D07A525CDD7A10F918A51077059BAC2C814AD5DA",
+          "factMethods": 6,
+          "theoryMethods": 1,
+          "rows": 8.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentToolEffectJournalIntegrationTests.Slices.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "5722A65EFC0D748EB206DFA0A1FF3814DDD5931539ACB39F05F8B008309B6828",
+          "factMethods": 6,
+          "theoryMethods": 0,
+          "rows": 6.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Cancelled_reconciliation_preserves_cancelled_disposition_and_never_dispatches",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Prepared_work_is_a_receipt_noop_while_native_uncertainty_requires_reconciliation",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Readonly_lease_rejects_every_dispatch_batch_provider_and_approval_entrypoint",
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ],
+          "rows": 2,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Interrupted_reconciliation_requires_exact_nonterminal_effect_session",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Independent_journals_serialize_reconciliation_and_preserve_original_intent",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_pages_preserve_original_generation_and_reach_later_intents_without_workspace_coordination_or_writes",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cursor_and_current_read_failures_disclose_no_snapshot_or_successor",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_final_witness_refuses_owner_changes_including_same_revision_byte_replacement",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_cancellation_drains_owner_reads_and_distinguishes_owner_outage_from_read_policy_failure",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_storage_refuses_pending_incomplete_and_oversized_files_without_recovery_or_initialization",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Historical_chat_projection_scans_long_history_without_materializing_messages_and_refuses_oversized_tokens",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_origin_segment_is_idempotent_and_only_original_live_lease_can_append",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_approvals_bind_original_proposal_without_any_sdk_checkpoint",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Effect_provider_dispatch_preserves_schema_five_and_exact_native_response_fences",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Owner_confirmation_preserves_original_result_disclosure_and_dispatch_claim",
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ],
+          "rows": 2,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Confirmed_receipt_is_terminal_and_summary_never_discloses_cached_detail",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Receipt_miss_including_closed_absence_never_authorizes_retry_or_clears_uncertainty",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Missing_duplicate_malformed_and_failing_receipt_owners_fail_without_invented_acceptance",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Current_read_revocation_before_or_during_lookup_denies_historical_disclosure",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Reconciliation_cannot_change_original_binding_after_owner_observation",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Journal_commit_ack_loss_or_capacity_failure_preserves_exact_intent_and_known_commitment",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Reconciliation_slice_counts_misses_and_missing_readers_with_a_four_candidate_limit",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Durable_cursor_wraps_without_starvation_and_survives_append_restart_and_old_schema_five",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Single_checkpoint_rejects_cancellation_state_approval_and_journal_races_without_dispatch",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Partial_failure_or_cancel_preserves_observed_commitment_and_only_persisted_cursor_progress",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Pinned_claims_and_batched_checkpoint_bound_full_run_decodes_independent_of_candidate_count",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.AgentToolEffectJournalIntegrationTests.Maximum_journal_slice_bounds_evidence_response_bytes_and_records_real_store_cost",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        }
+      ],
+      "expectedDiscovery": 29.0,
+      "expectedRuntime": 29.0,
+      "newHistoricalRows": 6.0
+    },
+    {
+      "family": "Integration",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/HistoricalPendingPublicationScanTests.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "D3AB07DE0CB6ADBC846D770D1BA37B1838AFC8E91A823046F5F3BFE220514B55",
+          "factMethods": 5,
+          "theoryMethods": 0,
+          "rows": 5.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Flat_sessions_beyond_the_former_entry_limit_remain_readable_without_writes",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Only_exact_selected_publication_names_refuse_a_large_session_directory",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Final_scan_detects_publication_of_an_absent_semantic_journal_after_payload_read",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.Caller_cancellation_during_nonmatching_enumeration_propagates_and_the_next_read_is_usable",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Runtime.HistoricalPendingPublicationScanTests.One_elapsed_budget_covers_all_read_phases_and_refuses_a_page_without_a_successor",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 5.0,
+      "expectedRuntime": 5.0,
+      "newHistoricalRows": 5.0
+    },
+    {
+      "family": "Integration",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.HistoricalBasis.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "CC77D01DE672F28DCAEA7B68616492A7A4D337F21BBEC24DEFF26B682FEDEAAC",
+          "factMethods": 4,
+          "theoryMethods": 0,
+          "rows": 4.0
+        },
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/ProcessCatalogAuthorityPersistenceTests.HistoricalHttp.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "01D97000A3647388910252CFBACC15A58C362502E18456BF4DD894B6DCDEB28D",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_interactive_four_receipts_use_two_catalog_decodes_and_preserve_final_SQL_target_fence",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_Process_four_receipts_select_actual_original_source_and_use_three_or_two_catalog_decodes",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_catalog_change_after_real_receipt_and_unexpected_source_after_seal_discard_the_entire_page",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_real_receipt_cancellation_drains_and_concurrent_pages_do_not_share_catalog_basis_or_claims",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_HTTP_pages_real_original_receipts_through_deferred_DI_and_enforces_current_read_policy",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.Processes.ProcessCatalogAuthorityPersistenceTests.Historical_HTTP_validates_authentication_bounded_body_and_lossless_cursor_before_owner_resolution",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 6.0,
+      "expectedRuntime": 6.0,
+      "newHistoricalRows": 6.0
+    },
+    {
+      "family": "Components",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests",
+      "classAttributes": [],
+      "files": [
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.HistoricalReview.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "87BFEC56E20AB195676094B4D0B215C98219913ABC404FF27909642F943CB3E2",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        },
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "A807ADA905CA5A546645ACDFEB8171EEE9C0FFF76611CC679A33691CB61B3406",
+          "factMethods": 13,
+          "theoryMethods": 3,
+          "rows": 26.0
+        },
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.ActiveRun.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "2FEA3481F10F695A8C5C113E73D617754CEEEBE5CD84C690DB4963A194D4D033",
+          "factMethods": 1,
+          "theoryMethods": 0,
+          "rows": 1.0
+        },
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.Recovery.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "4AC4E30C7EC3648D3150FC09717739852BE7B3B813246F0B8DC63D4B48D2151F",
+          "factMethods": 0,
+          "theoryMethods": 4,
+          "rows": 16.0
+        },
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentChatPanelResponsivenessTests.NewThread.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "FF81834111E93A189396E54583AB6FFA01EF47967AB138091826CE1F4EA7EC13",
+          "factMethods": 1,
+          "theoryMethods": 0,
+          "rows": 1.0
+        },
+        {
+          "path": "tests/Components/CanDoItAll.Tests.Components/AgentEffectContinuationSurfaceTests.cs",
+          "effectiveSource": "CurrentMain",
+          "sha256": "EEF051EF99C58A0E96AD3521055696BE6B597BE7FF1F4E1B631604D6F7D0F571",
+          "factMethods": 4,
+          "theoryMethods": 0,
+          "rows": 4.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Saved_receipt_review_retains_original_selection_after_detail_failure_and_pages_only_on_explicit_intent",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Saved_receipt_review_preserves_uncertainty_and_discards_late_results_outside_its_current_view",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Full_page_chat_start_refusal_restores_draft_and_remains_visible_after_same_target_refresh",
+          "attributes": [
+            "Theory",
+            "InlineData(AgentChatSessionBlockReason.UnresolvedEffects, false)",
+            "InlineData(AgentChatSessionBlockReason.UnresolvedEffects, true)",
+            "InlineData(AgentChatSessionBlockReason.PendingApproval, false)",
+            "InlineData(AgentChatSessionBlockReason.PendingApproval, true)",
+            "InlineData(AgentChatSessionBlockReason.ActiveExecution, false)",
+            "InlineData(AgentChatSessionBlockReason.ActiveExecution, true)"
+          ],
+          "rows": 6,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.A_stale_or_foreign_chat_start_refusal_cannot_rewrite_the_current_composer",
+          "attributes": [
+            "Theory",
+            "InlineData(false, false)",
+            "InlineData(true, false)",
+            "InlineData(false, true)"
+          ],
+          "rows": 3,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Same_thread_catalog_refresh_preserves_completion_and_releases_the_next_send",
+          "attributes": [
+            "Theory",
+            "InlineData(false, false)",
+            "InlineData(false, true)",
+            "InlineData(true, false)",
+            "InlineData(true, true)"
+          ],
+          "rows": 4,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_send_reloads_and_selects_the_exact_persisted_run",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_send_does_not_reload_a_run_from_another_thread",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_send_keeps_the_current_thread_when_reload_returns_another_thread",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_approval_reloads_and_selects_the_exact_persisted_run",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_send_does_not_publish_reload_message_after_session_selection_supersedes_reload",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Successful_send_does_not_apply_after_same_agent_session_aba_selection",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_send_does_not_apply_after_same_agent_session_aba_selection",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Failed_approval_does_not_apply_after_same_agent_session_aba_selection",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Send_releases_the_ui_event_while_the_post_run_workspace_refresh_is_pending",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Successful_send_workspace_reload_failure_hides_secret_and_does_not_restore_draft",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Send_captures_registry_context_before_workspace_execution",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Approval_releases_the_ui_event_while_the_post_run_workspace_refresh_is_pending",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Reopened_panel_without_the_external_run_reloads_once_when_it_completes",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.First_live_execution_loads_its_run_once_and_tool_activity_stays_busy",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Explicit_recovery_preserves_the_composer_and_reads_the_original_run_before_accepting_its_state",
+          "attributes": [
+            "Theory",
+            "InlineData(ExecutionState.Completed, false)",
+            "InlineData(ExecutionState.Completed, true)",
+            "InlineData(ExecutionState.WaitingOnTool, false)",
+            "InlineData(ExecutionState.Failed, false)"
+          ],
+          "rows": 4,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Recovery_or_readback_failure_retains_the_warning_and_draft_without_exposing_diagnostics",
+          "attributes": [
+            "Theory",
+            "InlineData(false)",
+            "InlineData(true)"
+          ],
+          "rows": 2,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Late_recovery_cannot_replace_a_new_thread_or_profile_view",
+          "attributes": [
+            "Theory",
+            "InlineData(RecoveryDetach.SwitchThread, false)",
+            "InlineData(RecoveryDetach.SwitchAwayAndBack, false)",
+            "InlineData(RecoveryDetach.Dispose, false)",
+            "InlineData(RecoveryDetach.ProfileBeforeCompletion, false)",
+            "InlineData(RecoveryDetach.ProfileDuringReadback, false)",
+            "InlineData(RecoveryDetach.SwitchThread, true)",
+            "InlineData(RecoveryDetach.ProfileBeforeCompletion, true)"
+          ],
+          "rows": 7,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Active_work_pending_approval_or_a_new_profile_blocks_recovery_before_dispatch",
+          "attributes": [
+            "Theory",
+            "InlineData(ExecutionState.Running)",
+            "InlineData(ExecutionState.WaitingOnTool)",
+            "InlineData(ExecutionState.Failed)"
+          ],
+          "rows": 3,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Floating_new_thread_focuses_the_created_chat_window",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Native_recovery_distinguishes_known_commitment_from_uncertainty_and_access_denial",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Native_recovery_keeps_original_draft_and_profile_generation_fence",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Voice_and_scenario_surfaces_require_actual_assistant_output",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Components.AgentFramework.AgentChatPanelResponsivenessTests.Awaiting_continuation_never_renders_as_approval_or_success",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": false
+        }
+      ],
+      "expectedDiscovery": 50.0,
+      "expectedRuntime": 50.0,
+      "newHistoricalRows": 2.0
+    },
+    {
+      "family": "LiveProcess",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests",
+      "classAttributes": [
+        "Trait(\"Category\", \"LiveProcess\")",
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "files": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartTests.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "903755EE8697A7BA7D1CCC0764BBF3C874BA679FD40D4D75A27166C4EE999182",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_interactive_receipts_survive_actual_seed_exit_and_Web_restart_without_resuming_the_original_run",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_Process_receipts_survive_expired_claim_and_restart_but_refuse_reactivated_dataset_in_new_Web_process",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 2.0,
+      "expectedRuntime": 2.0,
+      "newHistoricalRows": 2.0
+    }
+  ],
+  "separateLiveProcess": [
+    {
+      "family": "LiveProcess",
+      "fullyQualifiedClass": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests",
+      "classAttributes": [
+        "Trait(\"Category\", \"LiveProcess\")",
+        "Trait(\"Category\", \"HostPlatform\")"
+      ],
+      "files": [
+        {
+          "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentHistoricalReceiptRestartTests.cs",
+          "effectiveSource": "GuardedTransferMap",
+          "sha256": "903755EE8697A7BA7D1CCC0764BBF3C874BA679FD40D4D75A27166C4EE999182",
+          "factMethods": 2,
+          "theoryMethods": 0,
+          "rows": 2.0
+        }
+      ],
+      "methods": [
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_interactive_receipts_survive_actual_seed_exit_and_Web_restart_without_resuming_the_original_run",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        },
+        {
+          "fullyQualifiedName": "CanDoItAll.Tests.Integration.AgentHistoricalReceiptRestartTests.Historical_Process_receipts_survive_expired_claim_and_restart_but_refuse_reactivated_dataset_in_new_Web_process",
+          "attributes": [
+            "Fact"
+          ],
+          "rows": 1,
+          "newHistoricalFile": true
+        }
+      ],
+      "expectedDiscovery": 2.0,
+      "expectedRuntime": 2.0,
+      "newHistoricalRows": 2.0
+    }
+  ],
+  "optionalBrowser": {
+    "inventoryPath": "codex/bundles/concurrent-mutations/reviews/R1c-send-affordance-browser-source-inventory.json",
+    "inventorySha256": "4D06F6D410B9BE02F0E0A1DDAAF2ABE985C86C447D0A8DB1318857BC303010E5",
+    "expectedDiscovery": 1,
+    "filter": "FullyQualifiedName=CanDoItAll.Tests.Playwright.AgentChatSendAffordanceBrowserTests.Unconfirmed_outcome_blocks_Send_without_disabling_draft_editing",
+    "expectedRuntime": 1,
+    "files": [
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/AgentChatSandboxFixture.cs",
+        "sha256": "28AE775CFDF1D9415BBDBC190F2D74E02B4F74B8962EAB5ED4AE6E3DEE3314C4",
+        "sourceMatches": true,
+        "expectedMainBaseSha256": "9E3B169B15267F3B199C0BE397344BCA25E5F8553E1BDEC049A7D20C960A4A16",
+        "currentMainSha256": "9E3B169B15267F3B199C0BE397344BCA25E5F8553E1BDEC049A7D20C960A4A16",
+        "mainBaseMatches": true,
+        "overlapWithRequired": false
+      },
+      {
+        "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AgentChatSpecimen.razor",
+        "sha256": "A45F98741B9B68081330CC7D2AA3B8F456B19E7B6DE6A8C3531AE322DD202907",
+        "sourceMatches": true,
+        "expectedMainBaseSha256": "2068684A7CAE89E8A3C098148AEB92FE949363241E2C516303BBDC2A16E97985",
+        "currentMainSha256": "2068684A7CAE89E8A3C098148AEB92FE949363241E2C516303BBDC2A16E97985",
+        "mainBaseMatches": true,
+        "overlapWithRequired": false
+      },
+      {
+        "path": "tests/Playwright/CanDoItAll.Tests.Playwright/IndependentProviderSandboxHost.cs",
+        "sha256": "28D6A4036429F5398515295045B2959D22FDC8FCFDF9DD6043D301F2F7FCCD9B",
+        "sourceMatches": true,
+        "expectedMainBaseSha256": "2C604BD9FDC4551E400C2EE88F11F83151BD425D53A102F2C8B3C76136933D3B",
+        "currentMainSha256": "2C604BD9FDC4551E400C2EE88F11F83151BD425D53A102F2C8B3C76136933D3B",
+        "mainBaseMatches": true,
+        "overlapWithRequired": false
+      },
+      {
+        "path": "tests/Playwright/CanDoItAll.Tests.Playwright/AgentChatSendAffordanceBrowserTests.cs",
+        "sha256": "5F9FAE47469CE0C40869687B993138E220986232698EF2BE18369866736E5575",
+        "sourceMatches": true,
+        "expectedMainBaseSha256": null,
+        "currentMainSha256": null,
+        "mainBaseMatches": true,
+        "overlapWithRequired": false
+      }
+    ]
+  },
+  "execution": false,
+  "limits": [
+    "Counts are AST attribute accounting, not fresh discovery.",
+    "Ordinary sources are the effective map plus unchanged current main partials; do not transfer arbitrary managed files.",
+    "LiveProcess two rows require separately reviewed 600-second runner and resource closure.",
+    "Browser one row is separate and optional; synthetic sandbox does not prove owner receipts.",
+    "C3 registration and producer activation remain excluded.",
+    "Aggregate run/chat-byte memory capacity remains unqualified."
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "status": "Source frozen, unbuilt and unexecuted",
+  "owner": "agent_process_architecture",
+  "retainedRun": {
+    "path": "C:/repositories/CanDoItAll/.artifacts/concurrent-mutations/validation/r1c-historical-candidate-validation/historical-unit.result.json",
+    "sha256": "C11F24A0F27C8B0A844FE1D016467FF7B15F70D7C56CEEB0E8257FBB803480D0",
+    "executed": 43,
+    "passed": 40,
+    "failed": 3
+  },
+  "existingFactsInEditedFiles": 4,
+  "addedFacts": 0,
+  "unchangedParentSelectionExpected": 43,
+  "facts": [
+    "Historical_read_preserves_original_admission_and_requires_current_source_catalog_and_host_fences",
+    "Historical_read_requires_explicit_capability_and_never_falls_back_to_ordinary_authority",
+    "Historical_review_captures_bounded_ephemeral_observations_without_rebinding_original_admission",
+    "Historical_claim_validates_before_owner_read_and_retires_after_failure_or_drained_cancellation"
+  ],
+  "ownershipRecords": [
+    {
+      "path": ".artifacts/concurrent-mutations/candidates/historical-unit-fixture-repair-ownership.json",
+      "sha256": "176A93994F7752E738C353F8B137BA02721751C4E7561E36863B6B811D36482A"
+    },
+    {
+      "path": ".artifacts/concurrent-mutations/candidates/historical-unit-observer-repair-ownership.json",
+      "sha256": "FEE398B7663C80D5B03D7B88BC49BF150FCBDB2FD3580CC09DE2A1BAAA1FAA1B"
+    }
+  ],
+  "inputs": [
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs",
+      "sha256": "6DD880E1C5CB30291FAE066F8CA32FBDF2490E2CFC349183852979EAA7B11AE6",
+      "managedPredecessorSha256": "4F58D6441C67DBE1C96C3BB1C41FCAED82B1AE9C2010FB18BCF9C64ED135B4CC",
+      "mainPredecessorSha256": "4F58D6441C67DBE1C96C3BB1C41FCAED82B1AE9C2010FB18BCF9C64ED135B4CC",
+      "savedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-unit-fixture-repair-predecessors\\tests\\Unit\\CanDoItAll.Tests.Unit\\CanonicalAgentExecutionAuthorityResolverTests.HistoricalRead.cs"
+    },
+    {
+      "path": "tests/Unit/CanDoItAll.Tests.Unit/AgentHistoricalReceiptReviewContractTests.cs",
+      "sha256": "BBDD3836F59BE77D5E30B61C065D0771BFEE8554490EF036F85E9ACB691F5405",
+      "managedPredecessorSha256": "73D49339BD40D05C3FF83C5BB6AE7C8E859D599A39C23FB6FCCAF67002F3348C",
+      "mainPredecessorSha256": "73D49339BD40D05C3FF83C5BB6AE7C8E859D599A39C23FB6FCCAF67002F3348C",
+      "savedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-unit-fixture-repair-predecessors\\tests\\Unit\\CanDoItAll.Tests.Unit\\AgentHistoricalReceiptReviewContractTests.cs"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CanonicalAgentHistoricalReceiptReadObserver.cs",
+      "sha256": "78FE9865EFE18FD30F1B1845D607199783435F8526BA548E7F9F608D50F17395",
+      "managedPredecessorSha256": "6546944DF538E26BCE060F55D0A5FFABBADB1D1D782DB86D1F2A83BDC9911B74",
+      "mainPredecessorSha256": "6546944DF538E26BCE060F55D0A5FFABBADB1D1D782DB86D1F2A83BDC9911B74",
+      "savedPredecessorImage": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\candidates\\historical-unit-fixture-repair-predecessors\\src\\Modules\\CanDoItAll.Modules.AgentFramework\\Services\\CanonicalAgentHistoricalReceiptReadObserver.cs"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/R1c-historical-unit-repair-source.md",
+      "sha256": "EBE519952A11EC311B8444C8641ECBE09F8C7F5FF18B64AA33596A1F043DF7C6",
+      "managedPredecessorSha256": null,
+      "mainPredecessorSha256": null,
+      "savedPredecessorImage": null
+    }
+  ]
+}

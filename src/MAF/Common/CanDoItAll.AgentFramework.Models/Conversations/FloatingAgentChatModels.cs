@@ -1033,7 +1033,8 @@ public enum ActiveAgentChatRunState
 {
     Idle,
     Running,
-    AwaitingApproval
+    AwaitingApproval,
+    AwaitingContinuation
 }
 
 public sealed record AgentChatIdentity
@@ -1075,9 +1076,19 @@ public sealed record ActiveAgentChat(
     DateTimeOffset LastActivityUtc,
     DateTimeOffset? HiddenAtUtc)
 {
+    public bool HasUnsentDraft { get; init; }
+
+    public AgentExecutionActivityStreamId? ActivityStreamId { get; init; }
+
+    public Guid? ExecutionRunId { get; init; }
+
+    public long ExecutionRevision { get; init; }
+
+    public AgentChatReturnLocation? ReturnLocation { get; init; }
+
     public bool IsVisible => Visibility == ActiveAgentChatVisibility.Visible;
 
-    public bool CanStop => RunState != ActiveAgentChatRunState.Running;
+    public bool CanStop => RunState == ActiveAgentChatRunState.Idle;
 }
 
 public sealed record FloatingAgentChatSettings(
@@ -1088,6 +1099,8 @@ public sealed record FloatingAgentChatSettings(
     int PreparedResourceIdleRetentionMinutes = 10)
 {
     public static FloatingAgentChatSettings Default { get; } = new();
+
+    public DateTimeOffset? UpdatedAtUtc { get; init; }
 
     [JsonIgnore]
     public TimeSpan HiddenActiveChatRetention

@@ -1,10 +1,14 @@
 using System.Collections.Concurrent;
 using CanDoItAll.AgentFramework.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Core;
 
-public interface IAgentExecutionCancellationRegistry
-{
+public interface IAgentExecutionCancellationRegistry {
+    bool RequestCancellation(Guid executionRunId);
+
+    bool RequestCancellation(AgentToolSessionAdmission original);
+
     IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,
         CancellationToken cancellationToken);
@@ -15,107 +19,91 @@ public interface IAgentExecutionCancellationRegistry
         string reason);
 }
 
-public interface IAgentExecutionCancellationRegistration : IDisposable
-{
+public interface IAgentExecutionCancellationRegistration : IDisposable, IAsyncDisposable {
     CancellationToken Token { get; }
 
     bool IsCancellationRequested { get; }
 }
 
-public sealed class AgentExecutionCancellationRegistry : IAgentExecutionCancellationRegistry
-{
-    private readonly ConcurrentDictionary<Guid, ActiveExecution> activeExecutions = new();
+public sealed class AgentExecutionCancellationRegistry : IAgentExecutionCancellationRegistry {
+    private readonly ConcurrentDictionary<Guid, AgentExecutionCancellationRegistration> activeExecutions = new();
+    private readonly ILogger logger;
+
+    public AgentExecutionCancellationRegistry(ILogger<AgentExecutionCancellationRegistry> logger) : this((ILogger)logger) { }
+
+    internal AgentExecutionCancellationRegistry(ILogger logger) {
+        ArgumentNullException.ThrowIfNull(logger);
+        this.logger = logger;
+    }
+
+    public bool RequestCancellation(Guid executionRunId) {
+        if (executionRunId == Guid.Empty) {
+            throw new ArgumentException("Cancellation requires an execution identity.", nameof(executionRunId));
+        }
+        return activeExecutions.TryGetValue(executionRunId, out var active) && active.RequestCancellation(onlyNew: false);
+    }
+
+    public bool RequestCancellation(AgentToolSessionAdmission original) {
+        ArgumentNullException.ThrowIfNull(original);
+        if (original.Reference.ExecutionRunId == Guid.Empty) {
+            throw new ArgumentException("Cancellation requires an original admitted execution identity.", nameof(original));
+        }
+        return activeExecutions.TryGetValue(original.Reference.ExecutionRunId, out var active) &&
+            active.Session == original && active.RequestCancellation(onlyNew: false);
+    }
 
     public IAgentExecutionCancellationRegistration Register(
         ExecutionRunRecord run,
-        CancellationToken cancellationToken)
-    {
+        CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(run);
-
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var activeExecution = new ActiveExecution(run.Id, NormalizeRunId(run.ProcessRunId), cancellation);
-        if (!activeExecutions.TryAdd(run.Id, activeExecution))
-        {
-            cancellation.Dispose();
+        if (run.Id == Guid.Empty) {
+            throw new ArgumentException("Cancellation registration requires an execution identity.", nameof(run));
+        }
+        var activeExecution = new AgentExecutionCancellationRegistration(run.Id, NormalizeRunId(run.ProcessRunId), run.ToolAdmission?.Session, Unregister, logger);
+        if (!activeExecutions.TryAdd(run.Id, activeExecution)) {
+            activeExecution.Dispose();
             throw new InvalidOperationException($"Execution run '{run.Id:N}' is already registered for cancellation.");
         }
-
-        return new Registration(this, activeExecution);
+        try {
+            activeExecution.Link(cancellationToken);
+            return activeExecution;
+        } catch {
+            activeExecution.Dispose();
+            throw;
+        }
     }
 
     public int RequestCancellationByProcessRunIds(
         IReadOnlyCollection<string> processRunIds,
         string requestedBy,
-        string reason)
-    {
+        string reason) {
         ArgumentNullException.ThrowIfNull(processRunIds);
 
         var runIdSet = processRunIds
             .Select(NormalizeRunId)
             .Where(runId => runId.Length > 0)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (runIdSet.Count == 0)
-        {
+        if (runIdSet.Count == 0) {
             return 0;
         }
 
         var cancelledCount = 0;
-        foreach (var activeExecution in activeExecutions.Values)
-        {
-            if (!runIdSet.Contains(activeExecution.ProcessRunId) ||
-                activeExecution.Cancellation.IsCancellationRequested)
-            {
-                continue;
-            }
-
-            try
-            {
-                activeExecution.Cancellation.Cancel();
+        foreach (var activeExecution in activeExecutions.Values) {
+            if (runIdSet.Contains(activeExecution.ProcessRunId) && activeExecution.RequestCancellation(onlyNew: true)) {
                 cancelledCount++;
-            }
-            catch (ObjectDisposedException)
-            {
             }
         }
 
         return cancelledCount;
     }
 
-    private void Unregister(ActiveExecution activeExecution)
-    {
-        activeExecutions.TryRemove(activeExecution.ExecutionRunId, out _);
-        activeExecution.Cancellation.Dispose();
-    }
+    private void Unregister(AgentExecutionCancellationRegistration activeExecution)
+        => ((ICollection<KeyValuePair<Guid, AgentExecutionCancellationRegistration>>)activeExecutions)
+            .Remove(new(activeExecution.ExecutionRunId, activeExecution));
 
     private static string NormalizeRunId(string value)
         => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
-    private sealed record ActiveExecution(
-        Guid ExecutionRunId,
-        string ProcessRunId,
-        CancellationTokenSource Cancellation);
-
-    private sealed class Registration(
-        AgentExecutionCancellationRegistry owner,
-        ActiveExecution activeExecution) : IAgentExecutionCancellationRegistration
-    {
-        private bool disposed;
-
-        public CancellationToken Token => activeExecution.Cancellation.Token;
-
-        public bool IsCancellationRequested => activeExecution.Cancellation.IsCancellationRequested;
-
-        public void Dispose()
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            disposed = true;
-            owner.Unregister(activeExecution);
-        }
-    }
 }
 
 public sealed class AgentExecutionCancelledException : Exception

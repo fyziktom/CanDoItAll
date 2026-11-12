@@ -1,0 +1,8 @@
+{
+  "kind": "Managed-only supplementary stage2 compensation test ownership before edit",
+  "path": "tests/Unit/CanDoItAll.Tests.Unit/ProjectStructureSubprojectTransferCoordinatorTests.cs",
+  "managedSha256": "9A236CB5B1CB4F785ABED2755B4D1CD3EC9F7BAEC884594E0FC7830C90BCEE5B",
+  "mainSha256": "9A236CB5B1CB4F785ABED2755B4D1CD3EC9F7BAEC884594E0FC7830C90BCEE5B",
+  "backup": "codex/bundles/concurrent-mutations/reviews/P05-R1-deletion-compensation-before.cs.txt",
+  "intendedChange": "Extend existing compensation failure Fact with acknowledged deletion and owner cleanup uncertainty; preserve seven Facts."
+}

@@ -44,6 +44,19 @@ concrete service, a command surface or `NavigationManager`, and no component wri
 are host methods or host-supplied delegates (`PartyImportExportActions`), and a project admission
 is bound to the profile identifier the host passes (`OpportunityConversionDialog`).
 
+Directory relationship forms use typed value, input and pending-input callbacks. Their
+reconciliation keeps the original membership/row versions, raw notes, native date input
+and stable row identities separate from accepted data. `RelationshipEditing` renders
+the comparison and local Apply action; the module controller owns authorized reads,
+conditional writes, receipt handling and observation disposal. Large collections use
+complete snapshot choices with bounded previews, never partial replacement payloads.
+
+Navigation state is host state like any other. A routed host passes the committed catalog query
+(`CatalogQuery`) and the selected record section through its view contract and receives the
+catalog's committed changes (`HandleCatalogQueryChangedAsync`) and section changes as intents; it
+keeps both in the page URL. The surfaces never read or build a URL. A backend-free host passes no
+catalog query, and the catalog then keeps its own.
+
 Three rules keep the surfaces' actions on the record the operator sees. An action outside its form
 element (a dialog footer Save) validates the form's `EditContext`, parsing errors included, through
 `CrmHrWorkspaceSurface.SubmitAsync` before the host sees it. A row action inside a loop names the
@@ -72,6 +85,18 @@ The authoritative list is in [CanDoItAll.CrmHr.UI.csproj](CanDoItAll.CrmHr.UI.cs
   `Directory.Build.targets` these resolve to the live sibling source projects.
 - Shared UI families: [CanDoItAll.AppComponents.RecordBrowsing](../CanDoItAll.AppComponents.RecordBrowsing/README.md)
   and `CanDoItAll.AgentFramework.UI` (agent cards).
+- Editing: `CanDoItAll.Editing` and `CanDoItAll.Editing.UI` provide pure typed comparisons
+  and shared field rendering. The module hosts retain owner reads, writes, authorization,
+  subscriptions and close/navigation decisions.
+  Opportunity dialogs receive the host's controlled model and opening. Their form
+  keeps its `EditContext`, keyed rows and wizard section controls through refresh and
+  receipt reconciliation. Typed input/picker callbacks protect pending browser input;
+  selecting a project asks the host to capture its lifetime. Comparison Apply and Save
+  are separate actions. Board advance emits the stage and version displayed on its card.
+  Conversion uses the same controlled-form lifetime. Its comparison accepts a coherent
+  source and complete project handoff basis locally, preserving target text; it never
+  writes. An unknown conversion retains its recovery project and blocks replay even
+  after a peer change or comparison refresh.
 - Lightweight contracts: [CRM / HR contracts](../../Modules/CanDoItAll.Modules.CrmHr.Contracts/README.md),
   which brings the [Projects contracts](../../Modules/CanDoItAll.Modules.Projects.Contracts/README.md),
   `CanDoItAll.AgentFramework.Models` and `CanDoItAll.SharedKernel`.
@@ -97,3 +122,40 @@ the earlier slices keep their own records:
 [Home](../../../docs/architecture/crm-hr-home-ui-boundary.md),
 [account summary and activity history](../../../docs/architecture/crm-hr-account-activity-ui-boundary.md)
 and [Financials](../../../docs/architecture/crm-hr-financials-ui-boundary.md).
+
+`ConnectionReconciliation` and `InteractionAppendState` keep connection replacement and
+append-only journal drafts explicit. `ConnectionEditing` renders bounded local review;
+`InteractionJournalEditor` keeps one controlled EditContext per opening, immediate raw
+inputs and retired callback fences. Native reads, selected project lifetimes, access,
+observation and commands remain with the module host.
+
+Workforce profile and keyed skill review use typed B/L/R values and keep one model and
+EditContext per opening. Apply and Undo edit the local draft; Save is separate. Foreign
+profile hints request an explicit refresh or review even when the form is clean. An
+ordinary post-save context read cannot silently replace a different profile basis.
+Skills, catalog creation and capacity creation retain submitted and later input separately;
+manual refresh retains the forms and their raw validation. Allocation charts remain read-only.
+
+Number and date fields use BaseLib's `NativeValueInput`, whose native input event includes
+the browser's incomplete-input flag. An unfinished nullable control stays pending through
+blur, another edit and accepted-state reconciliation instead of becoming an empty value.
+The shared component example is `/native-value-input` in the Components sandbox. The
+delivery-unit dialog reuses the party editor's conditional save and review lifetime.
+
+Recruiting application, support and conversion comparisons use complete native originals
+and typed fields. Apply changes the local draft; the native command runs only on Save.
+Interview and checklist creation keep the accepted row separate from later input. Each
+form retains its model and EditContext through related refreshes; task reset replaces only
+the task form. Native date/time controls retain incomplete input across tab changes.
+Selected checklist projects carry the displayed lifetime with their identity. Observation,
+current access, command receipts and uncertain outcomes remain with the module sessions.
+
+Assignments use typed submission/current/accepted reconciliation for relationships,
+allocations and staffing requests. Later input keeps the exact accepted identity and
+full-row original. Comparisons read the current native row, preserve unresolved raw
+controls and custom comparison text, and apply only to the draft. Unknown outcomes
+require a read before explicit local discard; writes are never replayed by refresh.
+Visited form tabs remain mounted while unvisited panels stay lazy.
+
+Party and opportunity forms use BaseLib's `NativeFormInspector` for browser validity
+and focus. Application renderers own no JavaScript runtime or private inspection asset.

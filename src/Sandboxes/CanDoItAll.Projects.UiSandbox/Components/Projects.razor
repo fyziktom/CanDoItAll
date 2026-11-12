@@ -1,0 +1,379 @@
+@page "/"
+@using CanDoItAll.SharedKernel
+<PageTitle>Projects P1 sandbox</PageTitle>
+<Stack Class="p-4" GapScale="LayoutGap.Medium">
+    <FormSection Title="Projects portfolio scenarios" Description="Synthetic state only. The production host owns Files, packages and native mutations.">
+        <Cluster Gap="LayoutGap.Small">
+            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+                @foreach (var value in Enum.GetValues<ProjectsScenario>()) {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+            <Button Text="Reset scenario" Click="Reset" />
+            <Button Text="Hold next save" Click="() => store.HoldNextSave()" Disabled="@store.IsHeld" />
+            <Button Text="Release save" Click="() => store.Release()" Disabled="@(!store.IsHeld)" />
+            <Button Text="Hold next read" Click="() => store.HoldNextRead()" Disabled="@store.IsReadHeld" />
+            <Button Text="Release read" Click="() => store.ReleaseRead()" Disabled="@(!store.IsReadHeld)" />
+        </Cluster>
+        <TextBlock Value="@($"Simulated writes: {store.Writes}; seed batches: {store.SeedBatches}. {notice}")" data-testid="scenario-effects" />
+    </FormSection>
+    <ProjectDeletionStatusSurface Message="@cleanupMessage" IsError="@(cleanups.Count > 0)" Pending="cleanups" Completed="completedCleanups"
+                                  Retry="RetryCleanup" Review="cleanupReview" ReviewChanged="value => cleanupReview = value" />
+    <ProjectPendingListSurface Items="pendingRows" Open="_ => open = true" />
+    @if (scenario == ProjectsScenario.PendingRecovery) {
+        <Button Text="Manage synthetic retained references" Click="() => referencesOpen = true" />
+    }
+    <ProjectsBoard ProjectSummaries="store.Summaries" ProjectProjection="Projection" HierarchyLinks="store.Hierarchy"
+                   ProjectSearch="@search" ProjectSearchChanged="value => search = value"
+                   StatusFilter="status" StatusFilterChanged="value => status = value"
+                   RelatedPartyCategoryFilter="partyCategory" RelatedPartyCategoryFilterChanged="value => partyCategory = value"
+                   RelatedPartyValueFilter="@partyValue" RelatedPartyValueFilterChanged="value => partyValue = value"
+                   HierarchyFilterProjectId="hierarchyId" HierarchyFilterProjectIdChanged="value => hierarchyId = value"
+                   HierarchyFilterMode="hierarchyMode" HierarchyFilterModeChanged="value => hierarchyMode = value"
+                   IncludeSubprojects="includeSubprojects" IncludeSubprojectsChanged="value => includeSubprojects = value"
+                   LatestUpdatedProjectLabel="Synthetic portfolio" LatestUpdatedProjectHelper="Large desktop scenario"
+                   OpenNewProject="() => Acquire(null)" OpenProjectPreview="id => Acquire(id)"
+                   ResetFilters="ResetFilters" NavigateHome='() => notice = "Home navigation intent."'
+                   OpenHierarchyModal="OpenHierarchy" OpenProjectFiles='id => Handoff(id, "Files")'
+                   OpenProjectDashboard='id => Handoff(id, "Dashboard")' OpenProcesses='id => Handoff(id, "Processes")'
+                   OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")'
+                   OpenGantt='id => Handoff(id, "Gantt")' PortfolioView="portfolioView"
+                   PortfolioViewChanged='view => { portfolioView = view; notice = $"Selected {view}."; }'
+                   ProjectPackagePath="@packagePath" ProjectPackagePathChanged="value => packagePath = value"
+                   ProjectPackageTargetProfiles="packageTargets" ProjectPackageTargetProfileId="packageTarget"
+                   ProjectPackageTargetProfileIdChanged="value => packageTarget = value"
+                   ProjectPackageMessage="@packageMessage" ExportProjectsPackage="PackageHandoff" ImportProjectsPackage="PackageHandoff">
+        <FilesContent Context="projection">
+            <EmptyState Title="Files is supplied by the production host" Description="This slot receives the exact shared Cards and Files projection. It does not simulate file authorization or storage.">
+                <Actions><TextBlock Value="@($"{projection.Projects.Count} scoped projects · {projection.Fingerprint}")" data-testid="sandbox-files-scope" /></Actions>
+            </EmptyState>
+        </FilesContent>
+    </ProjectsBoard>
+</Stack>
+<ProjectModalHost @key="draft" IsOpen="open" IsEditorMode="editing" Draft="draft"
+                  PendingRecovery="pendingRecovery" PendingAction="HandlePendingScenario"
+                  StarterObjectKinds="starterKinds" ProjectSummaries="store.Summaries" WizardStep="step"
+                  WizardSteps="steps" WizardTabs="tabs" Message="@draft.Message" IsErrorMessage="draft.IsError"
+                  Close="Close" SwitchToOverview="() => editing = false" SwitchToEditor="() => editing = true"
+                  WizardTabChanged="value => step = int.Parse(value, System.Globalization.CultureInfo.InvariantCulture)"
+                  AddPhase="AddPhase" RemovePhase="RemovePhase"
+                  AddStarterObject="AddStarterObject" RemoveStarterObject="RemoveStarterObject"
+                  PreviousStep="() => step = Math.Max(0, step - 1)" NextStep="() => step = Math.Min(4, step + 1)"
+                  Save="submitted => SaveAsync(submitted, false)" SaveAndOpenStructure="submitted => SaveAsync(submitted, true)" Delete="Delete"
+                  ReadCurrentDefinition="ReadCurrentDefinitionAsync" DiscardAndReloadDefinition="target => RecoverDefinition(target, false)"
+                  BeginDefinitionReconciliation="BeginComparisonAsync" ApplyDefinitionReconciliation="ApplyComparisonAsync"
+                  OpenProjectDashboard='() => Handoff(draft.Model.Id, "Dashboard")'
+                  OpenProcesses='() => Handoff(draft.Model.Id, "Processes")'
+                  OpenStructure='id => Handoff(id, "Structure")' OpenCalendar='id => Handoff(id, "Calendar")' />
+<ProjectHierarchyModal State="hierarchy" Close="() => hierarchy = null" OpenHierarchy="OpenHierarchy"
+                       OpenProjectPreview="OpenFromHierarchyAsync" OpenStructure='id => Handoff(id, "Structure")' />
+<ProjectPendingReferenceSurface IsOpen="referencesOpen" Items="referenceRows" Selected="selectedReference"
+                                StoredCount="referenceRows.Count" StoredBytes="referenceRows.Sum(item => item.StoredBytes)"
+                                CurrentScope="referenceScope" Message="@referenceMessage"
+                                Close="() => referencesOpen = false" Select="item => selectedReference = item"
+                                CancelSelection="() => selectedReference = null" Discard="DiscardReference"
+                                Refresh='() => referenceMessage = "Synthetic metadata only; no browser storage or owner lookup runs."' />
+
+@code {
+    private static readonly string[] steps = ["Identity", "Dates and phases", "Stack profile", "Linked objects", "Review"];
+    private static readonly SecondaryTabItem[] tabs = steps.Select((label, index) => new SecondaryTabItem(index.ToString(), $"{index + 1}. {label}")).ToArray();
+    private static readonly ProjectObjectType[] starterKinds = [ProjectObjectType.Note, ProjectObjectType.Decision, ProjectObjectType.Milestone, ProjectObjectType.Repository, ProjectObjectType.Link];
+    private static readonly ProjectPackageTargetOption[] packageTargets = [new(ProjectsScenarioStore.ProfileId, "Synthetic inactive target", "Scenario only")];
+    private ProjectsScenario scenario;
+    private ProjectsScenarioStore store = new(ProjectsScenario.Portfolio);
+    private ProjectEditorDraft draft = new(new());
+    private ProjectPendingEditorView? pendingRecovery;
+    private IReadOnlyList<ProjectPendingSubmissionMetadata> pendingRows = [];
+    private static readonly ProjectPendingScope referenceScope = new(new(ProjectsScenarioStore.ProfileId), new("pc1:" + new string('a', 64)));
+    private IReadOnlyList<ProjectPendingReference> referenceRows = [];
+    private ProjectPendingReference? selectedReference;
+    private bool referencesOpen;
+    private string? referenceMessage;
+    private bool open;
+    private bool editing;
+    private long acquisition;
+    private int step;
+    private string search = string.Empty;
+    private ProjectStatus? status;
+    private ProjectPartyPortfolioCategory? partyCategory;
+    private string partyValue = string.Empty;
+    private Guid? hierarchyId;
+    private ProjectHierarchyFilterMode hierarchyMode;
+    private bool includeSubprojects = true;
+    private ProjectsAgentChatView portfolioView = ProjectsAgentChatView.Cards;
+    private ProjectHierarchyDialogState? hierarchy;
+    private string? notice;
+    private string packagePath = string.Empty;
+    private Guid? packageTarget;
+    private string? packageMessage;
+    private string? cleanupMessage;
+    private IReadOnlyList<ProjectCleanupStatus> cleanups = [];
+    private IReadOnlyList<ProjectCleanupNotice> completedCleanups = [];
+    private ProjectCleanupReview? cleanupReview;
+    private ProjectFileFilterProjection Projection => ProjectFileFilterProjection.Create(store.Summaries, store.Hierarchy,
+        new(search, status, partyCategory, partyValue, hierarchyId, hierarchyMode, includeSubprojects));
+
+    private void Reset() {
+        store.Release();
+        store.ReleaseRead();
+        store = new(scenario);
+        Close();
+        referencesOpen = false;
+        selectedReference = null;
+        referenceMessage = "Synthetic metadata only. Discard changes this specimen and performs no browser or server operation.";
+        referenceRows = scenario == ProjectsScenario.PendingRecovery
+            ? new[] { ProjectPendingStage.Prepared, ProjectPendingStage.Unconfirmed, ProjectPendingStage.Accepted }
+                .Select((stage, index) => new ProjectPendingReference(
+                    new(new(index == 1 ? Guid.NewGuid() : ProjectsScenarioStore.ProfileId), new(1), Guid.NewGuid(), new("pc1:" + new string('a', 64))),
+                    new(index + 1), stage, null, stage == ProjectPendingStage.Unconfirmed, true, 512)).ToArray()
+            : [];
+        ResetFilters();
+        cleanups = [];
+        cleanupMessage = null;
+        cleanupReview = null;
+        completedCleanups = scenario == ProjectsScenario.CleanupHistory
+            ? Enumerable.Range(0, 200).Select(index => new ProjectCleanupNotice(
+                new(Guid.NewGuid(), new("scenario-media"), Guid.NewGuid()), "project deletion",
+                Enumerable.Range(0, 23).Select(item => $"Retained object {index + 1}/{item + 1}: immutable media remains available. Review provider retention policy before removing an external pin.").ToArray())).ToArray()
+            : [];
+        notice = "Scenario reset.";
+    }
+
+    private void ResetFilters() {
+        search = string.Empty;
+        status = null;
+        partyCategory = null;
+        partyValue = string.Empty;
+        hierarchyId = null;
+        hierarchyMode = ProjectHierarchyFilterMode.Descendants;
+        includeSubprojects = true;
+    }
+
+    private async Task Acquire(Guid? id) {
+        long current = ++acquisition;
+        var owner = store;
+        notice = "Acquiring the selected synthetic editor.";
+        try {
+            var loaded = await owner.AcquireAsync(id);
+            if (current != acquisition || !ReferenceEquals(owner, store)) {
+                return;
+            }
+            draft = loaded;
+            step = 0;
+            editing = !id.HasValue;
+            if (scenario == ProjectsScenario.PendingRecovery) {
+                var operation = new ProjectDefinitionOperation(new(ProjectsScenarioStore.ProfileId), new(1), Guid.NewGuid(), new("pc1:" + new string('a', 64)));
+                pendingRecovery = new(operation, "Synthetic uncertain save: explicitly check before applying a retained result. No storage or owner effects run in this scenario.",
+                    false, true, false, false, false, false, true);
+                pendingRows = [new(operation, new(1), ProjectPendingStage.Unconfirmed, id, true, true)];
+                draft.Mutation = ProjectEditorMutationState.PendingRecovery;
+                editing = true;
+            }
+            open = true;
+        } catch (InvalidOperationException exception) {
+            if (current == acquisition && ReferenceEquals(owner, store)) {
+                notice = exception.Message;
+            }
+        }
+    }
+
+    private void Close() {
+        acquisition++;
+        open = false;
+        draft = new(new());
+        pendingRecovery = null;
+        pendingRows = [];
+    }
+
+    private void HandlePendingScenario(ProjectPendingEditorIntent intent) {
+        if (pendingRecovery is not { } current || current.Operation != intent.Operation) {
+            return;
+        }
+        pendingRecovery = intent.Action switch {
+            ProjectPendingEditorAction.Check => current with { Status = "Synthetic historical acceptance is ready for explicit application.", CanRetry = false, CanApply = true },
+            ProjectPendingEditorAction.ApplyAccepted when current.CanApply => current with { Status = "Synthetic acceptance applied; finish this recovery explicitly.", CanApply = false, CanClear = true },
+            ProjectPendingEditorAction.ClearResolved when current.CanClear => null,
+            _ => current with { Status = "Explicit intent observed. This renderer scenario performs no write or automatic retry." }
+        };
+        if (pendingRecovery is null) {
+            pendingRows = [];
+            draft.Mutation = ProjectEditorMutationState.Ready;
+        }
+    }
+
+    private void DiscardReference(ProjectPendingReference reference) {
+        if (selectedReference != reference) {
+            return;
+        }
+        referenceRows = referenceRows.Where(item => item != reference).ToArray();
+        selectedReference = null;
+        referenceMessage = "Synthetic local evidence removed. No server outcome was determined and no replacement save was submitted.";
+    }
+
+    private Task OpenFromHierarchyAsync(Guid id) {
+        hierarchy = null;
+        return Acquire(id);
+    }
+
+    private void AddPhase() {
+        draft.Model.Phases.Add(new());
+        draft.RecordStructureEdit();
+    }
+
+    private void RemovePhase(ProjectPhaseEditorModel phase) {
+        if (draft.Model.Phases.Remove(phase)) {
+            draft.RecordStructureEdit();
+        }
+    }
+
+    private void AddStarterObject() {
+        draft.StarterObjects.Add(new());
+        draft.RecordStructureEdit();
+    }
+
+    private void RemoveStarterObject(StarterObjectDraft row) {
+        if (draft.StarterObjects.Remove(row)) {
+            draft.RecordStructureEdit();
+        }
+    }
+
+    private void OpenHierarchy(Guid id) {
+        var projects = store.Summaries;
+        hierarchy = new(id, projects.Single(project => project.Id == id).Name,
+            projects.Where(project => store.Hierarchy.Any(link => link.ParentProjectId == project.Id && link.ChildProjectId == id)).ToArray(),
+            projects.Where(project => store.Hierarchy.Any(link => link.ChildProjectId == project.Id && link.ParentProjectId == id)).ToArray());
+    }
+
+    private async Task SaveAsync(ProjectEditorSubmission submitted, bool navigate) {
+        var target = draft;
+        var owner = store;
+        if (!target.CanMutate || !target.Validate()) {
+            return;
+        }
+        target.Mutation = ProjectEditorMutationState.Saving;
+        var result = await owner.SaveAsync(submitted.Model);
+        if (result.IsFailure) {
+            if (result.Errors.Any(error => error.Code == ProjectErrorCodes.DefinitionConflict)) {
+                target.RecordConflict(submitted);
+                return;
+            }
+            target.Mutation = ProjectEditorMutationState.Ready;
+            target.Message = string.Join(" ", result.Errors.Select(error => error.Message));
+            target.IsError = true;
+            return;
+        }
+        target.RecordAcceptedOutcome(submitted, result.Value!);
+        target.Acknowledge(submitted, result.Value!);
+        target.Message = "Project saved in the synthetic scenario.";
+        if (submitted.Seeds.Count > 0) {
+            owner.Seed();
+            if (owner.Scenario == ProjectsScenario.UnknownSeed) {
+                target.Mutation = ProjectEditorMutationState.SeedOutcomeUnknown;
+                target.Message = "Project saved. Seed acknowledgement is unknown; inspect the simulated effect count before any further action.";
+                target.IsError = true;
+                return;
+            }
+            target.AcknowledgeSeeds(submitted);
+        }
+        target.Mutation = ProjectEditorMutationState.Ready;
+        if (navigate && open && target.EditRevision == submitted.EditRevision && ReferenceEquals(draft, target) && ReferenceEquals(owner, store)) {
+            Handoff(result.Value!.Project.ProjectId, "Structure");
+        }
+    }
+
+    private void Delete() {
+        if (!draft.CanMutate || draft.Model.Id is not { } id) {
+            return;
+        }
+        store.Delete(id);
+        if (scenario == ProjectsScenario.PartialDeletion) {
+            cleanups = [new(new(id, new("scenario-cleanup"), Guid.NewGuid()), "Pending", true, null, "Synthetic exact cleanup operation.")];
+            cleanupMessage = "Project deleted; synthetic cleanup remains pending.";
+        }
+        Close();
+    }
+
+    private async Task ReadCurrentDefinitionAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || target.Model.Id is not { } id ||
+            !target.CanCompare || target.Definition.Reading) {
+            return;
+        }
+        long current = ++acquisition;
+        var owner = store;
+        target.Definition.Reading = true;
+        if (target.Conflict is not null) {
+            target.BeginConflictRead();
+        }
+        try {
+            var saved = await owner.ReadDefinitionAsync(id);
+            if (current == acquisition && open && ReferenceEquals(target, draft) && ReferenceEquals(owner, store)) {
+                if (target.Conflict is not null) {
+                    target.CompleteConflictRead(saved);
+                } else {
+                    target.InspectCurrent(saved);
+                }
+            }
+        } catch (InvalidOperationException exception) {
+            if (current == acquisition && open && ReferenceEquals(target, draft)) {
+                if (target.Conflict is not null) {
+                    target.FailConflictRead(exception.Message);
+                }
+                target.Message = exception.Message;
+                target.IsError = true;
+            }
+        } finally {
+            target.Definition.Reading = false;
+        }
+    }
+
+    private void RecoverDefinition(ProjectEditorDraft target, bool preservePrevious) {
+        if (!open || !ReferenceEquals(target, draft) || target.Conflict is not { ReadState: ProjectEditorConflictReadState.Ready }) {
+            return;
+        }
+        acquisition++;
+        draft = target.StartFromCurrent(preservePrevious);
+        step = 0;
+        editing = true;
+    }
+
+    private async Task BeginComparisonAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || !target.CanCompare) {
+            return;
+        }
+        if (!target.HasCurrentDefinition || target.Definition.CurrentIsStale || target.Definition.Review is not null) {
+            await ReadCurrentDefinitionAsync(target);
+        }
+        if (open && ReferenceEquals(target, draft) && target.HasCurrentDefinition && !target.Definition.CurrentIsStale) {
+            target.BeginMerge();
+            target.Message = null;
+            target.IsError = false;
+        }
+    }
+
+    private async Task ApplyComparisonAsync(ProjectEditorDraft target) {
+        if (!open || !ReferenceEquals(target, draft) || !target.CanApplyMerge || target.Model.Id is not { } id) {
+            return;
+        }
+        var review = target.Definition.Review!;
+        var hint = target.Definition.HintRevision;
+        var current = await store.ReadDefinitionAsync(id);
+        if (!open || !ReferenceEquals(target, draft) || !ReferenceEquals(review, target.Definition.Review)) {
+            return;
+        }
+        if (current.Expectation != review.Current.Expectation) {
+            target.InspectCurrent(current, hint);
+            target.BeginMerge();
+            target.Message = "The synthetic definition changed again. Review the new comparison; the editable draft is retained.";
+            return;
+        }
+        target.ApplyMerge();
+    }
+
+    private void RetryCleanup(ProjectCleanupTarget target) {
+        cleanups = cleanups.Where(row => row.Target != target).ToArray();
+        cleanupMessage = "Synthetic exact cleanup completed.";
+    }
+
+    private void Handoff(Guid? id, string surface) => notice = $"{surface} intent for project {id:D}; its production owner is outside this sandbox.";
+    private void PackageHandoff() => packageMessage = $"Package intent for target {packageTarget:D}. The production package owner performs this operation.";
+}

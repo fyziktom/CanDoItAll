@@ -21,8 +21,12 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTran
         typeof(ProcessRunRecordEntity),
         typeof(ProcessInstancePlanEntity),
         typeof(ProcessRuntimeStateEntity),
+        typeof(ProcessCancellationRecoveryEntity),
         typeof(ProcessRuntimeStepAssignmentEntity),
-        typeof(ProcessPreparedLaunchEntity)
+        typeof(ProcessPreparedLaunchEntity),
+        typeof(ProcessAuthoringHeadEntity),
+        typeof(ProcessAuthoringPublicationEntity),
+        typeof(ProcessAuthoringReceiptEntity)
     ];
 
     public Task<IReadOnlyList<ProjectTransferTargetStateResidue>> FindResiduesAsync(
@@ -33,6 +37,19 @@ internal sealed class ProcessesProjectTransferTargetStateParticipant(ProjectTran
     private static async Task<IReadOnlyList<ProjectTransferTargetStateResidue>> ReadResiduesAsync(
         ProcessPersistenceDbContext dbContext, CancellationToken cancellationToken) {
         var residues = new List<ProjectTransferTargetStateResidue>();
+        if (await dbContext.CancellationRecoveries.AsNoTracking().AnyAsync(item => !item.Completed, cancellationToken) ||
+                await dbContext.RuntimeStates.AsNoTracking().AnyAsync(root => root.RootRunId == root.RunId &&
+                    (root.Status == ProcessRuntimeStatus.CancelRequested || root.Status == ProcessRuntimeStatus.Cancelled) &&
+                    !dbContext.CancellationRecoveries.Any(recovery => recovery.RootRunId == root.RunId), cancellationToken)) {
+            residues.Add(new("unfinished Process cancellation recovery") { BlocksSourceTransfer = true });
+        } else if (await dbContext.CancellationRecoveries.AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("retained completed Process cancellation recovery"));
+        }
+        if (await dbContext.AuthoringHeads.AsNoTracking().AnyAsync(cancellationToken) ||
+                await dbContext.AuthoringPublications.AsNoTracking().AnyAsync(cancellationToken) ||
+                await dbContext.AuthoringReceipts.AsNoTracking().AnyAsync(cancellationToken)) {
+            residues.Add(new("process authoring, publications or operation receipts affecting project definition selection") { BlocksSourceTransfer = true });
+        }
         await foreach (var launch in dbContext.Set<ProcessPreparedLaunchEntity>().AsNoTracking()
                 .AsAsyncEnumerable().WithCancellation(cancellationToken)) {
             if (launch.ReferencesProject()) {

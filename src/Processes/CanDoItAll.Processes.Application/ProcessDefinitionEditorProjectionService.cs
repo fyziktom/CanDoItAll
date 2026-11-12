@@ -17,6 +17,7 @@ public sealed class ProcessDefinitionEditorProjectionService
 
     private readonly ProcessTemplatePackLoader templatePackLoader;
     private readonly IProcessProjectionClock clock;
+    private readonly ProcessDefinitionAuthoringAdapter? authoring;
     private readonly Dictionary<ProcessDefinitionEditorStateKey, ProcessDefinitionEditorSnapshot> snapshots = [];
 
     public ProcessDefinitionEditorProjectionService(IProcessProjectionClock clock)
@@ -26,10 +27,20 @@ public sealed class ProcessDefinitionEditorProjectionService
 
     public ProcessDefinitionEditorProjectionService(
         ProcessTemplatePackLoader templatePackLoader,
-        IProcessProjectionClock clock)
+        IProcessProjectionClock clock,
+        ProcessDefinitionAuthoringAdapter? authoring = null)
     {
         this.templatePackLoader = templatePackLoader ?? throw new ArgumentNullException(nameof(templatePackLoader));
         this.clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        this.authoring = authoring;
+    }
+
+    internal void InitializeAuthored(ProcessAuthoringSession session) {
+        var summary = templatePackLoader.ProjectDefinition(session.Content.Definition, session.Content.RoleResources);
+        snapshots[ProcessDefinitionEditorStateKey.From(session.Scope, new(session.Address.DefinitionKey))] = CreateTemplateSnapshot(session.Scope, summary) with {
+            Status = session.Status,
+            VersionToken = new(session.Token)
+        };
     }
 
     public Task<ProcessDefinitionEditorProjection> GetEditorAsync(
@@ -37,6 +48,10 @@ public sealed class ProcessDefinitionEditorProjectionService
         ProcessDefinitionCatalogItemKey definitionKey,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ReadAsync(scope, definitionKey, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ValidateScope(scope);
 
@@ -54,6 +69,10 @@ public sealed class ProcessDefinitionEditorProjectionService
         ProcessDefinitionEditorCommand command,
         CancellationToken cancellationToken = default)
     {
+        if (authoring is not null) {
+            return authoring.ExecuteAsync(command, cancellationToken);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.Scope);

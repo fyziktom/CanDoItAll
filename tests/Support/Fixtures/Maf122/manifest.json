@@ -1,0 +1,17 @@
+{
+  "writer": "Microsoft.Agents.AI/1.22.0",
+  "files": {
+    "Native/local-blocking-ordinary.json": "c28d4aa36629a91f9b5f8d59e44d38659722c5a85bbf11e8b7ae2551dff36a38",
+    "Native/local-blocking-pending.json": "c292c2ea7a453b92941deaebebf4696f970372e8a36e5521027cd16f430c21d6",
+    "Native/local-blocking-settled.json": "90c395c9fa3c9f5fc52636109ae0268f37aaec6e5bdca7c4d2ae639f6940f67b",
+    "Native/local-streaming-ordinary.json": "c28d4aa36629a91f9b5f8d59e44d38659722c5a85bbf11e8b7ae2551dff36a38",
+    "Native/local-streaming-pending.json": "c292c2ea7a453b92941deaebebf4696f970372e8a36e5521027cd16f430c21d6",
+    "Native/local-streaming-settled.json": "d606c2c395c094cabdcbd3e9763b2232d959397f3ff899226b48eac2cce72c44",
+    "Native/service-blocking-ordinary.json": "d60c3372c0698e1eb430b8cfb544c084bd413d550d61e967e3b550139bb16bc0",
+    "Native/service-blocking-pending.json": "7357bfd9fbe604d5e0c95a8a9bfb37963d1e1fe1e3972074839c855a6459490c",
+    "Native/service-blocking-settled.json": "d60c3372c0698e1eb430b8cfb544c084bd413d550d61e967e3b550139bb16bc0",
+    "Native/service-streaming-ordinary.json": "d60c3372c0698e1eb430b8cfb544c084bd413d550d61e967e3b550139bb16bc0",
+    "Native/service-streaming-pending.json": "7357bfd9fbe604d5e0c95a8a9bfb37963d1e1fe1e3972074839c855a6459490c",
+    "Native/service-streaming-settled.json": "d60c3372c0698e1eb430b8cfb544c084bd413d550d61e967e3b550139bb16bc0"
+  }
+}

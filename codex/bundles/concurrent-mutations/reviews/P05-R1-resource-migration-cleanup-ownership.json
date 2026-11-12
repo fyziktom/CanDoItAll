@@ -1,0 +1,9 @@
+{
+  "owner": "/root/persistence_architecture",
+  "purpose": "Preserve frozen 117DC migration source and inventory before parent-authorized cleanup diagnostics successor",
+  "paths": [
+    "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\codex\\bundles\\concurrent-mutations\\reviews\\P05-R1-resource-migration-cleanup-predecessors"
+  ],
+  "sourceSha256": "84D9241B9B7727B7806AEB0F892353C0C9258F12946D6E680DA64A791C01F790",
+  "inventorySha256": "117DC7FCF0A8F76F210DC064C8CA48503185A1DF43A92D430D5A91D5AE9F3813"
+}

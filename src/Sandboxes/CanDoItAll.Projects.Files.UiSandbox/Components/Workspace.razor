@@ -1,0 +1,77 @@
+@page "/"
+@implements IAsyncDisposable
+@using CanDoItAll.Projects.Files.UI
+@using CanDoItAll.Projects.Files.UiSandbox
+
+<PageTitle>Projects Files UI sandbox</PageTitle>
+<main class="files-sandbox" data-testid="files-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
+<Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small" Class="files-sandbox__layout">
+    <SurfaceCard>
+        <TextBlock TextStyle="TextStyle.Subtitle1" Value="Projects Files development sandbox" />
+        <TextBlock Value="Two independent surfaces over bounded synthetic sources. Real file viewers; simulated host actions. No database, vault, native launcher or model provider." />
+        <Cluster Wrap="FlexWrap.Wrap" Gap="LayoutGap.Small">
+            <InputSelect @bind-Value="scenario" class="cda-input" data-testid="files-scenario">
+                @foreach (var item in Enum.GetValues<FilesScenario>()) {
+                    <option value="@item">@item</option>
+                }
+            </InputSelect>
+            <Button Text="Reset surfaces" Click="ResetAsync" data-testid="files-reset" />
+            <Button Text="Open independent dialog" Click="OpenDialogAsync" data-testid="files-open-dialog" />
+            <Button Text="Hold next read" Click="() => pane.HoldNextRead()" data-testid="files-hold" />
+            <Button Text="Release reads" Click="() => pane.ReleaseReads()" data-testid="files-release" />
+            <Button Text="Fail next read" Click="() => pane.FailNextReadAsync()" data-testid="files-fail-read" />
+            <Button Text="Remove selected source" Click="() => pane.RemoveSourceAsync()" data-testid="files-remove-source" />
+        </Cluster>
+        <TextBlock Value="@($"Pending fixture reads: {pane.PendingReads}; simulated pane actions: {pane.SimulatedActions}")" data-testid="files-scenario-status" />
+    </SurfaceCard>
+    <SurfaceCard Class="files-sandbox__pane">
+        <ProjectFilesPortfolioPaneView State="pane.State" />
+    </SurfaceCard>
+</Stack>
+</main>
+@if (dialog is not null) {
+    <ProjectFilesDialogView IsOpen="true" ProjectName="Independent synthetic project" State="dialog.State" />
+}
+
+@code {
+    private FilesScenario scenario;
+    private bool interactive;
+    private FilesScenarioSurface pane = null!;
+    private FilesScenarioSurface? dialog;
+
+    protected override Task OnInitializedAsync() => ResetAsync();
+
+    protected override void OnAfterRender(bool firstRender) {
+        if (firstRender) {
+            interactive = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResetAsync() {
+        var oldPane = pane;
+        pane = new(this, scenario);
+        if (oldPane is not null) {
+            await oldPane.DisposeAsync();
+        }
+        await CloseDialogAsync();
+    }
+
+    private async Task OpenDialogAsync() {
+        await CloseDialogAsync();
+        dialog = new(this, scenario, EventCallback.Factory.Create(this, CloseDialogAsync));
+    }
+
+    private async Task CloseDialogAsync() {
+        var old = dialog;
+        dialog = null;
+        if (old is not null) {
+            await old.DisposeAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync() {
+        await pane.DisposeAsync();
+        await CloseDialogAsync();
+    }
+}

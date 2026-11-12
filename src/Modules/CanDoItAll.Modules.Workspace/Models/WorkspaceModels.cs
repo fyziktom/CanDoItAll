@@ -1,5 +1,4 @@
 using CanDoItAll.Infrastructure.Configuration;
-using System.ComponentModel;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Security;
@@ -7,13 +6,16 @@ using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workspace;
 
-public sealed class WorkspaceSettings
+public sealed class WorkspaceSettings : IHasConcurrencyToken
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+
+    public bool IsCurrent { get; set; }
+
+    public Guid ConcurrencyToken { get; set; } = Guid.NewGuid();
 
     public string WorkspaceName { get; set; } = "CanDoItAll";
 
@@ -26,6 +28,8 @@ public sealed class WorkspaceSettings
     public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
 
     public string Notes { get; set; } = string.Empty;
+
+    public string? DecisionDataPolicyJson { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
 }
@@ -34,36 +38,18 @@ internal sealed class WorkspaceSettingsConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<WorkspaceSettings> builder)
     {
-        builder.ToTable("Workspace_Settings");
+        builder.ToTable("Workspace_Settings", table => table.HasCheckConstraint("CK_Workspace_Settings_DecisionDataPolicyJson",
+            $"\"DecisionDataPolicyJson\" IS NULL OR octet_length(\"DecisionDataPolicyJson\") BETWEEN 1 AND {DecisionDataPolicyCodec.MaximumUtf8Bytes}"));
         builder.HasKey(settings => settings.Id);
+        builder.HasIndex(settings => settings.IsCurrent).IsUnique().HasFilter("\"IsCurrent\"");
+        builder.Property(settings => settings.ConcurrencyToken).IsConcurrencyToken().HasDefaultValueSql("gen_random_uuid()");
         builder.Property(settings => settings.WorkspaceName).HasMaxLength(200).IsRequired();
         builder.Property(settings => settings.DefaultPromptOutputFormat).HasMaxLength(40).IsRequired();
         builder.Property(settings => settings.CurrencyCode).HasMaxLength(3).HasDefaultValue("USD").IsRequired();
         builder.Property(settings => settings.CurrencyCultureName).HasMaxLength(40).HasDefaultValue("en-US").IsRequired();
         builder.Property(settings => settings.Notes).HasColumnType("TEXT");
+        builder.Property(settings => settings.DecisionDataPolicyJson).HasColumnType("TEXT");
     }
-}
-
-[Description("Workspace business defaults from the selected database; contains no credentials or deployment switches.")]
-public sealed class WorkspaceSettingsModel
-{
-    [Description("Default provider profile GUID, or null when no default is selected.")]
-    public Guid? DefaultProviderProfileId { get; set; }
-
-    [Description("Human-readable workspace name.")]
-    public string WorkspaceName { get; set; } = "CanDoItAll";
-
-    [Description("Default output format suggested for prompts, such as Markdown.")]
-    public string DefaultPromptOutputFormat { get; set; } = "Markdown";
-
-    [Description("Three-letter uppercase currency code used by the workspace.")]
-    public string CurrencyCode { get; set; } = CurrencyDisplaySettings.Default.CurrencyCode;
-
-    [Description(".NET culture name used to format currency values.")]
-    public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
-
-    [Description("Operator-authored notes about the workspace.")]
-    public string Notes { get; set; } = string.Empty;
 }
 
 public sealed partial class WorkspaceService(
@@ -75,15 +61,12 @@ public sealed partial class WorkspaceService(
     IStorageDriverRegistry storageDriverRegistry,
     IActivityStream activityStream,
     CurrencyDisplayState currencyDisplayState,
-    ILogger<WorkspaceService> logger)
+    WorkspaceSettingsWriter settingsWriter)
 {
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var settings = await dbContext.Set<WorkspaceSettings>()
-            .AsNoTracking()
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
+        var settings = await WorkspaceSettingsHeadStore.ReadAsync(dbContext, tracking: false, cancellationToken);
         if (settings is null)
         {
             var defaultModel = new WorkspaceSettingsModel();
@@ -105,47 +88,18 @@ public sealed partial class WorkspaceService(
         return model;
     }
 
-    public async Task<WorkspaceSettingsModel> SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(model);
+    public Task<WorkspaceSettingsSnapshot> ReadSettingsSnapshotAsync(CancellationToken cancellationToken = default)
+        => settingsWriter.ReadAsync(cancellationToken);
 
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var settings = await dbContext.Set<WorkspaceSettings>()
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (settings is null)
-        {
-            settings = new WorkspaceSettings();
-            await dbContext.Set<WorkspaceSettings>().AddAsync(settings, cancellationToken);
-        }
+    public Task<WorkspaceSettingsSaveOutcome> SaveSettingsAsync(ReplaceWorkspaceSettingsCommand command, CancellationToken cancellationToken = default)
+        => settingsWriter.ReplaceAsync(command, cancellationToken);
 
-        settings.WorkspaceName = string.IsNullOrWhiteSpace(model.WorkspaceName) ? "CanDoItAll" : model.WorkspaceName.Trim();
-        settings.DefaultProviderProfileId = model.DefaultProviderProfileId;
-        settings.DefaultPromptOutputFormat = string.IsNullOrWhiteSpace(model.DefaultPromptOutputFormat) ? "Markdown" : model.DefaultPromptOutputFormat.Trim();
-        var currencySettings = CurrencyDisplaySettings.Normalize(model.CurrencyCode, model.CurrencyCultureName);
-        settings.CurrencyCode = currencySettings.CurrencyCode;
-        settings.CurrencyCultureName = currencySettings.CultureName;
-        settings.Notes = model.Notes?.Trim() ?? string.Empty;
-        settings.UpdatedAtUtc = clock.GetUtcNow();
-        currencyDisplayState.Update(currencySettings);
+    public Task<WorkspaceSettingsSnapshotV2> ReadSettingsSnapshotV2Async(CancellationToken cancellationToken = default)
+        => settingsWriter.ReadV2Async(cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        try {
-            await activityStream.RecordAsync(new ActivityWriteRequest(
-                "workspace", "save-defaults", "Updated workspace defaults",
-                $"Workspace name: {settings.WorkspaceName}.", Route: "/settings"), cancellationToken);
-        } catch (Exception exception) {
-            logger.LogWarning("Workspace settings committed, but activity recording failed: {ErrorType}.", exception.GetType().Name);
-        }
-        return new WorkspaceSettingsModel {
-            WorkspaceName = settings.WorkspaceName,
-            DefaultProviderProfileId = settings.DefaultProviderProfileId,
-            DefaultPromptOutputFormat = settings.DefaultPromptOutputFormat,
-            CurrencyCode = settings.CurrencyCode,
-            CurrencyCultureName = settings.CurrencyCultureName,
-            Notes = settings.Notes
-        };
-    }
+    public Task<WorkspaceSettingsSaveOutcomeV2> SaveSettingsV2Async(ReplaceWorkspaceSettingsV2Command command,
+        CancellationToken cancellationToken = default)
+        => settingsWriter.ReplaceV2Async(command, cancellationToken);
 
     public Task<IReadOnlyList<SecretListItem>> ListSecretsAsync(CancellationToken cancellationToken = default)
         => secretService.ListForPickerAsync(cancellationToken);

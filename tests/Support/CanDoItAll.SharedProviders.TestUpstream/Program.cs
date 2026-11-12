@@ -12,6 +12,7 @@ builder.Services.AddSingleton(FixtureAuthenticationOptions.Load(
     builder.Configuration,
     builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<TestControlState>();
+builder.Services.AddSingleton<ResponseScriptState>();
 builder.Services.AddSingleton<RequestCaptureStore>();
 builder.Services.AddSingleton<ComfyUiFixtureState>();
 

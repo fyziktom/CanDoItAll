@@ -208,7 +208,8 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     private static EfProcessRuntimeUnitOfWork ToolUnit(IServiceProvider services, Fixture fixture, ProcessPersistenceDbContext context,
         NativeClock clock, bool missingPolicy = false) {
         var admissions = new ProjectWriteAdmissionService(new Factory<ProjectsDbContext>(fixture.ProjectOptions, static configured => new(configured)),
-            fixture.ProjectOptions, fixture.Coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>());
+            fixture.ProjectOptions, fixture.Coordinator, services.GetRequiredService<ICanonicalRuntimeDatabase>(),
+            services.GetRequiredService<DatasetActivationService>());
         return new(context, clock, fixture.Coordinator, new ProjectProcessAdmissionPolicy(admissions), fixture.Authority,
             missingPolicy ? null : ToolPolicy(services, fixture, clock));
     }

@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.ControlPlane;
+using Microsoft.AspNetCore.DataProtection;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Web.Api;
@@ -19,11 +21,68 @@ using Kind = CanDoItAll.AgentFramework.Models.ProviderKind;
 
 namespace CanDoItAll.Tests.Integration.SharedProviders;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fixture) : IClassFixture<ProviderRecoveryFixture> {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    public async Task Native_receipts_reject_any_client_change_to_the_attested_attempt(int field) {
+        await using var scope = fixture.Host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var model = NewEditor();
+        fixture.Fault.ArmProvider(model.Name, afterCommit: true);
+        var failure = await Assert.ThrowsAsync<ProviderMutationUnconfirmedException>(() =>
+            services.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(model));
+        var receipt = failure.Attempt;
+        Assert.False(string.IsNullOrWhiteSpace(receipt.Witness));
+        var verification = services.GetRequiredService<IProviderMutationVerification>();
+        Assert.Equal(ProviderVerificationDisposition.Committed, (await verification.VerifyAsync(receipt)).Disposition);
+        var altered = field switch {
+            0 => receipt with { AttemptId = Guid.NewGuid() },
+            1 => receipt with { ProviderId = Guid.NewGuid() },
+            2 => receipt with { ExpectedConcurrencyToken = Guid.NewGuid() },
+            3 => receipt with { IntendedConcurrencyToken = Guid.NewGuid() },
+            4 => receipt with { Kind = ProviderMutationKind.Delete },
+            5 => receipt with { SubmissionFingerprint = "changed-client-fingerprint" },
+            6 => receipt with { Witness = null },
+            _ => throw new ArgumentOutOfRangeException(nameof(field))
+        };
+
+        var result = await verification.VerifyAsync(altered);
+
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
+        Assert.Null(result.ConcurrencyToken);
+    }
+
+    [Fact]
+    public async Task Receipts_are_bound_to_the_native_dataset_activation_and_survive_service_recreation() {
+        await using var scope = fixture.Host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var model = NewEditor();
+        fixture.Fault.ArmProvider(model.Name, afterCommit: true);
+        var failure = await Assert.ThrowsAsync<ProviderMutationUnconfirmedException>(() =>
+            services.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(model));
+        var protection = services.GetRequiredService<IDataProtectionProvider>();
+        var database = services.GetRequiredService<ICanonicalRuntimeDatabase>();
+        Assert.True(new ProviderMutationWitness(protection, database).IsTrusted(failure.Attempt));
+        var differentActivation = new ShiftedDatabase(database);
+        Assert.False(new ProviderMutationWitness(protection, differentActivation).IsTrusted(failure.Attempt));
+    }
+
+    private sealed class ShiftedDatabase(ICanonicalRuntimeDatabase original) : ICanonicalRuntimeDatabase {
+        public ResolvedDatabaseProfile Profile => original.Profile;
+        public long Generation => original.Generation + 1;
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Canonical_candidate_verification_distinguishes_committed_and_absent(bool committed) {
+    public async Task Canonical_candidate_verification_requires_the_matching_intended_token(bool committed) {
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var model = NewEditor();
@@ -32,14 +91,14 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         Assert.NotEqual(Guid.Empty, error.Attempt.ProviderId);
         var verification = scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>();
         var result = await verification.VerifyAsync(error.Attempt);
-        Assert.Equal(committed ? ProviderVerificationDisposition.Committed : ProviderVerificationDisposition.DefinitelyNotCommitted, result.Disposition);
+        Assert.Equal(committed ? ProviderVerificationDisposition.Committed : ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
         Assert.Equal(error.Attempt.ProviderId, result.ProviderId);
         await using var db = await fixture.Factory.CreateDbContextAsync();
         Assert.Equal(committed ? 1 : 0, await db.Set<Entity>().CountAsync(row => row.Id == result.ProviderId));
     }
 
     [Fact]
-    public async Task Repeated_controlled_retry_cannot_create_second_provider() {
+    public async Task Absence_keeps_create_unconfirmed_and_repeated_verification_never_dispatches() {
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var model = NewEditor();
@@ -47,13 +106,12 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         model.ExpectedConcurrencyToken = Guid.Empty;
         fixture.Fault.ArmProvider(model.Name, afterCommit: false);
         var unknown = await Assert.ThrowsAsync<ProviderMutationUnconfirmedException>(() => registry.SaveProviderAsync(model));
-        var result = await scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>().VerifyAsync(unknown.Attempt);
-        Assert.Equal(ProviderVerificationDisposition.DefinitelyNotCommitted, result.Disposition);
-        var id = await registry.SaveProviderAsync(model);
-        Assert.Equal(model.Id, id);
-        await Assert.ThrowsAsync<ProviderProfileConcurrencyException>(() => registry.SaveProviderAsync(model));
+        var verification = scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>();
+        var result = await verification.VerifyAsync(unknown.Attempt);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
+        Assert.Equal(result, await verification.VerifyAsync(unknown.Attempt));
         await using var db = await fixture.Factory.CreateDbContextAsync();
-        Assert.Single(await db.Set<Entity>().Where(row => row.Name == model.Name).ToArrayAsync());
+        Assert.Empty(await db.Set<Entity>().Where(row => row.Id == model.Id).ToArrayAsync());
     }
 
     [Theory]
@@ -71,7 +129,7 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         fixture.Fault.ArmProvider(delete ? null : update.Name, committed, delete ? id : null);
         var unknown = await Assert.ThrowsAsync<ProviderMutationUnconfirmedException>(async () => {
             if (delete) {
-                await registry.DeleteProviderAsync(id);
+                await registry.DeleteProviderAsync(id, before!.Value);
             } else {
                 await registry.SaveProviderAsync(update);
             }
@@ -80,7 +138,8 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         Assert.Equal(before, unknown.Attempt.ExpectedConcurrencyToken);
         var verification = scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>();
         var outcome = await verification.VerifyAsync(unknown.Attempt);
-        Assert.Equal(committed ? ProviderVerificationDisposition.Committed : ProviderVerificationDisposition.DefinitelyNotCommitted, outcome.Disposition);
+        Assert.Equal(delete && committed ? ProviderVerificationDisposition.StillUnconfirmed
+            : committed ? ProviderVerificationDisposition.Committed : ProviderVerificationDisposition.DefinitelyNotCommitted, outcome.Disposition);
         var repeated = await verification.VerifyAsync(unknown.Attempt);
         Assert.Equal(outcome, repeated);
         await using var db = await fixture.Factory.CreateDbContextAsync();
@@ -142,10 +201,10 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var attempt = new SharedProviderSourceMutationAttempt(request.Id!.Value, SharedProviderSourceMutationKind.Create, request: request);
         await Assert.ThrowsAnyAsync<Exception>(() => management.SaveSourceAsync(request));
         var verification = await management.VerifySourceAsync(attempt);
-        Assert.Equal(ProviderVerificationDisposition.Committed, verification.Disposition);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, verification.Disposition);
+        Assert.True(verification.CurrentStateMatchesIntent);
         Assert.Equal(request.Id, verification.SourceId);
-        var repeated = await management.SaveSourceAsync(request);
-        Assert.Equal(request.Id, repeated.Id);
+        await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => management.SaveSourceAsync(request));
         await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => management.SaveSourceAsync(request with { Name = "Different immutable request" }));
         await using var db = await fixture.Factory.CreateDbContextAsync();
         Assert.Single(await db.Set<SharedProviderSource>().Where(row => row.Id == request.Id).ToArrayAsync());
@@ -175,8 +234,9 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
             }
         });
         var result = await management.VerifySourceAsync(attempt);
-        Assert.Equal(ProviderVerificationDisposition.Committed, result.Disposition);
-        Assert.NotNull(result.Change);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
+        Assert.True(result.CurrentStateMatchesIntent);
+        Assert.Null(result.Change);
         var second = await management.VerifySourceAsync(attempt);
         Assert.Equal(result.Disposition, second.Disposition);
         Assert.Equal(result.Sources.SingleOrDefault(source => source.Source.Id == first.Id)?.Source.ConcurrencyToken,
@@ -189,8 +249,9 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var registry = scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>();
         var sharing = scope.ServiceProvider.GetRequiredService<ISharedProviderManagementService>();
         var id = await registry.SaveProviderAsync(NewEditor());
-        var published = await sharing.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null);
-        await sharing.SetPublicationAsync(id, SharedProviderPublicationAction.Unpublish, published.Publication!.ConcurrencyToken);
+        var original = await sharing.GetProfileSharingAsync(id);
+        var published = await sharing.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, original.ProviderConcurrencyToken!.Value);
+        await sharing.SetPublicationAsync(id, SharedProviderPublicationAction.Unpublish, published.Publication!.ConcurrencyToken, published.ProviderConcurrencyToken!.Value);
         var response = await fixture.Host.Client.DeleteAsync($"/api/agents/providers/{id:D}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -208,7 +269,8 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var management = scope.ServiceProvider.GetRequiredService<ISharedProviderManagementService>();
         var providerId = await registry.SaveProviderAsync(NewEditor());
         if (hasPublication) {
-            await management.SetPublicationAsync(providerId, SharedProviderPublicationAction.Publish, null);
+            var original = await management.GetProfileSharingAsync(providerId);
+            await management.SetPublicationAsync(providerId, SharedProviderPublicationAction.Publish, null, original.ProviderConcurrencyToken!.Value);
         }
         var request = await SourceRequestAsync();
         var source = await management.SaveSourceAsync(request);
@@ -244,7 +306,8 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
     public async Task Canonical_read_failure_is_not_evidence_of_absence() {
         await using var scope = fixture.Host.App.Services.CreateAsyncScope();
         fixture.Fault.FailRead = true;
-        var attempt = new ProviderMutationAttempt(Guid.NewGuid(), Guid.NewGuid(), ProviderMutationKind.Create, Guid.Empty);
+        var attempt = scope.ServiceProvider.GetRequiredService<ProviderMutationWitness>().Sign(
+            new(Guid.NewGuid(), Guid.NewGuid(), ProviderMutationKind.Create, Guid.Empty));
         var result = await scope.ServiceProvider.GetRequiredService<IProviderMutationVerification>().VerifyAsync(attempt);
         Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, result.Disposition);
         Assert.Equal(attempt.ProviderId, result.ProviderId);
@@ -264,17 +327,20 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var exact = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Synchronize, before, selection: ids);
         var empty = new SharedProviderSourceMutationAttempt(source.Id, SharedProviderSourceMutationKind.Synchronize, before);
         await reconciler.ReconcileAsync(new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
-            ids, SharedProviderSelectionMode.Replace));
+            ids, SharedProviderSelectionMode.Replace, before.Source.ConcurrencyToken, before.Observation));
         Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, (await management.VerifySourceAsync(subset)).Disposition);
-        Assert.Equal(ProviderVerificationDisposition.Committed, (await management.VerifySourceAsync(exact)).Disposition);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, (await management.VerifySourceAsync(exact)).Disposition);
+        Assert.True((await management.VerifySourceAsync(exact)).CurrentStateMatchesIntent);
         Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, (await management.VerifySourceAsync(empty)).Disposition);
+        var original = (await management.ListSourcesAsync()).Single(item => item.Source.Id == source.Id).Observation;
         await reconciler.ReconcileAsync(new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
-            new HashSet<SharedProviderPublicationId>(), SharedProviderSelectionMode.Replace));
+            new HashSet<SharedProviderPublicationId>(), SharedProviderSelectionMode.Replace, original.ConcurrencyToken, original));
         var verified = await management.VerifySourceAsync(empty);
-        Assert.Equal(ProviderVerificationDisposition.Committed, verified.Disposition);
+        Assert.Equal(ProviderVerificationDisposition.StillUnconfirmed, verified.Disposition);
+        Assert.True(verified.CurrentStateMatchesIntent);
         var authoritative = verified.Sources.Single(item => item.Source.Id == source.Id);
         Assert.All(authoritative.Imports, import => Assert.Equal(SharedProviderSelectionState.Retired, import.SelectionState));
-        Assert.Equal(2, verified.Change!.RetiredProviderProfileIds.Count);
+        Assert.Null(verified.Change);
         var repeated = await management.VerifySourceAsync(empty);
         Assert.Equal(authoritative.Source.ConcurrencyToken, repeated.Sources.Single(item => item.Source.Id == source.Id).Source.ConcurrencyToken);
     }
@@ -288,18 +354,19 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var before = await management.GetProfileSharingAsync(id);
         var recovery = new SharedProviderRecovery();
         var publish = recovery.BeginTarget(id, SharedProviderTargetMutationKind.Publish, before);
-        var published = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied,
+        var published = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Publish, null, before.ProviderConcurrencyToken!.Value);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.CurrentMatchesIntent,
             SharedProviderTargetVerification.Evaluate(publish, published).Disposition);
-        var unpublished = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Unpublish, published.Publication!.ConcurrencyToken);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+        var unpublished = await management.SetPublicationAsync(id, SharedProviderPublicationAction.Unpublish, published.Publication!.ConcurrencyToken, published.ProviderConcurrencyToken!.Value);
+        Assert.Equal(SharedProviderTargetVerificationDisposition.DifferentCurrent,
             SharedProviderTargetVerification.Evaluate(publish, unpublished).Disposition);
 
         var source = await management.SaveSourceAsync(await SourceRequestAsync());
         var catalog = RecoveryCatalog();
         await scope.ServiceProvider.GetRequiredService<SharedProviderReconciliationCoordinator>().ReconcileAsync(
             new(source.Id, catalog, SharedProviderCatalogEntityTag.FromRevision(catalog.CatalogRevision),
-                catalog.Providers.Select(provider => provider.PublicationId).ToHashSet(), SharedProviderSelectionMode.Replace));
+                catalog.Providers.Select(provider => provider.PublicationId).ToHashSet(), SharedProviderSelectionMode.Replace,
+                source.ConcurrencyToken, new(source.ConcurrencyToken, [])));
         var import = (await management.ListSourcesAsync()).Single(item => item.Source.Id == source.Id).Imports.First();
         var sharing = await management.GetProfileSharingAsync(import.ProviderProfileId);
         var request = new SharedProviderImportedProfileUpdateRequest(import.ImportId, import.ProviderProfileId,
@@ -307,12 +374,12 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         var attempt = recovery.BeginTarget(import.ProviderProfileId, SharedProviderTargetMutationKind.ImportedSettings, sharing, request);
         var saved = await management.UpdateImportedProfileAsync(request);
         Assert.Equal("Exact local alias", saved.Import!.LocalAlias);
-        Assert.Equal(SharedProviderTargetVerificationDisposition.Satisfied,
+        Assert.Equal(SharedProviderTargetVerificationDisposition.CurrentMatchesIntent,
             SharedProviderTargetVerification.Evaluate(attempt, saved).Disposition);
         var superseded = await management.UpdateImportedProfileAsync(request with {
             LocalAlias = "A different later alias", ExpectedImportConcurrencyToken = saved.Import.ImportConcurrencyToken,
             ExpectedProviderConcurrencyToken = saved.Import.ProviderConcurrencyToken });
-        Assert.Equal(SharedProviderTargetVerificationDisposition.StillUnconfirmed,
+        Assert.Equal(SharedProviderTargetVerificationDisposition.DifferentCurrent,
             SharedProviderTargetVerification.Evaluate(attempt, superseded).Disposition);
     }
 
@@ -341,7 +408,7 @@ public sealed class ProviderRecoveryIntegrationTests(ProviderRecoveryFixture fix
         await using var db = await fixture.Factory.CreateDbContextAsync();
         db.Add(secret);
         await db.SaveChangesAsync();
-        return new(Guid.NewGuid(), null, "Recovery source " + Guid.NewGuid().ToString("N"),
+        return new(Guid.NewGuid(), Guid.Empty, "Recovery source " + Guid.NewGuid().ToString("N"),
             new Uri("https://source.example.test/"), secret.Id, true, false);
     }
 

@@ -17,6 +17,62 @@ namespace CanDoItAll.Tests.Unit.AgentFramework;
 /// </summary>
 public sealed class RuntimePortDecoratorFallthroughTests
 {
+    [Theory]
+    [InlineData(AgentSavedEffectDispatchSupport.Unsupported, false)]
+    [InlineData(AgentSavedEffectDispatchSupport.OriginalPreparedOwnerEffect, false)]
+    [InlineData(AgentSavedEffectDispatchSupport.OriginalPreparedOwnerEffect, true)]
+    public async Task Production_decorator_chain_preserves_saved_dispatch_capability_identity_and_cancellation(
+        AgentSavedEffectDispatchSupport support, bool cancelled) {
+        var binding = new AgentToolApprovalBinding(new(Guid.NewGuid()), new(Guid.NewGuid()), 1,
+            AgentToolProtocolEnvelope.Create("saved-decorator-fixture", 1, "{}").Digest);
+        var request = new AgentSavedEffectDispatchRequest(new(Guid.NewGuid(), Guid.NewGuid(), AgentExecutionAuthorityId.Create()), binding);
+        var result = new AgentSavedEffectDispatchResult(binding, AgentToolProposalState.Completed,
+            AgentToolEffectState.Committed, 7, 6);
+        var inner = new SavedDispatchProbe(support, result);
+        var execution = DispatchProxy.Create<IAgentExecutionRuntime, ThrowingProxy>();
+        var scenario = new ScenarioHarnessExecutionDecorator(execution, inner, null!);
+        var decorated = new ProcessMockExecutionDecorator(scenario, scenario, null!);
+        using var cancellation = new CancellationTokenSource();
+        if (cancelled) {
+            cancellation.Cancel();
+        }
+        Assert.Equal(support, decorated.SavedEffectDispatchSupport);
+        if (support == AgentSavedEffectDispatchSupport.Unsupported) {
+            await Assert.ThrowsAsync<NotSupportedException>(() => decorated.DispatchSavedEffectAsync(request, cancellation.Token));
+        } else if (cancelled) {
+            var failure = await Assert.ThrowsAsync<OperationCanceledException>(() => decorated.DispatchSavedEffectAsync(request, cancellation.Token));
+            Assert.Equal(cancellation.Token, failure.CancellationToken);
+        } else {
+            Assert.Same(result, await decorated.DispatchSavedEffectAsync(request, cancellation.Token));
+        }
+        Assert.Equal(1, inner.Calls);
+        Assert.Same(request, inner.Request);
+        Assert.Equal(cancellation.Token, inner.Token);
+    }
+
+    private sealed class SavedDispatchProbe(AgentSavedEffectDispatchSupport support, AgentSavedEffectDispatchResult result)
+        : IAgentContinuationRuntime {
+        public AgentSavedEffectDispatchSupport SavedEffectDispatchSupport => support;
+        internal int Calls { get; private set; }
+        internal AgentSavedEffectDispatchRequest? Request { get; private set; }
+        internal CancellationToken Token { get; private set; }
+
+        public Task<AgentSavedEffectDispatchResult> DispatchSavedEffectAsync(AgentSavedEffectDispatchRequest request,
+            CancellationToken cancellationToken = default) {
+            Calls++;
+            Request = request;
+            Token = cancellationToken;
+            if (support == AgentSavedEffectDispatchSupport.Unsupported) {
+                throw new NotSupportedException("Saved publication is unavailable.");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(result);
+        }
+
+        public Task<AgentRuntimeResponse> ContinueAsync(AgentRuntimeContinuationRequest request, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Saved dispatch cannot enter ordinary model continuation.");
+    }
+
     [Fact]
     public async Task ProcessMock_diagnostics_decorator_never_reaches_inner_for_the_process_mock_provider()
     {

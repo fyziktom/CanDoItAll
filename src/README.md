@@ -13,6 +13,7 @@ Production source is organized by architectural responsibility:
 | [Processes](Processes/README.md) | Durable process domain and runtime |
 | [Plugins](plugins/README.md) | Plugin contracts and implementations |
 | [UI](UI/README.md) | Application-owned reusable UI facades |
+| [Sandboxes](Sandboxes/README.md) | Standalone hosts for the same feature renderers and deterministic scenarios |
 
 Dependency direction and communication rules are defined in the
 [architecture overview](../docs/architecture/overview.md) and

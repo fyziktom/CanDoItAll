@@ -1,0 +1,74 @@
+@implements IAsyncDisposable
+
+<NativeFormInspector @ref="browserInput" FormId="@FormId" SectionIndexAttribute="data-opportunity-section" />
+<EditForm id="@FormId" EditContext="context" OnSubmit="SubmitAsync" novalidate>
+    <ValidationSummary />
+    <OpportunityEditor Model="Model" SourceOpportunity="Source" Section="Section" AccountDisplayName="@AccountDisplayName"
+        RelationshipStageLabel="@RelationshipStageLabel" StageHistory="@(Source?.StageHistory ?? [])" LoadFailed="LoadFailed" FormId="@FormId"
+        InputChanged="InputChanged" PickerChanged="PickerChanged" ProjectSelected="ProjectSelected" />
+</EditForm>
+
+@code {
+    private EditContext context = default!;
+    private NativeFormInspector browserInput = default!;
+    private bool focusInvalid;
+    private bool disposed;
+    private long generation;
+    [Parameter, EditorRequired] public CrmOpportunityEditorModel Model { get; set; } = default!;
+    [Parameter, EditorRequired] public string FormId { get; set; } = string.Empty;
+    [Parameter] public OpportunityEditorSection Section { get; set; } = OpportunityEditorSection.All;
+    [Parameter] public CrmOpportunityDetailModel? Source { get; set; }
+    [Parameter] public string AccountDisplayName { get; set; } = string.Empty;
+    [Parameter] public string RelationshipStageLabel { get; set; } = string.Empty;
+    [Parameter] public EventCallback<CrmOpportunityEditorModel> Save { get; set; }
+    [Parameter] public EventCallback<int?> InvalidSection { get; set; }
+    [Parameter] public EventCallback<OpportunityInput> InputChanged { get; set; }
+    [Parameter] public EventCallback<bool> PickerChanged { get; set; }
+    [Parameter] public EventCallback<Guid> ProjectSelected { get; set; }
+    [Parameter] public EventCallback<Exception> LoadFailed { get; set; }
+
+    protected override void OnParametersSet() {
+        if (context is null || !ReferenceEquals(context.Model, Model)) {
+            generation++;
+            context = new(Model);
+        }
+    }
+
+    public async Task<bool> ValidateAsync() {
+        var opening = generation;
+        if (disposed || opening != generation) {
+            return false;
+        }
+        var validity = await browserInput.InspectAsync();
+        if (disposed || opening != generation) {
+            return false;
+        }
+        if (!validity.IsValid || !context.Validate()) {
+            focusInvalid = true;
+            await InvalidSection.InvokeAsync(validity.SectionIndex);
+            StateHasChanged();
+            return false;
+        }
+        return true;
+    }
+
+    private async Task SubmitAsync() {
+        var submittedModel = Model;
+        if (await ValidateAsync() && !disposed && ReferenceEquals(submittedModel, Model)) {
+            await Save.InvokeAsync(submittedModel);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (focusInvalid && !disposed) {
+            focusInvalid = false;
+            await browserInput.FocusInvalidAsync();
+        }
+    }
+
+    public ValueTask DisposeAsync() {
+        disposed = true;
+        generation++;
+        return ValueTask.CompletedTask;
+    }
+}

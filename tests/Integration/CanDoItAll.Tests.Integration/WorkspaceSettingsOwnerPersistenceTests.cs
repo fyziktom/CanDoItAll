@@ -1,11 +1,13 @@
 using System.Text.Json;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
+using ProviderProfile = CanDoItAll.Modules.AgentFramework.ProviderManagement.ProviderProfile;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -22,7 +24,7 @@ public sealed class WorkspaceSettingsOwnerPersistenceTests {
     }
 
     [Fact]
-    public async Task Legacy_defaults_survive_owner_service_update_restart_and_profile_isolation() {
+    public async Task Explicit_current_defaults_survive_owner_service_update_restart_and_profile_isolation() {
         await using var environment = CanDoItAllTestEnvironment.Create("workspace-settings-owner");
         var profile = environment.CreatePostgreSqlProfile("original");
         var otherProfile = environment.CreatePostgreSqlProfile("other");
@@ -30,12 +32,21 @@ public sealed class WorkspaceSettingsOwnerPersistenceTests {
         var legacy = new WorkspaceSettings {
             WorkspaceName = "Legacy workspace", DefaultProviderProfileId = Guid.NewGuid(), DefaultPromptOutputFormat = "Markdown",
             CurrencyCode = "USD", CurrencyCultureName = "en-US", Notes = "Retain exact legacy notes.",
-            UpdatedAtUtc = new DateTimeOffset(2100, 1, 2, 3, 4, 5, TimeSpan.Zero)
+            UpdatedAtUtc = new DateTimeOffset(2100, 1, 2, 3, 4, 5, TimeSpan.Zero), IsCurrent = true
         };
         await using (var original = await TestApplication.CreateAsync(harness)) {
             await using var canonical = await original.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+            await using var transaction = await canonical.Database.BeginTransactionAsync();
+            await canonical.Database.ExecuteSqlRawAsync("LOCK TABLE \"Workspace_Settings\" IN SHARE ROW EXCLUSIVE MODE");
+            await canonical.Set<WorkspaceSettings>().Where(item => item.IsCurrent).ExecuteUpdateAsync(update => update.SetProperty(item => item.IsCurrent, false));
+            canonical.Add(new ProviderProfile {
+                Id = legacy.DefaultProviderProfileId!.Value, Name = "Retained custom provider",
+                ConnectorPluginKey = ProviderConnectorKeys.ScenarioHarness, ConfigSchemaVersion = "1.0",
+                BaseUrl = ProviderConnectorDefaults.ScenarioHarnessBaseUrl, DefaultModel = ProviderConnectorDefaults.ScenarioHarnessModel
+            });
             canonical.Add(legacy);
             await canonical.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         await using (var restarted = await TestApplication.CreateAsync(harness)) {
@@ -43,13 +54,15 @@ public sealed class WorkspaceSettingsOwnerPersistenceTests {
             Assert.Equal(JsonSerializer.Serialize(legacy), JsonSerializer.Serialize(await owner.Set<WorkspaceSettings>().SingleAsync(item => item.Id == legacy.Id)));
             await using var scope = restarted.Services.CreateAsyncScope();
             var service = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
-            var settings = await service.GetSettingsAsync();
+            var original = await service.ReadSettingsSnapshotAsync();
+            var settings = original.Values.ToEditorModel();
             Assert.Equal(legacy.WorkspaceName, settings.WorkspaceName);
             Assert.Equal(legacy.DefaultProviderProfileId, settings.DefaultProviderProfileId);
             Assert.Equal(legacy.Notes, settings.Notes);
             settings.WorkspaceName = "Owner saved workspace";
             settings.Notes = "Human edit retained after restart.";
-            await service.SaveSettingsAsync(settings);
+            Assert.IsType<WorkspaceSettingsSaveOutcome.Accepted>(await service.SaveSettingsAsync(
+                new(original.Expectation, WorkspaceSettingsValues.Capture(settings))));
         }
 
         await using (var restarted = await TestApplication.CreateAsync(harness)) {

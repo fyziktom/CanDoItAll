@@ -1,0 +1,107 @@
+{
+  "formatVersion": 1,
+  "owner": "/root/persistence_architecture",
+  "status": "Source frozen; self-review complete; independent review pending; no build or execution",
+  "files": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/ResourceMetadataMigrationTests.cs",
+      "operation": "add",
+      "bytes": 22029,
+      "sha256": "84D9241B9B7727B7806AEB0F892353C0C9258F12946D6E680DA64A791C01F790",
+      "mainPredecessorSha256": null
+    },
+    {
+      "path": "docs/architecture/concurrent-mutations/10-resource-metadata-revisions.md",
+      "operation": "add",
+      "bytes": 3406,
+      "sha256": "DE5BA3C5089D52B890A46B40B2DF958CC1C77A7B64127889128B3C48C7FE7B11",
+      "mainPredecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-body.sql.txt",
+      "operation": "add",
+      "bytes": 9701,
+      "sha256": "D7973F1856772809ACC4E86E40861C71FD03A70623C9E35543D64730C7971D8D",
+      "mainPredecessorSha256": null
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/validation/P05-R1-resource-migration-source.md",
+      "operation": "add",
+      "bytes": 5294,
+      "sha256": "EC04054582380C25118A3D36E2E86646D20A8A7FB2371F46971E28D0F7E3DE36",
+      "mainPredecessorSha256": null
+    }
+  ],
+  "managedDependencies": [
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-resource-migration-generation-plan.md",
+      "sha256": "6178AE05FC51A2179A1530A750B3B02F0ECD12CC6ECE26F0E2FB2D947D4603D1"
+    },
+    {
+      "path": "codex/bundles/concurrent-mutations/reviews/P05-R1-stage2-combined-transfer-preflight.json",
+      "sha256": "4718B5D1B8CA94830C970D2BF30982AA66EA1783FA047FBAFAC060C260687B88"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/ResourceModels.cs",
+      "sha256": "2B374A5FC43379D72B631216B1F22652D769B5C38844732AE7B5F5E4E913E833"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Resources/Persistence/ResourcesDbContext.cs",
+      "sha256": "71FC60D3B778A7ACBA6772CD0910EFE53F8665EBF95AC90D323AFB78229C8878"
+    }
+  ],
+  "mainGenerationPredecessors": [
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261017053554_AddWorkbenchTaskPlanReceipts.cs",
+      "sha256": "207226CED8E8DF29CEB9782B1CAD070A5CC399C9FA8EE19A9380D3EDE2C3A861"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
+      "sha256": "338896028E3206C613D34978C1F250963EC40037976E7EF5A6AD1DBFCFB2D79B"
+    }
+  ],
+  "canonicalMigrationAuthored": false,
+  "modelChanged": false,
+  "mainChanged": false,
+  "generatedMigrationSuffix": "AddResourceMetadataRevisions",
+  "previousMigration": "20261017053554_AddWorkbenchTaskPlanReceipts",
+  "expectedModel": {
+    "canonicalEntities": 169,
+    "resourceOwnerEntities": 1,
+    "resourceColumnsBefore": 19,
+    "resourceColumnsAfter": 20,
+    "newEntities": 0,
+    "newPools": 0,
+    "persistentRevisionDefault": false
+  },
+  "selection": {
+    "project": "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "filter": "FullyQualifiedName~CanDoItAll.Tests.Integration.ResourceMetadataMigrationTests.",
+    "facts": 3,
+    "theoryRows": 0,
+    "dynamicRows": 0,
+    "skips": 0,
+    "expectedDiscovery": 3,
+    "expectedRuntime": 3,
+    "methods": [
+      "Predecessor_upgrade_preserves_every_retained_field_and_Search_with_one_stable_revision_per_row",
+      "Fresh_catalog_requires_explicit_nonempty_revisions_and_matches_the_single_owner_model",
+      "Drift_partial_installation_lock_refusal_and_down_leave_history_and_retained_bytes_unchanged"
+    ]
+  },
+  "checkpointAccounting": {
+    "previousOrdinary": 343,
+    "additionalAuthoredMigrationFacts": 3,
+    "combinedOrdinary": 346,
+    "browserSeparate": 4,
+    "originalSelectionsUnchanged": true
+  },
+  "remainingGates": [
+    "Parent-generated canonical migration/designer/snapshot and reviewed SQL marker replacement",
+    "Independent source review",
+    "Affected Release builds and exact discovery/runtime PostgreSQL proof",
+    "Full portability/rendering enforcement",
+    "Stage1 fourteen run first at final coherent checkpoint",
+    "Stage3 shared Resource admission and capacity remain held"
+  ]
+}

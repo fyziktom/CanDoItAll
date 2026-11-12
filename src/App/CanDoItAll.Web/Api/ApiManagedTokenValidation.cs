@@ -7,6 +7,7 @@ namespace CanDoItAll.Web.Api;
 
 internal static class ApiManagedTokenValidation {
     public static async Task ValidateAsync(TokenValidatedContext context) {
+        context.HttpContext.Features.Set<ApiAuthenticationObservation>(null);
         Guid tokenId = default;
         try {
             using var document = ApiTokenPayloadValidation.Read(context.SecurityToken);
@@ -15,7 +16,10 @@ internal static class ApiManagedTokenValidation {
                 if (payload.TryGetProperty(ApiManagedTokenClaims.Kind, out _) || payload.TryGetProperty(ApiManagedTokenClaims.UserId, out _) ||
                     payload.TryGetProperty(ApiManagedTokenClaims.AuthenticationRevision, out _)) {
                     context.Fail("Session claims require a managed credential.");
+                    return;
                 }
+                context.HttpContext.Features.Set(ApiAuthenticationObservation.TryCapture(context.Principal!, context.SecurityToken.Issuer,
+                    payload, null, null));
                 return;
             }
             var version = ApiTokenPayloadValidation.Text(payload, ApiManagedTokenClaims.Version);
@@ -31,16 +35,18 @@ internal static class ApiManagedTokenValidation {
                 context.Fail("The API token is revoked, expired or deleted.");
                 return;
             }
-            ApiSessionIdentity? identity = null;
+            ApiSessionAuthoritySnapshot? session = null;
             if (token.Kind != ApiCredentialKind.Machine) {
-                identity = await context.HttpContext.RequestServices.GetRequiredService<ApiSessionService>()
-                    .ResolveIdentityAsync(token, context.HttpContext.RequestAborted);
-                if (identity is null) {
+                session = await context.HttpContext.RequestServices.GetRequiredService<ApiSessionService>()
+                    .ResolveAuthoritySnapshotAsync(token, context.HttpContext.RequestAborted);
+                if (session is null) {
                     context.Fail("The API session is no longer valid.");
                     return;
                 }
             }
-            context.HttpContext.Features.Set(new ValidatedApiCredential(token.Id, context.SecurityToken.Issuer, token.DisplayName, token.Kind, identity));
+            var observation = ApiAuthenticationObservation.TryCapture(context.Principal!, context.SecurityToken.Issuer, payload, token, session);
+            context.HttpContext.Features.Set(observation);
+            context.HttpContext.Features.Set(new ValidatedApiCredential(token.Id, context.SecurityToken.Issuer, token.DisplayName, token.Kind, session?.Identity));
         } catch (Exception exception) {
             context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                 .CreateLogger(nameof(ApiManagedTokenValidation))

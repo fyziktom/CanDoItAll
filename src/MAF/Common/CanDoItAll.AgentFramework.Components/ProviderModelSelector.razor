@@ -21,6 +21,9 @@
     public ProviderProfile? Provider { get; set; }
 
     [Parameter]
+    public WorkflowProviderOption? WorkflowProvider { get; set; }
+
+    [Parameter]
     public string? ProviderName { get; set; }
 
     [Parameter]
@@ -69,6 +72,14 @@
     {
         get
         {
+            if (WorkflowProvider is { } workflowProvider) {
+                return new ConversationProviderOption(new(workflowProvider.ProviderProfileId.ToString("D")),
+                    workflowProvider.Name, workflowProvider.IsEnabled, workflowProvider.DefaultModel, workflowProvider.ModelOptions) {
+                    ModelDisplayNames = System.Collections.Immutable.ImmutableDictionary.CreateRange(
+                        workflowProvider.ModelCatalog.Select(model => KeyValuePair.Create(model.Id, model.DisplayName))),
+                    AllowsModelOverride = !workflowProvider.IsSourceManaged
+                };
+            }
             if (Provider is not null)
             {
                 var mapped = AgentProviderPresentationMapper.Map(Provider);

@@ -1,0 +1,33 @@
+@using CanDoItAll.Editing.UI
+
+<Stack GapScale="LayoutGap.Small" data-testid="providers-comparison">
+    <TextBlock Value="Compare the saved provider with your draft. Apply changes locally, then use Save separately. No diagnostic or discovery is repeated." />
+    @if (Review.IsStale) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="providers-comparison-stale">The provider or your draft changed during review. Compare again; your unfinished work is retained.</Alert>
+    }
+    @if (Review.HasIncompleteSettings) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            Invalid or unfinished settings stay in the editor with their validation messages. Keeping them can replace the saved settings after you correct them and Save.
+            <FormField Text="Keep my unfinished provider settings locally">
+                <CheckBox TValue="bool" Value="Review.KeepIncompleteSettings" ValueChanged="KeepIncomplete" data-testid="providers-comparison-keep-input" />
+            </FormField>
+        </Alert>
+    }
+    <MergeFieldView TValue="string" Label="Name" Field="Review.Name" ShowUnchanged="false" Format="@(value => value)" Changed="Changed" TestId="providers-review-name" />
+    <MergeFieldView TValue="string" Label="Notes" Field="Review.Notes.Field" ShowUnchanged="false" Format="@(value => value)" Changed="Changed" TestId="providers-review-notes" />
+    <TextBlock Value="Connection, secret reference, execution settings, model catalog and prices are reviewed together. Stored configuration and extensions are kept privately with the chosen side." />
+    <MergeFieldView TValue="ProviderConnectionSettings" Label="Provider settings" Field="Review.Settings" ShowUnchanged="false"
+                    HasPendingInput="Review.HasIncompleteSettings" Format="Review.DescribeSettings" Changed="Changed" TestId="providers-review-settings" />
+    <FormField Text="Combined tags"><TextBlock Value="@string.Join(", ", Review.Tags)" /></FormField>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired] public ProviderEditorComparison Review { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private async Task KeepIncomplete(bool value) {
+        Review.KeepIncompleteSettings = value;
+        await Changed.InvokeAsync();
+    }
+
+}

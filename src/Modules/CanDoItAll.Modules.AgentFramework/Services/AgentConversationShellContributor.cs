@@ -6,6 +6,7 @@ using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Conversations.Shell;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
@@ -18,7 +19,9 @@ public sealed class AgentConversationShellContributor(
     IAgentReferenceDataCacheInvalidator referenceDataCacheInvalidator,
     DialogService dialogService,
     NotificationService notificationService,
-    ILogger<AgentConversationShellContributor> logger) : IConversationShellContributor, IAsyncDisposable
+    ILogger<AgentConversationShellContributor> logger,
+    AgentChatRecoveryService? recovery = null,
+    NavigationManager? navigation = null) : IConversationShellContributor, IAsyncDisposable
 {
     public const string SourceIdentifier = "agents";
     private const string ParticipantKeyPrefix = "agent:";
@@ -67,15 +70,13 @@ public sealed class AgentConversationShellContributor(
         var active = state.ActiveChats
             .Select(MapActiveChat)
             .ToArray();
-        ConversationShellWindowDescriptor[] windows = state.VisibleChat is { } visibleChat
-            ? [MapWindow(visibleChat)]
-            : [];
+        var windows = state.ActiveChats.Select(MapWindow).ToArray();
         return new(
             visibleAgents,
             active,
             windows,
             BuildStatusBadges(visibleAgents.Length, state.ActiveChats.Count),
-            string.IsNullOrWhiteSpace(failureMessage) ? null : failureMessage);
+            string.IsNullOrWhiteSpace(failureMessage) ? recovery?.FailureMessage : failureMessage);
     }
 
     public async Task HandleParticipantActionAsync(
@@ -109,7 +110,7 @@ public sealed class AgentConversationShellContributor(
 
             throw new InvalidOperationException($"Unsupported Agent participant action '{request.ActionKey.Value}'.");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || lifetime.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -137,6 +138,11 @@ public sealed class AgentConversationShellContributor(
         var handleId = ResolveHandleId(request.ItemKey);
         if (request.ActionKey == OpenActionKey)
         {
+            if (recovery is not null && navigation is not null &&
+                    await recovery.GetReturnLocationAsync(handleId, cancellationToken) is { } location) {
+                var target = location.ResolveUri(new Uri(navigation.BaseUri));
+                navigation.NavigateTo(target.AbsoluteUri);
+            }
             coordinator.ShowChat(handleId);
             shell.FocusWindow(SourceIdentifier, BuildWindowId(handleId));
             return;
@@ -171,7 +177,9 @@ public sealed class AgentConversationShellContributor(
         try
         {
             await coordinator.InitializeAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             await LoadAgentsAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             initialized = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -200,6 +208,7 @@ public sealed class AgentConversationShellContributor(
                 IncludeAgentTemplates: false,
                 ActiveAgentsOnly: true),
             cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         agents = referenceData.Agents;
         providersById = referenceData.ProviderById;
         failureMessage = string.Empty;
@@ -263,7 +272,9 @@ public sealed class AgentConversationShellContributor(
                 [nameof(AgentFloatingConversationContent.Chat)] = chat,
                 [nameof(AgentFloatingConversationContent.PreferredAgent)] = agents.FirstOrDefault(
                     agent => agent.Id == chat.Agent.AgentId)!
-            });
+            }, keepContentMounted: true) {
+                Avatar = new(chat.Agent.Name, chat.Agent.AvatarImageUrl, string.Empty, chat.Agent.Name)
+            };
 
     private IReadOnlyList<PresentationBadge> BuildStatusBadges(
         int visibleAgentCount,
@@ -295,10 +306,12 @@ public sealed class AgentConversationShellContributor(
 
     private async Task OpenHistoryAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
+        using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
         var workspace = await workspaceService.GetChatAgentWorkspaceAsync(
             agent.Id,
             preferredSessionId: null,
-            cancellationToken);
+            owner.Token);
+        owner.Token.ThrowIfCancellationRequested();
         var sessions = workspace.Sessions
             .Take(AgentThreadHistoryDialog.MaxThreadCount)
             .ToArray();
@@ -321,14 +334,19 @@ public sealed class AgentConversationShellContributor(
                 DenseChrome = true,
                 TestId = "floating-agent-chat-history-dialog",
                 AriaLabel = "Agent thread history"
-            });
-        if (result is not Guid sessionId)
+            }, owner.Token);
+        if (owner.IsCancellationRequested || Volatile.Read(ref disposed) != 0 || result is not Guid sessionId)
         {
             return;
         }
+        if (!sessions.Any(session => session.Id == sessionId)) {
+            throw new InvalidOperationException("The selected thread was not part of the opening Agent history.");
+        }
 
-        var chat = await coordinator.OpenChatAsync(agent.Id, sessionId, cancellationToken);
-        shell.FocusWindow(SourceIdentifier, BuildWindowId(chat.HandleId));
+        var chat = await coordinator.OpenChatAsync(agent.Id, sessionId, owner.Token);
+        if (!owner.IsCancellationRequested && Volatile.Read(ref disposed) == 0) {
+            shell.FocusWindow(SourceIdentifier, BuildWindowId(chat.HandleId));
+        }
     }
 
     private async Task RequestCloseAsync(
@@ -344,21 +362,28 @@ public sealed class AgentConversationShellContributor(
             return;
         }
 
-        var result = await dialogService.OpenAsync<FloatingAgentChatCloseDialog>(
-            "Close active chat",
-            new Dictionary<string, object?>
-            {
-                [nameof(FloatingAgentChatCloseDialog.Chat)] = chat
-            },
-            new DialogOptions
-            {
-                Eyebrow = "Floating agent chat",
-                Subtitle = chat.Agent.Name,
-                Size = ModalSize.Compact,
-                DenseChrome = true,
-                TestId = "floating-agent-chat-close-confirmation",
-                AriaLabel = "Close active agent chat"
-            });
+        using var owner = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+        object? result;
+        try {
+            result = await dialogService.OpenAsync<FloatingAgentChatCloseDialog>(
+                "Close active chat",
+                new Dictionary<string, object?> {
+                    [nameof(FloatingAgentChatCloseDialog.Chat)] = chat
+                },
+                new DialogOptions {
+                    Eyebrow = "Floating agent chat",
+                    Subtitle = chat.Agent.Name,
+                    Size = ModalSize.Compact,
+                    DenseChrome = true,
+                    TestId = "floating-agent-chat-close-confirmation",
+                    AriaLabel = "Close active agent chat"
+                }, owner.Token);
+        } catch (OperationCanceledException) when (owner.IsCancellationRequested) {
+            return;
+        }
+        if (owner.IsCancellationRequested || Volatile.Read(ref disposed) != 0) {
+            return;
+        }
         if (result is not FloatingAgentChatCloseDecision decision ||
             decision == FloatingAgentChatCloseDecision.Cancel)
         {
@@ -368,8 +393,16 @@ public sealed class AgentConversationShellContributor(
 
         if (decision == FloatingAgentChatCloseDecision.Stop && chat.CanStop)
         {
+            if (coordinator.Snapshot().ActiveChats.FirstOrDefault(item => item.HandleId == handleId)?.HasUnsentDraft == true && !chat.HasUnsentDraft) {
+                notificationService.Warning("Draft retained", "A new draft appeared while close confirmation was open. Review it before stopping this chat.");
+                shell.FocusWindow(SourceIdentifier, BuildWindowId(handleId));
+                return;
+            }
             try
             {
+                if (recovery is not null) {
+                    await recovery.DismissAsync(handleId, owner.Token);
+                }
                 coordinator.Stop(handleId);
                 shell.ClearFocusedWindow(SourceIdentifier, BuildWindowId(handleId));
                 return;

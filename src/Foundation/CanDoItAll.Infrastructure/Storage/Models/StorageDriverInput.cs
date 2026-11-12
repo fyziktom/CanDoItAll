@@ -20,7 +20,7 @@ public sealed record StorageDriverInput : StorageCatalogSnapshot {
 
     public StorageProviderConfiguration ReadConfiguration() => StorageJson.ParseProviderConfiguration(configurationJson);
 
-    public string BuildBrowseFingerprint(string root) {
+    private (string Endpoint, string Configuration) ReadFingerprintInputs() {
         string endpoint = EndpointOrRoot ?? string.Empty;
         string configuration = configurationJson ?? "{}";
         if (endpoint.Length > StorageBrowseContainer.MaximumKeyLength ||
@@ -28,6 +28,17 @@ public sealed record StorageDriverInput : StorageCatalogSnapshot {
             throw new StorageBrowseException(new StorageBrowseError(StorageBrowseErrorCode.InvalidConfiguration,
                 "The storage source configuration exceeds the bounded fingerprint contract."));
         }
+        return (endpoint, configuration);
+    }
+
+    public string BuildContentSourceFingerprint() {
+        var (endpoint, configuration) = ReadFingerprintInputs();
+        var canonical = System.Text.Json.JsonSerializer.Serialize(new { Id, ProviderKind, Endpoint = endpoint, Configuration = configuration, CredentialSecretId });
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
+    }
+
+    public string BuildBrowseFingerprint(string root) {
+        var (endpoint, configuration) = ReadFingerprintInputs();
         string canonical = string.Join('\n', Id.ToString("N"), ((int)ProviderKind).ToString(CultureInfo.InvariantCulture),
             endpoint, configuration, ((int)CapabilityMask).ToString(CultureInfo.InvariantCulture),
             IsEnabled ? "1" : "0", IsReadOnly ? "1" : "0", CredentialSecretId?.ToString("N") ?? "none", root);

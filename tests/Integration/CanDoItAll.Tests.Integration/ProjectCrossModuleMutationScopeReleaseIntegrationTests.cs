@@ -26,9 +26,10 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var admission = await CreateProjectAsync(projects, "Subtree scope release");
         var projectId = admission.ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, projectId, "Delete with CRM");
-        await SeedAssignmentAsync(partyIntegration, admission, node.Id);
+        await SeedAssignmentAsync(scope.ServiceProvider, admission, node.Id);
 
-        var deletedCount = await workbench.DeleteObjectAsync(projectId, node.Id)
+        var deletedCount = await workbench.DeleteObjectAsync(projectId, node.Id,
+                mutationOwner: await ProjectStructureTestOrigin.ReadOwnerAsync(workbench, projectId))
             .WaitAsync(CompletionTimeout);
 
         Assert.Equal(1, deletedCount);
@@ -54,7 +55,7 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var admission = await CreateProjectAsync(projects, "Replay scope release");
         var projectId = admission.ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, projectId, "Replay with CRM");
-        await SeedAssignmentAsync(partyIntegration, admission, node.Id);
+        await SeedAssignmentAsync(scope.ServiceProvider, admission, node.Id);
         var mutationId = Guid.NewGuid();
 
         await using (var dbContext = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync())
@@ -119,14 +120,14 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
         var targetProjectId = (await CreateProjectAsync(projects, "Transfer target")).ProjectId;
         var node = await CreateAssignableWorkItemAsync(workbench, sourceProjectId, "Move with CRM");
         var assignmentId = await SeedAssignmentAsync(
-            partyIntegration,
+            scope.ServiceProvider,
             sourceAdmission,
             node.Id);
 
         var result = await workbench.MoveNodesToProjectAsync(
                 sourceProjectId,
                 [node.Id],
-                targetProjectId)
+                targetProjectId, mutationOwner: await ProjectStructureTestOrigin.ReadTransferOwnerAsync(workbench, sourceProjectId, targetProjectId))
             .WaitAsync(CompletionTimeout);
 
         Assert.NotNull(result);
@@ -188,9 +189,11 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
     }
 
     private static async Task<Guid> SeedAssignmentAsync(
-        IProjectPartyIntegrationBridge partyIntegration,
+        IServiceProvider services,
         ProjectWriteAdmission admission,
         string nodeKey) {
+        var partyIntegration = services.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var assignments = services.GetRequiredService<ProjectPartyIntegrationService>();
         var projectId = admission.ProjectId;
         var party = await partyIntegration.CreatePartyAsync(new ProjectPartyQuickCreateRequest
         {
@@ -210,6 +213,7 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             Role = ProjectPartyAssignmentRole.WorkItemAssignee,
             NodeKey = nodeKey,
             IsPrimary = true,
+            PrimaryOriginal = await assignments.ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.WorkItemAssignee, nodeKey),
             Source = "cross-module-scope-release-integration"
         };
         var assignment = await partyIntegration.SaveAssignmentAsync(request);
@@ -217,6 +221,7 @@ public sealed class ProjectCrossModuleMutationScopeReleaseIntegrationTests
             assignment.IsSuccess,
             string.Join(" ", assignment.Errors.Select(error => error.Message)));
         request.Role = ProjectPartyAssignmentRole.Stakeholder;
+        request.PrimaryOriginal = await assignments.ReadPrimaryObservationAsync(admission, request.Role, nodeKey);
         var participation = await partyIntegration.SaveAssignmentAsync(request);
         Assert.True(participation.IsSuccess, string.Join(" ", participation.Errors.Select(error => error.Message)));
         return assignment.Value;

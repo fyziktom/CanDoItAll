@@ -196,8 +196,10 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
         Assert.Empty(findings);
     }
 
-    [Fact]
-    public void WorkspaceCommandReceiptWriter_characterizes_dotnet_lifecycle_facts_in_audit_receipt()
+    [Theory]
+    [InlineData(ToolContractCatalog.WorkspaceDotNetRun)]
+    [InlineData(ToolContractCatalog.WorkspaceStaticServe)]
+    public void WorkspaceCommandReceiptWriter_characterizes_managed_runtime_lifecycle_facts_in_audit_receipt(string toolName)
     {
         var workspaceRoot = Path.Combine(
             Path.GetTempPath(),
@@ -217,10 +219,10 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
             using (WorkspaceExecutionAuditContext.BeginScope(executionRun))
             {
                 writer.PersistProcessReceipt(
-                    "workspace_dotnet_run",
+                    toolName,
                     "dotnet-run",
                     new ToolExecutionDecision(
-                        "workspace_dotnet_run",
+                        toolName,
                         "dotnet-run",
                         "WorkspaceProcess",
                         Allowed: true,
@@ -256,7 +258,7 @@ public sealed class ProcessRuntimeArchitectureBaselineTests
 
             var auditReceipt = ReadSingleAuditReceipt(workspaceRoot, executionRun.Id);
 
-            Assert.Equal("workspace_dotnet_run", auditReceipt.ToolName);
+            Assert.Equal(toolName, auditReceipt.ToolName);
             Assert.Contains($"startupReceipt={startupReceiptPath}", auditReceipt.RequestSummary, StringComparison.Ordinal);
             Assert.Contains("hostUrl=http://127.0.0.1:5173", auditReceipt.RequestSummary, StringComparison.Ordinal);
         }

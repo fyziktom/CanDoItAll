@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Abstractions;
 using CanDoItAll.Processes.Application;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
@@ -28,6 +29,7 @@ public sealed partial class ProjectStructureAgentService(
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService,
+    ILogger<ProjectStructureAgentService> logger,
     ProjectAgentSourceMutationAuthority? projectSourceAuthority = null,
     ProjectProcessExecutionMutationService? processProjectAuthority = null)
 {
@@ -82,32 +84,54 @@ public sealed partial class ProjectStructureAgentService(
         return projectsService.GetHierarchyAsync(projectId, cancellationToken);
     }
 
+    public async Task<ProjectDefinitionSnapshot> GetProjectDefinitionAsync(Guid projectId, CancellationToken cancellationToken = default)
+        => ProjectStructureProjectDefinitionResult.Require(await projectsService.GetDefinitionAsync(projectId, cancellationToken));
+
+    public async Task<ProjectDefinitionScalarsAcknowledgement> UpdateProjectDefinitionAsync(
+        Guid projectId, ProjectStructureProjectSaveRequest request, ProjectStructureAgentContext agent,
+        CancellationToken cancellationToken = default) {
+        ValidateProjectRequest(request);
+        if (request.ExpectedDefinition is not { } expected) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationRequired,
+                "Read the project definition and retain its original expectation before updating it.");
+        }
+        if (expected.Project is null || expected.Project.ProjectId != projectId) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationInvalid,
+                "The original definition expectation must identify the requested project.");
+        }
+
+        UpdateProjectDefinitionScalarsCommand command = new(expected, new(request.Name, request.Description,
+            request.Objective, request.Status, request.CurrentPhase, request.TargetDateUtc));
+        ProjectDefinitionScalarsAcknowledgement? accepted = null;
+        try {
+            return await ExecuteWithAgentFailureMappingAsync(() => leaseService.RunWithProjectMutationLeaseAsync(
+                projectId, request.LeaseToken, agent, "save-project", async token => {
+                    accepted = ProjectStructureProjectDefinitionResult.Require(await projectsService.SaveScalarsAsync(command, token,
+                        ProjectAuthorization(agent, ProjectProcessProjectOperation.Update, projectId)));
+                    return accepted;
+                }, cancellationToken));
+        } catch (Exception exception) when (accepted is not null) {
+            logger.LogError(exception,
+                "Project {ProjectId} definition {Revision} committed, but mutation lease cleanup failed. Returning the exact accepted definition; inspect its outstanding lease before another mutation.",
+                projectId, accepted.Definition.Revision);
+            return accepted;
+        }
+    }
+
     public async Task<ProjectSummary> SaveProjectAsync(
         Guid? projectId,
         ProjectStructureProjectSaveRequest request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
-        ValidateProjectRequest(request);
-
-        var editor = BuildProjectEditor(projectId, request);
+        if (projectId is { } existingId) {
+            await UpdateProjectDefinitionAsync(existingId, request, agent, cancellationToken);
+            return await ResolveSavedProjectAsync(Result<Guid>.Success(existingId), cancellationToken);
+        }
+        ValidateProjectRequest(request, creating: true);
+        var editor = BuildProjectEditor(null, request);
         return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
-            if (projectId.HasValue)
-            {
-                return await leaseService.RunWithProjectMutationLeaseAsync(
-                    projectId.Value,
-                    request.LeaseToken,
-                    agent,
-                    "save-project",
-                    async cancellationToken =>
-                    {
-                        var saveResult = await projectsService.SaveAsync(editor, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.Update, projectId.Value));
-                        return await ResolveSavedProjectAsync(saveResult, cancellationToken);
-                    },
-                    cancellationToken);
-            }
-
             var createResult = await projectsService.SaveAsync(editor, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.CreateRoot));
             return await ResolveSavedProjectAsync(createResult, cancellationToken);
         });
@@ -130,7 +154,7 @@ public sealed partial class ProjectStructureAgentService(
             throw InvalidAgentRequest(400, "ProjectIdRequired", "A reserved project id is required.");
         }
 
-        ValidateProjectRequest(request);
+        ValidateProjectRequest(request, creating: true);
         return await ExecuteWithAgentFailureMappingAsync(async () =>
         {
             var editor = BuildProjectEditor(projectId: null, request);
@@ -178,7 +202,7 @@ public sealed partial class ProjectStructureAgentService(
             throw InvalidAgentRequest(400, "SubprojectIdRequired", "A reserved subproject id is required.");
         }
 
-        ValidateProjectRequest(request);
+        ValidateProjectRequest(request, creating: true);
         return await ExecuteWithAgentFailureMappingAsync(() =>
             leaseService.RunWithProjectMutationLeaseAsync(
                 parentProjectId,
@@ -197,43 +221,12 @@ public sealed partial class ProjectStructureAgentService(
                 cancellationToken));
     }
 
-    public async Task ChangeSubprojectAsync(
+    public Task ChangeSubprojectAsync(
         Guid parentProjectId,
         ProjectStructureSubprojectChangeRequest request,
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
-    {
-        if (request.ChildProjectId == Guid.Empty)
-        {
-            throw InvalidAgentRequest(400, "ChildProjectRequired", "A child project id is required.");
-        }
-
-        await leaseService.RunWithProjectMutationLeaseAsync(
-            request.ChildProjectId,
-            request.LeaseToken,
-            agent,
-            "change-subproject-link",
-            async cancellationToken =>
-            {
-                Result result;
-                if (request.CurrentParentProjectId.HasValue)
-                {
-                    result = await projectsService.ReconnectSubprojectAsync(
-                        request.ChildProjectId,
-                        request.CurrentParentProjectId.Value,
-                        parentProjectId,
-                        cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, request.ChildProjectId, request.CurrentParentProjectId.Value, parentProjectId));
-                }
-                else
-                {
-                    result = await projectsService.AddSubprojectAsync(parentProjectId, request.ChildProjectId, cancellationToken, ProjectAuthorization(agent, ProjectProcessProjectOperation.ChangeHierarchy, parentProjectId, request.ChildProjectId));
-                }
-
-                ThrowIfFailure(result);
-                return 0;
-            },
-            cancellationToken);
-    }
+        => throw new ProjectLifecycleOriginalIntentRequiredException();
 
     public async Task<ProjectStructureReadResponse> GetStructureAsync(
         Guid projectId,
@@ -264,15 +257,21 @@ public sealed partial class ProjectStructureAgentService(
         var links = request.IncludeLinks
             ? surface.Links
                 .Where(link => selectedIds.Contains(link.SourceId) && selectedIds.Contains(link.TargetId))
-                .Select(link => new ProjectStructureLinkSummary(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored))
+                .Select(link => new ProjectStructureLinkSummary(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored) {
+                    ExpectedState = link.IsUserAuthored && link.RecordId is { } recordId && surface.ExpectedProjectAdmission is { } project
+                        ? new(project, recordId, link.SourceId, link.TargetId, link.Kind) : null
+                })
                 .ToList()
             : [];
 
         var mappedNodes = selectedNodes
-            .Select(node => MapNodeSummary(node, effectivePriorities.GetValueOrDefault(node.Id), request))
+            .Select(node => MapNodeSummary(node, effectivePriorities.GetValueOrDefault(node.Id), request, surface.ExpectedProjectAdmission))
             .ToList();
 
-        return new ProjectStructureReadResponse(surface.ProjectId, surface.ProjectName, mappedNodes, links, warnings) { ExpectedProjectAdmission = surface.ExpectedProjectAdmission };
+        return new ProjectStructureReadResponse(surface.ProjectId, surface.ProjectName, mappedNodes, links, warnings) {
+            ExpectedProjectAdmission = surface.ExpectedProjectAdmission,
+            ExpectedGraph = request.IncludeMutationGraph ? ProjectStructureGraphStateGuard.Capture(surface) : null
+        };
     }
 
     public Task<ProjectStructureNodeCatalogResponse> GetNodeCatalogAsync(CancellationToken cancellationToken = default)
@@ -284,7 +283,8 @@ public sealed partial class ProjectStructureAgentService(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ProjectStructureManagedAssetCreationPolicy.EnsureGenericNodeCreateAllowed(
             request.ObjectType,
@@ -295,14 +295,15 @@ public sealed partial class ProjectStructureAgentService(
             request,
             agent,
             allowCanonicalTask: false,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     internal Task<ProjectStructureNodeSummary> CreateCanonicalTaskNodeAsync(
         Guid projectId,
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (!ProjectStructureCanonicalTaskMutationPolicy.IsTask(
                 request.ObjectType,
@@ -317,7 +318,7 @@ public sealed partial class ProjectStructureAgentService(
             request,
             agent,
             allowCanonicalTask: true,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task<ProjectStructureNodeSummary> CreateNodeCoreAsync(
@@ -325,7 +326,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureNodeCreateInput request,
         ProjectStructureAgentContext agent,
         bool allowCanonicalTask,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         EnsureValidMediaPayload(request.Media);
         ProjectStructureSvgAssetValidator.Validate(request.Media);
@@ -337,10 +339,14 @@ public sealed partial class ProjectStructureAgentService(
             "create-structure-node",
             async cancellationToken =>
             {
-                await EnsureParentAuthorityAllowedAsync(
+                var currentProject = await EnsureParentAuthorityAllowedAsync(
                     projectId,
                     request.ParentNodeKey,
                     cancellationToken);
+                if (agent.ExpectedProjectAdmission is { } originalProject && originalProject != currentProject) {
+                    throw new ProjectWriteAdmissionRejectedException(originalProject);
+                }
+                var createAdmission = agent.ExpectedProjectAdmission ?? currentProject;
                 var objectSubtype = ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype);
                 if (!allowCanonicalTask)
                 {
@@ -375,12 +381,12 @@ public sealed partial class ProjectStructureAgentService(
                         TaskPricingInitialization: allowCanonicalTask
                             ? ProjectObjectTaskPricingInitialization.PreserveValidatedAuthoritativePricing
                             : ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
-                        ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
+                        ExpectedProjectAdmission = createAdmission,
                             ProcessMutationAdmission = agent.ProcessMutationAdmission,
                             AgentMutationAdmission = agent.AgentMutationAdmission
                     },
-                    cancellationToken);
-                return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest);
+                    cancellationToken, authorizeCommit);
+                return MapNodeSummary(createdNode, createdNode.Priority, FullNodeReadRequest, createAdmission);
             },
             cancellationToken);
     }
@@ -392,6 +398,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedState, projectId, nodeId, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -442,6 +450,7 @@ public sealed partial class ProjectStructureAgentService(
                             UpdateTiming: request.StartUtc.HasValue ||
                                 request.EndUtc.HasValue ||
                                 request.DurationSeconds.HasValue) {
+                            ExpectedState = request.ExpectedState,
                             ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
                             ProcessMutationAdmission = agent.ProcessMutationAdmission,
                             AgentMutationAdmission = agent.AgentMutationAdmission
@@ -469,6 +478,7 @@ public sealed partial class ProjectStructureAgentService(
                             request.EndUtc,
                             metadataJson,
                             request.DurationSeconds) {
+                            ExpectedState = request.ExpectedState,
                             ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
                             ProcessMutationAdmission = agent.ProcessMutationAdmission,
                             AgentMutationAdmission = agent.AgentMutationAdmission
@@ -476,7 +486,7 @@ public sealed partial class ProjectStructureAgentService(
                         cancellationToken);
                 }
 
-                return MapRequiredNode(updatedNode, nodeId);
+                return MapRequiredNode(updatedNode, nodeId, agent.ExpectedProjectAdmission);
             },
             cancellationToken);
     }
@@ -504,7 +514,7 @@ public sealed partial class ProjectStructureAgentService(
                     EndUtc: null,
                     MetadataJson: existingNode.MetadataJson,
                     LeaseToken: request.LeaseToken,
-                    DurationSeconds: null),
+                    DurationSeconds: null) { ExpectedState = request.ExpectedState },
                 agent,
                 cancellationToken);
         }
@@ -530,6 +540,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedState, projectId, nodeId, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -555,8 +567,9 @@ public sealed partial class ProjectStructureAgentService(
                     request.Notes,
                     request.Status,
                     cancellationToken: cancellationToken,
-                    expectedProjectAdmission: agent.ExpectedProjectAdmission, processMutationAdmission: agent.ProcessMutationAdmission, agentMutationAdmission: agent.AgentMutationAdmission);
-                return MapRequiredNode(updatedNode, nodeId);
+                    expectedProjectAdmission: agent.ExpectedProjectAdmission, processMutationAdmission: agent.ProcessMutationAdmission,
+                    agentMutationAdmission: agent.AgentMutationAdmission, expectedState: request.ExpectedState);
+                return MapRequiredNode(updatedNode, nodeId, agent.ExpectedProjectAdmission);
             },
             cancellationToken);
     }
@@ -576,7 +589,7 @@ public sealed partial class ProjectStructureAgentService(
             externalTargetPathRegistryFactory);
     }
 
-    private async Task EnsureParentAuthorityAllowedAsync(
+    private async Task<ProjectWriteAdmission> EnsureParentAuthorityAllowedAsync(
         Guid projectId,
         string? parentNodeKey,
         CancellationToken cancellationToken)
@@ -591,6 +604,7 @@ public sealed partial class ProjectStructureAgentService(
                 : parentNodeKey.Trim(),
             workspacePathResolver.ResolveWorkspaceRoot(),
             externalTargetPathRegistryFactory);
+        return surface.ExpectedProjectAdmission ?? throw new ProjectStructureEditConflictException();
     }
 
     public async Task<int> UpdateNodeStatusesAsync(
@@ -599,12 +613,14 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedStates, projectId, request.NodeIds, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
             agent,
             "update-node-statuses",
-            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectStatusesAsync(projectId, request.NodeIds, request.Status, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedStates),
             cancellationToken);
     }
 
@@ -614,12 +630,14 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedStates, projectId, request.NodeIds, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
             agent,
             "update-node-progress",
-            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectProgressAsync(projectId, request.NodeIds, request.ProgressMode, request.ProgressPercent, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedStates),
             cancellationToken);
     }
 
@@ -629,12 +647,14 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedStates, projectId, request.NodeIds, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
             agent,
             "update-node-marker",
-            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectMarkerAsync(projectId, request.NodeIds, request.MarkerIcon, request.MarkerTone, request.MarkerLabel, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedStates),
             cancellationToken);
     }
 
@@ -644,12 +664,14 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedStates, projectId, request.NodeIds, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
             agent,
             "update-node-priority",
-            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+            cancellationToken => projectWorkbenchService.UpdateObjectPriorityAsync(projectId, request.NodeIds, request.Priority, cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedStates),
             cancellationToken);
     }
 
@@ -660,6 +682,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+            request.ExpectedState, projectId, nodeId, agent.ExpectedProjectAdmission) };
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -673,32 +697,32 @@ public sealed partial class ProjectStructureAgentService(
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedState is null ? null : [request.ExpectedState]),
                 ProjectStructureMarkerMutationMode.Toggle => projectWorkbenchService.ToggleObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedState is null ? null : [request.ExpectedState]),
                 ProjectStructureMarkerMutationMode.Remove => projectWorkbenchService.RemoveObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedState is null ? null : [request.ExpectedState]),
                 ProjectStructureMarkerMutationMode.Clear => projectWorkbenchService.ClearObjectMarkersAsync(
                     projectId,
                     [nodeId],
-                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission),
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedState is null ? null : [request.ExpectedState]),
                 _ => projectWorkbenchService.UpdateObjectMarkerAsync(
                     projectId,
                     [nodeId],
                     request.MarkerIcon,
                     request.MarkerTone,
                     request.MarkerLabel,
-                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission)
+                    cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, request.ExpectedState is null ? null : [request.ExpectedState])
             },
             cancellationToken);
     }
@@ -709,6 +733,10 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = agent with {
+            ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(request.ExpectedState, projectId, request.NodeId, agent.ExpectedProjectAdmission),
+            ExpectedNodeStates = [request.ExpectedState!]
+        };
         await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -728,6 +756,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, projectId);
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -755,6 +784,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, projectId);
         return await RejectInvariantViolationsAsync(() => leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -820,6 +850,7 @@ public sealed partial class ProjectStructureAgentService(
             projectId,
             request.DestinationParentNodeId);
 
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, projectId);
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -905,7 +936,8 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureLinkInput request,
         ProjectStructureAgentContext agent,
         bool allowCanonicalTaskResourceLink,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         ValidateLinkInput(request);
         return await leaseService.RunWithProjectMutationLeaseAsync(
@@ -935,7 +967,7 @@ public sealed partial class ProjectStructureAgentService(
                         request.SourceNodeId,
                         request.TargetNodeId,
                         request.Kind,
-                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission);
+                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, authorizeCommit);
                 }
                 else
                 {
@@ -986,6 +1018,15 @@ public sealed partial class ProjectStructureAgentService(
         CancellationToken cancellationToken)
     {
         ValidateLinkInput(request);
+        if (!allowCanonicalTaskResourceLink) {
+            var original = request.ExpectedState;
+            if (original is null || original.Project is null || original.Project.ProjectId != projectId || original.RecordId == Guid.Empty ||
+                original.SourceId != request.SourceNodeId || original.TargetId != request.TargetNodeId || original.Kind != request.Kind ||
+                agent.ExpectedProjectAdmission is { } project && project != original.Project) {
+                throw new ProjectStructureEditConflictException();
+            }
+            agent = agent with { ExpectedProjectAdmission = original.Project };
+        }
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -1014,7 +1055,8 @@ public sealed partial class ProjectStructureAgentService(
                         request.SourceNodeId,
                         request.TargetNodeId,
                         request.Kind,
-                        cancellationToken, agent);
+                        cancellationToken, agent, new ProjectStructureLink(request.ExpectedState!.SourceId, request.ExpectedState.TargetId,
+                            request.ExpectedState.Kind, true, request.ExpectedState.RecordId));
                 return new ProjectStructureLinkChangeResult(
                     changed,
                     new ProjectStructureLinkSummary(request.SourceNodeId, request.TargetNodeId, request.Kind, true));
@@ -1050,7 +1092,8 @@ public sealed partial class ProjectStructureAgentService(
         string sourceTaskNodeId,
         ProjectStructureProcessDefinitionLinkInput request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, ValueTask>? authorizeCommit = null)
     {
         if (request.ProcessDefinitionId == Guid.Empty)
         {
@@ -1070,7 +1113,7 @@ public sealed partial class ProjectStructureAgentService(
                 request.LeaseToken),
             agent,
             allowCanonicalTaskResourceLink: true,
-            cancellationToken);
+            cancellationToken, authorizeCommit);
     }
 
     private async Task EnsureResourceLinkAllowedAsync(
@@ -1115,6 +1158,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, sourceProjectId);
         if (request.TargetProjectId == Guid.Empty)
         {
             throw InvalidAgentRequest(400, "TargetProjectRequired", "A target project id is required.");
@@ -1182,6 +1226,7 @@ public sealed partial class ProjectStructureAgentService(
     private async Task<ProjectStructureNodesToSubprojectResult> MoveNodesToNewSubprojectCoreAsync(Guid sourceProjectId, Guid targetProjectId,
         ProjectCreationReservation? reservation, ProjectStructureNodesToSubprojectInput request, ProjectStructureAgentContext agent,
         CancellationToken cancellationToken) {
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, sourceProjectId);
         var requestedNodeIds = NormalizeTransferNodeIds(request.NodeIds);
         if (targetProjectId == Guid.Empty)
         {
@@ -1282,6 +1327,10 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        if (request.ExpectedState is { } state) {
+            agent = agent with { ExpectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(
+                state, projectId, nodeId, agent.ExpectedProjectAdmission) };
+        }
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -1293,7 +1342,7 @@ public sealed partial class ProjectStructureAgentService(
                     projectId,
                     nodeId,
                     request.CommandKind,
-                    cancellationToken, agent);
+                    cancellationToken, agent, expectedState: request.ExpectedState);
                 if (artifact is null)
                 {
                     throw RejectedBeforeWrite(
@@ -1393,6 +1442,9 @@ public sealed partial class ProjectStructureAgentService(
         CancellationToken cancellationToken = default)
     {
         EnsureManagedStorageDispositionSpecified(request.ManagedStorageDisposition);
+        if (request.DurableMutationId is null) {
+            agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, projectId);
+        }
         return ExecuteWithAgentFailureMappingAsync(() =>
             leaseService.RunWithProjectMutationLeaseAsync(
                 projectId,
@@ -1504,6 +1556,7 @@ public sealed partial class ProjectStructureAgentService(
         ProjectStructureAgentContext agent,
         CancellationToken cancellationToken = default)
     {
+        agent = ProjectStructureGraphStateGuard.Require(agent with { ExpectedGraph = request.ExpectedGraph }, projectId);
         EnsureManagedStorageDispositionSpecified(request.ManagedStorageDisposition);
         return ExecuteWithAgentFailureMappingAsync(async () =>
         {
@@ -1872,14 +1925,15 @@ public sealed partial class ProjectStructureAgentService(
             canRetryWithCorrectedInput: true,
             effectState: AgentToolEffectState.NotCommitted);
 
-    private ProjectStructureNodeSummary MapRequiredNode(ProjectStructureNode? node, string nodeId)
+    private ProjectStructureNodeSummary MapRequiredNode(ProjectStructureNode? node, string nodeId,
+        ProjectWriteAdmission? expectedProject = null)
     {
         if (node is null)
         {
             throw NodeNotFound(nodeId);
         }
 
-        return MapNodeSummary(node, node.Priority, FullNodeReadRequest);
+        return MapNodeSummary(node, node.Priority, FullNodeReadRequest, expectedProject);
     }
 
     private async Task<(ProjectStructureNode Node, ProjectStructureAssetDescriptor Asset)> GetAssetStateAsync(
@@ -2347,8 +2401,12 @@ public sealed partial class ProjectStructureAgentService(
         };
     }
 
-    private static void ValidateProjectRequest(ProjectStructureProjectSaveRequest request)
+    private static void ValidateProjectRequest(ProjectStructureProjectSaveRequest request, bool creating = false)
     {
+        if (creating && request.ExpectedDefinition is not null) {
+            throw InvalidAgentRequest(400, ProjectErrorCodes.DefinitionExpectationInvalid,
+                "A new project cannot carry an existing definition expectation.");
+        }
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             throw InvalidAgentRequest(400, "ProjectNameRequired", "Project name is required.");
@@ -2474,7 +2532,8 @@ public sealed partial class ProjectStructureAgentService(
     private ProjectStructureNodeSummary MapNodeSummary(
         ProjectStructureNode node,
         int effectivePriority,
-        ProjectStructureReadRequest options)
+        ProjectStructureReadRequest options,
+        ProjectWriteAdmission? runtimeAdmission = null)
     {
         return new ProjectStructureNodeSummary(
             node.Id,
@@ -2512,7 +2571,10 @@ public sealed partial class ProjectStructureAgentService(
                 node,
                 runtimeLauncher,
                 localFileOpener,
-                ProjectStructureRuntimePathAuthorityMode.AgentExecution));
+                ProjectStructureRuntimePathAuthorityMode.AgentExecution,
+                runtimeAdmission is null ? null : new(runtimeAdmission, node.RecordId))) {
+            ExpectedState = node.IsSystemManaged ? null : ProjectStructureNodeStateGuard.Capture(node, runtimeAdmission)
+        };
     }
 
     private static ProjectStructureDependencyItem MapDependencyItem(ProjectStructureDependencyNodeAnalysis analysis)

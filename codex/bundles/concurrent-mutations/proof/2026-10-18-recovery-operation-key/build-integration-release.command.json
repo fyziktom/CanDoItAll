@@ -1,0 +1,29 @@
+{
+  "DeadlineSeconds": 900,
+  "ResourceClosure": "ParentReconciliationRequired",
+  "Name": "build-integration-release",
+  "Arguments": [
+    "build",
+    "tests/Integration/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj",
+    "--configuration",
+    "Release",
+    "-p:UseLocalCanDoItAllLibraries=true",
+    "/m:1",
+    "--no-restore"
+  ],
+  "StartedUtc": "2026-10-18T21:48:02.3988081+00:00",
+  "State": "Completed",
+  "RunnerPid": 54620,
+  "ChildPid": 56308,
+  "ChildStartedUtc": "2026-10-18T21:48:02.4039804Z",
+  "ExitCode": 0,
+  "Seconds": 38.058455,
+  "DeadlineExceeded": false,
+  "OutputPumpFailures": [],
+  "CleanupFailures": [],
+  "DeadlineFailureType": null,
+  "StdoutRetainedBytes": 174207,
+  "StderrRetainedBytes": 0,
+  "StdoutDiscardedBytes": 0,
+  "StderrDiscardedBytes": 0
+}

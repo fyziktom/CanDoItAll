@@ -8,9 +8,11 @@ public sealed class AgentDirectoryProjectionSynchronizationException(
     Exception innerException,
     AgentPackageImportReceipt? importReceipt = null,
     AgentExternalProvisioningReceipt? provisioningReceipt = null,
-    Guid? partyId = null)
+    Guid? partyId = null,
+    AgentDefinition? acceptedDefinition = null)
     : AiTechnicalAgentCommittedSaveException(agentId, partyId, innerException) {
     public Guid AgentId => TechnicalAgentId;
     public AgentPackageImportReceipt? ImportReceipt { get; } = importReceipt;
     public AgentExternalProvisioningReceipt? ProvisioningReceipt { get; } = provisioningReceipt;
+    public AgentDefinition? AcceptedDefinition { get; } = acceptedDefinition;
 }

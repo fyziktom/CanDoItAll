@@ -37,11 +37,15 @@ internal sealed class ProjectStructureLocalFileActionCoordinator(
         Guid projectId,
         string nodeId,
         FileToolsLocalFileAction action,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<CancellationToken, Task>? ensureOrigin = null)
     {
         if (!Enum.IsDefined(action))
         {
             throw new ArgumentOutOfRangeException(nameof(action));
+        }
+        if (ensureOrigin is not null) {
+            await ensureOrigin(cancellationToken);
         }
 
         ProjectStructureNode? currentNode = await currentNodeResolver.ResolveAsync(
@@ -54,6 +58,9 @@ internal sealed class ProjectStructureLocalFileActionCoordinator(
                 false,
                 "The project node no longer exists in the current structure.");
         }
+        if (ensureOrigin is not null) {
+            await ensureOrigin(cancellationToken);
+        }
 
         if (ProjectStructureNodeHelpers.HasManagedAttachment(currentNode))
         {
@@ -61,20 +68,25 @@ internal sealed class ProjectStructureLocalFileActionCoordinator(
                 projectId,
                 nodeId,
                 cancellationToken);
+            if (ensureOrigin is not null) {
+                await ensureOrigin(cancellationToken);
+            }
             FileToolsBrowseItemActionResult result = await knownFileActionService.LaunchAsync(
                 current.Scope,
                 current.Occurrence,
                 action,
-                cancellationToken);
+                cancellationToken, ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token)));
             return new ProjectStructureLocalFileOpenResult(result.IsSuccess, result.Message);
         }
 
         return action switch
         {
             FileToolsLocalFileAction.OpenInPreferredApplication =>
-                await localFileOpener.OpenInPreferredApplicationAsync(currentNode, cancellationToken),
+                await localFileOpener.OpenInPreferredApplicationAsync(currentNode, cancellationToken,
+                    ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token))),
             FileToolsLocalFileAction.OpenContainingFolder =>
-                await localFileOpener.OpenAsync(currentNode, cancellationToken),
+                await localFileOpener.OpenAsync(currentNode, cancellationToken,
+                    ensureOrigin is null ? null : token => new ValueTask(ensureOrigin(token))),
             _ => throw new ArgumentOutOfRangeException(nameof(action))
         };
     }

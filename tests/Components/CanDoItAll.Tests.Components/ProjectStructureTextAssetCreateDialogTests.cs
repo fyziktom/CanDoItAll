@@ -134,7 +134,7 @@ public sealed class ProjectStructureTextAssetCreateDialogTests
                 StringComparison.Ordinal);
             var contentEditor = Assert.IsAssignableFrom<IHtmlTextAreaElement>(
                 host.Find("[data-testid='project-structure-text-asset-content']"));
-            Assert.Equal("Keep this pasted content.", contentEditor.Value);
+            Assert.Equal("Keep this pasted content.", contentEditor.GetAttribute("value"));
             Assert.NotNull(host.Find("[data-testid='project-structure-text-asset-create-dialog']"));
         });
     }

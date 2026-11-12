@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.WorkflowExecutors.Plugins;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +64,8 @@ public sealed class PluginGrantStore(
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var grantKey = $"plugin-grant:{pluginId.Value}:{request.Capability}:{recipeId}:{request.ScopeKind}:{scopeKey}";
+        await using var mutation = await SerializableMutationScope.BeginAsync(dbContext, grantKey, cancellationToken);
         var record = await dbContext.Set<PluginCapabilityGrantRecord>()
             .SingleOrDefaultAsync(item =>
                 item.PluginId == pluginId.Value &&
@@ -71,6 +74,9 @@ public sealed class PluginGrantStore(
                 item.ScopeKind == request.ScopeKind.ToString() &&
                 item.ScopeKey == scopeKey,
                 cancellationToken);
+        if (record?.ConcurrencyToken != request.ExpectedConcurrencyToken) {
+            return ChangedGrant();
+        }
         var timestamp = clock.GetUtcNow();
         if (record is null)
         {
@@ -92,17 +98,25 @@ public sealed class PluginGrantStore(
         record.UpdatedBy = NormalizeActor(actor);
         record.UpdatedAtUtc = timestamp;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await mutation.CommitAsync(cancellationToken);
+        } catch (Exception exception) when (SerializableMutationScope.IsConflict(exception)) {
+            return ChangedGrant();
+        }
         Interlocked.Increment(ref revision);
-        logger.LogInformation(
+        PluginCommit.Observe(ToItem(record), () => logger.LogInformation(
             "Set plugin grant {PluginId} capability {Capability} recipe {RecipeId} state {State}. Actor={Actor}.",
             pluginId.Value,
             request.Capability,
             recipeId,
             record.State,
-            record.UpdatedBy);
+            record.UpdatedBy));
         return Result<PluginCapabilityGrantItem>.Success(ToItem(record));
     }
+
+    private static Result<PluginCapabilityGrantItem> ChangedGrant()
+        => Result<PluginCapabilityGrantItem>.Failure(Error.Failure("The grant changed after it was opened. Review the current decision.", PluginWriteConflict.GrantChanged));
 
     internal static string NormalizeRecipeId(string? recipeId)
         => string.IsNullOrWhiteSpace(recipeId)
@@ -204,6 +218,9 @@ public sealed class PluginConnectionStore(
             record = await dbContext.Set<PluginConnectionRecord>()
                 .SingleOrDefaultAsync(item => item.Id == connectionId.Value && item.PluginId == pluginId.Value, cancellationToken);
         }
+        if (record?.ConcurrencyToken != request.ExpectedConcurrencyToken) {
+            return ChangedConnection();
+        }
 
         var timestamp = clock.GetUtcNow();
         if (record is null)
@@ -218,15 +235,32 @@ public sealed class PluginConnectionStore(
             dbContext.Set<PluginConnectionRecord>().Add(record);
         }
 
+        var settings = string.IsNullOrWhiteSpace(request.SettingsJson) ? "{}" : request.SettingsJson.Trim();
+        if (request.ExpectedConcurrencyToken.HasValue && (settings != record.SettingsJson || request.IsEnabled != record.IsEnabled)) {
+            await PluginOAuthService.RetireSessionsAsync(dbContext, pluginId.Value, record.Id, "configuration-changed", timestamp, cancellationToken);
+            var oauth = await dbContext.Set<PluginOAuthConnectionRecord>()
+                .SingleOrDefaultAsync(item => item.PluginId == pluginId.Value && item.ConnectionId == record.Id, cancellationToken);
+            if (oauth?.Status == nameof(PluginOAuthConnectionStatusKind.Connected)) {
+                oauth.Status = nameof(PluginOAuthConnectionStatusKind.ReconnectRequired);
+                oauth.UpdatedAtUtc = timestamp;
+            }
+        }
         record.DisplayName = request.DisplayName.Trim();
-        record.SettingsJson = string.IsNullOrWhiteSpace(request.SettingsJson) ? "{}" : request.SettingsJson.Trim();
+        record.SettingsJson = settings;
         record.IsEnabled = request.IsEnabled;
         record.UpdatedBy = PluginGrantStore.NormalizeActor(actor);
         record.UpdatedAtUtc = timestamp;
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        } catch (DbUpdateConcurrencyException) {
+            return ChangedConnection();
+        }
         return Result<PluginConnectionItem>.Success(ToItem(record));
     }
+
+    private static Result<PluginConnectionItem> ChangedConnection()
+        => Result<PluginConnectionItem>.Failure(Error.Failure("The connection changed after it was opened. Review the current settings.", PluginWriteConflict.ConnectionChanged));
 
     private static PluginConnectionItem ToItem(PluginConnectionRecord record)
         => new(

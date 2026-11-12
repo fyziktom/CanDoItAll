@@ -139,7 +139,8 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
             await using var scope = before.Services.CreateAsyncScope();
             var service = scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptService>();
             var thrown = await Record.ExceptionAsync(() => service.CreateOnceAsync(admission));
-            Assert.Same(failure, thrown);
+            var committed = Assert.IsType<LlmChatCommittedException<Result<LlmChatDefinitionCreateResponse>>>(thrown);
+            Assert.Same(failure, committed.InnerException);
             original = (await service.FindReceiptAsync(admission.Key)).Value!;
             Assert.NotNull(original);
             await AssertCountsAsync(before, 1, 1);
@@ -364,8 +365,9 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
         await using var application = await database.OpenAsync(new Resolver(), commands, failure);
         await using var scope = application.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
+        using var execution = PushExecution(services);
         var definitions = services.GetRequiredService<ILlmChatDefinitionApplicationService>();
-        var receipts = services.GetRequiredService<ILlmChatDefinitionCreateReceiptService>();
+        var receipts = services.GetRequiredService<LlmChatDefinitionApplicationService>();
         var command = CreateCommand();
         var unrelated = (await definitions.CreateAsync(command.Definition with { Name = "Unrelated" })).Value!;
         var owner = services.GetRequiredService<SimpleChatsDbContext>();
@@ -380,9 +382,12 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
         Assert.DoesNotContain(owner.ChangeTracker.Entries<LlmChatDefinitionTagRow>(), entry => entry.Entity.DefinitionId == failure.AttemptedId);
         var ordinary = await definitions.CreateAsync(command.Definition with { Name = "After rejection" });
         Assert.True(ordinary.IsSuccess);
+        Assert.Equal(EntityState.Modified, owner.Entry(tracked).State);
+        await using var observer = await application.Services.GetRequiredService<IDbContextFactory<SimpleChatsDbContext>>().CreateDbContextAsync();
+        Assert.Equal("Unrelated", (await observer.Set<LlmChatDefinitionRow>().AsNoTracking().SingleAsync(row => row.Id == tracked.Id)).Name);
+        await owner.SaveChangesAsync();
         Assert.Null((await receipts.FindReceiptAsync(command.Key)).Value);
         await AssertCountsAsync(application, 2, 0);
-        await using var observer = await application.Services.GetRequiredService<IDbContextFactory<SimpleChatsDbContext>>().CreateDbContextAsync();
         Assert.False(await observer.Set<LlmChatDefinitionRow>().AnyAsync(row => row.Id == failure.AttemptedId));
         Assert.Equal("Unrelated pending edit", (await observer.Set<LlmChatDefinitionRow>().SingleAsync(row => row.Id == tracked.Id)).Name);
     }

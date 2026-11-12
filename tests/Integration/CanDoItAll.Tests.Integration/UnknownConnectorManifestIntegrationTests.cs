@@ -72,7 +72,7 @@ public sealed class UnknownConnectorManifestIntegrationTests
         Assert.Equal("""{"mode":"strict"}""", providerEditor.Configuration.GetText("jsonPayload"));
         Assert.Equal(secretId.ToString("D"), providerEditor.Configuration.GetText("sharedSecret"));
 
-        var saveResourceResult = await resources.SaveAsync(new ResourceEditorModel
+        var saveResourceResult = await resources.SaveAsync(await ResourceMetadataTestCommands.NewAsync(resources, new ResourceEditorModel
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = await scope.ServiceProvider.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId),
@@ -89,10 +89,10 @@ public sealed class UnknownConnectorManifestIntegrationTests
                 ["structuredMetadata"] = """{"owner":"platform"}""",
                 ["sharedSecret"] = secretId.ToString("D")
             })
-        });
-        Assert.True(saveResourceResult.IsSuccess);
+        }));
+        var accepted = Assert.IsType<ResourceMetadataSaveOutcome.Accepted>(saveResourceResult);
 
-        var resourceEditor = await resources.GetAsync(saveResourceResult.Value);
+        var resourceEditor = resources.CreateEditor(accepted.Snapshot);
         Assert.Equal(UnknownManifestResourceConnectorPlugin.PluginKey, resourceEditor.ConnectorPluginKey);
         Assert.Equal("https://resource.example.com/hook", resourceEditor.Configuration.GetText("endpointUrl"));
         Assert.Equal("Resource hint", resourceEditor.Configuration.GetText("displayNameHint"));

@@ -128,7 +128,8 @@ public sealed class AgentApiPublicProjectionIntegrationTests
                 await PostJsonAsync(
                     host.Client,
                     $"/api/agents/{agentId:D}/chat-sessions/{chatSessionId:D}/rename",
-                    JsonContent.Create(new ChatSessionRenameApiRequest("Public projection chat")))));
+                    JsonContent.Create(new ChatSessionRenameApiRequest("Public projection chat",
+                        endpointPayloads.Single(item => item.Family == "chat-session-create").Payload.RootElement.GetProperty("title").GetString())))));
             endpointPayloads.Add((
                 "execution-run-list",
                 await GetJsonAsync(host.Client, "/api/agents/execution-runs")));
@@ -546,22 +547,20 @@ public sealed class AgentApiPublicProjectionIntegrationTests
         var store = scope.ServiceProvider
             .GetRequiredService<ISandboxWorkspaceStore>();
         var chatQueryStore = Assert.IsAssignableFrom<ISandboxWorkspaceChatQueryStore>(store);
-        var chatSessionStore = Assert.IsAssignableFrom<ISandboxWorkspaceChatSessionStore>(store);
         var session = await chatQueryStore.GetChatSessionAsync(chatSessionId);
         Assert.NotNull(session);
-        await chatSessionStore.UpdateChatSessionAsync(session with
-        {
-            Compatibility = new ChatSessionRuntimeCompatibilityRecord(
-                DisclosureSentinelAgentRuntime.RuntimeSessionKeySentinel,
-                $$"""{"sentinel":"{{DisclosureSentinelAgentRuntime.SerializedSessionSentinel}}"}""",
-                [DisclosureSentinelAgentRuntime.CreatePendingApproval()],
-                autoApprovePendingToolCalls: false)
-        });
         var mutationStore = Assert.IsAssignableFrom<ISandboxWorkspaceExecutionRunMutationStore>(store);
         await mutationStore.UpdateExecutionRunDetailAsync(
             executionRunId,
             detail => detail with
             {
+                ChatSession = detail.ChatSession! with {
+                    Compatibility = new ChatSessionRuntimeCompatibilityRecord(
+                        DisclosureSentinelAgentRuntime.RuntimeSessionKeySentinel,
+                        $$"""{"sentinel":"{{DisclosureSentinelAgentRuntime.SerializedSessionSentinel}}"}""",
+                        [DisclosureSentinelAgentRuntime.CreatePendingApproval()],
+                        autoApprovePendingToolCalls: false)
+                },
                 Run = detail.Run with
                 {
                     SourceKind = DisclosureSentinelAgentRuntime.PrivateSourceKindSentinel,

@@ -2,7 +2,11 @@ using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Projects.Pages.Components;
 using CanDoItAll.Web.Infrastructure;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.Tests.Support;
 
@@ -33,6 +37,10 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
 
     public BunitContext Context { get; }
 
+    public static EditContext FindEditContext(IRenderedComponent<IComponent> cut, object model) =>
+        Assert.Single(cut.FindComponents<EditForm>().Select(form => form.Instance.EditContext).OfType<EditContext>(),
+            context => ReferenceEquals(context.Model, model));
+
     public static async Task<ComponentTestHarness> CreateAsync(
         Action<IServiceCollection>? configureServices = null,
         TestHarnessOptions? options = null) {
@@ -47,6 +55,12 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             var activeProfile = options?.ActiveProfile ?? testEnvironment.CreatePostgreSqlProfile("primary");
             context = new BunitContext();
             context.JSInterop.Mode = JSRuntimeMode.Loose;
+            context.JSInterop.SetupModule("./_content/CanDoItAll.Projects.UI/project-editor.js")
+                .Setup<CanDoItAll.Modules.Projects.Pages.Components.ProjectFormValidity>("inspect", _ => true)
+                .SetResult(new(true, null, null));
+            context.JSInterop.SetupModule("./_content/CanDoItAll.Components.BaseLib/Components/Forms/NativeFormInspector.razor.js")
+                .Setup<CanDoItAll.Components.BaseLib.NativeFormValidity>("inspect", _ => true)
+                .SetResult(new(true));
             context.AddAuthorization();
             var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
@@ -55,8 +69,17 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
                 configuration,
                 testEnvironment.CreateHostEnvironment("CanDoItAll.Tests.Components"));
             context.Services.AddAgentFrameworkUi();
+            context.Services.AddSingleton<CanDoItAll.Editing.IEditingUiAccess>(new EditingUiTestAccess());
             context.Services.AddScoped<TuningCoordinator>();
             context.Services.AddHttpClient<DevelopmentManagerClient>();
+            context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();
+            context.Services.AddSingleton(services => (IProjectPendingReferenceStore)services.GetRequiredService<IProjectPendingSubmissionStore>());
+            context.Services.AddSingleton(new ProjectPendingStoreLimits(64, 16 * 1024 * 1024, 16, ProjectDefinitionLimits.VersionOneMaximum));
+            context.Services.AddSingleton<IProjectLifecyclePendingStore, ProjectLifecyclePendingTestStore>();
+            context.Services.AddSingleton(new ProjectLifecyclePendingStoreLimits(64, 2 * 1024 * 1024, 16));
+            context.Services.AddSingleton<IProjectLifecycleRecoveryCodec, ProjectLifecycleRecoveryCodec>();
+            context.Services.AddScoped<ProjectLifecycleHierarchyReader>();
+            context.Services.AddScoped<CanDoItAll.Modules.Projects.Pages.ProjectNativeLifecycleOperations>();
             configureServices?.Invoke(context.Services);
 
             if (string.IsNullOrWhiteSpace(configuration["Database:Provider"]) &&
@@ -75,6 +98,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
                 context.Services,
                 options?.SchemaModules ?? TestSchemaBootstrapModules.Default);
 
+            context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
             return new ComponentTestHarness(testEnvironment, ownsTestEnvironment, activeProfile, context);
         } catch (Exception failure) {
             await TestFixtureCleanup.DisposeAfterFailureAsync(

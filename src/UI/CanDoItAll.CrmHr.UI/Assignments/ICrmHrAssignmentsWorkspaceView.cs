@@ -53,6 +53,31 @@ public interface ICrmHrAssignmentsWorkspaceView : ICrmHrWorkspaceView
     int? StaffingRequestCount { get; }
     string StaffingRequestBadgeText { get; }
     ProjectRecordQueryItem? SelectedProject { get; }
+    AssignmentComparisons Comparisons { get; }
+    Task CompareAsync(AssignmentEditorKind editor);
+    Task ApplyComparisonAsync();
+    Task UndoComparisonAsync();
+    string? EditingMessage { get; }
+    bool EditingRequiresAttention { get; }
+    bool RecordsChanged { get; }
+    bool RelationshipDirty { get; }
+    bool AllocationDirty { get; }
+    bool StaffingDirty { get; }
+    bool RelationshipSaveDisabled { get; }
+    bool AllocationSaveDisabled { get; }
+    bool StaffingSaveDisabled { get; }
+    bool WritesDisabled { get; }
+    bool HasUnknownOperation { get; }
+    bool CanDiscardReviewedUnknown { get; }
+    Task DiscardReviewedUnknownAsync();
+    Task AssignmentInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input);
+    Task AllocationInputChangedAsync(CanDoItAll.Editing.RecordInput<AssignmentField> input);
+    Task StaffingInputChangedAsync(CanDoItAll.Editing.RecordInput<StaffingField> input);
+    Task<bool> ReviewRelationshipPrimaryAsync();
+    Task<bool> ReviewAllocationPrimaryAsync();
+    Task RefreshRecordsAsync();
+    Task RefreshSkillCatalogAsync();
+    Task<bool> RequestDiscardAsync(AssignmentEditorKind editor);
     Task HandleProjectChanged(Guid? projectId);
     Task HandleWorkspaceTabChangedAsync(int selectedIndex);
     Task<bool> PrepareRelationshipCreateAsync();
@@ -79,10 +104,11 @@ public interface ICrmHrAssignmentsWorkspaceView : ICrmHrWorkspaceView
     Task ResetAllocationAsync();
     Task ResetStaffingRequestAsync();
     Task ResetCandidateFiltersAsync();
-    Task DeleteAssignmentAsync(Guid assignmentId);
-    Task DeleteAllocationAsync(Guid assignmentId);
-    Task DeleteStaffingRequestAsync(Guid staffingRequestId);
+    Task DeleteAssignmentAsync(ProjectPartyAssignmentDetail assignment);
+    Task DeleteAllocationAsync(ProjectPartyAssignmentDetail assignment);
+    Task DeleteStaffingRequestAsync(StaffingRequestItemModel request);
     bool IsLoading(AssignmentSelectionData data);
+    bool HasDisplayed(AssignmentSelectionData data);
     Task<ProjectNodeDetails?> LoadTaskDetailsAsync(ProjectPartyAssignmentDetail assignment);
     void HandleProjectPickerLoadFailed(Exception exception);
     Task OpenStructure(Guid projectId);

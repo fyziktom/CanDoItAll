@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 using CanDoItAll.AgentFramework.Llm.Abstractions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
@@ -25,6 +26,7 @@ public sealed class ConversationWorkspaceSessionTests {
             Current = CreateOperationView(operationId, LlmChatOperationStatus.RecoveryRequired)
         };
         using var context = CreateContext(gateway, operations);
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var callbacks = new List<Guid?>();
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId)
             .Add(x => x.SelectedConversationIdChanged, value => callbacks.Add(value)));
@@ -51,7 +53,7 @@ public sealed class ConversationWorkspaceSessionTests {
         cut.WaitForAssertion(() => Assert.True(oldRead.CanBeCanceled));
         await cut.InvokeAsync(() => surface.Instance.Intent.InvokeAsync(new(generation, ConversationWorkspaceAction.NewConversation, a.ConversationId)));
         cut.Find("[data-testid^='llm-chat-start-definition-'][data-testid$='11111111-1111-1111-1111-111111111111']").Click();
-        cut.Find("[data-testid='llm-chat-start-title']").Change("Created B");
+        cut.Find("[data-testid='llm-chat-start-title']").Input("Created B");
         await cut.Find("[data-testid='llm-chat-start-confirm']").ClickAsync(new());
         Assert.Equal("Created B", cut.Find("[data-testid='llm-chat-selected-title']").TextContent);
         Assert.Equal([b.ConversationId], callbacks);
@@ -82,11 +84,14 @@ public sealed class ConversationWorkspaceSessionTests {
     [InlineData(true)]
     public void Initial_selection_does_not_echo_a_route_callback_during_prerender(bool requested) {
         var a = CreateConversation();
-        using var context = CreateContext(Gateway(a), new StubOperationGateway());
+        var gateway = Gateway(a);
+        using var context = CreateContext(gateway, new StubOperationGateway());
+        context.SetRendererInfo(new RendererInfo("Static", isInteractive: false));
         var callbacks = new List<Guid?>();
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, requested ? a.ConversationId : null)
             .Add(x => x.SelectedConversationIdChanged, value => callbacks.Add(value)));
-        cut.WaitForElement("[data-testid='llm-chat-selected-title']");
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-selected-title']"));
+        Assert.Empty(gateway.TranscriptTargets);
         Assert.Empty(callbacks);
     }
     [Fact]
@@ -100,6 +105,7 @@ public sealed class ConversationWorkspaceSessionTests {
             Read = id => CreateOperationView(id, LlmChatOperationStatus.Running) with { ConversationId = id == opA ? a.ConversationId : b.ConversationId }
         };
         using var context = CreateContext(Gateway(a, b), operations, events);
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId));
         cut.WaitForAssertion(() => Assert.Single(events.Sessions));
         var old = events.Sessions[0];
@@ -132,9 +138,10 @@ public sealed class ConversationWorkspaceSessionTests {
         var gateway = Gateway(a, b);
         gateway.Rename = _ => pending.Task;
         using var context = CreateContext(gateway, new StubOperationGateway());
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId));
         cut.Find($"[data-testid='llm-chat-rename-{a.ConversationId:D}']").Click();
-        cut.Find("[data-testid='llm-chat-rename-title']").Change("Captured title");
+        cut.Find("[data-testid='llm-chat-rename-title']").Input("Captured title");
         var rename = cut.Find("[data-testid='llm-chat-rename-confirm']").ClickAsync(new());
         Assert.Equal("Captured title", gateway.RenamedTitle);
         cut.Render(p => p.Add(x => x.InitialConversationId, b.ConversationId));
@@ -349,6 +356,7 @@ public sealed class ConversationWorkspaceSessionTests {
         var a = CreateConversation();
         var b = CreateConversation(Guid.NewGuid(), "B");
         using var context = CreateContext(Gateway(a, b), new StubOperationGateway());
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId));
         var surface = cut.FindComponent<LlmChatConversationSurface>();
         var old = new ConversationWorkspaceIntent(surface.Instance.Presentation.Generation, action, a.ConversationId);
@@ -386,6 +394,7 @@ public sealed class ConversationWorkspaceSessionTests {
         };
         gateway.ListPages.Enqueue(new([a, b], null));
         using var context = CreateContext(gateway, new StubOperationGateway());
+        context.SetRendererInfo(new RendererInfo("Server", isInteractive: true));
         var selected = new List<Guid?>();
         var cut = context.Render<LlmChatConversationWorkspace>(p => p.Add(x => x.InitialConversationId, a.ConversationId)
             .Add(x => x.SelectedConversationIdChanged, value => selected.Add(value)));

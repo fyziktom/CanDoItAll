@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -10,6 +11,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     IAgentFrameworkWorkspaceService,
     IAgentFrameworkWorkspaceActivityExecutionService,
+    IAgentInheritedPlanningWorkspaceService,
     IDisposable
 {
     private readonly ICanDoItAllAgentWorkspaceFactory workspaceFactory;
@@ -20,6 +22,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     private readonly IAgentExecutionActivityCoordinator activityCoordinator;
     private readonly IAgentExecutionProfileGenerationSource executionProfileGenerationSource;
     private readonly ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger;
+    private readonly Func<IAgentHistoricalReceiptReviewService>? historicalReceipts;
+    private readonly IDatabaseRuntimeState? historicalRuntimeState;
     private readonly IsolatedCompatibilityEventDispatcher<ExecutionLogEntry>
         executionUpdatedDispatcher;
     private readonly Lock executionSubscriptionGate = new();
@@ -35,7 +39,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         IDatabaseSwitchNotificationService databaseSwitchNotificationService,
         IAgentExecutionActivityCoordinator activityCoordinator,
         IAgentExecutionProfileGenerationSource executionProfileGenerationSource,
-        ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger)
+        ILogger<CurrentProfileAgentFrameworkWorkspaceService> logger,
+        Func<IAgentHistoricalReceiptReviewService>? historicalReceipts = null,
+        IDatabaseRuntimeState? historicalRuntimeState = null)
     {
         this.workspaceFactory = workspaceFactory;
         this.technicalAgentBridge = technicalAgentBridge;
@@ -45,6 +51,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         this.activityCoordinator = activityCoordinator;
         this.executionProfileGenerationSource = executionProfileGenerationSource;
         this.logger = logger;
+        this.historicalReceipts = historicalReceipts;
+        this.historicalRuntimeState = historicalRuntimeState;
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
         databaseSwitchNotificationService.Changed += HandleDatabaseProfileChanged;
     }
@@ -119,6 +127,41 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default)
         => ResolveService().LoadCatalogSnapshotAsync(cancellationToken);
 
+    public Task<AgentExecutionActivityWorkspaceIdentity> ReadAgentDecisionDataPolicyContextAsync(CancellationToken cancellationToken = default)
+        => ResolveService().ReadAgentDecisionDataPolicyContextAsync(cancellationToken);
+
+    public Task<AgentDecisionDataPolicySnapshot> ReadAgentDecisionDataPolicyAsync(Guid agentId,
+        CancellationToken cancellationToken = default)
+        => ResolveService().ReadAgentDecisionDataPolicyAsync(agentId, cancellationToken);
+
+    public Task<AgentDecisionDataPolicyLookup> LookupAgentDecisionDataPolicyAsync(ReplaceAgentDecisionDataPolicyCommand command,
+        CancellationToken cancellationToken = default)
+        => ResolveService().LookupAgentDecisionDataPolicyAsync(command, cancellationToken);
+
+    public async Task<AgentDecisionDataPolicySaveOutcome> ReplaceAgentDecisionDataPolicyAsync(
+        ReplaceAgentDecisionDataPolicyCommand command, CancellationToken cancellationToken = default) {
+        var outcome = await ResolveService().ReplaceAgentDecisionDataPolicyAsync(command, cancellationToken);
+        if (outcome is not AgentDecisionDataPolicySaveOutcome.Accepted accepted) {
+            return outcome;
+        }
+        try {
+            referenceDataCacheInvalidator.Invalidate();
+            return accepted;
+        } catch (Exception failure) {
+            var diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.CacheInvalidation,
+                failure, accepted.Failure);
+            try {
+                logger.LogWarning("Agent policy operation {OperationId} for Agent {AgentId} in profile {ProfileId} was accepted but cache invalidation failed; failure types {FailureTypes}; truncated {Truncated}.",
+                    command.OperationId, command.Expectation.AgentId, command.Expectation.Workspace.DatabaseProfileId,
+                    string.Join(", ", diagnostic.ExceptionTypes), diagnostic.Truncated);
+            } catch (Exception diagnosticFailure) {
+                diagnostic = AgentDecisionDataPolicyFailure.Capture(AgentDecisionDataPolicyFailureStage.Diagnostics,
+                    diagnosticFailure, diagnostic);
+            }
+            return new AgentDecisionDataPolicySaveOutcome.Accepted(accepted.Command, accepted.Snapshot, followupRequired: true, diagnostic);
+        }
+    }
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
@@ -130,13 +173,26 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     }
 
     public async Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
-    {
-        var agentId = await ResolveService().SaveAgentAsync(model, cancellationToken);
+        => (await SaveAgentDefinitionAsync(model, cancellationToken)).Id;
+
+    public async Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default) {
+        AgentDefinition accepted;
+        Exception? publicationWarning = null;
+        try {
+            accepted = await ResolveService().SaveAgentDefinitionAsync(model, cancellationToken);
+        } catch (AgentCatalogCommittedException<AgentDefinition> exception) {
+            accepted = exception.Accepted;
+            publicationWarning = exception;
+        }
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
             cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
+            exception => new AgentDirectoryProjectionSynchronizationException(accepted.Id,
+                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception), acceptedDefinition: accepted));
+        if (publicationWarning is not null) {
+            throw new AgentDirectoryProjectionSynchronizationException(accepted.Id, publicationWarning, acceptedDefinition: accepted);
+        }
 
-        return agentId;
+        return accepted;
     }
 
     public async Task GrantAgentProjectStructureAccessAsync(
@@ -230,6 +286,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().ListAgentTeamsAsync(cancellationToken);
     }
 
+    public async Task DeleteAgentAsync(Guid agentId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default) {
+        await ResolveService().DeleteAgentAsync(agentId, expectedUpdatedAtUtc, cancellationToken);
+        await RefreshDirectoryProjectionAfterCommittedAgentDeletionAsync(agentId, cancellationToken);
+    }
+
     public Task<AgentTeamEditorModel> GetAgentTeamEditorAsync(Guid? teamId = null, CancellationToken cancellationToken = default)
     {
         return ResolveService().GetAgentTeamEditorAsync(teamId, cancellationToken);
@@ -239,6 +300,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     {
         return ResolveService().SaveAgentTeamAsync(model, cancellationToken);
     }
+
+    public Task<AgentTeamEditorModel> SaveAgentTeamMetadataAsync(AgentTeamEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveAgentTeamMetadataAsync(model, cancellationToken);
 
     public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds, CancellationToken cancellationToken = default)
     {
@@ -250,20 +314,39 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().DeleteAgentTeamAsync(teamId, cancellationToken);
     }
 
-    public async Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
-    {
-        var cloneId = await ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken);
-        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(cloneId, exception));
-        return cloneId;
-    }
+    public Task<AgentTeamDefinition> UpdateAgentTeamMembersAsync(Guid teamId, IReadOnlyList<Guid> agentIds,
+        DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => ResolveService().UpdateAgentTeamMembersAsync(teamId, agentIds, expectedUpdatedAtUtc, cancellationToken);
 
-    public async Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
-    {
-        var templateId = await ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken);
+    public Task DeleteAgentTeamAsync(Guid teamId, DateTimeOffset expectedUpdatedAtUtc, CancellationToken cancellationToken = default)
+        => ResolveService().DeleteAgentTeamAsync(teamId, expectedUpdatedAtUtc, cancellationToken);
+
+    public Task<AgentTeamDefinition> EnsureAgentTeamMemberAsync(Guid teamId, DateTimeOffset expectedCreatedAtUtc, Guid agentId,
+        CancellationToken cancellationToken = default)
+        => ResolveService().EnsureAgentTeamMemberAsync(teamId, expectedCreatedAtUtc, agentId, cancellationToken);
+
+    public Task<Guid> CloneAgentAsync(Guid agentId, string cloneName, CancellationToken cancellationToken = default)
+        => CompleteAgentCopyAsync(() => ResolveService().CloneAgentAsync(agentId, cloneName, cancellationToken), cancellationToken);
+
+    public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
+        => CompleteAgentCopyAsync(() => ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken), cancellationToken);
+
+    private async Task<Guid> CompleteAgentCopyAsync(Func<Task<Guid>> copy, CancellationToken cancellationToken) {
+        Guid id;
+        Exception? publicationWarning = null;
+        try {
+            id = await copy();
+        } catch (AgentCatalogCommittedException<Guid> exception) {
+            id = exception.Accepted;
+            publicationWarning = exception;
+        }
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-            exception => new AgentDirectoryProjectionSynchronizationException(templateId, exception));
-        return templateId;
+            exception => new AgentDirectoryProjectionSynchronizationException(id,
+                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception)));
+        if (publicationWarning is not null) {
+            throw new AgentDirectoryProjectionSynchronizationException(id, publicationWarning);
+        }
+        return id;
     }
 
     public Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
@@ -309,13 +392,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         AgentExternalProvisioningCommand command,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await ResolveService().ProvisionAgentByExternalKeyAsync(
+        var (service, workspace) = ResolveExternalMutationWorkspace();
+        var receipt = await service.ProvisionAgentByExternalKeyAsync(
             command,
             cancellationToken);
         if (!receipt.Replayed)
         {
             await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt), workspace);
         }
 
         return receipt;
@@ -325,16 +409,26 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         AgentExternalArchiveCommand command,
         CancellationToken cancellationToken = default)
     {
-        var receipt = await ResolveService().ArchiveAgentByExternalKeyAsync(
+        var (service, workspace) = ResolveExternalMutationWorkspace();
+        var receipt = await service.ArchiveAgentByExternalKeyAsync(
             command,
             cancellationToken);
         if (!receipt.Replayed)
         {
             await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
-                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt));
+                exception => new AgentDirectoryProjectionSynchronizationException(receipt.AgentId, exception, provisioningReceipt: receipt), workspace);
         }
 
         return receipt;
+    }
+
+    private (IAgentFrameworkWorkspaceService Service, AgentExecutionActivityWorkspaceIdentity Workspace) ResolveExternalMutationWorkspace() {
+        lock (executionSubscriptionGate) {
+            var identity = ResolvePinnedActivityExecutionIdentity();
+            var service = workspaceFactory.GetWorkspaceService(identity.WorkspaceScope);
+            EnsurePinnedActivityExecutionIdentity(identity, ResolvePinnedActivityExecutionIdentity());
+            return (service, new(identity.ProfileId, identity.WorkspaceScope, identity.ProfileGeneration));
+        }
     }
 
     public Task<IReadOnlyList<ProviderProfile>> ListProvidersAsync(CancellationToken cancellationToken = default)
@@ -357,6 +451,11 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public async Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
         await ResolveService().DeleteProviderAsync(providerId, cancellationToken);
+        await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
+    }
+
+    public async Task DeleteProviderAsync(Guid providerId, Guid expectedConcurrencyToken, CancellationToken cancellationToken = default) {
+        await ResolveService().DeleteProviderAsync(providerId, expectedConcurrencyToken, cancellationToken);
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken);
     }
 
@@ -394,12 +493,18 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().SaveCapabilityAsync(model, cancellationToken);
     }
 
+    public Task<CapabilityEditorModel> SaveCapabilityEditorAsync(CapabilityEditorModel model, CancellationToken cancellationToken = default)
+        => ResolveService().SaveCapabilityEditorAsync(model, cancellationToken);
+
     public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
     {
         return ResolveService().DeleteCapabilityAsync(capabilityId, cancellationToken);
     }
 
-    public Task VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
+    public Task DeleteCapabilityAsync(Guid capabilityId, string expectedFingerprint, CancellationToken cancellationToken = default)
+        => ResolveService().DeleteCapabilityAsync(capabilityId, expectedFingerprint, cancellationToken);
+
+    public Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default) {
         IAgentFrameworkWorkspaceService workspace;
         try {
             cancellationToken.ThrowIfCancellationRequested();
@@ -427,14 +532,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetChatAgentWorkspaceAsync(agentId, preferredSessionId, cancellationToken);
     }
 
-    public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default)
+    public Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null)
     {
-        return ResolveService().GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken);
+        return ResolveService().GetOrCreateChatSessionAsync(agentId, chatSessionId, cancellationToken, initialTitle);
     }
 
-    public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, CancellationToken cancellationToken = default)
+    public Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default)
     {
-        return ResolveService().RenameChatSessionAsync(agentId, chatSessionId, title, cancellationToken);
+        return ResolveService().RenameChatSessionAsync(agentId, chatSessionId, title, expectedTitle, cancellationToken);
     }
 
     public Task<ExecutionRunResult> ExecuteRunAsync(ExecutionRunRequest request, CancellationToken cancellationToken = default)
@@ -466,6 +571,44 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 operation,
                 request,
                 cancellationToken));
+    }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningAsync(AgentInheritedPlanningWorkspaceRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return ExecuteNewActivityOperationAsync(request.ActivityOperationId, request.AgentId, chatSessionId: null,
+            "Inherited planning request accepted.", (service, operation) => RequireInheritedWorkspace(service)
+                .ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    public Task<AgentInheritedPlanningWorkspaceResult> ExecuteInheritedPlanningWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningWorkspaceRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return DispatchPinnedActivityOperation(operation, request.AgentId, expectedChatSessionId: null, request.ActivityOperationId,
+            service => RequireInheritedWorkspace(service).ExecuteInheritedPlanningWithinOperationAsync(operation, request, cancellationToken));
+    }
+
+    private static IAgentInheritedPlanningWorkspaceService RequireInheritedWorkspace(IAgentFrameworkWorkspaceActivityExecutionService service)
+        => service as IAgentInheritedPlanningWorkspaceService
+            ?? throw new NotSupportedException("This workspace does not support inherited planning.");
+
+    public Task<T> ReviewInheritedPlanningAsync<T>(AgentInheritedPlanningReviewRequest request,
+        AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent, AgentExecutionOperationId activityOperationId,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(authority);
+        return ExecuteNewActivityOperationAsync(activityOperationId, authority.Original.AgentId, chatSessionId: null,
+            "Inherited planning review accepted.", (service, operation) => RequireInheritedWorkspace(service)
+                .ReviewInheritedPlanningWithinOperationAsync(operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
+    }
+
+    public Task<T> ReviewInheritedPlanningWithinOperationAsync<T>(IAgentExecutionActivityOperationLease operation,
+        AgentInheritedPlanningReviewRequest request, AgentInheritedSavedEffectContinuation authority, AgentToolSemanticDigest ownerIntent,
+        Func<AgentInheritedPlanningReviewResult, CancellationToken, Task<T>> settleOriginal, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(authority);
+        return DispatchPinnedActivityOperation(operation, authority.Original.AgentId, expectedChatSessionId: null, operation.StreamId.OperationId,
+            service => RequireInheritedWorkspace(service).ReviewInheritedPlanningWithinOperationAsync(
+                operation, request, authority, ownerIntent, settleOriginal, cancellationToken));
     }
 
     public Task<ExecutionRunSourceExecutionResult> ExecuteSameSourceRunAsync(
@@ -524,6 +667,22 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                 decisions,
                 autoApprovePendingToolCalls,
                 cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionAsync(AgentPlanningActionRequest request,
+        AgentExecutionOperationId activityOperationId, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
+        return ExecuteNewActivityOperationAsync(activityOperationId, agentId: null, request.ChatSessionId,
+            "Planning action accepted.", (service, operation) => service.ApplyPlanningActionWithinOperationAsync(
+                operation, request, cancellationToken));
+    }
+
+    public Task<ExecutionRunDetail> ApplyPlanningActionWithinOperationAsync(IAgentExecutionActivityOperationLease operation,
+        AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(request);
+        return DispatchPinnedActivityOperation(operation, expectedAgentId: null, request.ChatSessionId,
+            operation.StreamId.OperationId, service => service.ApplyPlanningActionWithinOperationAsync(operation, request, cancellationToken));
     }
 
     public Task<ExecutionRunDetail> CancelPendingExecutionApprovalsAsync(Guid executionRunId,
@@ -732,6 +891,14 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         return ResolveService().GetExecutionRunDetailAsync(executionRunId, cancellationToken);
     }
 
+    public Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,
+        CancellationToken cancellationToken = default) {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        AgentHistoricalReceiptReviewService.RequireInitialized(historicalRuntimeState);
+        return (historicalReceipts ?? throw new NotSupportedException("Historical receipt review is not registered."))()
+            .ReadSavedEffectReceiptsAsync(request, cancellationToken);
+    }
+
     public Task<IReadOnlyList<ExecutionArtifactRecord>> ListExecutionArtifactsAsync(Guid executionRunId, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListExecutionArtifactsAsync(executionRunId, cancellationToken);
@@ -805,6 +972,12 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
                     pinnedService.Service,
                     operation);
             }
+            catch (Exception exception) when (AgentEffectActivityFinalization.IsEffectFailure(exception)) {
+                var failure = AgentEffectActivityFinalization.Publish(operation, null, exception);
+                failure = AgentEffectActivityFinalization.Dispose(operation, null, failure);
+                ExceptionDispatchInfo.Capture(failure!).Throw();
+                throw;
+            }
             catch (OperationCanceledException)
             {
                 try
@@ -842,9 +1015,27 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         IAgentExecutionActivityOperationLease operation,
         Task<TResult> completion)
     {
+        TResult result = default!;
+        Exception? primary = null;
+        try {
+            result = await completion.ConfigureAwait(false);
+        } catch (Exception exception) {
+            primary = exception;
+        }
+        var continuation = AgentEffectActivityFinalization.Continuation(result);
+        if (continuation is not null || AgentEffectActivityFinalization.IsEffectFailure(primary)) {
+            primary = AgentEffectActivityFinalization.Publish(operation, continuation, primary);
+            primary = AgentEffectActivityFinalization.Dispose(operation, continuation, primary);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
+            return result;
+        }
         try
         {
-            var result = await completion.ConfigureAwait(false);
+            if (primary is not null) {
+                ExceptionDispatchInfo.Capture(primary).Throw();
+            }
             if (!operation.IsTerminal)
             {
                 TerminalizeOwnedFailure(operation);
@@ -1064,11 +1255,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
 
     private async Task SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(
         CancellationToken cancellationToken,
-        Func<Exception, Exception>? synchronizationExceptionFactory = null)
+        Func<Exception, Exception>? synchronizationExceptionFactory = null,
+        AgentExecutionActivityWorkspaceIdentity? expectedWorkspace = null)
     {
         try {
             referenceDataCacheInvalidator.Invalidate();
-            await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+            if (expectedWorkspace is null) {
+                await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(cancellationToken);
+            } else {
+                await technicalAgentBridge.SynchronizeDirectoryProjectionAsync(expectedWorkspace, cancellationToken);
+            }
             referenceDataCacheInvalidator.Invalidate();
         } catch (Exception exception) when (synchronizationExceptionFactory is not null) {
             throw synchronizationExceptionFactory(exception);

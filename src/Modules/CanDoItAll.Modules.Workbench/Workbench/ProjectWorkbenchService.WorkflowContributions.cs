@@ -320,8 +320,8 @@ internal static class ProjectWorkflowContributionFingerprint {
         return new DateTimeOffset(utc.Ticks - utc.Ticks % TimeSpan.TicksPerMicrosecond, TimeSpan.Zero);
     }
 
-    public static string Target(ProjectObjectRecord node) => Hash(JsonSerializer.Serialize(new {
-        node.Id,
+    public static string Target(ProjectObjectRecord node, Guid? persistedObjectId) => Hash(JsonSerializer.Serialize(new {
+        Id = persistedObjectId,
         node.ProjectId,
         node.NodeKey,
         node.ParentNodeKey,

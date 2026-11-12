@@ -226,10 +226,16 @@ public sealed class ApiRunEventAdapterTests
     {
         using var stream = CreateProcessEventStream();
         var inner = new RecordingProcessRuntimeProjector();
+        ProcessStoredRuntimeEvent? structureEvent = null;
         var decorator = new ApiNotifyingProcessRuntimeProjector(
             inner,
             stream,
-            NullLogger<ApiNotifyingProcessRuntimeProjector>.Instance);
+            NullLogger<ApiNotifyingProcessRuntimeProjector>.Instance,
+            (projected, _) => {
+                Assert.Same(projected, inner.ProjectedEvent);
+                structureEvent = projected;
+                return Task.CompletedTask;
+            });
         var runtimeEvent = CreateProcessEvent(
             ProcessRunId.New(),
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted,
@@ -243,6 +249,7 @@ public sealed class ApiRunEventAdapterTests
             .ReadAsync(0, CancellationToken.None);
 
         Assert.Same(runtimeEvent, inner.ProjectedEvent);
+        Assert.Same(runtimeEvent, structureEvent);
         var entry = Assert.Single(published.Events);
         Assert.Equal(runtimeEvent.GlobalSequence, entry.Value.GlobalSequence);
         Assert.Equal(ProcessApiEventCategory.Completed, entry.Value.Category);
@@ -253,10 +260,15 @@ public sealed class ApiRunEventAdapterTests
     {
         using var stream = CreateProcessEventStream();
         var inner = new ThrowingProcessRuntimeProjector();
+        var structureNotifications = 0;
         var decorator = new ApiNotifyingProcessRuntimeProjector(
             inner,
             stream,
-            NullLogger<ApiNotifyingProcessRuntimeProjector>.Instance);
+            NullLogger<ApiNotifyingProcessRuntimeProjector>.Instance,
+            (_, _) => {
+                structureNotifications++;
+                return Task.CompletedTask;
+            });
         var runtimeEvent = CreateProcessEvent(
             ProcessRunId.New(),
             ProcessRuntimeProjectionEventTypeNames.ProcessRunCompleted,
@@ -265,6 +277,7 @@ public sealed class ApiRunEventAdapterTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => decorator.ProjectAsync(runtimeEvent, context));
+        Assert.Equal(0, structureNotifications);
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(

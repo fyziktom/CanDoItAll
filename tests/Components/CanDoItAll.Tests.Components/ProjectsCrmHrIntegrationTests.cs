@@ -23,33 +23,39 @@ public sealed class ProjectsCrmHrIntegrationTests
         var deliveryUnitId = await CreatePartyAsync(partyDirectoryService, PartyType.OrganizationUnit, "Delivery Guild");
         var ownerId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Jordan Owner");
 
-        await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = admission,
             PartyId = customerId,
             Role = ProjectPartyAssignmentRole.Customer,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Customer, string.Empty),
             Source = "component-tests"
-        });
-        await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        })).IsSuccess);
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = admission,
             PartyId = deliveryUnitId,
             Role = ProjectPartyAssignmentRole.DeliveryUnit,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.DeliveryUnit, string.Empty),
             Source = "component-tests"
-        });
-        await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        })).IsSuccess);
+        Assert.True((await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
         {
             ProjectId = projectId,
             ExpectedProjectAdmission = admission,
             PartyId = ownerId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
+            PrimaryOriginal = await harness.Context.Services.GetRequiredService<ProjectPartyIntegrationService>()
+                .ReadPrimaryObservationAsync(admission, ProjectPartyAssignmentRole.Manager, string.Empty),
             Source = "component-tests"
-        });
+        })).IsSuccess);
 
         var summary = Assert.IsType<ProjectSummary>(await harness.Context.Services
             .GetRequiredService<IProjectSummaryQueryService>().GetSummaryAsync(projectId));
@@ -61,6 +67,8 @@ public sealed class ProjectsCrmHrIntegrationTests
         Assert.Contains("Delivery Guild", summary.RelatedPartySearchText);
         Assert.Contains("Jordan Owner", summary.RelatedPartySearchText);
 
+        // The page applies and writes its URL state only at its own route.
+        harness.Context.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/projects");
         var cut = harness.Context.Render<ProjectsPage>();
 
         cut.WaitForAssertion(() =>

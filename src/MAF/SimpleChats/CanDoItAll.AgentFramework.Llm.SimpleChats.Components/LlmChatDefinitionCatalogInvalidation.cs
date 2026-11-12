@@ -14,7 +14,17 @@ public sealed class LlmChatDefinitionCatalogInvalidationHub : ILlmChatDefinition
     public void Invalidate(LlmChatDefinitionListItem definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        Invalidated?.Invoke(this, new LlmChatDefinitionCatalogInvalidatedEventArgs(definition));
+        List<Exception>? failures = null;
+        foreach (var handler in Invalidated?.GetInvocationList() ?? []) {
+            try {
+                ((EventHandler<LlmChatDefinitionCatalogInvalidatedEventArgs>)handler)(this, new(definition));
+            } catch (Exception exception) {
+                (failures ??= []).Add(exception);
+            }
+        }
+        if (failures is not null) {
+            throw new AggregateException("The saved definition requires catalog reconciliation.", failures);
+        }
     }
 }
 

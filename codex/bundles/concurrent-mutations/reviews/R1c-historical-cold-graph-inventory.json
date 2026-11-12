@@ -1,0 +1,308 @@
+{
+  "status": "Proposed graph inventory only; gated Infrastructure/Projects edits not released. No builds/tests.",
+  "capturedUtc": "2026-10-16T21:47:11.1608798-04:00",
+  "scope": "Exact cold-graph production amendment; not the full historical integration or final test inventory. Existing authored historical overrides superseded by dedicated owners will be removed only from their newly authored regions.",
+  "inputs": [
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/PhysicalFileSystemPathPolicy.cs",
+      "action": "modify",
+      "reason": "Expose existing explicit Sensitive constructor, preserving ordinary detection",
+      "managedPredecessorSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7",
+      "mainParentSha256": "6F97091348F1BF3782D8CD43BBCF468E7E146AB931EBF3A14A59FFCD48957ED7"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "action": "modify",
+      "reason": "Expose exact pure pending-name predicate, ordinary callers unchanged",
+      "managedPredecessorSha256": "2D356C8111D07813B5219A8F53B607117067EDFCDDF8535E9B96B5F3B03BBF0A",
+      "mainParentSha256": "2D356C8111D07813B5219A8F53B607117067EDFCDDF8535E9B96B5F3B03BBF0A"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/Storage/WorkspaceStorage.cs",
+      "action": "modify",
+      "reason": "Pure root calculation with unsupported interface default; existing Ensure path unchanged",
+      "managedPredecessorSha256": "31B971EA75BE52A957B1EDF5A8AD8628510EFCF5607703B10838970B7C54FAA0",
+      "mainParentSha256": "31B971EA75BE52A957B1EDF5A8AD8628510EFCF5607703B10838970B7C54FAA0"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/ControlPlanePaths.cs",
+      "action": "modify",
+      "reason": "Pure control-plane root calculation with unsupported default",
+      "managedPredecessorSha256": "0F80F90F613F78DB87C6E21D10BF181BB2DE475C35C7E7BBC0529FA304E365E3",
+      "mainParentSha256": "0F80F90F613F78DB87C6E21D10BF181BB2DE475C35C7E7BBC0529FA304E365E3"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationService.cs",
+      "action": "modify",
+      "reason": "Bounded existing-file observation and same codec shared with ordinary lease",
+      "managedPredecessorSha256": "276DD57AFBF9B23243F63349AB46D5C54691F79E0FAEF12F11C2EDB06FBAD71B",
+      "mainParentSha256": "276DD57AFBF9B23243F63349AB46D5C54691F79E0FAEF12F11C2EDB06FBAD71B"
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/DatasetActivationRecordCodec.cs",
+      "action": "new",
+      "reason": "Shared exact record parse/version/profile validation only",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.cs",
+      "action": "new",
+      "reason": "Standalone read-only layout/catalog/run owner moved from authored partial",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceHistoricalReadStore.Chat.cs",
+      "action": "new",
+      "reason": "Streaming projected chat identity moved from authored partial",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.HistoricalRead.cs",
+      "action": "replace-authored",
+      "reason": "Thin explicit historical-port forwarding; no ordinary constructor changes",
+      "managedPredecessorSha256": "5DC1D8689CEDFB98FACB33C4F274C35180347AB8334343124B65D07B5FAD6CF0",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.HistoricalChatRead.cs",
+      "action": "remove-authored",
+      "reason": "Move authored helper into standalone owner, never present in main",
+      "managedPredecessorSha256": "2FCAF4D725910CB583535752B4B431F1F3169988A6157F235B0C992453F11560",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.HistoricalRead.cs",
+      "action": "modify-authored",
+      "reason": "Explicit standalone-store overload using same bounded algorithm",
+      "managedPredecessorSha256": "C2567AFE1D113C76797635082CA298260E0202DC0A458E58EDD7E8A9019A3268",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Contracts/AgentHistoricalReceiptReviewService.cs",
+      "action": "new",
+      "reason": "Narrow historical operation port for API/native/current-profile owners",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolHistoricalBackgroundRead.cs",
+      "action": "new",
+      "reason": "Historical-only background current-read port, no dispatch member",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Context/AgentHistoricalReceiptReadPolicy.cs",
+      "action": "modify-authored",
+      "reason": "Explicit historical source read participant contract",
+      "managedPredecessorSha256": "52E3D98B706535D50EFAFCB1CAAC4E8AA60A24EA5AE0BC546FF954914CC54882",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentHistoricalReceiptReviewService.cs",
+      "action": "new",
+      "reason": "Lightweight initialized-profile/current-fence owner",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/CanonicalAgentHistoricalReceiptReadObserver.cs",
+      "action": "new",
+      "reason": "Shared exact historical canonical policy without execution factory",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentHistoricalReadStore.cs",
+      "action": "new",
+      "reason": "Initialized-profile standalone file/catalog observation",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentHistoricalReceiptReviewBoundary.cs",
+      "action": "remove-authored",
+      "reason": "Replace authored execution-factory boundary with dedicated read owner",
+      "managedPredecessorSha256": "BCE34161E034E67BA7D94B7F68FED095964AE0754CAF4E3AEBBEDE011A946134",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentExecutionAuthorityComposition.cs",
+      "action": "modify",
+      "reason": "Delegate new historical method to shared observer; ordinary resolution unchanged",
+      "managedPredecessorSha256": "AABF8AFE0BE01AD581A342BC8FF7A95424381EE419C57C99286EC6DD4DD58A7C",
+      "mainParentSha256": "AF4ED277DF2CF542EF3DB5E100084B5F06242715B8926197275DC9E1BBA1D2A9"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
+      "action": "modify",
+      "reason": "Explicit lightweight historical service/catalog/observer registration",
+      "managedPredecessorSha256": "61BE779699D2D852C2B3E2FB1F0FED5637B91F9950949A2EF0C4A0E117440F60",
+      "mainParentSha256": "61BE779699D2D852C2B3E2FB1F0FED5637B91F9950949A2EF0C4A0E117440F60"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Workspace/CurrentProfileAgentFrameworkWorkspaceService.cs",
+      "action": "modify",
+      "reason": "Historical forwarding only; existing R1c activity paths preserved",
+      "managedPredecessorSha256": "32EDA754FAAC630C2370495FE81E6B0ADC33605512E187ADB763ABDFC69904F0",
+      "mainParentSha256": "34875D94F7F2C20B26CE6E709E5364D18640F74F9F4AED3A4B239B07D1CB9FD6"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentChatExecutionOrchestrator.cs",
+      "action": "modify",
+      "reason": "Historical forwarding only; existing ownership finalization preserved",
+      "managedPredecessorSha256": "8CEA477C2E6ED52DE7D4665D53315DE2BF8CFB79C43EBC78714B90AA79092697",
+      "mainParentSha256": "A590368C30C7531B96F85373DE669BDF67131AC1E2F2E03E41317257EBFD313F"
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessHistoricalReceiptRead.cs",
+      "action": "new",
+      "reason": "Original-evidence query/current historical source observation ports",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessOriginalReceiptAuthorityReader.cs",
+      "action": "new",
+      "reason": "Existing EF dispatch evidence query and initialized-profile checks only",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessHistoricalReceiptSourcePolicy.cs",
+      "action": "new",
+      "reason": "Captured-run original evidence/current read with no execution store",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs",
+      "action": "modify",
+      "reason": "Historical-only Process query/background registration",
+      "managedPredecessorSha256": "57B9D13D4550F564FD37C38FEFA663764125D5E809CD9FE1B9C311FD774F9951",
+      "mainParentSha256": "57B9D13D4550F564FD37C38FEFA663764125D5E809CD9FE1B9C311FD774F9951"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessHistoricalReadAuthority.cs",
+      "action": "new",
+      "reason": "Current source observation without launch targets/contributors/mutation service",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessReadAuthorityPolicy.cs",
+      "action": "new",
+      "reason": "Shared pure operator/source-project/grant validation, exact old semantics",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.cs",
+      "action": "modify",
+      "reason": "Use shared pure validators; ordinary policy/lease behavior unchanged",
+      "managedPredecessorSha256": "E0246ABE0238841E750FAF15E91F9D5089F226A421BA3DC4D05E8F0367CA128B",
+      "mainParentSha256": "E0246ABE0238841E750FAF15E91F9D5089F226A421BA3DC4D05E8F0367CA128B"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureExecutionAuthorityProvider.cs",
+      "action": "modify",
+      "reason": "Declare explicit historical read participant using existing policy",
+      "managedPredecessorSha256": "7AD13D9B232FB2B9449B15093E51795220996A8ECC0B5D5A9F7B5C8371258D64",
+      "mainParentSha256": "7AD13D9B232FB2B9449B15093E51795220996A8ECC0B5D5A9F7B5C8371258D64"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs",
+      "action": "modify",
+      "reason": "Explicit historical Project-structure source registration",
+      "managedPredecessorSha256": "54DB12820CB973123F26CC66A13049C6DE9CC59E8190E000B6C1B42E9E355F4E",
+      "mainParentSha256": "5732A4A6518FEB83FA58F483F71F5086531A6C4A234856A9532600B26C0D3443"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectDefinitionHistoricalReceiptRecovery.cs",
+      "action": "new",
+      "reason": "Dedicated historical adapter/shared codec and pure receipt access validation",
+      "managedPredecessorSha256": null,
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/AgentTools/ProjectDefinitionToolReceiptRecovery.cs",
+      "action": "modify",
+      "reason": "Share pure receipt conversion only; remove authored cold-unsafe historical branch",
+      "managedPredecessorSha256": "996908ED4D3D4714C4C65BDF101B0284AB62DB07113624F0F22BBAE21DDC722B",
+      "mainParentSha256": "838562D7064DD5D954B049DD9EAF4A57B95145D60774657345A8E910EEB72412"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectDefinitionGovernedReceiptAccess.cs",
+      "action": "modify",
+      "reason": "Share pure validation/remove authored historical mutation-service dependency",
+      "managedPredecessorSha256": "6DE79BD4AE35186E56D036CD09B7E895806E4B00CC597398669FD83CEE984124",
+      "mainParentSha256": "DBF2AE2B61DD7D5D33941C195F5009C4AE081F8E359AD8BD75B692C6B9580DBC"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Projects/ProjectDefinitionReceiptReader.cs",
+      "action": "modify",
+      "reason": "Existing-file before/after observation around identical SQL receipt path",
+      "managedPredecessorSha256": "02568B5FF10D1498F0E9FAA7741C332082E3A70E6301D4958AD93213A83D4F30",
+      "mainParentSha256": "02568B5FF10D1498F0E9FAA7741C332082E3A70E6301D4958AD93213A83D4F30"
+    },
+    {
+      "path": "src/App/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs",
+      "action": "modify",
+      "reason": "Historical owner bindings only, preserve current C2/C3 pool registration",
+      "managedPredecessorSha256": "3FBF7996388665A2A998B3EE84C3267CFCBD0DDF7D35577024C92258A47F3274",
+      "mainParentSha256": "3FBF7996388665A2A998B3EE84C3267CFCBD0DDF7D35577024C92258A47F3274"
+    },
+    {
+      "path": "src/App/CanDoItAll.Web/Api/AgentHistoricalReceiptsApi.cs",
+      "action": "modify-authored",
+      "reason": "Resolve lightweight historical service directly",
+      "managedPredecessorSha256": "2B47CF95E11ABFEE0EE813F271DB50BEBF46D2BCC048C89CCDF7EE560A7606B7",
+      "mainParentSha256": null
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolBackgroundSourcePolicy.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "6BD77A7D5F531C7BDFC7BFA0787D4FA8674063DCC30873D1044D16C9B934BB85",
+      "mainParentSha256": "4262E420645EEBE2CD988F15A3B4578F8FBFE0A68311FCB13529294201854FB0"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/CanonicalAgentCatalogLeaseSource.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "C7922DB453CCB0E7BED576593B2DFFAF5827ED024BE8FF239D0AE2A10835FEA7",
+      "mainParentSha256": "36AE3348643F25A217767959EE50CAA90DC546EAEF3D9FB34BC8F6162CB160D7"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Processes/Services/RuntimeIntegration/ProcessToolBackgroundSourcePolicy.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "C25CD52885BEB73D6108F0A029004ECA35C83BD719AAA66544863EE0CA0D73C0",
+      "mainParentSha256": "EBA3CC835B03D542DB12E5012890EF0DC3399C861FCA7897578C5C93A90525C3"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessLaunchAuthorityService.Observation.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "F28ACAD1BBA1EBBB22C37E3B47E902519314994291714E8B1B411787471ACD4A",
+      "mainParentSha256": "8E8D48A64AFA7FE1FA9912C33B9C65ABAC7B19AC6693AF7BAA26E274B4181F47"
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectProcessExecutionMutationService.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "4FB829C3C58CFBB49FC3345FF04802B527AB806924BDF7BE58B6AD285096A4FC",
+      "mainParentSha256": "8946318B68897E4AEFADD9D6B276A09EB8D05DA21141219C767D552B1D9063FE"
+    },
+    {
+      "path": "src/Processes/CanDoItAll.Processes.Application/ProcessExecutionDispatchAuthority.cs",
+      "action": "remove-authored-region",
+      "reason": "Remove or forward only newly authored historical override/port superseded by dedicated owner; ordinary existing code and later parent repairs preserved",
+      "managedPredecessorSha256": "CEF1B15A822147FC52C3B66B701C6C00AD2BCE80041215AEF24DDE9A2962E827",
+      "mainParentSha256": "D14EB3DD5AE6B3DCAAF06E63A4D53B16B96C0F781C5A7E553317E8115C1DFFF6"
+    }
+  ]
+}

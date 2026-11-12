@@ -21,6 +21,10 @@ internal sealed record CrmOpportunityAssignmentSnapshot(Guid Id, Guid ProjectId,
         row.ProjectLifetimeId, row.PartyId, row.PartyOrganizationAffiliationId, row.AssignmentKind, row.NodeKey,
         row.PhaseName, row.OpportunityId, row.AllocationPercent, row.StartsAtUtc, row.EndsAtUtc, row.IsPrimary, row.Source, row.Notes);
 
+    internal CrmOpportunityAssignmentOriginal Original() => new(Id, ProjectId, ProjectLifetimeId, PartyId,
+        PartyOrganizationAffiliationId, AssignmentKind, NodeKey, PhaseName, OpportunityId, AllocationPercent,
+        StartsAtUtc, EndsAtUtc, IsPrimary, Source, Notes);
+
     internal ProjectPartyAssignment ToRecord() => new() {
         Id = Id, ProjectId = ProjectId, ProjectLifetimeId = ProjectLifetimeId, PartyId = PartyId,
         PartyOrganizationAffiliationId = PartyOrganizationAffiliationId, AssignmentKind = AssignmentKind,

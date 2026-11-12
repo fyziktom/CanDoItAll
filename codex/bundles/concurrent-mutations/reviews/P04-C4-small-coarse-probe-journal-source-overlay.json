@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "owner": "/root/agent_process_architecture",
+  "status": "Source-only journal monotonicity assertion repair; parent build/static/execution pending",
+  "sourceOnly": true,
+  "previousOverlay": {
+    "path": "codex/bundles/concurrent-mutations/reviews/P04-C4-small-coarse-probe-cancellation-source-overlay.json",
+    "sha256": "A5AFABB9FB65667BFE66CFAA031B186CB8F9DA05CF17A37644BE8702434216E1"
+  },
+  "files": [
+    {
+      "path": "tests/Integration/CanDoItAll.Tests.Integration/AgentPlanningPublicationCostFixture.cs",
+      "predecessorSha256": "2CAAEFEFDA239FE131F6E129D5AFA66AB090A78839ACCEF9D8A7F9413E17756E",
+      "predecessorBytes": 32121,
+      "preservedSource": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-journal-repair-source\\AgentPlanningPublicationCostFixture.before-journal-repair.cs.txt",
+      "sha256": "1FCFF5E3B8FFA3744F1AE118076951B4845D42C310CF9127DC68F855BCC846A5",
+      "bytes": 32117,
+      "change": "Assert strict journal revision advancement rather than an invented one-increment-per-owner-write contract. Exact run increment and full cancellation/origin assertions remain unchanged."
+    }
+  ],
+  "sourceTrace": [
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolJournalTransitions.cs",
+      "sha256": "5AD46EEB72D9B9B44FD544657C968BF4E86CE977DBBA212999DD4B036CDE5186",
+      "bytes": 17025
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolAdmissionJournal.SavedEffects.cs",
+      "sha256": "03AD3538DB8DDCACAE6BCF5D5F800E1F38B12C0301DEF30B882E3C088A4BDA49",
+      "bytes": 20561
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs",
+      "sha256": "007864C9C73288EA1EDD324D6ADC6D7EAC475F248FC0C8F1821E34C7B21B5DE6",
+      "bytes": 98414
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs",
+      "sha256": "BF855D01303BB3B31DAD5E04640217A03969CAA1F8B37078E33BF47815978F9C",
+      "bytes": 146889
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.ProjectLifetimes.cs",
+      "sha256": "2FD7F5193C066CE72F9C413D071CD39E5E3D69F474C5E41D7AD3F34BE24184EB",
+      "bytes": 3671
+    }
+  ],
+  "reason": [
+    "RejectUndispatchedOnCancellation calls Replace once per Prepared proposal; Replace advances journal revision.",
+    "There is no Started provider dispatch in this single-proposal fixture, so CancelProviderDispatches returns unchanged.",
+    "CancelSavedEffectsAsync then advances the journal revision once more before one store update persists its target.",
+    "ValidatePersistence forbids regression and changed content at equal revision; revisions are monotonic CAS tokens, not physical-write counts.",
+    "UpdateExecutionRunDetailAsync invokes the callback once; NormalizeRunDetail preserves Run and ToolAdmission; prepare/commit persist that exact target. Grant updates only catalog and workspace index."
+  ],
+  "ownership": {
+    "path": "C:\\Users\\lucys\\.codex\\worktrees\\concurrent-mutations-runtime\\CanDoItAll\\.artifacts\\concurrent-mutations\\validation\\c4-small-probe-journal-repair-source.ownership.json",
+    "sha256": "A12F2E199CB5084F5A0F1363339FBC331F419CCC3890D262EDD8D25A66D0B9B7"
+  },
+  "expectedFacts": 1,
+  "longRunningRows": 1,
+  "workloadChanged": false,
+  "responsivenessThresholdChanged": false,
+  "productionChanged": false,
+  "buildsPerformed": false,
+  "testsPerformed": false,
+  "staticPerformed": false,
+  "mainMaintainedEdits": false
+}

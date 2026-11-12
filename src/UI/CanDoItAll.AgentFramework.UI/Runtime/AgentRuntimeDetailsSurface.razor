@@ -1,0 +1,48 @@
+@using CanDoItAll.AgentFramework.UI.Governance
+@{ var rendered = State; }
+
+<div class="agent-runtime-details-dialog" data-testid="agent-runtime-details-dialog-body">
+    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch">
+        <SurfaceCard Soft="true">
+            <Stack GapScale="LayoutGap.Small">
+                <TextBlock TextStyle="TextStyle.Subtitle2" Value="Selected execution" />
+                @if (rendered.RunId is null) {
+                    <TextBlock TextStyle="TextStyle.Body2" Value="No execution run is selected yet. Sending a prompt creates or reuses the thread runtime." />
+                } else {
+                    <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                        <StatusBadge Tone="@rendered.Tone" Text="@rendered.State" />
+                        @if (rendered.Outcome is not null) {
+                            <StatusBadge Tone="info" Text="@rendered.Outcome" />
+                        }
+                        <StatusBadge Tone="neutral" Text="@rendered.UpdatedAtUtc" />
+                    </Cluster>
+                    <TextBlock TextStyle="TextStyle.Body2" Value="@rendered.Title" />
+                    <TextBlock TextStyle="TextStyle.Caption" Value="@($"Entry provider {rendered.EntryProvider}")" />
+                    @if (rendered.FailureProvider is not null) {
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Failure provider {rendered.FailureProvider}")" />
+                    }
+                    @if (rendered.Compatibility is { } evidence) {
+                        <TextBlock TextStyle="TextStyle.Caption" Value="Entry-agent request compatibility" />
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="neutral" Text="@($"Transport {evidence.Transport}")" />
+                            <StatusBadge Tone="info" Text="@($"Compatibility {evidence.Disposition}")" />
+                        </Cluster>
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Reasoning requested {evidence.RequestedEffort} / effective {evidence.EffectiveEffort}")" />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Model requested {evidence.RequestedModel} / effective {evidence.EffectiveModel}")" />
+                        <TextBlock TextStyle="TextStyle.Caption" Value="@($"Compatibility code {evidence.Adjustment}")" />
+                    } else {
+                        <TextBlock TextStyle="TextStyle.Caption" Value="Compatibility evidence was not recorded for this run; execution may have ended before provider dispatch." />
+                    }
+                }
+            </Stack>
+        </SurfaceCard>
+        <Grid Gap="LayoutGap.Large" ColumnTemplate="minmax(0,1.35fr) minmax(18rem,0.65fr)">
+            <ExecutionTimelinePanel Entries="rendered.Timeline" />
+            <MetricSummaryPanel Metrics="rendered.Metrics" />
+        </Grid>
+    </Stack>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AgentRuntimeDetailsState State { get; set; } = default!;
+}

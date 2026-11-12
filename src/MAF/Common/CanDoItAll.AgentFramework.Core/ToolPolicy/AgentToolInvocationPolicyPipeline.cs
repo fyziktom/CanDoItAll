@@ -18,6 +18,9 @@ public interface IToolInvocationPolicyContextContributor
         WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope);
 
     WorkspacePathScopeContribution? ContributeWorkspacePaths(WorkspaceScopeDescriptor scope) => null;
+
+    IReadOnlyList<ToolInputConstraint> ContributeToolInputConstraints(string toolName,
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope) => [];
 }
 
 public sealed record ToolInvocationPolicyEvaluationResult(

@@ -29,6 +29,7 @@ public sealed class ProjectStructureGraphAdapter
         return new CanvasWorkbenchSurface
         {
             SurfaceId = $"project-structure:{surface.ProjectId:N}",
+            RootNodeId = surface.Nodes.FirstOrDefault(node => node.ProjectRole == ProjectStructureProjectRole.ActiveProject)?.Id ?? string.Empty,
             Mode = "authoring",
             UiState = uiState,
             Chrome = chrome,

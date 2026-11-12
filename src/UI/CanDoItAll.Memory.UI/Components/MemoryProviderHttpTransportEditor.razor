@@ -1,0 +1,58 @@
+@namespace CanDoItAll.Modules.Memory.Components
+
+<FormSection Title="HTTP transport"
+             Description="Store only an environment-variable name for credentials. Secrets are resolved at dispatch time.">
+    <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
+        <FormField Text="Service base URL">
+            <TextBox Immediate="true" Value="@Transport.BaseUrl"
+                     ValueChanged="@(value => Transport.BaseUrl = value)"
+                     data-testid="memory-ui-editor-http-base-url" />
+        </FormField>
+        <FormField Text="Query path">
+            <TextBox Immediate="true" Value="@Transport.QueryPath"
+                     ValueChanged="@(value => Transport.QueryPath = value)"
+                     data-testid="memory-ui-editor-http-query-path" />
+        </FormField>
+        <FormField Text="Health path">
+            <TextBox Immediate="true" Value="@Transport.HealthPath"
+                     ValueChanged="@(value => Transport.HealthPath = value)"
+                     data-testid="memory-ui-editor-http-health-path" />
+        </FormField>
+        <FormField Text="API key environment variable">
+            <TextBox Immediate="true" Value="@Transport.ApiKeyEnvironmentVariable"
+                     ValueChanged="@(value => Transport.ApiKeyEnvironmentVariable = value)"
+                     Placeholder="CANDOITALL_MEMORY_API_KEY"
+                     data-testid="memory-ui-editor-http-api-key-environment-variable" />
+        </FormField>
+        <FormField Text="Authentication header">
+            <TextBox Immediate="true" Value="@Transport.AuthHeaderName"
+                     ValueChanged="@(value => Transport.AuthHeaderName = value)"
+                     data-testid="memory-ui-editor-http-auth-header" />
+        </FormField>
+        <FormField Text="Authentication scheme">
+            <TextBox Immediate="true" Value="@Transport.AuthScheme"
+                     ValueChanged="@(value => Transport.AuthScheme = value)"
+                     data-testid="memory-ui-editor-http-auth-scheme" />
+        </FormField>
+        <FormField Text="Timeout (milliseconds)">
+            <TextBox Immediate="true" inputmode="numeric"
+                     Value="@Transport.TimeoutText"
+                     ValueChanged="@(value => Transport.TimeoutText = value)"
+                     data-testid="memory-ui-editor-http-timeout" />
+        </FormField>
+        <FormField Text="Retry attempts">
+            <TextBox Immediate="true" inputmode="numeric"
+                     Value="@Transport.RetryText"
+                     ValueChanged="@(value => Transport.RetryText = value)"
+                     data-testid="memory-ui-editor-http-retries" />
+        </FormField>
+    </Grid>
+</FormSection>
+
+@code {
+    [Parameter, EditorRequired]
+    public MemoryProviderHttpTransportEditorModel Transport { get; set; } = new();
+
+    [Parameter]
+    public MemoryProviderDriverKind DriverKind { get; set; }
+}
