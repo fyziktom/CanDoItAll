@@ -4,7 +4,11 @@
 <SurfaceCard data-testid="content-collection-specimen" data-name="@Name">
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
-        <DropDown TValue="ContentCollectionScenarioKind" Data="Enum.GetValues<ContentCollectionScenarioKind>()" @bind-Value="kind" Style="width:11rem" />
+        <SelectInput TValue="ContentCollectionScenarioKind" @bind-Value="kind" Style="width:11rem">
+    @foreach (var option in Enum.GetValues<ContentCollectionScenarioKind>()) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         <Button Text="Replace opening" Click="ReplaceAsync" />
         <Button Text="Hold read" Click="() => scenario.HoldNextRead()" />
         <Button Text="Release read" Click="() => scenario.ReleaseRead()" />

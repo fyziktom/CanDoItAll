@@ -26,7 +26,7 @@
 
                                         <label class="workflows-field mt-4">
                                             <span>Search</span>
-                                            <input class="cda-input"
+                                            <input class="form-input ui-input ui-input--outlined"
                                                    value="@Presentation.Search"
                                                    @onchange="SearchAsync"
                                                    data-testid="workflows-template-catalogue-search" />
@@ -52,7 +52,7 @@
                                                         <Button Text="Preview"
                                                                 Icon="visibility"
                                                                 Size="ButtonSize.Small"
-                                                                ButtonStyle="ButtonStyle.Light"
+                                                                Tone="ButtonTone.Default"
                                                                 Click="@(() => PreviewAsync(template.Key))"
                                                                 data-testid="workflows-template-preview" />
                                                     </div>

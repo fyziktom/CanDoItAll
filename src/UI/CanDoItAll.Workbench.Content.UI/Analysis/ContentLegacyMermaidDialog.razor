@@ -9,9 +9,9 @@
                      Summary="@($"Detected diagram type: {state.DiagramKind}")" Close="@(() => close.InvokeAsync())">
     <Actions>
         @if (state.CanEdit) {
-            <Button Text="Edit" ButtonStyle="ButtonStyle.Info" Click="@(() => edit.InvokeAsync())" />
+            <Button Text="Edit" Tone="ButtonTone.Info" Click="@(() => edit.InvokeAsync())" />
         }
-        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => close.InvokeAsync())" />
+        <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => close.InvokeAsync())" />
     </Actions>
     <Body>
         <Stack GapScale="LayoutGap.Medium">

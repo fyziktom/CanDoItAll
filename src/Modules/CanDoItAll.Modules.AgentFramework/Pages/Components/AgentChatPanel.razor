@@ -18,10 +18,10 @@
                 <TextBlock Value="Submitted purpose: plan project tasks for review." />
             }
             <TextBlock Value="This copy is retained only for this session. Restoring text does not resend it or reuse its execution permissions." />
-            <Button Text="Restore draft" Icon="restore" ButtonStyle="ButtonStyle.Secondary"
+            <Button Text="Restore draft" Icon="restore" Tone="ButtonTone.Secondary"
                     Disabled="@(!CanRestoreSubmission(submission))" Click="@(() => RestoreSubmission(submission))"
                     data-testid="agents-chat-restore-submission" />
-            <Button Text="Discard retained copy" Icon="close" ButtonStyle="ButtonStyle.Light"
+            <Button Text="Discard retained copy" Icon="close" Tone="ButtonTone.Default"
                     Click="@(() => Submissions.Discard(submission))" data-testid="agents-chat-discard-submission" />
         </Stack>
     </Alert>
@@ -62,7 +62,7 @@
             <ComposerActions>
                 @{ var composerOwner = chatSession.Generation; }
                 <Button Text="@(ActionPresentation.FocusedFloating ? null : "Plan project tasks")" Icon="playlist_add"
-                        aria-label="Plan project tasks" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                        aria-label="Plan project tasks" Tone="ButtonTone.Secondary" Size="ButtonSize.Small"
                         Disabled="@(IsChatInteractionBusy || BlocksNewMessage || selectedAgentId is null || draftAttachmentPaths.Count > 0)"
                         title="Uses the current Project Structure context. Review is required before publication; attachments are not supported."
                         Click="@(() => chatSession.IsCurrent(composerOwner) ? SendMessageCoreAsync(AgentPlanningOwner.ProjectTaskPlan) : Task.CompletedTask)"

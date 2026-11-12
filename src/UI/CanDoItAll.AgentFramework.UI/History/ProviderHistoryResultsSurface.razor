@@ -8,9 +8,9 @@
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
     <Cluster Gap="LayoutGap.Small">
         @if (Presentation.Phase == HistorySearchPhase.Loading) {
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Cancel(renderedOrigin)))" data-testid="history-cancel" />
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Cancel(renderedOrigin)))" data-testid="history-cancel" />
         }
-        <Button Text="Clear results" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Clear(renderedOrigin)))"
+        <Button Text="Clear results" Tone="ButtonTone.Default" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Clear(renderedOrigin)))"
                 Disabled="@(Presentation.AppliedQuery is null)" data-testid="history-clear" />
     </Cluster>
     @if (Presentation.AppliedQuery is { } applied) {
@@ -59,7 +59,7 @@
                         @{
                             var rowOrigin = Presentation.Origin;
                         }
-                        <Button Text="Details" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(rowOrigin, entry.Id)))" data-testid="history-details" />
+                        <Button Text="Details" Size="ButtonSize.Small" Tone="ButtonTone.Default" Click="@(() => OnIntent.InvokeAsync(new HistoryResultsIntent.Details(rowOrigin, entry.Id)))" data-testid="history-details" />
                     </Template>
                 </DataGridColumn>
             </Columns>

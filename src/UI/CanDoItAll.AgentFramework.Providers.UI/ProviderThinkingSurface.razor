@@ -5,7 +5,7 @@
 <FormSection Title="Model thinking" Description="@(SourceManaged ? "Read-only capabilities and defaults from the shared instance. Refresh to load its latest settings." : "Automatic settings use provider discovery, then built-in model definitions. Administrator overrides take precedence and survive discovery.")">
     <Stack GapScale="LayoutGap.Medium">
         <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Small">
-            <TextBox Immediate="true" @bind-Value="search" Placeholder="Search models" aria-label="Search thinking models" data-testid="provider-thinking-search" />
+            <TextInput Immediate="true" @bind-Value="search" Placeholder="Search models" aria-label="Search thinking models" data-testid="provider-thinking-search" />
             @if (SourceManaged && Provider is not null) {
                 @SourceRefresh
             }
@@ -24,7 +24,7 @@
                 @if (!SourceManaged) {
                     <DataGridColumn TItem="ThinkingRow" Title="Actions">
                         <Template Context="row">
-                            <Button Text="Edit" Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                            <Button Text="Edit" Icon="edit" Size="ButtonSize.Small" Tone="ButtonTone.Default"
                                     Click="@(() => Edit(row))" aria-label="@($"Edit thinking for {row.Name}")" />
                         </Template>
                     </DataGridColumn>
@@ -39,38 +39,43 @@
             OnClose="Close" TestId="provider-thinking-dialog">
         <ChildContent>
             <Stack GapScale="LayoutGap.Medium">
-                <label class="cda-inline-option">
-                    <CheckBox TValue="bool" Value="automatic" ValueChanged="SetAutomatic" data-testid="thinking-automatic" />
+                <CheckboxOption TValue="bool" Value="automatic" ValueChanged="SetAutomatic" data-testid="thinking-automatic">
                     Automatic (provider discovery / built-in defaults)
-                </label>
+                </CheckboxOption>
                 <Alert AlertStyle="AlertStyle.Info" data-testid="thinking-automatic-summary">@automaticSummary</Alert>
                 @if (!automatic) {
-                    <label class="cda-inline-option">
-                        <CheckBox TValue="bool" @bind-Value="supported" data-testid="thinking-supported" />
+                    <CheckboxOption TValue="bool" @bind-Value="supported" data-testid="thinking-supported">
                         Supports configurable thinking
-                    </label>
+                    </CheckboxOption>
                     @if (supported) {
                         <FormField Text="Control type">
-                            <DropDown TValue="AgentThinkingEffortControlMode" Data="@ControlModes" Value="controlMode"
-                                      ValueChanged="SetControlMode" data-testid="thinking-control-mode" />
+                            <SelectInput TValue="AgentThinkingEffortControlMode" Value="controlMode"
+                                      ValueChanged="SetControlMode" data-testid="thinking-control-mode">
+    @foreach (var option in ControlModes) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
                         </FormField>
                         <FormField Text="Allowed efforts">
                             <Grid Columns="3" Gap="LayoutGap.Small">
                                 @foreach (var effort in AvailableEfforts) {
-                                    <label class="cda-inline-option">
-                                        <CheckBox TValue="bool" Value="@allowed.Contains(effort)"
-                                                  ValueChanged="@(value => SetEffort(effort, value))"
-                                                  Disabled="@(controlMode == AgentThinkingEffortControlMode.BooleanToggle)"
-                                                  data-testid="@($"thinking-allow-{effort}")" />
+                                    <CheckboxOption TValue="bool" Value="@allowed.Contains(effort)"
+                                                    ValueChanged="@(value => SetEffort(effort, value))"
+                                                    Disabled="@(controlMode == AgentThinkingEffortControlMode.BooleanToggle)"
+                                                    data-testid="@($"thinking-allow-{effort}")">
                                         @EffortLabel(effort, controlMode)
-                                    </label>
+                                    </CheckboxOption>
                                 }
                             </Grid>
                         </FormField>
                         <FormField Text="Default effort for this model">
-                            <DropDown TValue="AgentReasoningEffortLevel?" Data="@DefaultChoices" AllowClear="true" Placeholder="Provider-wide / upstream default"
-                                      TextProperty="@nameof(DefaultChoice.Label)" ValueProperty="@nameof(DefaultChoice.Effort)"
-                                      @bind-Value="defaultEffort" data-testid="thinking-model-default" />
+                            <SelectInput TValue="AgentReasoningEffortLevel?"
+                                      @bind-Value="defaultEffort" data-testid="thinking-model-default">
+    <option value="">Provider-wide / upstream default</option>
+    @foreach (var option in DefaultChoices) {
+        <option value="@option.Effort">@option.Label</option>
+    }
+</SelectInput>
                         </FormField>
                     }
                     <Alert AlertStyle="AlertStyle.Warning">Configure only controls accepted by this model and transport. These settings do not add thinking support to a model.</Alert>
@@ -82,7 +87,7 @@
             </Stack>
         </ChildContent>
         <Footer>
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Close" />
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="Close" />
             <Button Text="Apply to provider draft" Click="Apply" data-testid="thinking-apply" />
         </Footer>
     </Dialog>

@@ -20,7 +20,7 @@
                 @if (State.Publication?.IsPublished == true)
                 {
                     <Button Text="Unpublish"
-                            ButtonStyle="ButtonStyle.Danger"
+                            Tone="ButtonTone.Danger"
                             Size="ButtonSize.Small"
                             Disabled="@IsBusy"
                             Click="Unpublish"
@@ -50,11 +50,11 @@
             </Alert>
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Public identity</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Public identity</TextBlock>
                     <p class="break-all font-mono text-xs" data-testid="shared-provider-public-id">@(State.Publication?.PublicId.Value.ToString("D") ?? "Created by the first Publish")</p>
                 </SurfaceCard>
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Discovery routes</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Discovery routes</TextBlock>
                     <p class="font-mono text-xs">@SharedProviderRoutes.Catalog</p>
                     <p class="font-mono text-xs">@SharedProviderRoutes.Models</p>
                 </SurfaceCard>
@@ -64,7 +64,7 @@
             {
                 <SurfaceCard Soft="true">
                     <Stack GapScale="LayoutGap.Small">
-                        <p class="cda-eyebrow">Published capability preview</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Published capability preview</TextBlock>
                         @foreach (var model in eligibility.Models)
                         {
                             <Split Breakpoint="LayoutBreakpoint.None"
@@ -84,7 +84,7 @@
                 </SurfaceCard>
             }
 
-            <p class="cda-body-muted">The public catalog contains only the public publication ID, display/model metadata, capabilities, and health. Provider endpoints, secret IDs, secret names, and secret values stay private.</p>
+            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">The public catalog contains only the public publication ID, display/model metadata, capabilities, and health. Provider endpoints, secret IDs, secret names, and secret values stay private.</TextBlock>
         </Stack>
     }
 </FormSection>

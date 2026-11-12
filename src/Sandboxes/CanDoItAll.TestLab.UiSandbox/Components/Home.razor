@@ -11,7 +11,7 @@
                     <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
                         <strong>TestLab sandbox · Parity assets</strong>
                         <label for="scenario">Scenario</label>
-                        <select id="scenario" class="cda-input" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="testlab-scenario">
+                        <select id="scenario" class="form-input ui-input ui-input--outlined" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="testlab-scenario">
                             @foreach (var value in Enum.GetValues<TestLabScenario>()) {
                                 <option value="@value">@value</option>
                             }

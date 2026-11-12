@@ -5,7 +5,7 @@
         <h1 class="cda-title-xl">Governance sandbox</h1>
         <p>Real Governance rendering. Interactions update controlled sample state and the intent log.</p>
         <label for="governance-scenario" class="cda-field-label">Scenario</label>
-        <select id="governance-scenario" class="cda-input" value="@ScenarioToken"
+        <select id="governance-scenario" class="form-input ui-input ui-input--outlined" value="@ScenarioToken"
                 @onchange="ChangeScenario" data-testid="sandbox-governance-scenario">
             @foreach (var definition in GovernanceSandboxFixture.Scenarios) {
                 <option value="@definition.Token">@definition.Label</option>

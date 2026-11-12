@@ -4,24 +4,24 @@
 <Stack Class="p-4" GapScale="LayoutGap.Medium" @onkeydown="keys.Handle">
     <FormSection Title="Workspace API Access scenarios" Description="Synthetic, bounded in-memory fixtures. Disclosure values are NOT credentials. This sandbox does not authenticate callers or prove production security.">
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+            <SelectInput @bind-Value="scenario" aria-label="Scenario">
                 @foreach (var value in Enum.GetValues<ApiScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Reset scenario" Click="() => workspace.ResetAsync(scenario)" data-testid="scenario-reset" />
-            <InputSelect @bind-Value="operation" aria-label="Operation">
+            <SelectInput @bind-Value="operation" aria-label="Operation">
                 @foreach (var value in Enum.GetValues<ApiScenarioOperation>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Hold next operation" Click="() => workspace.Hold(operation)" data-testid="scenario-hold" />
             <Button Text="Release held operations" Click="workspace.Release" data-testid="scenario-release" />
-            <InputSelect @bind-Value="fault" aria-label="Next outcome">
+            <SelectInput @bind-Value="fault" aria-label="Next outcome">
                 @foreach (var value in Enum.GetValues<ApiScenarioFault>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Set next outcome" Click="() => workspace.Store.FaultNext(operation, fault)" data-testid="scenario-fault" />
             <Button Text="Change accounts externally" Click="workspace.Store.ChangeAccountsExternally" data-testid="scenario-external-change" />
             <Button Text="Retire view" Click="workspace.Retire" data-testid="scenario-retire" />

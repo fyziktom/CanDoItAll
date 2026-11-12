@@ -46,31 +46,31 @@
                          AlignItems="AlignItems.End"
                          Wrap="FlexWrap.Wrap">
                     <FormField Text="Scope">
-                        <InputSelect TValue="WorkflowAnalyticsScopeKind"
+                        <SelectInput TValue="WorkflowAnalyticsScopeKind"
                                      Value="@Presentation.Scope"
                                      ValueChanged="HandleScopeChangedAsync"
                                      ValueExpression="@(() => Presentation.Scope)"
-                                     class="cda-input"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="workflow-analytics-scope">
                             <option value="@WorkflowAnalyticsScopeKind.All">All workflows</option>
                             @if (Presentation.Workflows.Length > 0) {
                                 <option value="@WorkflowAnalyticsScopeKind.SelectedWorkflow">Selected workflow</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
 
                     @if (Presentation.Scope == WorkflowAnalyticsScopeKind.SelectedWorkflow) {
                         <FormField Text="Workflow">
-                            <InputSelect TValue="Guid?"
+                            <SelectInput TValue="Guid?"
                                          Value="@Presentation.SelectedWorkflow"
                                          ValueChanged="HandleSelectedWorkflowChangedAsync"
                                          ValueExpression="@(() => Presentation.SelectedWorkflow)"
-                                         class="cda-input"
+                                         class="form-input ui-input ui-input--outlined"
                                          data-testid="workflow-analytics-workflow">
                                 @foreach (var workflow in Presentation.Workflows) {
                                     <option value="@workflow.Id">@workflow.Name</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                         </FormField>
                     }
 

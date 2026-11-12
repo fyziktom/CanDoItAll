@@ -55,7 +55,7 @@ internal sealed partial class ScenarioHarnessAgentRuntime
             <div class="row g-3 mt-2">
                 <div class="col-md-8">
                     <label class="form-label">Work item</label>
-                    <InputText @bind-Value="newNote" class="form-control" />
+                    <TextInput @bind-Value="newNote" class="form-control" />
                 </div>
                 <div class="col-md-4 d-flex align-items-end gap-2">
                     <button class="btn btn-primary" @onclick="AddNote">Add item</button>

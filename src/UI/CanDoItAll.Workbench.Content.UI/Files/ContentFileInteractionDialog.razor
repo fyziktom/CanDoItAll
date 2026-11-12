@@ -12,16 +12,16 @@
                 <StatusBadge Tone="@StateTone(view)" Text="@StateLabel(view)" />
             }
             @if (view.Opening.EditDetails.HasDelegate) {
-                <Button Text="Edit node details" ButtonStyle="ButtonStyle.Info" Disabled="view.HasGuardedWork"
+                <Button Text="Edit node details" Tone="ButtonTone.Info" Disabled="view.HasGuardedWork"
                         Click="@(() => InvokeAsync(view, view.Opening.EditDetails))" />
             }
             @if (view.Opening.OpenPreferred.HasDelegate) {
-                <Button Text="Open in preferred app" ButtonStyle="ButtonStyle.Primary" Click="@(() => InvokeAsync(view, view.Opening.OpenPreferred))" />
+                <Button Text="Open in preferred app" Tone="ButtonTone.Primary" Click="@(() => InvokeAsync(view, view.Opening.OpenPreferred))" />
             }
             @if (view.Opening.ShowInFolder.HasDelegate) {
-                <Button Text="Show in folder" ButtonStyle="ButtonStyle.Info" Click="@(() => InvokeAsync(view, view.Opening.ShowInFolder))" />
+                <Button Text="Show in folder" Tone="ButtonTone.Info" Click="@(() => InvokeAsync(view, view.Opening.ShowInFolder))" />
             }
-            <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => RequestCloseAsync(view))" />
+            <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => RequestCloseAsync(view))" />
         </Actions>
         <Body>
             @if (view.Request is null || view.Opening.ContentSource is null) {
@@ -57,7 +57,7 @@
                                 <TextBlock TextStyle="TextStyle.Note" Value="@(view.IsSaving ? "Wait for the awaited save before closing this interaction." : "Close and discard the in-memory edit session?")" />
                                 <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                                     <Button Text="Keep editing" Variant="Variant.Text" Click="@(() => KeepEditing(view))" />
-                                    <Button Text="Discard and close" ButtonStyle="ButtonStyle.Danger" Disabled="view.IsSaving"
+                                    <Button Text="Discard and close" Tone="ButtonTone.Danger" Disabled="view.IsSaving"
                                             data-testid="project-structure-interaction-close-confirm" Click="@(() => ConfirmCloseAsync(view))" />
                                 </Cluster>
                             </Stack>

@@ -25,7 +25,7 @@
             <TextBlock Value="@AgentChatEffectRecovery.ActivityFinalizationFailedMessage" data-testid="agents-chat-activity-finalization-failed" />
         }
         @if (rendered.CanRecover) {
-            <Button Text="@(rendered.EffectRecovery is null ? "Recover original run" : "Check next receipt slice")" Icon="restore" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+            <Button Text="@(rendered.EffectRecovery is null ? "Recover original run" : "Check next receipt slice")" Icon="restore" Size="ButtonSize.Small" Tone="ButtonTone.Secondary"
                     Disabled="@rendered.RecoveryBlocked" Click="@(() => Intent.InvokeAsync(new(rendered.Origin, AgentChatAction.RecoverOriginalRun)))"
                     data-testid="agents-chat-recover-original-run" />
         }

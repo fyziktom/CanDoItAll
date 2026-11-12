@@ -11,25 +11,25 @@
             <Actions>
                 <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
                     <Button Icon="add" title="New provider" aria-label="New provider"
-                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="@(() => ResetProviderAsync(target))" data-testid="providers-new" />
                     <Button Icon="refresh" title="Refresh providers" aria-label="Refresh providers"
-                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="LoadAsync" data-testid="providers-refresh" />
                     <Button Icon="hub" title="Shared provider connections" aria-label="Shared provider connections"
-                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="@(() => sharedConnectionsOpen = true)" data-testid="providers-connections" />
                 </Cluster>
             </Actions>
             <Filters>
                 <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny" data-testid="providers-filter">
-                    <TextBox Immediate="true" @bind-Value="providerSearch"
-                           class="cda-input min-w-0 flex-1" placeholder="Search providers"
+                    <TextInput Immediate="true" @bind-Value="providerSearch"
+                           class="form-input ui-input ui-input--outlined min-w-0 flex-1" placeholder="Search providers"
                            aria-label="Search providers" data-testid="providers-search" />
                     <Button Icon="filter_alt_off" title="Reset filter" aria-label="Reset provider filter"
-                            ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="ResetProviderSearch" data-testid="providers-search-reset" />
-                    <span class="shrink-0 text-xs text-slate-500" data-testid="providers-filter-count"
+                    <span class="shrink-0 text-xs text-chrome-500" data-testid="providers-filter-count"
                           aria-label="Provider results">@FilteredProviders.Count / @providers.Count</span>
                 </Cluster>
             </Filters>
@@ -58,11 +58,11 @@
 
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
-            <p class="cda-eyebrow">Provider editor</p>
-            <h2 class="cda-title-xl">@(View.State.ProviderId.HasValue
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Provider editor</TextBlock>
+            <h2 class="cda-text-block cda-text-block--h4">@(View.State.ProviderId.HasValue
                 ? View.CanEdit ? providerModel.Name : SelectedProvider?.Name ?? "Unavailable provider"
                 : "New provider profile")</h2>
-            <p class="cda-body-muted">@ResolveSelectedProviderStatus()</p>
+            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">@ResolveSelectedProviderStatus()</TextBlock>
         </Stack>
     </DetailHeader>
 
@@ -81,7 +81,7 @@
                 <ProviderComparisonSurface Review="review" Changed="StateHasChanged" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Apply locally" Disabled="@(!review.CanApply || isBusy)" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.ApplyComparison)))" data-testid="providers-comparison-apply" />
-                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" data-testid="providers-comparison-cancel" />
+                    <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" data-testid="providers-comparison-cancel" />
                 </Cluster>
             </Stack>
         }
@@ -95,7 +95,7 @@
             <ProviderRecoveryReviewSurface Review="recoveryReview" Changed="StateHasChanged" />
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Keep draft against reviewed version" Disabled="@(isBusy || !recoveryReview.CanApply)" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.ApplyCurrentReview)))" data-testid="providers-recovery-apply" />
-                <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" />
+                <Button Text="Cancel review" Tone="ButtonTone.Default" Click="@(() => View.ExecuteAsync(new(target, ProviderEditorAction.CancelComparison)))" />
             </Cluster>
         }
         @if (View.HasPendingReconciliation) {
@@ -145,7 +145,7 @@
                     <Tabs @key="(target.ProviderId, target.Activation)" SelectedIndex="@providerEditorTabIndex"
                           SelectedIndexChanged="@(index => SelectSection(target, index))"
                           RenderMode="TabRenderMode.Client"
-                          Variant="TabsVariant.WorkspaceSecondary"
+                          Density="TabsDensity.Compact"
                           OverflowMode="TabsOverflowMode.Wrap"
                           Class="agent-provider-editor-tabs"
                           AriaLabel="Provider editor tabs"
@@ -166,66 +166,62 @@
                             <div class="agent-provider-connection-tab">
                                 <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2" ColumnsXl="4">
-                                    <div>
-                                        <label class="cda-field-label">Name</label>
-                                        <TextBox Immediate="true" @bind-Value:get="providerModel.Name" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Name), value, accepted => providerModel.Name = accepted))"
-                                                   class="cda-input"
+                                    <FormField Text="Name">
+                                        <TextInput Immediate="true" @bind-Value:get="providerModel.Name" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Name), value, accepted => providerModel.Name = accepted))"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="providers-name-input" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Default model</label>
-                                        <TextBox Immediate="true" Value="@ProviderDefaultModelText" ValueChanged="@(value => SetField(target, editor, nameof(providerModel.DefaultModel), value, accepted => providerModel.DefaultModel = accepted ?? string.Empty))"
-                                                   class="cda-input"
+                                    </FormField>
+                                    <FormField Text="Default model">
+                                        <TextInput Immediate="true" Value="@ProviderDefaultModelText" ValueChanged="@(value => SetField(target, editor, nameof(providerModel.DefaultModel), value, accepted => providerModel.DefaultModel = accepted ?? string.Empty))"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="providers-model-input" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Provider kind</label>
-                                        <InputSelect TValue="ProviderKind" Value="@providerModel.Kind"
+                                    </FormField>
+                                    <FormField Text="Provider kind">
+                                        <SelectInput TValue="ProviderKind" Value="@providerModel.Kind"
                                                      ValueChanged="@(value => ChangeProviderKind(target, value))"
                                                      ValueExpression="@(() => providerModel.Kind)"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="providers-kind-select">
                                             @foreach (var kind in Enum.GetValues<ProviderKind>()) {
                                                 <option value="@kind">@kind</option>
                                             }
-                                        </InputSelect>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Purpose</label>
-                                        <InputSelect @bind-Value:get="providerModel.Purpose" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Purpose), value, accepted => providerModel.Purpose = accepted))"
-                                                     class="cda-input"
+                                        </SelectInput>
+                                    </FormField>
+                                    <FormField Text="Purpose">
+                                        <SelectInput @bind-Value:get="providerModel.Purpose" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Purpose), value, accepted => providerModel.Purpose = accepted))"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="providers-purpose-select">
                                             @foreach (var purpose in Enum.GetValues<ProviderProfilePurpose>()) {
                                                 <option value="@purpose">@purpose</option>
                                             }
-                                        </InputSelect>
-                                    </div>
+                                        </SelectInput>
+                                    </FormField>
                                 </Grid>
 
-                                <div>
-                                    <label class="cda-field-label">Base URL</label>
-                                    <TextBox Immediate="true" @bind-Value:get="providerModel.BaseUrl" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.BaseUrl), value, accepted => providerModel.BaseUrl = accepted))"
-                                               class="cda-input"
+                                <FormField Text="Base URL">
+                                    <TextInput Immediate="true" @bind-Value:get="providerModel.BaseUrl" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.BaseUrl), value, accepted => providerModel.BaseUrl = accepted))"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="providers-base-url-input" />
-                                </div>
+                                </FormField>
 
                                 <div>
-                                    <label class="cda-field-label">API key secret</label>
-                                    <InputSelect @bind-Value:get="providerModel.ApiKeyEnvironmentVariable" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ApiKeyEnvironmentVariable), value, accepted => providerModel.ApiKeyEnvironmentVariable = accepted))"
-                                                 class="cda-input"
-                                                 data-testid="providers-api-key-input">
-                                        <option value="">None</option>
-                                        @if (HasUnlistedSecretReference) {
-                                            <option value="@providerModel.ApiKeyEnvironmentVariable">@(View.SecretMetadataError is null ? "Unavailable saved secret" : "Unverified saved secret")</option>
-                                        }
-                                        @foreach (var secret in secrets) {
-                                            <option value="@secret.Reference">@secret.Name</option>
-                                        }
-                                    </InputSelect>
+                                    <FormField Text="API key secret">
+                                        <SelectInput @bind-Value:get="providerModel.ApiKeyEnvironmentVariable" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ApiKeyEnvironmentVariable), value, accepted => providerModel.ApiKeyEnvironmentVariable = accepted))"
+                                                     class="form-input ui-input ui-input--outlined"
+                                                     data-testid="providers-api-key-input">
+                                            <option value="">None</option>
+                                            @if (HasUnlistedSecretReference) {
+                                                <option value="@providerModel.ApiKeyEnvironmentVariable">@(View.SecretMetadataError is null ? "Unavailable saved secret" : "Unverified saved secret")</option>
+                                            }
+                                            @foreach (var secret in secrets) {
+                                                <option value="@secret.Reference">@secret.Name</option>
+                                            }
+                                        </SelectInput>
+                                    </FormField>
                                     @if (HasUnlistedSecretReference) {
-                                        <p class="cda-body-muted mt-1">@(View.SecretMetadataError is null ? "The saved secret reference is no longer available in the vault. Select another secret before saving." : "Secret metadata is unavailable. The saved reference has not been verified and is retained.")</p>
+                                        <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 mt-1">@(View.SecretMetadataError is null ? "The saved secret reference is no longer available in the vault. Select another secret before saving." : "Secret metadata is unavailable. The saved reference has not been verified and is retained.")</TextBlock>
                                     } else if (secrets.Count == 0 && View.SecretMetadataError is null) {
-                                        <p class="cda-body-muted mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</p>
+                                        <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 mt-1">Add an API key in Settings → Secrets, then refresh this provider list.</TextBlock>
                                     }
                                 </div>
 
@@ -279,47 +275,43 @@
                             <div class="agent-provider-runtime-tab">
                                 <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Transport</label>
-                                            <InputSelect @bind-Value:get="providerModel.Transport" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Transport), value, accepted => providerModel.Transport = accepted))"
-                                                         class="cda-input"
+                                        <FormField Text="Transport">
+                                            <SelectInput @bind-Value:get="providerModel.Transport" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Transport), value, accepted => providerModel.Transport = accepted))"
+                                                         class="form-input ui-input ui-input--outlined"
                                                          data-testid="providers-transport-select">
                                                 @foreach (var transport in Enum.GetValues<ProviderTransportKind>()) {
                                                     <option value="@transport">@transport</option>
                                                 }
-                                            </InputSelect>
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Suggested models</label>
-                                            <TextArea Immediate="true" Value="@suggestedModelsText" ValueChanged="@(value => ChangeSuggestedModels(target, value))"
-                                                      class="cda-input min-h-[7rem]"
-                                                      data-testid="providers-suggested-models"></TextArea>
-                                        </div>
+                                            </SelectInput>
+                                        </FormField>
+                                        <FormField Text="Suggested models">
+                                            <TextAreaInput Immediate="true" Value="@suggestedModelsText" ValueChanged="@(value => ChangeSuggestedModels(target, value))"
+                                                      class="form-input ui-input ui-input--outlined min-h-[7rem]"
+                                                      data-testid="providers-suggested-models"></TextAreaInput>
+                                        </FormField>
                                     </Grid>
 
                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2" ColumnsXl="3">
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.IsEnabled" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.IsEnabled), value, accepted => providerModel.IsEnabled = accepted))" /> Enabled</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsStreaming" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsStreaming), value, accepted => providerModel.SupportsStreaming = accepted))" /> Streaming</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsTools" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsTools), value, accepted => providerModel.SupportsTools = accepted))" /> Tool calling</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.PreferFrameworkManagedChatHistory" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.PreferFrameworkManagedChatHistory), value, accepted => providerModel.PreferFrameworkManagedChatHistory = accepted))" /> Framework-managed history</label>
-                                        <label class="cda-inline-option"><InputCheckbox @bind-Value:get="providerModel.SupportsBackgroundResponses" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsBackgroundResponses), value, accepted => providerModel.SupportsBackgroundResponses = accepted))" /> Background responses</label>
+                                        <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value:get="providerModel.IsEnabled" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.IsEnabled), value, accepted => providerModel.IsEnabled = accepted))" /> Enabled</label>
+                                        <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value:get="providerModel.SupportsStreaming" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsStreaming), value, accepted => providerModel.SupportsStreaming = accepted))" /> Streaming</label>
+                                        <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value:get="providerModel.SupportsTools" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsTools), value, accepted => providerModel.SupportsTools = accepted))" /> Tool calling</label>
+                                        <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value:get="providerModel.PreferFrameworkManagedChatHistory" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.PreferFrameworkManagedChatHistory), value, accepted => providerModel.PreferFrameworkManagedChatHistory = accepted))" /> Framework-managed history</label>
+                                        <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value:get="providerModel.SupportsBackgroundResponses" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.SupportsBackgroundResponses), value, accepted => providerModel.SupportsBackgroundResponses = accepted))" /> Background responses</label>
                                     </Grid>
                                 </FormSection>
 
                                 <FormSection Title="Configuration and notes" Description="Advanced provider metadata. Keep JSON valid and explicit.">
                                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                        <div>
-                                            <label class="cda-field-label">Configuration JSON</label>
-                                            <TextArea Immediate="true" @bind-Value:get="providerModel.ConfigurationJson" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ConfigurationJson), value, accepted => providerModel.ConfigurationJson = accepted))"
-                                                           class="cda-input min-h-[12rem] font-mono text-xs"
+                                        <FormField Text="Configuration JSON">
+                                            <TextAreaInput Immediate="true" @bind-Value:get="providerModel.ConfigurationJson" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.ConfigurationJson), value, accepted => providerModel.ConfigurationJson = accepted))"
+                                                           class="form-input ui-input ui-input--outlined min-h-[12rem] font-mono text-xs"
                                                            data-testid="providers-config-json" />
-                                        </div>
-                                        <div>
-                                            <label class="cda-field-label">Notes</label>
-                                            <TextArea Immediate="true" @bind-Value:get="providerModel.Notes" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Notes), value, accepted => providerModel.Notes = accepted))"
-                                                           class="cda-input min-h-[12rem]"
+                                        </FormField>
+                                        <FormField Text="Notes">
+                                            <TextAreaInput Immediate="true" @bind-Value:get="providerModel.Notes" @bind-Value:set="@(value => SetField(target, editor, nameof(providerModel.Notes), value, accepted => providerModel.Notes = accepted))"
+                                                           class="form-input ui-input ui-input--outlined min-h-[12rem]"
                                                            data-testid="providers-notes" />
-                                        </div>
+                                        </FormField>
                                     </Grid>
                                 </FormSection>
                             </div>

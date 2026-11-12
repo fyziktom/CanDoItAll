@@ -2,10 +2,10 @@
 @using CanDoItAll.Editing.UI
 
 @if (State.IsOutdated) {
-    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="The saved support values changed. Review the current values before replacing them." /><Button Text="Review support changes" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" data-testid="crmhr-recruiting-support-review-open" /></Alert>
+    <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="The saved support values changed. Review the current values before replacing them." /><Button Text="Review support changes" Tone="ButtonTone.Default" Click="ReviewRequested" data-testid="crmhr-recruiting-support-review-open" /></Alert>
 }
 @if (State.CanUndo) {
-    <Button Text="Undo support merge" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" />
+    <Button Text="Undo support merge" Tone="ButtonTone.Default" Click="UndoRequested" />
 }
 <Dialog IsOpen="@(State.Review is not null)" Title="Review support changes" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-recruiting-support-review-dialog">
     <ChildContent>
@@ -15,7 +15,7 @@
                 @if (State.IsStale || State.State.IsUnknown || State.State.HasPendingInput) {
                     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Refresh a stale comparison and complete pending input before applying. A comparison does not resolve an unknown save outcome." /></Alert>
                 }
-                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" Tone="ButtonTone.Default" Click="@(() => showUnchanged = !showUnchanged)" />
                 <MergeFieldView TValue="Guid?" Label="Manager" Field="review.Manager" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="Guid?" Label="Buddy" Field="review.Buddy" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="Guid?" Label="Mentor" Field="review.Mentor" Format="PartyName" ShowUnchanged="showUnchanged" Changed="Changed" />
@@ -24,9 +24,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="Reading" Click="ReviewRequested" data-testid="crmhr-recruiting-support-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="Reading" Click="ReviewRequested" data-testid="crmhr-recruiting-support-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(Reading || !State.CanApply)" Click="ApplyRequested" data-testid="crmhr-recruiting-support-review-apply" />
             </Cluster>
         </Cluster>

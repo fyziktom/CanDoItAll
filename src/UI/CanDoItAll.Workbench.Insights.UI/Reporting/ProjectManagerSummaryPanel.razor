@@ -40,7 +40,7 @@
                             <PageHeaderActionButton Icon="warning_amber"
                                                     Label="Open report notes and warnings"
                                                     TooltipText="@FormatReportDiagnosticsTooltip(loadedSnapshot)"
-                                                    ButtonStyle="ButtonStyle.Warning"
+                                                    Tone="ButtonTone.Warning"
                                                     Click="@(() => view.OpenWarnings(loadedSnapshot))"
                                                     TestId="manager-summary-open-warnings" />
                         }
@@ -53,30 +53,30 @@
                   AlignItems="AlignItems.End">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Cost view" />
-                    <InputSelect TValue="ProjectManagerSummaryContentMode"
+                    <SelectInput TValue="ProjectManagerSummaryContentMode"
                                  Value="@options.ContentMode"
                                  ValueExpression="@(() => options.ContentMode)"
                                  ValueChanged="@(value => view.UpdateOptions(options, options with { ContentMode = value }))"
-                                 class="cda-input"
+                                 class="form-input ui-input ui-input--outlined"
                                  disabled="@isLoading"
                                  data-testid="manager-summary-content-mode">
                         <option value="@ProjectManagerSummaryContentMode.HistoryOnly">History only</option>
                         <option value="@ProjectManagerSummaryContentMode.HistoryAndFuture">History + remaining plan</option>
-                    </InputSelect>
+                    </SelectInput>
                 </Stack>
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="Project scope" />
-                    <InputSelect TValue="ProjectManagerSummaryScope"
+                    <SelectInput TValue="ProjectManagerSummaryScope"
                                  Value="@options.Scope"
                                  ValueExpression="@(() => options.Scope)"
                                  ValueChanged="@(value => view.UpdateOptions(options, options with { Scope = value }))"
-                                 class="cda-input"
+                                 class="form-input ui-input ui-input--outlined"
                                  disabled="@isLoading"
                                  data-testid="manager-summary-project-scope">
                         <option value="@ProjectManagerSummaryScope.CurrentProject">This project</option>
                         <option value="@ProjectManagerSummaryScope.ProjectAndDescendants">Project + all subprojects</option>
                         <option value="@ProjectManagerSummaryScope.UncategorizedAgentActivity">Uncategorized agent activity</option>
-                    </InputSelect>
+                    </SelectInput>
                 </Stack>
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Caption" Value="History window" />

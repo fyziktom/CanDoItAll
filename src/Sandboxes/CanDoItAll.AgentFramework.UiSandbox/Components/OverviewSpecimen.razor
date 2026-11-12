@@ -12,7 +12,7 @@
         <p>Real Overview components and charts. Actions change sample state and the intent log.</p>
         <Grid ColumnTemplate="auto minmax(14rem,30rem) auto" Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
             <label for="overview-scenario" class="cda-field-label">Scenario</label>
-            <select id="overview-scenario" class="cda-input" value="@ScenarioToken"
+            <select id="overview-scenario" class="form-input ui-input ui-input--outlined" value="@ScenarioToken"
                     @onchange="ChangeScenario" data-testid="sandbox-overview-scenario">
                 @foreach (var definition in OverviewSandboxContext.Scenarios) {
                     <option value="@definition.Token">@definition.Label</option>

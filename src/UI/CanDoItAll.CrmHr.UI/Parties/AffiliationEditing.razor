@@ -3,11 +3,11 @@
 @if (State.IsOutdated || State.IsUnknown || Message is not null) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-affiliation-freshness">
         <TextBlock Value="@(Message ?? (State.IsUnknown ? "The affiliation save outcome is unknown. Your submission and draft are retained; resubmission is blocked." : "Saved affiliations changed. Review their current values before saving."))" />
-        <Button Text="Review affiliations" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-affiliation-review-open" />
+        <Button Text="Review affiliations" Tone="ButtonTone.Default" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-affiliation-review-open" />
     </Alert>
 }
 @if (State.CanUndo) {
-    <Button Text="Undo affiliation merge" ButtonStyle="ButtonStyle.Light" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
+    <Button Text="Undo affiliation merge" Tone="ButtonTone.Default" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
 }
 <Dialog IsOpen="@(State.Review is not null)" Title="Review organization affiliations" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-affiliation-review-dialog">
     <ChildContent>
@@ -20,7 +20,7 @@
                 @if (review.GroupError is { } error) {
                     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
                 }
-                <Button Text="@(showAll ? "Show changed affiliations" : "Show all affiliations")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                <Button Text="@(showAll ? "Show changed affiliations" : "Show all affiliations")" Tone="ButtonTone.Default" Click="@(() => showAll = !showAll)" />
                 <PartyMergeRows TRow="PartyOrganizationAffiliationEditorModel" Title="Organization affiliations" Rows="review.Rows" Format="FormatRow" ShowUnchanged="@showAll" Changed="Changed">
                     <ResultActions Context="row">
                         @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
@@ -28,9 +28,9 @@
                                 <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@((bool primary) => SetPrimaryAsync(row, value, primary))" />
                             </FormField>
                             <Grid ColumnsXl="3" Gap="LayoutGap.Small">
-                                <FormField Text="Merged affiliation title"><TextBox Value="@value.JobTitle" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Title, text))" aria-label="Merged affiliation title" /></FormField>
-                                <FormField Text="Merged employee code"><TextBox Value="@value.EmployeeCode" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.EmployeeCode, text))" aria-label="Merged employee code" /></FormField>
-                                <FormField Text="Merged affiliation notes"><TextArea Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Notes, text))" aria-label="Merged affiliation notes" /></FormField>
+                                <FormField Text="Merged affiliation title"><TextInput Value="@value.JobTitle" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Title, text))" aria-label="Merged affiliation title" /></FormField>
+                                <FormField Text="Merged employee code"><TextInput Value="@value.EmployeeCode" Immediate="true" ValueChanged="@(text => SetTextAsync(row, AffiliationField.EmployeeCode, text))" aria-label="Merged employee code" /></FormField>
+                                <FormField Text="Merged affiliation notes"><TextAreaInput Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetTextAsync(row, AffiliationField.Notes, text))" aria-label="Merged affiliation notes" /></FormField>
                             </Grid>
                         }
                     </ResultActions>
@@ -40,9 +40,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-affiliation-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-affiliation-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(Reading || State.IsSaving || State.IsUnknown || State.ReviewIsStale || State.Review?.CanApply != true)" Click="ApplyRequested" data-testid="crmhr-affiliation-review-apply" />
             </Cluster>
         </Cluster>

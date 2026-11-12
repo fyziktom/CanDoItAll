@@ -21,7 +21,7 @@
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                     <Button Text="PostgreSQL"
                             Class="shrink-0 whitespace-nowrap"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@Session.IsLocked"
                             Click="Session.NewProfile"
@@ -30,11 +30,11 @@
                 <FilterBar ResultText="@($"{Session.FilteredProfiles.Count} matching profile(s)")">
                     <input @bind="Session.Search"
                            @bind:event="oninput"
-                           class="cda-input min-w-[14rem] flex-1"
+                           class="form-input ui-input ui-input--outlined min-w-[14rem] flex-1"
                            placeholder="Search data sources"
                            data-testid="database-profile-search" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ResetSearch" />
                 </FilterBar>
@@ -44,7 +44,7 @@
 
     <ListContent>
         @if (Session.CurrentSelection is not null) {
-            <div class="mb-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4"
+            <div class="mb-4 rounded-[1.5rem] border border-chrome-200 bg-chrome-50/90 p-4"
                  data-testid="database-data-sources-summary">
                 <Split Breakpoint="LayoutBreakpoint.None"
                        Gap="LayoutGap.Medium"
@@ -52,9 +52,9 @@
                        JustifyContent="JustifyContent.SpaceBetween"
                        Wrap="FlexWrap.Wrap">
                     <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                        <p class="cda-eyebrow">Current runtime selection</p>
-                        <p class="text-base font-semibold text-slate-950">@Session.CurrentSelection.DisplayName</p>
-                        <p class="text-sm leading-6 text-slate-600">@Session.CurrentSelection.Descriptor</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Current runtime selection</TextBlock>
+                        <p class="text-base font-semibold text-chrome-950">@Session.CurrentSelection.DisplayName</p>
+                        <p class="text-sm leading-6 text-chrome-600">@Session.CurrentSelection.Descriptor</p>
                         @if (Session.CurrentSelection.HasPendingRestartActivation) {
                             <p class="text-sm leading-6 text-amber-700">
                                 Pending restart: @Session.CurrentSelection.PendingRestartDisplayName (@Session.CurrentSelection.PendingRestartDescriptor)
@@ -71,8 +71,8 @@
                     </Cluster>
                 </Split>
 
-                <p class="mt-3 text-xs text-slate-500">Workspace root: @Session.CurrentSelection.WorkspaceRoot</p>
-                <p class="mt-1 text-xs text-slate-500">Selection source: @DescribeResolutionSource(Session.CurrentSelection.ResolutionSource)</p>
+                <p class="mt-3 text-xs text-chrome-500">Workspace root: @Session.CurrentSelection.WorkspaceRoot</p>
+                <p class="mt-1 text-xs text-chrome-500">Selection source: @DescribeResolutionSource(Session.CurrentSelection.ResolutionSource)</p>
             </div>
         }
 
@@ -135,9 +135,9 @@
 
     <DetailHeader>
         <Stack GapScale="LayoutGap.Tiny">
-            <p class="cda-eyebrow">Data source editor</p>
-            <h2 class="cda-title-xl">@(Session.Draft.Id.HasValue ? Session.Draft.DisplayName : "New data source")</h2>
-            <p class="cda-body-muted">@DescribeEditorLead(Session.Draft)</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Data source editor</TextBlock>
+            <h2 class="cda-text-block cda-text-block--h4">@(Session.Draft.Id.HasValue ? Session.Draft.DisplayName : "New data source")</h2>
+            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">@DescribeEditorLead(Session.Draft)</TextBlock>
         </Stack>
     </DetailHeader>
 
@@ -167,7 +167,7 @@
                                 @if (selectedSchemaHealth.CanApplySchema) {
                                     <Button Text="Apply current schema"
                                             Icon="database"
-                                            ButtonStyle="ButtonStyle.Warning"
+                                            Tone="ButtonTone.Warning"
                                             Size="ButtonSize.Small"
                                             Disabled="@(!Session.CanMutate || Session.IsLocked || Session.Operations.IsBusy)"
                                             IsBusy="@(Session.Operations.IsBusy)"
@@ -181,19 +181,15 @@
                     <FormSection Title="Profile identity"
                                  Description="Choose a clear name and workspace root for this PostgreSQL runtime profile.">
                         <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                            <div>
-                                <label class="cda-field-label">Profile name</label>
-                                <InputText @bind-Value="Session.Draft.DisplayName"
-                                           class="cda-input"
+                            <FormField Text="Profile name">
+                                <TextInput @bind-Value="Session.Draft.DisplayName"
                                            data-testid="database-profile-name" />
-                            </div>
+                            </FormField>
 
-                            <div>
-                                <label class="cda-field-label">Workspace root</label>
-                                <InputText @bind-Value="Session.Draft.WorkspaceRoot"
-                                           class="cda-input"
+                            <FormField Text="Workspace root">
+                                <TextInput @bind-Value="Session.Draft.WorkspaceRoot"
                                            data-testid="database-profile-workspace-root" />
-                            </div>
+                            </FormField>
                         </Grid>
 
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -212,57 +208,47 @@
                         <FormSection Title="PostgreSQL connection"
                                      Description="Save the profile first, then use Test connection to verify the target database or Create empty to provision it before activation.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Host</label>
-                                    <InputText @bind-Value="Session.Draft.PostgresHost"
-                                               class="cda-input"
+                                <FormField Text="Host">
+                                    <TextInput @bind-Value="Session.Draft.PostgresHost"
                                                data-testid="database-profile-postgres-host" />
-                                </div>
+                                </FormField>
 
-                                <div>
-                                    <label class="cda-field-label">Port</label>
-                                    <InputNumber @bind-Value="Session.Draft.PostgresPort"
-                                                 class="cda-input"
+                                <FormField Text="Port">
+                                    <NumberInput @bind-Value="Session.Draft.PostgresPort"
                                                  data-testid="database-profile-postgres-port" />
-                                </div>
+                                </FormField>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Database</label>
-                                    <InputText @bind-Value="Session.Draft.PostgresDatabaseName"
-                                               class="cda-input"
+                                <FormField Text="Database">
+                                    <TextInput @bind-Value="Session.Draft.PostgresDatabaseName"
                                                data-testid="database-profile-postgres-database" />
-                                </div>
+                                </FormField>
 
-                                <div>
-                                    <label class="cda-field-label">Admin database</label>
-                                    <InputText @bind-Value="Session.Draft.PostgresAdminDatabaseName"
-                                               class="cda-input"
+                                <FormField Text="Admin database">
+                                    <TextInput @bind-Value="Session.Draft.PostgresAdminDatabaseName"
                                                data-testid="database-profile-postgres-admin-database" />
-                                </div>
+                                </FormField>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Username</label>
-                                    <InputText @bind-Value="Session.Draft.PostgresUsername"
-                                               class="cda-input"
+                                <FormField Text="Username">
+                                    <TextInput @bind-Value="Session.Draft.PostgresUsername"
                                                data-testid="database-profile-postgres-user" />
-                                </div>
+                                </FormField>
 
                                 <div>
-                                    <label class="cda-field-label">Password</label>
-                                    <InputText @bind-Value="Session.Password"
-                                               type="password"
-                                               class="cda-input"
-                                               data-testid="database-profile-postgres-password" />
-                                    <p class="text-xs text-slate-500">Leave blank to retain the saved password. Existing values are never loaded into this field.</p>
+                                    <FormField Text="Password">
+                                        <TextInput @bind-Value="Session.Password"
+                                                   type="password"
+                                                   data-testid="database-profile-postgres-password" />
+                                    </FormField>
+                                    <p class="text-xs text-chrome-500">Leave blank to retain the saved password. Existing values are never loaded into this field.</p>
                                 </div>
                             </Grid>
 
-                            <label class="cda-inline-option">
-                                <InputCheckbox @bind-Value="Session.Draft.PostgresTrustServerCertificate"
+                            <label class="ui-checkbox-option">
+                                <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="Session.Draft.PostgresTrustServerCertificate"
                                                data-testid="database-profile-postgres-trust-server-certificate" />
                                 Trust server certificate
                             </label>
@@ -278,7 +264,7 @@
                     }
 
                     @if (!Session.Draft.Id.HasValue) {
-                        <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+                        <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50 px-4 py-3 text-sm leading-6 text-chrome-700">
                             Save the profile before testing a PostgreSQL connection, creating an empty database, or activating this data source.
                         </div>
                     }
@@ -288,27 +274,27 @@
                         <PrimaryActions>
                             <Cluster Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End" Class="w-full">
                             <Button Text="Reset draft"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Disabled="@(!Session.CanMutate || Session.IsLocked)"
                                     Click="Session.ResetAsync"
                                     data-testid="database-profile-reset" />
                             @if (Session.Draft.Id.HasValue && IsPostgres) {
                                 <Button Text="Test connection"
-                                        ButtonStyle="ButtonStyle.Info"
+                                        Tone="ButtonTone.Info"
                                         Disabled="@(!Session.CanMutate || Session.IsLocked)"
                                         Click="TestConnection"
                                         data-testid="database-profile-test-connection" />
                             }
                             @if (Session.Draft.Id.HasValue && IsPostgres) {
                                 <Button Text="Create empty"
-                                        ButtonStyle="ButtonStyle.Info"
+                                        Tone="ButtonTone.Info"
                                         Disabled="@(!Session.CanMutate || Session.IsLocked)"
                                         Click="CreateEmpty"
                                         data-testid="database-profile-create-empty" />
                             }
                             @if (Session.Draft.Id.HasValue) {
                                 <Button Text="Transfer settings"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@(!Session.CanMutate || Session.IsLocked)"
                                         Click="@(() => Session.OpenTransferAsync(Session.Draft.Id.Value))"
                                         data-testid="database-profile-transfer-settings" />
@@ -319,14 +305,14 @@
                                     data-testid="database-profile-save" />
                             @if (Session.Draft.Id.HasValue) {
                                 <Button Text="@ResolveActivationButtonText()"
-                                        ButtonStyle="ButtonStyle.Warning"
+                                        Tone="ButtonTone.Warning"
                                         Disabled="@(!Session.CanMutate || Session.IsActive || Session.IsPending || Session.SelectedSchemaHealth?.Status != SchemaStatus.Current)"
                                         Click="Activate"
                                         data-testid="database-profile-activate" />
                             }
                             @if (Session.Draft.Id.HasValue) {
                                 <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Disabled="@(!Session.CanDelete)"
                                         Click="Delete"
                                         data-testid="database-profile-delete" />

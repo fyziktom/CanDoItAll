@@ -11,9 +11,9 @@
             @if (pending.Count > 0) {
                 <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="Complete the date or number input before saving. Your raw input is retained." /></Alert>
             }
-            <p class="cda-eyebrow">Skill assignment</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Attach a skill to this profile</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Skill assignment</TextBlock>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Attach a skill to this profile</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Proficiency and certification details are included in workforce search so staffing can find the right people or units quickly.
             </p>
 
@@ -27,42 +27,42 @@
             {
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Skill">
-                        <InputSelect TValue="Guid" Value="SkillDraft.SkillId" ValueChanged="SelectSkillAsync" ValueExpression="@(() => SkillDraft.SkillId)"
-                                     class="cda-input"
+                        <SelectInput TValue="Guid" Value="SkillDraft.SkillId" ValueChanged="SelectSkillAsync" ValueExpression="@(() => SkillDraft.SkillId)"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-skill-skill-id">
                             <option value="@Guid.Empty">Choose a skill</option>
                             @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name))
                             {
                                 <option value="@skill.Id">@skill.Name (@skill.Category)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Proficiency">
-                        <InputSelect @bind-Value="SkillDraft.Proficiency" @bind-Value:after="@(() => SkillParsedAsync(WorkforceSkillField.Proficiency))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="SkillDraft.Proficiency" @bind-Value:after="@(() => SkillParsedAsync(WorkforceSkillField.Proficiency))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-skill-proficiency">
                             @foreach (var proficiency in Enum.GetValues<SkillProficiencyLevel>())
                             {
                                 <option value="@proficiency">@proficiency</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <FormField Text="Years">
                         <NativeValueInput TValue="int" DisplayName="Years of experience" @bind-Value="SkillDraft.YearsExperience"
-                                     class="cda-input"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-skill-years" PendingChanged="@(pending => SkillValueInputAsync(WorkforceSkillField.Years, pending))" />
                     </FormField>
                     <FormField Text="Certification">
                         <NativeValueInput TValue="string" @bind-Value="SkillDraft.CertificationStatus" PendingChanged="@(_ => SkillTextAsync(WorkforceSkillField.Certification))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-skill-certification" />
                     </FormField>
                     <FormField Text="Last validated">
                         <NativeValueInput TValue="DateOnly?" DisplayName="Last validated" @bind-Value="SkillDraft.LastValidatedOn"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-skill-validated-on" PendingChanged="@(pending => SkillValueInputAsync(WorkforceSkillField.Validated, pending))" />
                     </FormField>
                 </Grid>
@@ -70,7 +70,7 @@
                 <div class="mt-4">
                     <FormField Text="Notes">
                         <NativeValueInput TValue="string" Multiline="true" @bind-Value="SkillDraft.Notes" PendingChanged="@(_ => SkillTextAsync(WorkforceSkillField.Notes))"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                       class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-skill-notes" />
                     </FormField>
                 </div>
@@ -86,21 +86,21 @@
 
         <SurfaceCard Soft="true">
             <EditForm EditContext="definitionContext" OnValidSubmit="SubmitDefinitionAsync" data-testid="crmhr-skill-definition-form">
-            <p class="cda-eyebrow">Skill dictionary</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Add a reusable skill definition</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Skill dictionary</TextBlock>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Add a reusable skill definition</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Keep the catalog small and intentional so staffing search stays strongly typed and consistent across workforce and project routes.
             </p>
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                 <FormField Text="Skill name">
                     <NativeValueInput TValue="string" @bind-Value="SkillDefinitionDraft.Name" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Name))"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-skill-definition-name" />
                 </FormField>
                 <FormField Text="Category">
                     <NativeValueInput TValue="string" @bind-Value="SkillDefinitionDraft.Category" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Category))"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-skill-definition-category" />
                 </FormField>
             </Grid>
@@ -108,12 +108,12 @@
             <div class="mt-4">
                 <FormField Text="Description">
                     <NativeValueInput TValue="string" Multiline="true" @bind-Value="SkillDefinitionDraft.Description" PendingChanged="@(_ => DefinitionTextAsync(WorkforceDefinitionField.Description))"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-skill-definition-description" />
                 </FormField>
             </div>
 
-            <label class="mt-4 inline-flex items-center gap-2 text-sm text-slate-700">
+            <label class="mt-4 inline-flex items-center gap-2 text-sm text-chrome-700">
                 <InputCheckbox @bind-Value="SkillDefinitionDraft.IsActive" @bind-Value:after="@(() => DefinitionInputChanged.InvokeAsync(new(WorkforceDefinitionField.Active)))"
                                data-testid="crmhr-skill-definition-active" />
                 <span>Active skill</span>
@@ -133,8 +133,8 @@
                AlignItems="AlignItems.Center"
                JustifyContent="JustifyContent.SpaceBetween">
             <div>
-                <p class="cda-eyebrow">Current coverage</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Skills.Count skill record(s)</h3>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Current coverage</TextBlock>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Skills.Count skill record(s)</h3>
             </div>
         </Split>
 
@@ -156,18 +156,18 @@
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0 space-y-1">
-                                <p class="text-base font-semibold text-slate-950">@skill.SkillName</p>
-                                <p class="text-sm text-slate-600">@BuildMeta(skill)</p>
+                                <p class="text-base font-semibold text-chrome-950">@skill.SkillName</p>
+                                <p class="text-sm text-chrome-600">@BuildMeta(skill)</p>
                                 @if (!string.IsNullOrWhiteSpace(skill.Notes))
                                 {
-                                    <p class="text-sm leading-6 text-slate-600">@skill.Notes</p>
+                                    <p class="text-sm leading-6 text-chrome-600">@skill.Notes</p>
                                 }
                             </div>
                             <Cluster Gap="LayoutGap.Small">
                                 <StatusBadge Tone="@ResolveProficiencyTone(skill.Proficiency)"
                                              Text="@skill.Proficiency.ToString()" />
                                 <Button Text="Delete"
-                                        ButtonStyle="ButtonStyle.Danger"
+                                        Tone="ButtonTone.Danger"
                                         Size="ButtonSize.Small"
                                         Click="@(() => DeletePartySkill.InvokeAsync(skill.Id))" Disabled="WritesDisabled"
                                         data-testid="crmhr-skill-delete-button" />

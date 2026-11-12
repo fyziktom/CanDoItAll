@@ -6,16 +6,16 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Small">
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Select all" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="SelectAll" />
-                <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => selected.Clear())" />
+                <Button Text="Select all" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="SelectAll" />
+                <Button Text="Clear" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => selected.Clear())" />
                 <StatusBadge Text="@($"{selected.Count} selected")" Tone="info" />
             </Cluster>
             @foreach (var section in scopes.GroupBy(scope => scope.Section).OrderBy(section => section.Key, StringComparer.Ordinal)) {
                 <FormSection Title="@section.Key">
                     <Grid ColumnsMd="2" Gap="LayoutGap.Small">
                     @foreach (var scope in section) {
-                    <label class="cda-inline-option" data-testid="api-scope-option">
-                        <input type="checkbox" checked="@selected.Contains(scope.Name)"
+                    <label class="ui-checkbox-option" data-testid="api-scope-option">
+                        <input class="form-checkbox ui-checkbox ui-checkbox--outlined" type="checkbox" checked="@selected.Contains(scope.Name)"
                                @onchange="args => SetSelected(scope.Name, args.Value is true)" value="@scope.Name" />
                         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                             <strong>@scope.Label</strong>
@@ -23,7 +23,7 @@
                                 <StatusBadge Text="Sensitive capability" Tone="warning" />
                             }
                             <code class="text-xs break-all">@scope.Name</code>
-                            <span class="cda-body-muted">@scope.Description</span>
+                            <span class="cda-text-block cda-text-block--muted leading-5">@scope.Description</span>
                         </Stack>
                     </label>
                     }
@@ -37,7 +37,7 @@
     </ChildContent>
     <Footer>
         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="OnClose" />
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="OnClose" />
             <Button Text="Use selection" Disabled="@(!ForUser && selected.Count == 0)" Click="ConfirmAsync" data-testid="api-scopes-confirm" />
         </Cluster>
     </Footer>

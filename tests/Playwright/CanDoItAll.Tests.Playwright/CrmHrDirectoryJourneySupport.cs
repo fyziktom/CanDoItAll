@@ -16,7 +16,7 @@ internal static class CrmHrDirectoryJourneySupport
 
     // The SecondaryTabs buttons of the area navigation carry no data-testid and no aria state; the selected one is
     // told apart by the filled style only.
-    public const string ActiveAreaTabClass = "bg-slate-900";
+    public const string ActiveAreaTabClass = "bg-chrome-900";
 
     public static readonly IReadOnlyList<string> AreaTabLabels =
         ["Home", "Directory", "CRM", "Workforce", "Recruiting", "Agents", "Assignments"];

@@ -93,24 +93,24 @@
                     <Button Text="Export Mermaid"
                             Icon="download"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(projection is not { IsValid: true, Tasks.Count: > 0 })"
                             data-testid="project-structure-gantt-export-mermaid"
                             Click="@(() => exportCallback.InvokeAsync(new(accepted.Origin)))" />
                     <Button Text="Add task"
                             Icon="add_task"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="@(!CanMutate)"
                             data-testid="project-structure-gantt-add-task"
                             Click="@(() => addCallback.InvokeAsync(new(accepted.Origin)))" />
                     <Button Text="Agent chats"
                             Icon="smart_toy"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             data-testid="project-structure-gantt-agent-chats"
                             Click="@(() => agentsCallback.InvokeAsync(new(accepted.Origin)))" />
-                    <Button Text="Dependencies" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                    <Button Text="Dependencies" Size="ButtonSize.Small" Tone="ButtonTone.Default"
                             Disabled="@(!projection.IsValid || projection.Dependencies.Count == 0)" Click="@(() => showDependencies = !showDependencies)" />
                     @ToolbarSupplement
                     <ErrorBoundary @ref="dragSourceErrorBoundary">
@@ -139,7 +139,7 @@
                             var successor = accepted.Tasks.First(task => task.Id == dependency.SuccessorId);
                             <Cluster Gap="LayoutGap.Small" @key="dependency.Id">
                                 <TextBlock Value="@($"{predecessor.Title} → {successor.Title}")" />
-                                <Button Text="Remove dependency" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Disabled="@(!CanMutate)"
+                                <Button Text="Remove dependency" Size="ButtonSize.Small" Tone="ButtonTone.Default" Disabled="@(!CanMutate)"
                                         aria-label="@($"Remove dependency from {predecessor.Title} to {successor.Title}")"
                                         Click="@(() => dependencyCallback.InvokeAsync(new(accepted.Origin,
                                             GanttDependencyPlanner.PlanRemove(accepted.Tasks, accepted.Dependencies, dependency.Id))))" />
@@ -250,7 +250,7 @@
                     data-testid="project-structure-gantt-download-mermaid" />
             <Button Text="Close"
                     Size="ButtonSize.Small"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Click="@(() => closeCallback.InvokeAsync(new(accepted.Origin)))" />
         </HeaderActions>
         <ChildContent>
@@ -285,7 +285,7 @@
                 <SurfaceCard>
                     <TextBlock TextStyle="TextStyle.Subtitle2"
                                Value="Mermaid source" />
-                    <pre class="mt-4 max-h-60 overflow-auto rounded-[1.35rem] border border-slate-200 bg-slate-950 p-4 text-sm leading-6 text-slate-100"
+                    <pre class="mt-4 max-h-60 overflow-auto rounded-[1.35rem] border border-chrome-200 bg-chrome-950 p-4 text-sm leading-6 text-chrome-100"
                          data-testid="project-structure-gantt-mermaid-source">@mermaidSource</pre>
                 </SurfaceCard>
             </Stack>

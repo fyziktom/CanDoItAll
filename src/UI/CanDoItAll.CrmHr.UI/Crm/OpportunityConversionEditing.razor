@@ -8,9 +8,9 @@
 }
 @if (RecoveryProject is { } project) {
     <Button Text="Open project for review" Href="@($"/projects?projectId={project.ProjectId:D}")" Target="_blank"
-        ButtonStyle="ButtonStyle.Light" data-testid="crmhr-conversion-recovery-project" />
+        Tone="ButtonTone.Default" data-testid="crmhr-conversion-recovery-project" />
 }
-<Button Text="Review current conversion basis" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving || State.PickerPending)"
+<Button Text="Review current conversion basis" Tone="ButtonTone.Default" Disabled="@(Reading || State.IsSaving || State.PickerPending)"
         Click="ReviewRequested" data-testid="crmhr-conversion-review-open" />
 <Dialog IsOpen="@(State.Review is not null)" Title="Review conversion basis" Size="ModalSize.Full" DenseChrome="true"
         CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-conversion-review-dialog">
@@ -56,21 +56,21 @@
                                 </PanelCard>
                             }
                             @if (changes.Length > visibleRows) {
-                                <Button Text="Show next 50 changed rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+                                <Button Text="Show next 50 changed rows" Tone="ButtonTone.Default" Click="@(() => visibleRows += 50)" />
                             }
                         </Stack>
                     </ChildContent>
                 </FormSection>
                 @if (review.Original.Parties.Count > visibleParties || review.Current.Parties.Count > visibleParties) {
-                    <Button Text="Show all pursuit links" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleParties = int.MaxValue)" />
+                    <Button Text="Show all pursuit links" Tone="ButtonTone.Default" Click="@(() => visibleParties = int.MaxValue)" />
                 }
             </Stack>
         }
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
-            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" Disabled="Reading" data-testid="crmhr-conversion-review-refresh" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
+            <Button Text="Refresh comparison" Tone="ButtonTone.Default" Click="ReviewRequested" Disabled="Reading" data-testid="crmhr-conversion-review-refresh" />
             <Button Text="Use current conversion basis" Click="ApplyRequested" Disabled="@(Reading || !State.CanApplyReview)" data-testid="crmhr-conversion-review-apply" />
         </Cluster>
     </Footer>

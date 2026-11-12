@@ -32,7 +32,7 @@
                                     Text="@action.Label"
                                     Icon="@action.Icon"
                                     Size="ButtonSize.Small"
-                                    ButtonStyle="@ResolveButtonStyle(action.Style)"
+                                    Tone="@ResolveButtonTone(action.Style)"
                                     Disabled="@action.IsDisabled"
                                     Click="@(() => ActionRequested.InvokeAsync(new(item.Key, action.Key, item.Version)))"
                                     data-testid="@ResolveActionTestId(item.Key, action)" />
@@ -67,6 +67,6 @@
             ? $"{ResolveItemTestId(itemKey)}-{action.Key.Value}"
             : action.TestId;
 
-    private static ButtonStyle ResolveButtonStyle(ConversationActionStyle style)
-        => style == ConversationActionStyle.Danger ? ButtonStyle.Danger : ButtonStyle.Primary;
+    private static ButtonTone ResolveButtonTone(ConversationActionStyle style)
+        => style == ConversationActionStyle.Danger ? ButtonTone.Danger : ButtonTone.Primary;
 }

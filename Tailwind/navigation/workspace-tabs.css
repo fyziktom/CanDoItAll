@@ -1,0 +1,89 @@
+@layer components {
+  .app-shell-workbar {
+    @apply relative z-[260] shrink-0 border-b border-chrome-300 bg-chrome-100 px-3 py-1;
+  }
+
+  .app-tab-strip {
+    @apply w-full min-w-0;
+  }
+
+  .app-tab-strip__main-row {
+    @apply flex w-full min-w-0 flex-row flex-nowrap items-center gap-2;
+  }
+
+  .app-tab-strip__tabs {
+    @apply flex min-w-0 flex-1 flex-nowrap gap-1 overflow-x-auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-chrome-400) transparent;
+  }
+
+  .app-tab-strip__controls {
+    @apply flex shrink-0 flex-nowrap items-center gap-2;
+  }
+
+  .app-inline-tab {
+    @apply relative inline-flex h-9 w-56 shrink-0 items-center gap-2 rounded-md border border-transparent px-3 text-sm text-chrome-700;
+  }
+
+  .app-inline-tab--active {
+    @apply border-primary-400 bg-primary-50 text-primary-900;
+    box-shadow: inset 0 -2px 0 var(--color-primary-500);
+  }
+
+  .app-inline-tab--inactive {
+    @apply hover:border-chrome-300 hover:bg-chrome-200;
+  }
+
+  .app-inline-tab > button:first-child {
+    @apply h-full w-full min-w-0 cursor-pointer;
+  }
+
+  .app-inline-tab__actions {
+    @apply absolute right-1 hidden items-center rounded border border-chrome-300 bg-chrome-50;
+  }
+
+  .app-inline-tab:hover .app-inline-tab__actions,
+  .app-inline-tab:focus-within .app-inline-tab__actions {
+    display: inline-flex;
+  }
+
+  .app-inline-tab__action {
+    @apply inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-chrome-600 hover:bg-chrome-200 hover:text-chrome-950;
+  }
+
+  .app-tab-search {
+    @apply h-8 w-40 rounded border border-chrome-300 bg-chrome-50 px-2 text-sm text-chrome-900;
+  }
+
+  .app-tab-menu {
+    @apply relative;
+  }
+
+  .app-tab-menu__summary {
+    @apply cursor-pointer whitespace-nowrap rounded border border-chrome-300 bg-chrome-50 px-2 py-1 text-sm text-chrome-700;
+  }
+
+  .app-tab-menu__panel {
+    @apply absolute right-0 top-full z-50 mt-2 w-96 max-w-[80vw] rounded-lg border border-chrome-300 bg-chrome-50 p-3 text-chrome-900 shadow-lg;
+  }
+
+  .app-tab-menu__list {
+    @apply max-h-[60vh] overflow-y-auto;
+  }
+
+  .app-tab-menu__item {
+    @apply flex w-full cursor-pointer items-center justify-between gap-3 rounded px-3 py-2 text-left hover:bg-chrome-200;
+  }
+
+  .app-tab-summary {
+    @apply flex items-center justify-between gap-3 pt-1 text-chrome-600;
+  }
+
+  .app-tab-summary-chip {
+    @apply rounded bg-chrome-200 px-2 py-0.5 text-xs;
+  }
+
+  .app-tab-summary-action {
+    @apply cursor-pointer rounded px-2 py-1 text-xs hover:bg-chrome-200;
+  }
+}

@@ -7,17 +7,17 @@
               Wrap="FlexWrap.Wrap"
               Class="min-w-0 flex-1 prompt-gallery-search-list__rail"
               data-testid="prompt-gallery-filter-rail">
-            <TextBox Value="@Filters.Text"
+            <TextInput Value="@Filters.Text"
                      ValueChanged="HandleSearchChangedAsync"
                      Placeholder="Search names, prompt text, or tags"
                      Immediate="true"
                      aria-label="Search prompt gallery"
                      Style="min-width:0;flex:2 1 12rem" data-testid="prompt-gallery-search" />
-            <InputSelect TValue="PromptGalleryItemKind?"
+            <SelectInput TValue="PromptGalleryItemKind?"
                          Value="@Filters.Kind"
                          ValueChanged="HandleKindChangedAsync"
                          ValueExpression="@(() => Filters.Kind)"
-                         class="cda-input"
+                         class="form-input ui-input ui-input--outlined"
                          aria-label="Prompt kind"
                          style="min-width:0;flex:0.7 1 8rem" data-testid="prompt-gallery-kind-filter">
                 <option value="">All kinds</option>
@@ -25,12 +25,12 @@
                 {
                     <option value="@option">@PromptGalleryText.FormatKind(option)</option>
                 }
-            </InputSelect>
-            <InputSelect TValue="PromptArtifactStatus?"
+            </SelectInput>
+            <SelectInput TValue="PromptArtifactStatus?"
                          Value="@Filters.Status"
                          ValueChanged="HandleStatusChangedAsync"
                          ValueExpression="@(() => Filters.Status)"
-                         class="cda-input"
+                         class="form-input ui-input ui-input--outlined"
                          aria-label="Prompt status"
                          style="min-width:0;flex:0.7 1 8rem" data-testid="prompt-gallery-status-filter">
                 <option value="">All statuses</option>
@@ -38,7 +38,7 @@
                 {
                     <option value="@option">@option</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <TagEditor Value="@Filters.Tags"
                        ValueChanged="HandleTagsChangedAsync"
                        Suggestions="@Presentation.AvailableTags"
@@ -48,13 +48,13 @@
                        InputTestId="prompt-gallery-tag-filter-input" />
             @if (!Compact)
             {
-                <TextBox Value="@Filters.ProviderFilter"
+                <TextInput Value="@Filters.ProviderFilter"
                          ValueChanged="HandleProviderFilterChangedAsync"
                          Placeholder="Any provider"
                          Immediate="true"
                          aria-label="Filter by supported provider"
                          Style="min-width:0;flex:0.8 1 8rem" data-testid="prompt-gallery-provider-filter" />
-                <TextBox Value="@Filters.ModelFilter"
+                <TextInput Value="@Filters.ModelFilter"
                          ValueChanged="HandleModelFilterChangedAsync"
                          Placeholder="Any model"
                          Immediate="true"
@@ -82,7 +82,7 @@
             }
             <Button Text=""
                     Icon="filter_alt_off"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Variant="Variant.Text"
                     Size="ButtonSize.Small"
                     Click="ClearFiltersAsync"
@@ -204,7 +204,7 @@
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
                             <Button Text=""
                                     Icon="@(item.IsFavorite ? "star" : "star_border")"
-                                    ButtonStyle="@(item.IsFavorite ? ButtonStyle.Warning : ButtonStyle.Light)"
+                                    Tone="@(item.IsFavorite ? ButtonTone.Warning : ButtonTone.Default)"
                                     Variant="Variant.Text"
                                     Size="ButtonSize.Small"
                                     Disabled="@(Presentation.FavoriteBusyItemId == item.Id)"
@@ -225,7 +225,7 @@
                             {
                                 <Button Text="Details"
                                         Icon="edit"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => EditAsync(item.Id))"
                                         data-item-id="@item.Id"
@@ -241,14 +241,14 @@
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Previous"
                         Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(Presentation.PageIndex <= 0)"
                         Click="PreviousPageAsync"
                         data-testid="prompt-gallery-previous-page" />
                 <Button Text="Next"
                         Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(Presentation.PageIndex + 1 >= Presentation.TotalPages)"
                         Click="NextPageAsync"

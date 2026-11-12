@@ -7,7 +7,7 @@
         <TextBlock Value="@($"Default provider: {ProviderLabel}")" />
         <TextBlock Value="@($"Output format: {Values.DefaultPromptOutputFormat}")" />
         <TextBlock Value="@($"Currency: {Values.CurrencyCode}; culture: {Values.CurrencyCultureName}")" />
-        <TextArea Value="@Values.Notes" ReadOnly="true" aria-label="@($"{Title} notes")" />
+        <TextAreaInput Value="@Values.Notes" ReadOnly="true" aria-label="@($"{Title} notes")" />
         @if (PolicyDraft is { } draft) {
             <TextBlock Value="@($"Draft policy: {draft.ReadBasisMode}; {draft.PublicationFreshness}; {draft.OnBasisChange}; replans {draft.MaximumReplans}")" />
             <TextBlock Value="@($"Draft work duration: {draft.MaximumWorkDuration}; basis age: {draft.MaximumBasisAge}")" />

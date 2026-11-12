@@ -10,11 +10,11 @@
         <TextBlock TextStyle="TextStyle.Subtitle1" Value="Projects Files development sandbox" />
         <TextBlock Value="Two independent surfaces over bounded synthetic sources. Real file viewers; simulated host actions. No database, vault, native launcher or model provider." />
         <Cluster Wrap="FlexWrap.Wrap" Gap="LayoutGap.Small">
-            <InputSelect @bind-Value="scenario" class="cda-input" data-testid="files-scenario">
+            <SelectInput @bind-Value="scenario" data-testid="files-scenario">
                 @foreach (var item in Enum.GetValues<FilesScenario>()) {
                     <option value="@item">@item</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Reset surfaces" Click="ResetAsync" data-testid="files-reset" />
             <Button Text="Open independent dialog" Click="OpenDialogAsync" data-testid="files-open-dialog" />
             <Button Text="Hold next read" Click="() => pane.HoldNextRead()" data-testid="files-hold" />

@@ -16,7 +16,7 @@
             }
             @foreach (var section in Sections) {
                 <FormSection Title="@section.Title" Description="@($"{section.Content.CapturedBytes:N0} of {section.Content.OriginalBytes:N0} bytes · {section.Content.Flags}")">
-                    <TextArea Value="@section.Content.Text" ReadOnly="true" Size="@(section.Content.Text.Length <= 512 ? TextAreaSize.Compact : TextAreaSize.Extended)"
+                    <TextAreaInput Value="@section.Content.Text" ReadOnly="true" Size="@(section.Content.Text.Length <= 512 ? TextAreaSize.Compact : TextAreaSize.Extended)"
                               aria-label="@section.Title" data-testid="history-content-text" />
                 </FormSection>
             }
@@ -26,7 +26,7 @@
         </Stack>
     </ChildContent>
     <Footer>
-        <Button Text="Close content" ButtonStyle="ButtonStyle.Light" Click="@(() => CloseAsync(renderedContent))" data-testid="history-content-close" />
+        <Button Text="Close content" Tone="ButtonTone.Default" Click="@(() => CloseAsync(renderedContent))" data-testid="history-content-close" />
     </Footer>
 </Dialog>
 }

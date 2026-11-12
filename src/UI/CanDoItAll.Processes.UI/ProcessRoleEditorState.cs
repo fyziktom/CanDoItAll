@@ -348,13 +348,13 @@ public sealed class ProcessRoleEditorState {
             _ => "neutral"
         };
 
-    public static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionRoleCommandKind kind)
+    public static ButtonTone ResolveCommandButtonTone(ProcessDefinitionRoleCommandKind kind)
         => kind switch {
-            ProcessDefinitionRoleCommandKind.AddRole => ButtonStyle.Primary,
-            ProcessDefinitionRoleCommandKind.SaveRole => ButtonStyle.Success,
-            ProcessDefinitionRoleCommandKind.ApplyTemplate => ButtonStyle.Info,
-            ProcessDefinitionRoleCommandKind.DeleteRole => ButtonStyle.Danger,
-            _ => ButtonStyle.Light
+            ProcessDefinitionRoleCommandKind.AddRole => ButtonTone.Primary,
+            ProcessDefinitionRoleCommandKind.SaveRole => ButtonTone.Success,
+            ProcessDefinitionRoleCommandKind.ApplyTemplate => ButtonTone.Info,
+            ProcessDefinitionRoleCommandKind.DeleteRole => ButtonTone.Danger,
+            _ => ButtonTone.Default
         };
 
     public static string BuildRoleCommandTestId(ProcessDefinitionRoleCommandKind kind)

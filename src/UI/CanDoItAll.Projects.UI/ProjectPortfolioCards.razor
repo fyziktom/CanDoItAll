@@ -25,7 +25,7 @@
                     <Cluster AlignItems="AlignItems.Start"
                              Wrap="FlexWrap.NoWrap"
                              Gap="LayoutGap.Medium">
-                        <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-slate-600 shadow-sm">
+                        <div class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/90 text-xs font-bold uppercase tracking-[0.18em] text-chrome-600 shadow-sm">
                             @ProjectsPresentation.GetProjectMonogram(project.Name)
                         </div>
                         <div class="min-w-0 flex-1">
@@ -35,30 +35,30 @@
                                    JustifyContent="JustifyContent.SpaceBetween"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
-                                    <p class="cda-eyebrow cda-eyebrow--tight text-slate-400">Project</p>
-                                    <h3 class="mt-1 text-base font-bold tracking-tight text-slate-950">@project.Name</h3>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Class="text-chrome-400" Value="Project" />
+                                    <h3 class="mt-1 text-base font-bold tracking-tight text-chrome-950">@project.Name</h3>
                                 </div>
                                 <StatusBadge Tone="@ProjectsPresentation.GetStatusTone(project.Status)"
                                              Text="@project.Status.ToString()" />
                             </Split>
-                            <p class="mt-2 text-sm leading-5 text-slate-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
+                            <p class="mt-2 text-sm leading-5 text-chrome-500">@(string.IsNullOrWhiteSpace(project.CurrentPhase) ? "Current phase not set yet." : project.CurrentPhase)</p>
                             @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName) ||
                                  !string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName) ||
                                  !string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
                             {
-                                <div class="mt-3 space-y-1.5 text-sm text-slate-600"
+                                <div class="mt-3 space-y-1.5 text-sm text-chrome-600"
                                      data-testid="project-card-related-parties">
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryCustomerName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Customer:</span> @project.PrimaryCustomerName</p>
+                                        <p><span class="font-semibold text-chrome-800">Customer:</span> @project.PrimaryCustomerName</p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryDeliveryUnitName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
+                                        <p><span class="font-semibold text-chrome-800">Delivery unit:</span> @project.PrimaryDeliveryUnitName</p>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(project.PrimaryOwnerName))
                                     {
-                                        <p><span class="font-semibold text-slate-800">Owner:</span> @project.PrimaryOwnerName</p>
+                                        <p><span class="font-semibold text-chrome-800">Owner:</span> @project.PrimaryOwnerName</p>
                                     }
                                 </div>
                             }
@@ -87,14 +87,14 @@
                     <CardActions Secondary="true"
                                  Class="mt-4 border-white/70">
                         <Cluster>
-                            <Button Class="cda-button--quick"
+                            <Button Class="ui-button--quick"
                                     Icon="visibility"
                                     title="Preview project"
                                     aria-label="Preview project"
                                     data-testid="project-card-details-button"
                                     Click="@(() => OpenProjectPreview.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
-                                    Class="cda-button--quick"
+                            <Button Tone="ButtonTone.Default"
+                                    Class="ui-button--quick"
                                     Icon="subdirectory_arrow_right"
                                     title="Open hierarchy"
                                     aria-label="Open hierarchy"
@@ -102,47 +102,47 @@
                                     Click="@(() => OpenHierarchyModal.InvokeAsync(project.Id))" />
                         </Cluster>
                         <Cluster Gap="LayoutGap.XSmall">
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="folder_open"
                                     title="Open project files"
                                     aria-label="Open project files"
                                     data-testid="project-card-files-button"
                                     Click="@(() => OpenProjectFiles.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="dashboard"
                                     title="Open dashboard tab"
                                     aria-label="Open dashboard tab"
                                     Click="@(() => OpenProjectDashboard.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="account_tree"
                                     title="Open structure"
                                     aria-label="Open structure"
                                     data-testid="project-card-structure-button"
                                     Click="@(() => OpenStructure.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="timeline"
                                     title="Open Gantt tab"
                                     aria-label="Open Gantt tab"
                                     data-testid="project-card-gantt-button"
                                     Click="@(() => OpenGantt.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="hub"
                                     title="Open processes"
                                     aria-label="Open processes"
                                     Click="@(() => OpenProcesses.InvokeAsync(project.Id))" />
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
-                                    Class="cda-button--quick"
+                                    Class="ui-button--quick"
                                     Icon="calendar_month"
                                     title="Open calendar"
                                     aria-label="Open calendar"

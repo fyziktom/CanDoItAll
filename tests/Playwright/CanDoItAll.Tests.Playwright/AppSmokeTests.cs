@@ -2660,7 +2660,7 @@ public sealed partial class AppSmokeTests
             @"() => {
                 const shell = document.querySelector('.cw-workbench-shell');
                 const host = document.querySelector('.cw-canvas-host');
-                const workbar = document.querySelector('.cda-shell-workbar');
+                const workbar = document.querySelector('.app-shell-workbar');
                 const hostBounds = host?.getBoundingClientRect();
                 const workbarBounds = workbar?.getBoundingClientRect();
                 const canvasLayers = Array.from(document.querySelectorAll('.cw-workbench__canvas'));
@@ -3050,7 +3050,7 @@ public sealed partial class AppSmokeTests
                 const button = Array.from(document.querySelectorAll('button'))
                     .find(candidate => regex.test(normalize(candidate.textContent)));
                 return button instanceof HTMLButtonElement &&
-                    button.className.includes('bg-slate-900') &&
+                    button.className.includes('bg-chrome-900') &&
                     button.className.includes('text-white');
             }",
             tabPattern);

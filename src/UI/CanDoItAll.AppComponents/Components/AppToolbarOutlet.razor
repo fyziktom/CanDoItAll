@@ -1,0 +1,31 @@
+@namespace CanDoItAll.AppComponents
+@implements IDisposable
+@inject AppToolbarState ToolbarState
+
+@if (Kind == AppToolbarOutletKind.Stats && ToolbarState.StatsContent is not null && ToolbarState.StatsVisible) {
+    <div class="app-stats-row">
+        <CompactStatStrip>@ToolbarState.StatsContent</CompactStatStrip>
+        <button type="button" class="app-stats-row__close" aria-label="Hide stats" title="Hide stats"
+                @onclick="@(() => ToolbarState.SetStatsVisibleAsync(false))">
+            <Icon Name="close" />
+        </button>
+    </div>
+} else if (Kind == AppToolbarOutletKind.Help && ToolbarState.HelpContent is not null) {
+    <HelpCard Visible="@ToolbarState.HelpVisible"
+              VisibleChanged="@(value => ToolbarState.SetHelpVisibleAsync(value))"
+              Heading="@ToolbarState.HelpHeading" Icon="help" Class="help-card">
+        @ToolbarState.HelpContent
+    </HelpCard>
+}
+
+@code {
+    [Parameter]
+    public AppToolbarOutletKind Kind { get; set; }
+
+    protected override void OnInitialized()
+        => ToolbarState.Changed += HandleChanged;
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ToolbarState.Changed -= HandleChanged;
+}

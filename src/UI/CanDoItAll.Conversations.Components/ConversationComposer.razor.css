@@ -26,7 +26,7 @@
 }
 
 .chat-composer__tools ::deep .chat-composer__icon-button,
-.chat-composer__tools ::deep .cda-button {
+.chat-composer__tools ::deep .ui-button {
     min-height: 2.125rem;
     min-width: 2.5rem;
 }

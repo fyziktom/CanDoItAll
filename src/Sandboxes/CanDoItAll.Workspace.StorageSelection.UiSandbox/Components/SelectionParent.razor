@@ -3,7 +3,7 @@
 
 <Stack GapScale="LayoutGap.Medium" data-testid="@($"selection-{Draft.Name}-parent")">
     <Alert AlertStyle="AlertStyle.Info">This is a fixture parent draft. Apply changes its explicit ID list; there is no persistence or runtime authority here.</Alert>
-    <TextBox @bind-Value="notes" Immediate="true" data-testid="@($"selection-{Draft.Name}-notes")" aria-label="Fixture parent notes" />
+    <TextInput @bind-Value="notes" Immediate="true" data-testid="@($"selection-{Draft.Name}-notes")" aria-label="Fixture parent notes" />
     <Cluster Gap="LayoutGap.Small">
         <label><input type="checkbox" @bind="Draft.AllowAll" data-testid="selection-allow-all" /> Allow all (preserves IDs)</label>
         <label><input type="checkbox" @bind="Draft.Disabled" data-testid="selection-disabled" /> Externally disabled</label>

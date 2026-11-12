@@ -16,10 +16,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="@(() => actions.Close())" />
             <Button Text="@workflowStart.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     data-testid="project-structure-workflow-start-submit"
                     IsBusy="@workflowStart.IsBusy"
                     Disabled="@workflowStart.IsBusy"

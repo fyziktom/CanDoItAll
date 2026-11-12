@@ -2,41 +2,41 @@
     <Grid Gap="LayoutGap.Large" ColumnTemplateLg="minmax(0,1.25fr) minmax(18rem,0.75fr)">
         <SurfaceCard data-testid="scheduler-form">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Setup" />
-            <h2 class="text-base font-semibold text-slate-900">Schedule a workflow run</h2>
+            <h2 class="text-base font-semibold text-chrome-900">Schedule a workflow run</h2>
             @if (Draft.Issues.Count > 0) {
                 <TextBlock Value="Workflow input needs attention" />
             }
             <SchedulerDraftReceipt Workspace="Workspace" Draft="Draft" />
             <Stack GapScale="LayoutGap.Medium" Class="mt-4">
                 <label class="block">
-                    <span class="cda-eyebrow">Name</span>
-                    <input value="@Draft.Values.Name" @oninput="args => Set(Draft.Values with { Name = Text(args) })" class="cda-input mt-1" data-testid="@Id("name")" />
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Name</span>
+                    <input value="@Draft.Values.Name" @oninput="args => Set(Draft.Values with { Name = Text(args) })" class="form-input ui-input ui-input--outlined mt-1" data-testid="@Id("name")" />
                 </label>
                 <label class="block">
-                    <span class="cda-eyebrow">Description</span>
-                    <textarea value="@Draft.Values.Description" @oninput="args => Set(Draft.Values with { Description = Text(args) })" class="cda-input cda-input--textarea mt-1" data-testid="@Id("description")"></textarea>
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Description</span>
+                    <textarea value="@Draft.Values.Description" @oninput="args => Set(Draft.Values with { Description = Text(args) })" class="form-input ui-input ui-input--outlined ui-input--textarea mt-1" data-testid="@Id("description")"></textarea>
                 </label>
                 <div class="scheduler-target-summary" data-testid="scheduler-target-selected">
                     <div><strong>@(Target?.Name ?? "Exact target unavailable")</strong><p>@(Target?.Description ?? "The saved target/version is retained. Choose an available version explicitly.")</p></div>
-                    <Button Text="Choose" Icon="switch_account" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                    <Button Text="Choose" Icon="switch_account" Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="@(() => Workspace.OpenPicker(Draft))" data-testid="@(Editing ? "scheduler-edit-target-open" : "scheduler-target-open")" />
                 </div>
                 <label class="block">
-                    <span class="cda-eyebrow">Quartz CRON</span>
-                    <input value="@Draft.Values.CronExpression" @oninput="args => Set(Draft.Values with { CronExpression = Text(args) })" class="cda-input mt-1 font-mono" data-testid="@Id("cron")" />
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Quartz CRON</span>
+                    <input value="@Draft.Values.CronExpression" @oninput="args => Set(Draft.Values with { CronExpression = Text(args) })" class="form-input ui-input ui-input--outlined mt-1 font-mono" data-testid="@Id("cron")" />
                 </label>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" data-testid="@Id("cron-presets")">
-                    <Button Text="Every 2 hours" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Preset("0 0 0/2 ? * *"))" data-testid="scheduler-cron-preset-every-two-hours" />
-                    <Button Text="Weekdays 9 AM" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Preset("0 0 9 ? * MON-FRI"))" />
-                    <Button Text="Daily 9 AM" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="@(() => Preset("0 0 9 ? * *"))" />
+                    <Button Text="Every 2 hours" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => Preset("0 0 0/2 ? * *"))" data-testid="scheduler-cron-preset-every-two-hours" />
+                    <Button Text="Weekdays 9 AM" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => Preset("0 0 9 ? * MON-FRI"))" />
+                    <Button Text="Daily 9 AM" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => Preset("0 0 9 ? * *"))" />
                 </Cluster>
                 <label class="block">
-                    <span class="cda-eyebrow">Schedule time zone</span>
-                    <input value="@Draft.Values.TimeZoneId" @oninput="args => Set(Draft.Values with { TimeZoneId = Text(args) })" class="cda-input mt-1" data-testid="@Id("timezone")" />
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Schedule time zone</span>
+                    <input value="@Draft.Values.TimeZoneId" @oninput="args => Set(Draft.Values with { TimeZoneId = Text(args) })" class="form-input ui-input ui-input--outlined mt-1" data-testid="@Id("timezone")" />
                 </label>
                 <label class="block">
-                    <span class="cda-eyebrow">Misfire policy</span>
-                    <select value="@Draft.Values.MisfirePolicy" @onchange="MisfireChanged" class="cda-input mt-1" data-testid="@Id("misfire")">
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Misfire policy</span>
+                    <select value="@Draft.Values.MisfirePolicy" @onchange="MisfireChanged" class="form-input ui-input ui-input--outlined mt-1" data-testid="@Id("misfire")">
                         @foreach (var policy in Enum.GetValues<SchedulerPlanMisfirePolicy>()) {
                             <option value="@policy">@policy</option>
                         }
@@ -55,9 +55,9 @@
                                 var choices = options?.Values ?? [];
                                 var select = parameter.OptionSource.Kind is WorkflowInputParameterOptionSourceKind.Static or WorkflowInputParameterOptionSourceKind.ProjectStructureProjects or WorkflowInputParameterOptionSourceKind.ProjectStructureNodes or WorkflowInputParameterOptionSourceKind.Office365Connections;
                                 <label class="scheduler-workflow-input__field" data-testid="@($"scheduler-input-field-{parameter.Key}")">
-                                    <span class="cda-eyebrow">@parameter.Label</span>
+                                    <span class="cda-text-block cda-text-block--eyebrow-caption">@parameter.Label</span>
                                     @if (select) {
-                                        <select value="@value" @onchange="args => Workspace.SetInputAsync(Draft, parameter, Text(args))" class="cda-input mt-1" data-testid="@($"scheduler-input-{parameter.Key}")">
+                                        <select value="@value" @onchange="args => Workspace.SetInputAsync(Draft, parameter, Text(args))" class="form-input ui-input ui-input--outlined mt-1" data-testid="@($"scheduler-input-{parameter.Key}")">
                                             <option value="">@(parameter.IsRequired ? "Choose an option" : parameter.Kind == WorkflowInputParameterKind.ExternalConnectionId ? "Use default connection" : "Optional / owner default")</option>
                                             @if (value.Length > 0 && choices.All(item => item.Value != value)) {
                                                 <option value="@value">@value (unavailable)</option>
@@ -69,7 +69,7 @@
                                     } else {
                                         <input type="text" value="@value" inputmode="@(parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes ? "numeric" : "text")"
                                                list="@($"scheduler-options-{Draft.Origin:N}-{parameter.Key}")" placeholder="@parameter.Placeholder"
-                                               @oninput="args => Workspace.SetInputAsync(Draft, parameter, Text(args))" class="cda-input mt-1" data-testid="@($"scheduler-input-{parameter.Key}")" />
+                                               @oninput="args => Workspace.SetInputAsync(Draft, parameter, Text(args))" class="form-input ui-input ui-input--outlined mt-1" data-testid="@($"scheduler-input-{parameter.Key}")" />
                                         <datalist id="@($"scheduler-options-{Draft.Origin:N}-{parameter.Key}")">
                                             @foreach (var option in choices) {
                                                 <option value="@option.Value">@option.Label</option>
@@ -94,21 +94,21 @@
                     <p class="scheduler-workflow-input__issue" data-testid="scheduler-input-general-error">@issue.Message</p>
                 }
                 <label class="block">
-                    <span class="cda-eyebrow">Advanced input JSON</span>
-                    <textarea value="@Draft.Values.InputJson" @oninput="args => Workspace.SetRawInputAsync(Draft, Text(args))" class="cda-input cda-input--textarea mt-1 font-mono" data-testid="@Id("input-json")"></textarea>
+                    <span class="cda-text-block cda-text-block--eyebrow-caption">Advanced input JSON</span>
+                    <textarea value="@Draft.Values.InputJson" @oninput="args => Workspace.SetRawInputAsync(Draft, Text(args))" class="form-input ui-input ui-input--outlined ui-input--textarea mt-1 font-mono" data-testid="@Id("input-json")"></textarea>
                 </label>
                 <label><input type="checkbox" checked="@Draft.Values.IsEnabled" @onchange="args => Set(Draft.Values with { IsEnabled = args.Value is true })" /> Enabled after save</label>
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="@(Editing ? "Save changes" : "Save schedule")" Icon="save" Disabled="@Locked" IsBusy="@(Draft.Receipt?.Status == SchedulerMutationStatus.Pending)" Click="@(() => Workspace.SaveAsync(Draft))" data-testid="@Id("save")" />
                     @if (!Editing) {
-                        <Button Text="Reset" Icon="restart_alt" ButtonStyle="ButtonStyle.Light" Click="Workspace.ResetAsync" data-testid="scheduler-reset" />
+                        <Button Text="Reset" Icon="restart_alt" Tone="ButtonTone.Default" Click="Workspace.ResetAsync" data-testid="scheduler-reset" />
                     }
                 </Cluster>
             </Stack>
         </SurfaceCard>
         <SurfaceCard data-testid="scheduler-cron-preview">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="CRON description" />
-            <h2 class="text-base font-semibold text-slate-900">@Workspace.DescribeCron(Draft.Values)</h2>
+            <h2 class="text-base font-semibold text-chrome-900">@Workspace.DescribeCron(Draft.Values)</h2>
             <p>Schedule time zone: @Draft.Values.TimeZoneId. Calendar display time zone is independent.</p>
             <aside class="scheduler-edit-context" data-testid="scheduler-edit-context">
                 <h3>@(Target?.Name ?? "Saved target unavailable")</h3>

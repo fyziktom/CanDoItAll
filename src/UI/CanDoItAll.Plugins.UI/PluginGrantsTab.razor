@@ -16,31 +16,31 @@ else
     <Stack GapScale="LayoutGap.Medium">
         @foreach (var grant in Settings.Grants)
         {
-            <div data-testid="plugin-grant-row" data-scope="@grant.ScopeKey" class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div data-testid="plugin-grant-row" data-scope="@grant.ScopeKey" class="grid gap-3 rounded-lg border border-[var(--tone-border-soft)] bg-[var(--tone-surface-soft)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <Stack GapScale="LayoutGap.Tiny">
                     <Cluster Gap="LayoutGap.Small">
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveGrantTone(grant.State)" Text="@grant.State.ToString()" />
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveRiskTone(grant.RiskKind)" Text="@grant.RiskKind.ToString()" />
                         <StatusBadge Tone="neutral" Text="@grant.Capability.ToString()" />
                     </Cluster>
-                    <span class="text-sm font-medium text-[var(--cda-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
+                    <span class="text-sm font-medium text-[var(--tone-text)]">@PluginsPageHelpers.ResolveGrantName(grant)</span>
                     <span>@grant.ScopeKind: @grant.ScopeKey</span>
                     @if (!string.IsNullOrWhiteSpace(grant.Reason))
                     {
-                        <span class="text-sm text-[var(--cda-text-muted)]">@grant.Reason</span>
+                        <span class="text-sm text-[var(--tone-text-muted)]">@grant.Reason</span>
                     }
                 </Stack>
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                     <Button Text="Grant"
                             Icon="check"
-                            ButtonStyle="ButtonStyle.Success"
+                            Tone="ButtonTone.Success"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Granted || !Workspace.View.Settings.IsCurrent || Workspace.View.IsBlocked(new PluginOperationTarget.Grant(PluginGrantTarget.From(grant))))"
                             IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Grant(PluginGrantTarget.From(grant)))"
                             Click="@(() => Workspace.SetGrantAsync(Plugin, grant, PluginGrantState.Granted))" />
                     <Button Text="Deny"
                             Icon="close"
-                            ButtonStyle="ButtonStyle.Danger"
+                            Tone="ButtonTone.Danger"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Denied || !Workspace.View.Settings.IsCurrent || Workspace.View.IsBlocked(new PluginOperationTarget.Grant(PluginGrantTarget.From(grant))))"
@@ -48,7 +48,7 @@ else
                             Click="@(() => Workspace.SetGrantAsync(Plugin, grant, PluginGrantState.Denied))" />
                     <Button Text="Revoke"
                             Icon="undo"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(grant.State == PluginGrantState.Revoked || !Workspace.View.Settings.IsCurrent || Workspace.View.IsBlocked(new PluginOperationTarget.Grant(PluginGrantTarget.From(grant))))"

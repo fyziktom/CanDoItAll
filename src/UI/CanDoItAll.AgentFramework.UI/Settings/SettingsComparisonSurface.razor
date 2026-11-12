@@ -18,7 +18,7 @@
                     </Grid>
                     <Cluster Gap="LayoutGap.Small">
                         <Button Text="Use my draft" Size="ButtonSize.Small" Click="@(() => Choose(field, true))" />
-                        <Button Text="Use current" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="@(() => Choose(field, false))" />
+                        <Button Text="Use current" Size="ButtonSize.Small" Tone="ButtonTone.Default" Click="@(() => Choose(field, false))" />
                         <TextBlock Value="@field.Result" />
                     </Cluster>
                 </SurfaceCard>
@@ -30,7 +30,7 @@
             }
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Apply to my draft" Disabled="@(!Editor.CanApply || Editor.OutcomeUnknown && !acknowledged)" Click="Apply" data-testid="settings-review-apply" />
-                <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" />
+                <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="Cancel" />
             </Cluster>
         </Stack>
     </OverlayWindow>

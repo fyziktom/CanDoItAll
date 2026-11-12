@@ -3,10 +3,10 @@
 <Stack GapScale="LayoutGap.Medium" data-testid="api-users-panel">
     <Alert AlertStyle="AlertStyle.Info">Configured administrator: @Controller.Configuration.AdministratorName. Its credentials are deployment-owned. Change Api:BootstrapAdmin:PasswordHash and restart to reset it.</Alert>
     <Cluster Gap="LayoutGap.Small">
-        <TextBox @bind-Value="Controller.Page.DesiredSearch" Immediate="true" Placeholder="Search API users" aria-label="Search API users" @onkeydown="SearchKeyAsync" data-testid="api-users-search" />
-        <Button Text="Search" Click="Controller.Page.SearchAsync" ButtonStyle="ButtonStyle.Light" data-testid="api-users-search-submit" />
+        <TextInput @bind-Value="Controller.Page.DesiredSearch" Immediate="true" Placeholder="Search API users" aria-label="Search API users" @onkeydown="SearchKeyAsync" data-testid="api-users-search" />
+        <Button Text="Search" Click="Controller.Page.SearchAsync" Tone="ButtonTone.Default" data-testid="api-users-search-submit" />
         <Button Text="Create user" Icon="person_add" Click="Controller.Create" data-testid="api-user-create" />
-        <Button Text="Refresh" Icon="refresh" Click="Controller.Page.RefreshAsync" ButtonStyle="ButtonStyle.Light" data-testid="api-users-refresh" />
+        <Button Text="Refresh" Icon="refresh" Click="Controller.Page.RefreshAsync" Tone="ButtonTone.Default" data-testid="api-users-refresh" />
     </Cluster>
     @if (Controller.Outcome is { } outcome) {
         <Alert AlertStyle="@(outcome.IsCommitted ? AlertStyle.Success : AlertStyle.Warning)" data-testid="api-users-message">
@@ -15,7 +15,7 @@
                 <p>@(outcome.IsCommitted ? "Confirmed identity:" : "Original target or candidate:") @id @(outcome.Version is { } version ? $"· Version {version}" : string.Empty)</p>
             }
             @if (outcome.State == ApiWriteState.Unknown && outcome.Identity.HasValue) {
-                <Button Text="Observe exact account" Click="Controller.ObserveOutcomeAsync" ButtonStyle="ButtonStyle.Light" />
+                <Button Text="Observe exact account" Click="Controller.ObserveOutcomeAsync" Tone="ButtonTone.Default" />
             }
         </Alert>
     }
@@ -23,7 +23,7 @@
         <Alert AlertStyle="AlertStyle.Info">
             @observation
             @if (Controller.Observation is { } observed) {
-                <Button Text="Open current account" Click="() => Controller.OpenAsync(observed.Id, ApiWriteAction.UpdateAccount)" ButtonStyle="ButtonStyle.Light" />
+                <Button Text="Open current account" Click="() => Controller.OpenAsync(observed.Id, ApiWriteAction.UpdateAccount)" Tone="ButtonTone.Default" />
             }
         </Alert>
     }
@@ -48,8 +48,8 @@
                 <DataGridColumn TItem="ApiAccountMetadata" Title="Actions">
                     <Template Context="user"><Cluster Gap="LayoutGap.Tiny">
                         <Button Text="Edit" Size="ButtonSize.Small" Click="() => Controller.OpenAsync(user.Id, ApiWriteAction.UpdateAccount)" data-testid="api-user-edit" />
-                        <Button Text="Reset password" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light" Click="() => Controller.OpenAsync(user.Id, ApiWriteAction.ResetPassword)" data-testid="api-user-reset" />
-                        <Button Text="Delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="() => Controller.OpenAsync(user.Id, ApiWriteAction.DeleteAccount)" data-testid="api-user-delete" />
+                        <Button Text="Reset password" Size="ButtonSize.Small" Tone="ButtonTone.Default" Click="() => Controller.OpenAsync(user.Id, ApiWriteAction.ResetPassword)" data-testid="api-user-reset" />
+                        <Button Text="Delete" Size="ButtonSize.Small" Tone="ButtonTone.Danger" Click="() => Controller.OpenAsync(user.Id, ApiWriteAction.DeleteAccount)" data-testid="api-user-delete" />
                     </Cluster></Template>
                 </DataGridColumn>
             </Columns>
@@ -57,8 +57,8 @@
         <Cluster JustifyContent="JustifyContent.SpaceBetween">
             <span data-testid="api-users-page">@(page.TotalCount) users · Page @(Controller.Page.AcceptedQuery!.Offset / ApiPageQuery.PageSize + 1) · Search “@Controller.Page.AcceptedQuery.Search”</span>
             <Cluster Gap="LayoutGap.Tiny">
-                <Button Text="Previous" Disabled="@(!Controller.Page.CanPrevious)" Click="Controller.Page.PreviousAsync" ButtonStyle="ButtonStyle.Light" />
-                <Button Text="Next" Disabled="@(!Controller.Page.CanNext)" Click="Controller.Page.NextAsync" ButtonStyle="ButtonStyle.Light" />
+                <Button Text="Previous" Disabled="@(!Controller.Page.CanPrevious)" Click="Controller.Page.PreviousAsync" Tone="ButtonTone.Default" />
+                <Button Text="Next" Disabled="@(!Controller.Page.CanNext)" Click="Controller.Page.NextAsync" Tone="ButtonTone.Default" />
             </Cluster>
         </Cluster>
     } else {
@@ -78,11 +78,11 @@
                 <Stack GapScale="LayoutGap.Medium">
                     <Alert AlertStyle="AlertStyle.Warning">Saving changes, resetting a password or deleting this user invalidates its existing sessions.</Alert>
                     @if (editor.Id is { } id) {
-                        <p class="cda-body-muted break-all" data-testid="api-user-identity">@id · Version @editor.Version</p>
+                        <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 break-all" data-testid="api-user-identity">@id · Version @editor.Version</TextBlock>
                     }
                     @if (editor.EditsProfile) {
-                        <FormField Text="Username"><TextBox @bind-Value="editor.UserName" Immediate="true" maxlength="64" aria-label="Username" data-testid="api-user-name" /></FormField>
-                        <FormField Text="Display name"><TextBox @bind-Value="editor.DisplayName" Immediate="true" maxlength="128" aria-label="User display name" data-testid="api-user-display-name" /></FormField>
+                        <FormField Text="Username"><TextInput @bind-Value="editor.UserName" Immediate="true" maxlength="64" aria-label="Username" data-testid="api-user-name" /></FormField>
+                        <FormField Text="Display name"><TextInput @bind-Value="editor.DisplayName" Immediate="true" maxlength="128" aria-label="User display name" data-testid="api-user-display-name" /></FormField>
                         <FormField Text="Enabled"><CheckBox TValue="bool" @bind-Value="editor.Enabled" data-testid="api-user-enabled" /></FormField>
                         <FormField Text="Business capabilities"><Stack GapScale="LayoutGap.Small">
                             <TextBlock Value="@(string.IsNullOrEmpty(editor.ScopeText) ? "No business permissions" : editor.ScopeText)" />
@@ -105,7 +105,7 @@
             </EditForm>
         </ChildContent>
         <Footer><Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
-            <Button Text="Cancel" Click="() => Controller.Close(editor.Origin)" ButtonStyle="ButtonStyle.Light" />
+            <Button Text="Cancel" Click="() => Controller.Close(editor.Origin)" Tone="ButtonTone.Default" />
             <Button Text="@(editor.Action == ApiWriteAction.DeleteAccount ? "Delete user" : editor.Action == ApiWriteAction.ResetPassword ? "Reset password" : "Save user")"
                     Click="() => Controller.SaveAsync(editor.Origin)" Disabled="@(!Controller.CanSave)" IsBusy="editor.Pending" data-testid="api-user-save" />
         </Cluster></Footer>

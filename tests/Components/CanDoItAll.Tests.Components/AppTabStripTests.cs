@@ -7,6 +7,9 @@ namespace CanDoItAll.Tests.Components.Shell;
 
 public sealed class AppTabStripTests : BunitContext
 {
+    public AppTabStripTests() {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+    }
     [Fact]
     public void Renders_state_indicators_and_invokes_actions()
     {
@@ -27,12 +30,12 @@ public sealed class AppTabStripTests : BunitContext
 
         Assert.Contains("push_pin", cut.Markup);
         Assert.Contains("bedtime", cut.Markup);
-        Assert.Contains("cda-inline-tab--active", cut.Markup);
-        Assert.Contains("cda-inline-tab--inactive", cut.Markup);
-        Assert.Contains("cda-inline-tab__actions", cut.Markup);
-        Assert.DoesNotContain("cda-inline-tab__actions--active", cut.Markup);
+        Assert.Contains("app-inline-tab--active", cut.Markup);
+        Assert.Contains("app-inline-tab--inactive", cut.Markup);
+        Assert.Contains("app-inline-tab__actions", cut.Markup);
+        Assert.DoesNotContain("app-inline-tab__actions--active", cut.Markup);
         Assert.Contains("app-tab-strip-main-row", cut.Markup);
-        Assert.Contains("cda-tab-strip__controls", cut.Markup);
+        Assert.Contains("app-tab-strip__controls", cut.Markup);
         var activeTabButton = cut.Find("button[role='tab'][aria-selected='true']");
         Assert.Equal("page", activeTabButton.GetAttribute("aria-current"));
         Assert.Contains("Projects", activeTabButton.TextContent, StringComparison.Ordinal);
@@ -47,7 +50,7 @@ public sealed class AppTabStripTests : BunitContext
     }
 
     [Fact]
-    public void Renders_all_tabs_inline_without_overflow_counter()
+    public void Keeps_all_tabs_reachable_in_scroll_row_and_menu()
     {
         var tabs = Enumerable.Range(1, 8)
             .Select(index => new WorkbenchTabState($"tab-{index}", $"Tab {index}", $"/tab-{index}"))
@@ -62,7 +65,8 @@ public sealed class AppTabStripTests : BunitContext
             Assert.Contains(tab.Title, cut.Markup);
         }
 
-        Assert.DoesNotContain("+2", cut.Markup);
+        Assert.Equal(8, cut.FindAll("[role=tab]").Count);
+        Assert.Contains("All tabs (8)", cut.Markup);
     }
 
     [Fact]

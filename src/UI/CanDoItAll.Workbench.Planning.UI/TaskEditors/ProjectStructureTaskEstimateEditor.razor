@@ -9,7 +9,7 @@
           Gap="LayoutGap.Medium">
         <FormField Text="Pure effort">
             <input type="text" inputmode="decimal"
-                   class="cda-input"
+                   class="form-input ui-input ui-input--outlined"
                    min="0.01"
                    step="0.25"
                    value="@expectedEffortValueText"
@@ -19,13 +19,14 @@
         </FormField>
 
         <FormField Text="Effort unit">
-            <DropDown TValue="ProjectWorkItemEffortUnit?"
-                      Data="@EffortUnitOptions"
-                      TextProperty="Label"
-                      ValueProperty="Value"
+            <SelectInput TValue="ProjectWorkItemEffortUnit?"
                       Value="@expectedEffortUnit"
                       ValueChanged="HandleExpectedEffortUnitChangedAsync"
-                      data-testid="@TestId("unit")" />
+                      data-testid="@TestId("unit")">
+    @foreach (var option in EffortUnitOptions) {
+        <option value="@option.Value">@option.Label</option>
+    }
+</SelectInput>
         </FormField>
     </Grid>
 
@@ -40,7 +41,7 @@
             <Button Text="@capturedPreset.Label"
                     Size="ButtonSize.Small"
                     Variant="Variant.Outlined"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     data-testid="@TestId($"preset-{capturedPreset.TestId}")"
                     Click="@(() => ApplyPresetAsync(capturedPreset))" />
         }
@@ -50,7 +51,7 @@
           Gap="LayoutGap.Medium">
         <FormField Text="Expected cost">
             <input type="text" inputmode="decimal"
-                   class="cda-input"
+                   class="form-input ui-input ui-input--outlined"
                    min="0"
                    step="0.01"
                    value="@expectedCostAmountText"
@@ -61,7 +62,7 @@
         </FormField>
 
         <FormField Text="Currency">
-            <TextBox Value="@expectedCostCurrencyCode"
+            <TextInput Value="@expectedCostCurrencyCode"
                      ValueChanged="HandleCurrencyChangedAsync"
                      Placeholder="@DefaultCurrencyCode"
                      Immediate="true"

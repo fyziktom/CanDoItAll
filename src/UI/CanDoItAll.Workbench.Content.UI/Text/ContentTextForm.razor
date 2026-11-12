@@ -10,32 +10,32 @@
         <FormField Text="Content source">
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="Create new" Icon="note_add" Disabled="form.Locked"
-                        ButtonStyle="@(form.Source == ContentTextSource.CreateNew ? ButtonStyle.Info : ButtonStyle.Base)"
+                        Tone="@(form.Source == ContentTextSource.CreateNew ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.CreateNew)"
                         data-testid="project-structure-text-asset-source-create" Click="@(() => Change(form, () => form.Source = ContentTextSource.CreateNew))" />
                 <Button Text="Upload existing" Icon="upload_file" Disabled="form.Locked"
-                        ButtonStyle="@(form.Source == ContentTextSource.UploadExisting ? ButtonStyle.Info : ButtonStyle.Base)"
+                        Tone="@(form.Source == ContentTextSource.UploadExisting ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.UploadExisting)"
                         data-testid="project-structure-text-asset-source-upload" Click="@(() => Change(form, () => form.Source = ContentTextSource.UploadExisting))" />
             </Cluster>
         </FormField>
         <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
             <FormField Text="@form.Definition.TitleLabel">
-                <TextBox Value="@form.Title" Disabled="form.Locked" Placeholder="@form.Definition.TitlePlaceholder" Immediate="true"
+                <TextInput Value="@form.Title" Disabled="form.Locked" Placeholder="@form.Definition.TitlePlaceholder" Immediate="true"
                          ValueChanged="@(value => Change(form, () => form.Title = value ?? string.Empty))" data-testid="project-structure-text-asset-title" />
             </FormField>
             <FormField Text="@form.Definition.SubtitleLabel">
-                <TextBox Value="@form.Subtitle" Disabled="form.Locked" Placeholder="@form.Definition.SubtitlePlaceholder" Immediate="true"
+                <TextInput Value="@form.Subtitle" Disabled="form.Locked" Placeholder="@form.Definition.SubtitlePlaceholder" Immediate="true"
                          ValueChanged="@(value => Change(form, () => form.Subtitle = value ?? string.Empty))" data-testid="project-structure-text-asset-subtitle" />
             </FormField>
         </Grid>
         @if (form.Source == ContentTextSource.CreateNew) {
             <FormField Text="File name">
-                <TextBox Value="@form.FileName" Disabled="form.Locked" Placeholder="@form.Definition.FileNamePlaceholder" Immediate="true"
+                <TextInput Value="@form.FileName" Disabled="form.Locked" Placeholder="@form.Definition.FileNamePlaceholder" Immediate="true"
                          ValueChanged="@(value => Change(form, () => form.FileName = value ?? string.Empty))" data-testid="project-structure-text-asset-file-name" />
             </FormField>
             <FormField Text="File content">
-                <TextArea Value="@form.Content" Disabled="form.Locked" Placeholder="@form.Definition.ContentPlaceholder" Rows="10" Immediate="true"
+                <TextAreaInput Value="@form.Content" Disabled="form.Locked" Placeholder="@form.Definition.ContentPlaceholder" Rows="10" Immediate="true"
                           ValueChanged="@(value => Change(form, () => form.Content = value ?? string.Empty))" data-testid="project-structure-text-asset-content" />
             </FormField>
         } else {
@@ -51,7 +51,7 @@
             }
         }
         <FormField Text="@form.Definition.NotesLabel">
-            <TextArea Value="@form.Notes" Disabled="form.Locked" Placeholder="@form.Definition.NotesPlaceholder" Rows="3" Immediate="true"
+            <TextAreaInput Value="@form.Notes" Disabled="form.Locked" Placeholder="@form.Definition.NotesPlaceholder" Rows="3" Immediate="true"
                       ValueChanged="@(value => Change(form, () => form.Notes = value ?? string.Empty))" data-testid="project-structure-text-asset-notes" />
         </FormField>
         @if (!string.IsNullOrWhiteSpace(form.Error)) {
@@ -66,10 +66,10 @@
             </Alert>
         }
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
-            <Button Text="Cancel" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Base" Disabled="@(form.IsDispatching || form.Retired)"
+            <Button Text="Cancel" Variant="Variant.Outlined" Tone="ButtonTone.Default" Disabled="@(form.IsDispatching || form.Retired)"
                     data-testid="project-structure-text-asset-cancel" Click="@(() => CancelAsync(form))" />
             <Button Text="@form.Definition.SubmitLabel" Icon="@(form.Source == ContentTextSource.CreateNew ? "note_add" : "upload_file")"
-                    ButtonStyle="ButtonStyle.Info" Disabled="@(form.Locked || form.Source == ContentTextSource.UploadExisting && form.Upload is null)"
+                    Tone="ButtonTone.Info" Disabled="@(form.Locked || form.Source == ContentTextSource.UploadExisting && form.Upload is null)"
                     IsBusy="form.IsBusy" data-testid="project-structure-text-asset-submit" Click="@(() => SubmitAsync(form))" />
         </Cluster>
     </Stack>

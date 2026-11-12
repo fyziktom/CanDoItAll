@@ -36,7 +36,7 @@
                           StateChanged="WindowStateChanged">
         <div class="contextual-agent-window" data-testid="@($"{TestId}-content")">
             <div class="contextual-agent-window__filters">
-                <TextBox Value="@searchText"
+                <TextInput Value="@searchText"
                          ValueChanged="HandleSearchChangedAsync"
                          Placeholder="Search agents"
                          Immediate="true"
@@ -80,7 +80,7 @@
                             Description="@loadError">
                     <Actions>
                         <Button Text="Retry"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="LoadAgentsAsync" />
                     </Actions>
                 </EmptyState>
@@ -240,7 +240,7 @@
                                 SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
                 <HeaderActions>
                     <Button Icon="file_download"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Variant="Variant.Text"
                             Disabled="@(!CanDownloadThreadHistory)"
@@ -254,7 +254,7 @@
                           @onmousemove="OpenRuntimeDetailsTooltip"
                           @onmouseleave="CloseRuntimeDetailsTooltip">
                         <Button Icon="runtime"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="OpenRuntimeDetailsDialogAsync"
                                 aria-label="Runtime details"

@@ -19,10 +19,10 @@
     </Alert>
 }
 <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
-    <Button Text="@(Result is null ? "Cancel" : "Close")" Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Base"
+    <Button Text="@(Result is null ? "Cancel" : "Close")" Variant="Variant.Outlined" Tone="ButtonTone.Default"
             data-testid="@($"{TestIdPrefix}-cancel")" Click="Cancelled" />
     <Button Text="@(IsEditMode ? "Save task" : "Create task")" Icon="@(IsEditMode ? "save" : "add_task")"
-            ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || SubmitBlocked || Result is { CanRetry: false })"
+            Tone="ButtonTone.Info" Disabled="@(IsBusy || SubmitBlocked || Result is { CanRetry: false })"
             data-testid="@($"{TestIdPrefix}-submit")" Click="Submitted" />
 </Cluster>
 

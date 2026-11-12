@@ -6,9 +6,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@ReadingReview" Click="RefreshRequested" data-testid="crmhr-party-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="@ReadingReview" Click="RefreshRequested" data-testid="crmhr-party-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(ReadingReview || State.IsSaving || State.Review?.CanApply != true || State.ReviewIsStale || State.IsUnknown)" Click="ApplyRequested" data-testid="crmhr-party-review-apply" />
             </Cluster>
         </Cluster>

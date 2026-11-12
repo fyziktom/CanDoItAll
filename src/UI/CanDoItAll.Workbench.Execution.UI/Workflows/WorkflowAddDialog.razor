@@ -22,10 +22,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="@(() => actions.Close())" />
             <Button Text="@workflowDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-workflow-add-submit"
                     IsBusy="@workflowDialog.IsBusy"
                     Disabled="@(workflowDialog.IsBusy || workflowDialog.RequiresObservation || workflowDialog.Options.Count == 0 || !workflowDialog.SelectedWorkflowId.HasValue)"

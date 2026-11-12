@@ -25,8 +25,8 @@
             <SmallText Text="@($"Showing {FirstVisibleItem}-{LastVisibleItem} of {ResolvedTotalCount}")" />
             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
                 <TooltipTarget Text="Previous page" Position="TooltipPosition.Bottom">
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Class="cda-button--quick"
+                    <Button Tone="ButtonTone.Default"
+                            Class="ui-button--quick"
                             Icon="chevron_left"
                             Disabled="@(CurrentPageIndex == 0)"
                             aria-label="Previous page"
@@ -35,8 +35,8 @@
                 </TooltipTarget>
                 <StatusBadge Tone="neutral" Text="@($"{CurrentPageIndex + 1} / {PageCount}")" />
                 <TooltipTarget Text="Next page" Position="TooltipPosition.Bottom">
-                    <Button ButtonStyle="ButtonStyle.Light"
-                            Class="cda-button--quick"
+                    <Button Tone="ButtonTone.Default"
+                            Class="ui-button--quick"
                             Icon="chevron_right"
                             Disabled="@(CurrentPageIndex >= PageCount - 1)"
                             aria-label="Next page"

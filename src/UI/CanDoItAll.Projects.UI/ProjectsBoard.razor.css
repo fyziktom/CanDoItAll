@@ -8,8 +8,11 @@
 }
 
 .projects-board__filters {
-    display: grid;
-    gap: 0.5rem;
+    /*display: grid;*/
+    /*gap: 0.5rem;*/
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
 }
 
 .projects-board__package-dialog {
@@ -49,7 +52,7 @@
     }
 
     .projects-board__filters {
-        grid-template-columns: minmax(14rem, 1.7fr) repeat(5, minmax(8rem, 1fr)) auto;
-        align-items: center;
+        /*grid-template-columns: minmax(14rem, 1.7fr) repeat(5, minmax(8rem, 1fr)) auto;*/
+        /*align-items: center;*/
     }
 }

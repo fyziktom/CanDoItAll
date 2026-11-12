@@ -10,14 +10,14 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow cda-eyebrow--tight">Project demand</p>
-                    <h3 class="mt-1 truncate text-lg font-semibold text-slate-950">Staffing requests</h3>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Project demand</TextBlock>
+                    <h3 class="mt-1 truncate text-lg font-semibold text-chrome-950">Staffing requests</h3>
                     <SmallText Text="@ProjectContextText" />
                 </div>
                 <TooltipTarget Text="@CreateTooltipText"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-staffing-request-create-tooltip">
-                    <Button Class="cda-button--quick"
+                    <Button Class="ui-button--quick"
                             Icon="add"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanOpenCreate)"
@@ -31,16 +31,16 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching request(s)")">
                 <input value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[16rem] flex-1"
+                       class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[16rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search title, role, project, requester, unit, skill, or notes"
                        aria-label="Search staffing requests"
                        data-testid="crmhr-staffing-request-search" />
-                <InputSelect TValue="StaffingRequestStatus?"
+                <SelectInput TValue="StaffingRequestStatus?"
                              Value="@StatusFilter"
                              ValueChanged="HandleStatusFilterChangedAsync"
                              ValueExpression="@(() => StatusFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[12rem]"
+                             class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[12rem]"
                              style="width: 12rem; flex: 0 1 12rem;"
                              aria-label="Filter staffing requests by status"
                              data-testid="crmhr-staffing-request-status-filter">
@@ -49,7 +49,7 @@
                     {
                         <option value="@status">@status</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
         </Stack>
     </SurfaceCard>
@@ -75,15 +75,15 @@
                                AlignItems="AlignItems.Start"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <div class="min-w-0">
-                                <p class="cda-eyebrow cda-eyebrow--tight">Project</p>
-                                <p class="truncate text-xs font-semibold text-slate-600">@ResolveProjectName(request)</p>
-                                <h3 class="mt-2 line-clamp-2 text-base font-semibold text-slate-950">@request.Title</h3>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Project</TextBlock>
+                                <p class="truncate text-xs font-semibold text-chrome-600">@ResolveProjectName(request)</p>
+                                <h3 class="mt-2 line-clamp-2 text-base font-semibold text-chrome-950">@request.Title</h3>
                             </div>
                             <StatusBadge Tone="@ResolveStatusTone(request.Status)"
                                          Text="@request.Status.ToString()" />
                         </Split>
 
-                        <p class="text-sm leading-5 text-slate-600">@BuildMeta(request)</p>
+                        <p class="text-sm leading-5 text-chrome-600">@BuildMeta(request)</p>
 
                         @if (request.NeededSkills.Count > 0)
                         {
@@ -102,7 +102,7 @@
 
                         @if (!string.IsNullOrWhiteSpace(request.Notes))
                         {
-                            <p class="line-clamp-2 text-sm leading-5 text-slate-600">@request.Notes</p>
+                            <p class="line-clamp-2 text-sm leading-5 text-chrome-600">@request.Notes</p>
                         }
 
                         <CardActions Secondary="true" Class="mt-auto pt-3">
@@ -111,9 +111,9 @@
                             <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
                                 <TooltipTarget Text="Show staffing request details"
                                                Position="TooltipPosition.Bottom">
-                                    <Button ButtonStyle="ButtonStyle.Light"
+                                    <Button Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
-                                            Class="cda-button--quick"
+                                            Class="ui-button--quick"
                                             Icon="visibility"
                                             aria-label="Show staffing request details"
                                             data-testid="crmhr-staffing-request-details-button"
@@ -121,9 +121,9 @@
                                 </TooltipTarget>
                                 <TooltipTarget Text="Delete this staffing request"
                                                Position="TooltipPosition.Bottom">
-                                    <Button ButtonStyle="ButtonStyle.Danger"
+                                    <Button Tone="ButtonTone.Danger"
                                             Size="ButtonSize.Small"
-                                            Class="cda-button--quick"
+                                            Class="ui-button--quick"
                                             Icon="delete"
                                             aria-label="Delete staffing request"
                                             data-testid="crmhr-staffing-request-delete-button"
@@ -146,14 +146,14 @@
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Previous"
                         Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(PageIndex <= 0)"
                         Click="@(() => PageChanged.InvokeAsync(PageIndex - 1))"
                         data-testid="crmhr-staffing-request-previous" />
                 <Button Text="Next"
                         Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Disabled="@(PageIndex + 1 >= TotalPages)"
                         Click="@(() => PageChanged.InvokeAsync(PageIndex + 1))"
@@ -188,12 +188,12 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Request title">
                         <NativeValueInput TValue="string" @bind-Value="Draft.Title" PendingChanged="@(_ => TextAsync(StaffingField.Title))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-staffing-request-title" />
                     </FormField>
                     <FormField Text="Needed role">
                         <NativeValueInput TValue="string" @bind-Value="Draft.NeededRole" PendingChanged="@(_ => TextAsync(StaffingField.Role))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-staffing-request-role" />
                     </FormField>
                 </Grid>
@@ -201,28 +201,28 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
                     <FormField Text="Allocation %">
                         <NativeValueInput DisplayName="allocation percentage" TValue="decimal" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(StaffingField.Allocation, value))"
-                                     class="cda-input"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-staffing-request-allocation" />
                     </FormField>
                     <FormField Text="Starts on">
                         <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartDate" PendingChanged="@(value => ReportAsync(StaffingField.Start, value))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-staffing-request-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
                         <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndDate" PendingChanged="@(value => ReportAsync(StaffingField.End, value))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-staffing-request-end-date" />
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="Draft.Status" @bind-Value:after="@(() => ReportAsync(StaffingField.Status))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="Draft.Status" @bind-Value:after="@(() => ReportAsync(StaffingField.Status))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-staffing-request-status">
                             @foreach (var status in Enum.GetValues<StaffingRequestStatus>())
                             {
                                 <option value="@status">@status</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
@@ -242,7 +242,7 @@
                 <Stack GapScale="LayoutGap.Small">
                     <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
                         <TextBlock Value="Needed skills" TextStyle="TextStyle.Subtitle2" />
-                        <Button Text="Refresh skill choices" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Light"
+                        <Button Text="Refresh skill choices" Size="ButtonSize.Small" Tone="ButtonTone.Default"
                             Disabled="@(WritesDisabled || isSaving || RefreshSkillsDisabled)" Click="RefreshSkills"
                             data-testid="crmhr-staffing-request-refresh-skills" />
                     </Cluster>
@@ -254,15 +254,15 @@
                     else {
                         <Grid Gap="LayoutGap.Small" ColumnsMd="2" Class="mt-2">
                             @foreach (var skill in SkillCatalog.Where(item => item.IsActive).OrderBy(item => item.Category).ThenBy(item => item.Name)) {
-                                <label class="rounded-[1rem] border border-slate-200 bg-slate-50/80 px-3 py-3 text-sm text-slate-700">
+                                <label class="rounded-[1rem] border border-chrome-200 bg-chrome-50/80 px-3 py-3 text-sm text-chrome-700">
                                     <input type="checkbox"
                                            checked="@Draft.SkillIds.Contains(skill.Id)"
                                            data-testid="crmhr-staffing-request-skill"
                                            @onchange="args => ToggleSkill(skill.Id, args)" />
-                                    <span class="ml-2 font-medium text-slate-900">@skill.Name</span>
+                                    <span class="ml-2 font-medium text-chrome-900">@skill.Name</span>
                                     @if (!string.IsNullOrWhiteSpace(skill.Category))
                                     {
-                                        <span class="ml-2 text-slate-500">@skill.Category</span>
+                                        <span class="ml-2 text-chrome-500">@skill.Category</span>
                                     }
                                 </label>
                             }
@@ -272,7 +272,7 @@
                         <SurfaceCard Soft="true" data-testid="crmhr-staffing-request-unavailable-skill">
                             <Split Gap="LayoutGap.Small" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
                                 <TextBlock Value="@($"Unavailable skill ({id.ToString("N")[..8]})")" />
-                                <Button Text="Remove unavailable skill" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                <Button Text="Remove unavailable skill" Tone="ButtonTone.Default" Size="ButtonSize.Small"
                                     Disabled="@(WritesDisabled || isSaving)" Click="@(() => RemoveUnavailableSkillAsync(id))"
                                     data-testid="crmhr-staffing-request-remove-unavailable-skill" />
                             </Split>
@@ -282,7 +282,7 @@
 
                 <FormField Text="Notes">
                     <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(StaffingField.Notes))"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-staffing-request-notes" />
                 </FormField>
             </Stack>
@@ -291,7 +291,7 @@
         <Footer>
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                 <Button Text="Reset"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@(isSaving || WritesDisabled)"
                         Click="ResetEditorAsync"
                         data-testid="crmhr-staffing-request-reset-button" />
@@ -324,32 +324,32 @@
             <Stack GapScale="LayoutGap.Medium">
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Needed role</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.NeededRole)</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Needed role</TextBlock>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.NeededRole)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Allocation</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Allocation</TextBlock>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@($"{selectedRequest.AllocationPercent:0.##}%")</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Period</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@BuildPeriod(selectedRequest)</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Period</TextBlock>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@BuildPeriod(selectedRequest)</p>
                     </SurfaceCard>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Requested by</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.RequestedByName)</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Requested by</TextBlock>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.RequestedByName)</p>
                     </SurfaceCard>
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Delivery unit</p>
-                        <p class="mt-1 text-sm font-semibold text-slate-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Delivery unit</TextBlock>
+                        <p class="mt-1 text-sm font-semibold text-chrome-950">@FormatValue(selectedRequest.DeliveryUnitName)</p>
                     </SurfaceCard>
                 </Grid>
 
                 <SurfaceCard Soft="true">
-                    <p class="cda-eyebrow">Needed skills</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Needed skills</TextBlock>
                     @if (selectedRequest.NeededSkills.Count == 0)
                     {
                         <SmallText Text="No skills were specified." Class="mt-2" />
@@ -368,8 +368,8 @@
                 @if (!string.IsNullOrWhiteSpace(selectedRequest.Notes))
                 {
                     <SurfaceCard Soft="true">
-                        <p class="cda-eyebrow">Notes</p>
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@selectedRequest.Notes</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Notes</TextBlock>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@selectedRequest.Notes</p>
                     </SurfaceCard>
                 }
             </Stack>
@@ -377,7 +377,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="CloseDetailsAsync" />
             </Cluster>
         </Footer>

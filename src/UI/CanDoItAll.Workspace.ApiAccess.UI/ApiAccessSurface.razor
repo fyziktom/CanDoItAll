@@ -10,14 +10,14 @@
         <FormSection Title="API access" Icon="console" Description="Control the local API surface and create JWT bearer tokens when authorization is active.">
             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                 <Stack GapScale="LayoutGap.Small">
-                    <p class="cda-eyebrow">API</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">API</TextBlock>
                     <StatusBadge Tone="@(status.ApiEnabled ? "success" : "warning")" Text="@(status.ApiEnabled ? "Enabled" : "Disabled")" />
-                    <p class="cda-body-muted break-all">OpenAPI: @(status.OpenApiEnabled ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</p>
+                    <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 break-all">OpenAPI: @(status.OpenApiEnabled ? "/openapi/v1.json and /swagger/v1/swagger.json" : "Disabled")</TextBlock>
                 </Stack>
                 <Stack GapScale="LayoutGap.Small">
-                    <p class="cda-eyebrow">Authorization</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Authorization</TextBlock>
                     <StatusBadge Tone="@(status.AuthorizationEnabled ? "warning" : "info")" Text="@(status.AuthorizationEnabled ? "JWT required" : "JWT disabled")" />
-                    <p class="cda-body-muted break-all">@(status.AuthorizationEnabled ? $"Issuer: {status.Issuer} / Audience: {status.Audience}" : "Bearer tokens are not required.")</p>
+                    <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 break-all">@(status.AuthorizationEnabled ? $"Issuer: {status.Issuer} / Audience: {status.Audience}" : "Bearer tokens are not required.")</TextBlock>
                 </Stack>
             </Grid>
             @if (!status.AuthorizationEnabled) {
@@ -43,7 +43,7 @@
             }
         </FormSection>
     }
-    <Button Text="Retry status and access" Icon="refresh" ButtonStyle="ButtonStyle.Light" Click="Session.LoadAsync" data-testid="api-access-retry" />
+    <Button Text="Retry status and access" Icon="refresh" Tone="ButtonTone.Default" Click="Session.LoadAsync" data-testid="api-access-retry" />
     @if (Session.Issuance is not null && Session.Receipts.Count > 0) {
         <FormSection Title="Recent API operations" Description="Safe session receipts. Unknown acknowledgements remain locked; observations never replay writes.">
             <Stack GapScale="LayoutGap.Small">
@@ -55,7 +55,7 @@
                             <span>Version @version</span>
                         }
                         @if (receipt.Result.State == ApiWriteState.Unknown && receipt.Result.Identity.HasValue) {
-                            <Button Text="Observe current state" ButtonStyle="ButtonStyle.Light" Click="() => Session.ObserveAsync(receipt.OperationId)" />
+                            <Button Text="Observe current state" Tone="ButtonTone.Default" Click="() => Session.ObserveAsync(receipt.OperationId)" />
                         }
                     </Cluster>
                 }

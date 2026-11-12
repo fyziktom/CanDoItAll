@@ -8,70 +8,69 @@
         <FormSection Title="Interaction journal"
                      Description="Record calls, meetings, emails, and messages against the account so recent context survives handoffs and reloads.">
             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                <div>
-                    <label class="cda-field-label">Interaction type</label>
-                    <InputSelect @bind-Value="Model.InteractionType"
-                                 class="cda-input"
+                <FormField Text="Interaction type">
+                    <SelectInput @bind-Value="Model.InteractionType"
                                  data-testid="crmhr-interaction-type">
                         @foreach (var interactionType in Enum.GetValues<InteractionType>())
                         {
                             <option value="@interactionType">@interactionType</option>
                         }
-                    </InputSelect>
-                </div>
+                    </SelectInput>
+                </FormField>
                 <div>
-                    <label class="cda-field-label">Occurred on</label>
+                    <label class="cda-form-field__label">Occurred on</label>
                     <InputDate @bind-Value="Model.OccurredOn"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-interaction-occurred-on" />
                 </div>
                 <div>
-                    <label class="cda-field-label">Linked opportunity</label>
-                    <InputSelect @bind-Value="Model.RelatedOpportunityId"
-                                 class="cda-input"
-                                 data-testid="crmhr-interaction-opportunity">
-                        <option value="">No linked opportunity</option>
-                        @if (SelectedOpportunity is { } selectedOpportunity)
-                        {
-                            <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
-                        }
-                        @if (Model.RelatedOpportunityId is Guid retained && retained != SelectedOpportunity?.Id) {
-                            <option value="@retained">@opportunityNames.GetValueOrDefault(retained, $"Previously selected opportunity ({retained:D})")</option>
-                        }
-                    </InputSelect>
-                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                    <FormField Text="Linked opportunity">
+                        <SelectInput @bind-Value="Model.RelatedOpportunityId"
+                                     data-testid="crmhr-interaction-opportunity">
+                            <option value="">No linked opportunity</option>
+                            @if (SelectedOpportunity is { } selectedOpportunity)
+                            {
+                                <option value="@selectedOpportunity.Id">@selectedOpportunity.Title</option>
+                            }
+                            @if (Model.RelatedOpportunityId is Guid retained && retained != SelectedOpportunity?.Id) {
+                                <option value="@retained">@opportunityNames.GetValueOrDefault(retained, $"Previously selected opportunity ({retained:D})")</option>
+                            }
+                        </SelectInput>
+                    </FormField>
+                    <p class="mt-1 text-xs leading-5 text-chrome-500">
                         Select an opportunity from the paged Opportunities tab before linking it here.
                     </p>
                 </div>
             </Grid>
 
             <div class="mt-5">
-                <label class="cda-field-label">Subject</label>
-                <NativeValueInput TValue="string" @bind-Value="Model.Subject" PendingChanged="@(_ => SetInteractionTextAsync())"
-                           class="cda-input"
-                           data-testid="crmhr-interaction-subject" />
+                <FormField Text="Subject">
+                    <NativeValueInput aria-label="Subject" TValue="string" @bind-Value="Model.Subject" PendingChanged="@(_ => SetInteractionTextAsync())"
+                               class="form-input ui-input ui-input--outlined"
+                               data-testid="crmhr-interaction-subject" />
+                </FormField>
             </div>
 
             <Grid Gap="LayoutGap.Large" ColumnsMd="2" Class="mt-5">
                 <div>
-                    <label class="cda-field-label">Summary</label>
-                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Summary" PendingChanged="@(_ => SetInteractionTextAsync())"
-                                   class="cda-input cda-input--textarea min-h-[9rem]"
-                                   data-testid="crmhr-interaction-summary" />
+                    <FormField Text="Summary">
+                        <NativeValueInput aria-label="Summary" TValue="string" Multiline="true" @bind-Value="Model.Summary" PendingChanged="@(_ => SetInteractionTextAsync())"
+                                       class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[9rem]"
+                                       data-testid="crmhr-interaction-summary" />
+                    </FormField>
                 </div>
-                <div>
-                    <label class="cda-field-label">Notes</label>
-                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => SetInteractionTextAsync())"
-                                   class="cda-input cda-input--textarea min-h-[9rem]"
+                <FormField Text="Notes">
+                    <NativeValueInput aria-label="Notes" TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => SetInteractionTextAsync())"
+                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[9rem]"
                                    data-testid="crmhr-interaction-notes" />
-                </div>
+                </FormField>
             </Grid>
 
             <div class="mt-5">
-                <p class="cda-field-label">Participants</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Participants</TextBlock>
                 @if (ParticipantOptions.Count == 0)
                 {
-                    <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                    <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                         Save at least one connected record to expose reusable participant shortcuts here.
                     </div>
                 }
@@ -80,7 +79,7 @@
                     <Grid Gap="LayoutGap.Small" ColumnsMd="2">
                         @foreach (var option in ParticipantOptions)
                         {
-                            <label class="flex items-center gap-3 rounded-[1rem] border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700"
+                            <label class="flex items-center gap-3 rounded-[1rem] border border-chrome-200 bg-chrome-50/80 px-4 py-3 text-sm text-chrome-700"
                                    data-testid="@($"crmhr-interaction-participant-option-{option.Id:N}")">
                                 <input type="checkbox"
                                        checked="@Model.ParticipantPartyIds.Contains(option.Id)"

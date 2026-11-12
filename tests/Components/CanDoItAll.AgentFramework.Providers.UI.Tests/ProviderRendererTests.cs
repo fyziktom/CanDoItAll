@@ -234,7 +234,7 @@ public sealed class ProviderRendererTests {
         var other = new ProviderScenarioSession();
         var cut = context.Render<ProviderProfilesSurface>(p => p.Add(c => c.View, view));
         var second = context.Render<ProviderProfilesSurface>(p => p.Add(c => c.View, other));
-        var staleName = cut.FindComponents<TextBox>().Single(box => box.FindAll("[data-testid='providers-name-input']").Count == 1).Instance.ValueChanged;
+        var staleName = cut.FindComponents<TextInput>().Single(box => box.FindAll("[data-testid='providers-name-input']").Count == 1).Instance.ValueChanged;
         var target = Target(view);
         var id = view.State.ProviderId!.Value;
         await view.SelectAsync(view.Providers[1].Id);
@@ -257,7 +257,7 @@ public sealed class ProviderRendererTests {
         var cut = context.Render<ProviderProfilesSurface>(p => p.Add(c => c.View, view));
         var name = view.Editor.Model.Name;
         var configuration = view.Editor.Model.ConfigurationJson;
-        var input = cut.FindComponents<TextBox>().Single(box => box.FindAll("[data-testid='providers-name-input']").Count == 1).Instance.ValueChanged;
+        var input = cut.FindComponents<TextInput>().Single(box => box.FindAll("[data-testid='providers-name-input']").Count == 1).Instance.ValueChanged;
         await Tab(cut, ProviderEditorSection.Thinking);
         cut.Find("[data-testid='provider-thinking-search']").Input("qwen3:8b");
         await cut.Find("button[aria-label='Edit thinking for qwen3:8b']").ClickAsync();

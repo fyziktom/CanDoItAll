@@ -8,14 +8,14 @@
            AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.SpaceBetween">
         <div>
-            <p class="cda-eyebrow">Organization affiliations</p>
-            <p class="mt-1 text-sm leading-6 text-slate-600">
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Organization affiliations</TextBlock>
+            <p class="mt-1 text-sm leading-6 text-chrome-600">
                 Record each company relationship separately. Selecting a primary affiliation clears the previous primary. End-date saved history; only unsaved rows can be removed.
             </p>
         </div>
         <Button Text="Add affiliation"
                 Icon="add"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Disabled="@(!CurrentPersonPartyId.HasValue)"
                 Click="AddAffiliationAsync"
@@ -24,13 +24,13 @@
 
     @if (!CurrentPersonPartyId.HasValue)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             Save the person first, then add organization affiliations.
         </div>
     }
     else if (edits.Count == 0)
     {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600"
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600"
              data-testid="crmhr-affiliations-empty">
             No organization affiliations are recorded. A person without a staffable affiliation appears as an external contact in Workforce.
         </div>
@@ -47,11 +47,11 @@
                            AlignItems="AlignItems.Center"
                            JustifyContent="JustifyContent.SpaceBetween">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-slate-950"
+                            <p class="text-sm font-semibold text-chrome-950"
                                data-testid="@($"crmhr-affiliation-company-name-{rowIndex}")">
                                 @ResolvePartyName(item.OrganizationPartyId, "No company selected")
                             </p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">
                                 @FormatAffiliationKind(item.AffiliationKind)
                             </p>
                         </div>
@@ -63,65 +63,62 @@
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
                         <div>
-                            <label class="cda-field-label">Company</label>
+                            <label class="cda-form-field__label">Company</label>
                             <Button Text="Choose company"
                                     Icon="business"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenPicker(item, AffiliationPartyField.Organization))"
                                     data-testid="@($"crmhr-affiliation-company-{rowIndex}")" />
                         </div>
-                        <div>
-                            <label class="cda-field-label">Affiliation kind</label>
-                            <InputSelect TValue="PartyOrganizationAffiliationKind"
+                        <FormField Text="Affiliation kind">
+                            <SelectInput TValue="PartyOrganizationAffiliationKind"
                                          Value="@item.AffiliationKind"
                                          ValueChanged="@((PartyOrganizationAffiliationKind value) => UpdateKindAsync(item, value))"
                                          ValueExpression="@(() => item.AffiliationKind)"
-                                         class="cda-input"
+                                         class="form-input ui-input ui-input--outlined"
                                          data-testid="@($"crmhr-affiliation-kind-{rowIndex}")">
                                 @foreach (var kind in Enum.GetValues<PartyOrganizationAffiliationKind>())
                                 {
                                     <option value="@kind">@FormatAffiliationKind(kind)</option>
                                 }
-                            </InputSelect>
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Job title</label>
-                            <NativeValueInput TValue="string" Value="@item.JobTitle"
+                            </SelectInput>
+                        </FormField>
+                        <FormField Text="Job title">
+                            <NativeValueInput aria-label="Job title" TValue="string" Value="@item.JobTitle"
                                        ValueChanged="@((string? value) => UpdateJobTitleAsync(item, value))"
                                        ValueExpression="@(() => item.JobTitle)"
-                                       class="cda-input"
+                                       class="form-input ui-input ui-input--outlined"
                                        data-testid="@($"crmhr-affiliation-title-{rowIndex}")" />
-                        </div>
+                        </FormField>
                     </Grid>
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="3">
-                        <div>
-                            <label class="cda-field-label">Employee / engagement code</label>
-                            <NativeValueInput TValue="string" Value="@item.EmployeeCode"
+                        <FormField Text="Employee / engagement code">
+                            <NativeValueInput aria-label="Employee / engagement code" TValue="string" Value="@item.EmployeeCode"
                                        ValueChanged="@((string? value) => UpdateEmployeeCodeAsync(item, value))"
                                        ValueExpression="@(() => item.EmployeeCode)"
-                                       class="cda-input"
+                                       class="form-input ui-input ui-input--outlined"
                                        data-testid="@($"crmhr-affiliation-code-{rowIndex}")" />
-                        </div>
+                        </FormField>
                         <div>
-                            <label class="cda-field-label">Valid from</label>
+                            <label class="cda-form-field__label">Valid from</label>
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidFrom"
                                        @oninput="@(() => ReportPendingDateAsync(item, AffiliationField.Start))"
                                        ValueChanged="@((DateOnly? value) => UpdateValidFromAsync(item, value))"
                                        ValueExpression="@(() => item.ValidFrom)"
-                                       class="cda-input"
+                                       class="form-input ui-input ui-input--outlined"
                                        data-testid="@($"crmhr-affiliation-start-{rowIndex}")" />
                         </div>
                         <div>
-                            <label class="cda-field-label">Valid to</label>
+                            <label class="cda-form-field__label">Valid to</label>
                             <InputDate TValue="DateOnly?"
                                        Value="@item.ValidTo"
                                        @oninput="@(() => ReportPendingDateAsync(item, AffiliationField.End))"
                                        ValueChanged="@((DateOnly? value) => UpdateValidToAsync(item, value))"
                                        ValueExpression="@(() => item.ValidTo)"
-                                       class="cda-input"
+                                       class="form-input ui-input ui-input--outlined"
                                        data-testid="@($"crmhr-affiliation-end-{rowIndex}")" />
                         </div>
                     </Grid>
@@ -133,8 +130,8 @@
                                    AlignItems="AlignItems.Center"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
-                                    <p class="cda-field-label">Organization unit</p>
-                                    <p class="truncate text-sm text-slate-700"
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Organization unit</TextBlock>
+                                    <p class="truncate text-sm text-chrome-700"
                                        data-testid="@($"crmhr-affiliation-unit-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.OrganizationUnitPartyId)
                                     </p>
@@ -143,7 +140,7 @@
                                     @if (item.OrganizationUnitPartyId.HasValue)
                                     {
                                         <Button Text="Clear"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Variant="Variant.Text"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => ClearUnitAsync(item))"
@@ -151,7 +148,7 @@
                                     }
                                     <Button Text="Choose"
                                             Icon="account_tree"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => OpenPicker(item, AffiliationPartyField.OrganizationUnit))"
                                             data-testid="@($"crmhr-affiliation-unit-{rowIndex}")" />
@@ -165,8 +162,8 @@
                                    AlignItems="AlignItems.Center"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0">
-                                    <p class="cda-field-label">Manager</p>
-                                    <p class="truncate text-sm text-slate-700"
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Manager</TextBlock>
+                                    <p class="truncate text-sm text-chrome-700"
                                        data-testid="@($"crmhr-affiliation-manager-name-{rowIndex}")">
                                         @ResolveOptionalPartyName(item.ManagerPartyId)
                                     </p>
@@ -175,7 +172,7 @@
                                     @if (item.ManagerPartyId.HasValue)
                                     {
                                         <Button Text="Clear"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Variant="Variant.Text"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => ClearManagerAsync(item))"
@@ -183,7 +180,7 @@
                                     }
                                     <Button Text="Choose"
                                             Icon="supervisor_account"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="@(() => OpenPicker(item, AffiliationPartyField.Manager))"
                                             data-testid="@($"crmhr-affiliation-manager-{rowIndex}")" />
@@ -193,24 +190,23 @@
                     </Grid>
 
                     <Grid Gap="LayoutGap.Medium" ColumnsLg="2">
-                        <div>
-                            <label class="cda-field-label">Notes</label>
-                            <NativeValueInput TValue="string" Multiline="true" Value="@item.Notes"
+                        <FormField Text="Notes">
+                            <NativeValueInput aria-label="Notes" TValue="string" Multiline="true" Value="@item.Notes"
                                            ValueChanged="@((string? value) => UpdateNotesAsync(item, value))"
                                            ValueExpression="@(() => item.Notes)"
-                                           class="cda-input min-h-24"
+                                           class="form-input ui-input ui-input--outlined min-h-24"
                                            data-testid="@($"crmhr-affiliation-notes-{rowIndex}")" />
-                        </div>
+                        </FormField>
                         <div class="flex items-end justify-between gap-3">
-                            <label class="cda-inline-option">
-                                <InputCheckbox Value="@item.IsPrimary"
+                            <label class="ui-checkbox-option">
+                                <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" Value="@item.IsPrimary"
                                                ValueChanged="@((bool value) => UpdatePrimaryAsync(item, value))"
                                                ValueExpression="@(() => item.IsPrimary)"
                                                data-testid="@($"crmhr-affiliation-primary-{rowIndex}")" />
                                 Primary affiliation
                             </label>
                             <Button Text="Remove"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Size="ButtonSize.Small"
                                     Disabled="@(item.Id.HasValue && !item.IsNew)"
                                     Click="@(() => RemoveAffiliationAsync(item))"

@@ -52,7 +52,7 @@
         @if (contextOutdated || recordsOutdated || catalogOutdated || RecordMessage is not null || AnyWorkforceOutcomeUnknown) {
             <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-workforce-record-updates">
                 <TextBlock Value="@(AnyWorkforceOutcomeUnknown ? "A workforce command has an unknown outcome. Submitted values and later input are retained; repeating writes is blocked." : contextOutdated || recordsOutdated || catalogOutdated ? "Workforce information changed. Refresh the saved rows and context; your drafts will remain." : RecordMessage)" />
-                <Button Text="Refresh saved information" ButtonStyle="ButtonStyle.Light" Disabled="WorkforceMutationInFlight" Click="RefreshWorkforceContextAsync" data-testid="crmhr-workforce-refresh-records" />
+                <Button Text="Refresh saved information" Tone="ButtonTone.Default" Disabled="WorkforceMutationInFlight" Click="RefreshWorkforceContextAsync" data-testid="crmhr-workforce-refresh-records" />
             </Alert>
         }
     </RecordUpdates>

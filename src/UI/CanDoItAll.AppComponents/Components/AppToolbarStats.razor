@@ -1,0 +1,14 @@
+@namespace CanDoItAll.AppComponents
+@implements IDisposable
+@inject AppToolbarState ToolbarState
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnParametersSet()
+        => ToolbarState.SetStats(this, ChildContent);
+
+    public void Dispose()
+        => ToolbarState.Clear(this);
+}

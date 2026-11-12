@@ -27,7 +27,7 @@
                                      Body="Use the editor when you need to shape phases, stack decisions, or starter objects in depth while the projects board stays focused on scanning cards and routing into dedicated workbench tabs."
                                      Tip="The overview modal is still the faster path when you only need to inspect the project and open dashboard, structure, or calendar." />
                         @if (IsEditorMode && Editor.Id.HasValue) {
-                            <Button ButtonStyle="ButtonStyle.Light"
+                            <Button Tone="ButtonTone.Default"
                                     Text="Back to details"
                                     Click="SwitchToOverview" />
                         }
@@ -50,7 +50,7 @@
                     } else if (Draft.Definition.IsOutdated && Draft.Conflict is null) {
                         <Alert AlertStyle="AlertStyle.Warning" data-testid="project-definition-updates">
                             <TextBlock Value="This Project changed since your original read. Your draft and unfinished input are preserved." />
-                            <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanCompare || ReadingCurrent)"
+                            <Button Text="Compare changes" Tone="ButtonTone.Default" Disabled="@(!Draft.CanCompare || ReadingCurrent)"
                                     Click="HandleReconciliationAsync" data-testid="project-definition-compare" />
                         </Alert>
                     }
@@ -61,7 +61,7 @@
                                 <Stack GapScale="LayoutGap.Small">
                                     <TextBlock Value="The current saved definition is shown separately. It does not change your original or unsaved draft, or the accepted result of a retained save." />
                                     <Cluster Wrap="FlexWrap.Wrap">
-                                        <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanMutate)"
+                                        <Button Text="Discard draft and reload current" Tone="ButtonTone.Default" Disabled="@(!Draft.CanMutate)"
                                                 Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" />
                                         <Button Text="Compare and merge" Disabled="@(!Draft.CanCompare || ReadingCurrent)" Click="HandleReconciliationAsync" />
                                     </Cluster>
@@ -79,10 +79,10 @@
                                         <TextBlock Value="@readError" data-testid="project-conflict-read-error" />
                                     }
                                     <Cluster Wrap="FlexWrap.Wrap">
-                                        <Button Text="Read current definition" ButtonStyle="ButtonStyle.Light"
+                                        <Button Text="Read current definition" Tone="ButtonTone.Default"
                                                 Disabled="@(conflict.ReadState == ProjectEditorConflictReadState.Loading)"
                                                 Click="@(() => ReadCurrentDefinition.InvokeAsync(Draft))" data-testid="project-conflict-read" />
-                                        <Button Text="Discard draft and reload current" ButtonStyle="ButtonStyle.Light"
+                                        <Button Text="Discard draft and reload current" Tone="ButtonTone.Default"
                                                 Disabled="@(conflict.ReadState != ProjectEditorConflictReadState.Ready)"
                                                 Click="@(() => DiscardAndReloadDefinition.InvokeAsync(Draft))" data-testid="project-conflict-reload" />
                                         <Button Text="Compare and merge"
@@ -119,18 +119,18 @@
 
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.Wrap">
-                                <span class="cda-shell-pill cda-shell-pill--info">@($"Step {WizardStep + 1} / {WizardSteps.Count}: {WizardSteps[WizardStep]}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--neutral">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--info">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                                <span class="app-shell-pill app-shell-pill--info">@($"Step {WizardStep + 1} / {WizardSteps.Count}: {WizardSteps[WizardStep]}")</span>
+                                <span class="app-shell-pill app-shell-pill--neutral">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                                <span class="app-shell-pill app-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                                <span class="app-shell-pill app-shell-pill--info">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryCustomerName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
                                 }
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryDeliveryUnitName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
                                 }
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryOwnerName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
                                 }
                             </Cluster>
                             <section hidden="@(WizardStep != 0)" data-wizard-step="0">
@@ -140,11 +140,11 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Name">
-                                                <NativeValueInput TValue="string" @bind-Value="Editor.Name" class="cda-input" data-testid="project-name-input" />
+                                                <NativeValueInput TValue="string" @bind-Value="Editor.Name" class="form-input ui-input ui-input--outlined" data-testid="project-name-input" />
                                             </FormField>
                                             <FormField Text="Current phase">
                                                 <NativeValueInput TValue="string" @bind-Value="Editor.CurrentPhase"
-                                                           class="cda-input"
+                                                           class="form-input ui-input ui-input--outlined"
                                                            data-testid="project-phase-input" />
                                             </FormField>
                                         </Grid>
@@ -152,23 +152,23 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnsLg="2">
                                             <FormField Text="Status">
-                                                <InputSelect @bind-Value="Editor.Status" class="cda-input">
+                                                <SelectInput @bind-Value="Editor.Status">
                                                     @foreach (var status in Enum.GetValues<ProjectStatus>()) {
                                                         <option value="@status">@status</option>
                                                     }
-                                                </InputSelect>
+                                                </SelectInput>
                                             </FormField>
                                             <FormField Text="Target date">
-                                                <NativeValueInput TValue="DateTime?" data-testid="project-target-date" @bind-Value="Editor.TargetDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(Editor, nameof(Editor.TargetDateUtc)), pending))" class="cda-input" />
+                                                <NativeValueInput TValue="DateTime?" data-testid="project-target-date" @bind-Value="Editor.TargetDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(Editor, nameof(Editor.TargetDateUtc)), pending))" class="form-input ui-input ui-input--outlined" />
                                             </FormField>
                                         </Grid>
 
                                         <FormField Text="Description">
-                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Description" class="cda-input cda-input--textarea min-h-28" />
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Description" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-28" />
                                         </FormField>
 
                                         <FormField Text="Objective">
-                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Objective" class="cda-input cda-input--textarea min-h-28" />
+                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Editor.Objective" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-28" />
                                         </FormField>
                                     </ChildContent>
                                 </FormSection>
@@ -177,7 +177,7 @@
                                 <FormSection Title="Dates and phases"
                                          Description="Keep phase planning explicit so the project calendar and workbench stay aligned.">
                                     <Actions>
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Add phase"
                                                 Click="AddPhase" />
                                     </Actions>
@@ -196,16 +196,16 @@
                                                     <PanelCard @key="phase" data-testid="project-phase-row">
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="5">
-                                                            <NativeValueInput TValue="string" @bind-Value="phase.Name" class="cda-input xl:col-span-2" />
-                                                            <InputSelect @bind-Value="phase.Status" class="cda-input">
+                                                            <NativeValueInput TValue="string" @bind-Value="phase.Name" class="form-input ui-input ui-input--outlined xl:col-span-2" />
+                                                            <SelectInput @bind-Value="phase.Status">
                                                                 @foreach (var status in Enum.GetValues<ProjectPhaseStatus>()) {
                                                                     <option value="@status">@status</option>
                                                                 }
-                                                            </InputSelect>
-                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.StartDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.StartDateUtc)), pending))" class="cda-input" />
-                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.EndDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.EndDateUtc)), pending))" class="cda-input" />
-                                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="phase.Goal" class="cda-input cda-input--textarea min-h-20 xl:col-span-4" />
-                                                            <Button ButtonStyle="ButtonStyle.Danger"
+                                                            </SelectInput>
+                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.StartDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.StartDateUtc)), pending))" class="form-input ui-input ui-input--outlined" />
+                                                            <NativeValueInput TValue="DateTime?" @bind-Value="phase.EndDateUtc" PendingChanged="@(pending => Draft.PendingInput(new(phase, nameof(phase.EndDateUtc)), pending))" class="form-input ui-input ui-input--outlined" />
+                                                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="phase.Goal" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-20 xl:col-span-4" />
+                                                            <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => RemovePhase.InvokeAsync(phase))" />
@@ -225,10 +225,10 @@
                                               ColumnsLg="2">
                                             @foreach (var option in Editor.Options.OrderBy(item => item.Category)) {
                                                 <PanelCard @key="option" data-testid="@($"project-option-{option.Category}")">
-                                                    <div class="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">@option.Category</div>
+                                                    <div class="mb-3 rounded-xl bg-chrome-50 px-3 py-2 text-sm font-semibold text-chrome-700">@option.Category</div>
                                                     <Grid Gap="LayoutGap.Medium">
-                                                        <NativeValueInput TValue="string" @bind-Value="option.OptionName" class="cda-input" />
-                                                        <NativeValueInput TValue="string" @bind-Value="option.Notes" class="cda-input" />
+                                                        <NativeValueInput TValue="string" @bind-Value="option.OptionName" class="form-input ui-input ui-input--outlined" />
+                                                        <NativeValueInput TValue="string" @bind-Value="option.Notes" class="form-input ui-input ui-input--outlined" />
                                                     </Grid>
                                                 </PanelCard>
                                             }
@@ -240,7 +240,7 @@
                                 <FormSection Title="Linked object planning"
                                              Description="Capture the first notes, milestones, repositories, or links that should appear when the structure workbench opens.">
                                     <Actions>
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Add planned object"
                                                 Click="AddStarterObject" />
                                     </Actions>
@@ -262,17 +262,17 @@
                                                         }
                                                         <Grid Gap="LayoutGap.Medium"
                                                               ColumnsXl="4">
-                                                            <InputSelect @bind-Value="starter.ObjectType" class="cda-input">
+                                                            <SelectInput @bind-Value="starter.ObjectType">
                                                                 @foreach (var kind in StarterObjectKinds) {
                                                                     <option value="@kind">@kind</option>
                                                                 }
-                                                            </InputSelect>
-                                                            <NativeValueInput TValue="string" data-testid="project-starter-title" @bind-Value="starter.Title" class="cda-input" />
-                                                            <NativeValueInput TValue="string" @bind-Value="starter.Subtitle" class="cda-input" />
+                                                            </SelectInput>
+                                                            <NativeValueInput TValue="string" data-testid="project-starter-title" @bind-Value="starter.Title" class="form-input ui-input ui-input--outlined" />
+                                                            <NativeValueInput TValue="string" @bind-Value="starter.Subtitle" class="form-input ui-input ui-input--outlined" />
                                                             @if (starter.WasDispatched && !starter.IsSeeded) {
                                                                 <TextBlock Value="An earlier submitted version was attempted. Inspect Structure; newer changes to this plan will not be sent automatically." />
                                                             }
-                                                            <Button ButtonStyle="ButtonStyle.Danger"
+                                                            <Button Tone="ButtonTone.Danger"
                                                                     Text="Remove"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => RemoveStarterObject.InvokeAsync(starter))" />
@@ -291,9 +291,9 @@
                                         <Grid Gap="LayoutGap.Large"
                                               ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                                             <PanelCard>
-                                                <p class="cda-eyebrow cda-eyebrow--tight">Project summary</p>
-                                                <p class="mt-2 text-lg font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(Editor.Name) ? "Unnamed project" : Editor.Name)</p>
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description captured yet." : Editor.Description)</p>
+                                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Project summary</TextBlock>
+                                                <p class="mt-2 text-lg font-semibold text-chrome-950">@(string.IsNullOrWhiteSpace(Editor.Name) ? "Unnamed project" : Editor.Name)</p>
+                                                <p class="mt-2 text-sm leading-6 text-chrome-600">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description captured yet." : Editor.Description)</p>
                                             </PanelCard>
 
                                             <div class="cda-panel-card border-sky-200 bg-sky-50/80 text-sm leading-6 text-sky-900">
@@ -324,9 +324,9 @@
                                         <Actions>
                                             <Cluster>
                                                 <TextBlock Value="@($"{previousDraftIndex + 1} of {PreviousDrafts.Count}")" />
-                                                <Button Text="Newer previous draft" ButtonStyle="ButtonStyle.Light" Disabled="@(previousDraftIndex == 0)"
+                                                <Button Text="Newer previous draft" Tone="ButtonTone.Default" Disabled="@(previousDraftIndex == 0)"
                                                         Click="() => previousDraftIndex--" data-testid="project-previous-draft-newer" />
-                                                <Button Text="Older previous draft" ButtonStyle="ButtonStyle.Light" Disabled="@(previousDraftIndex + 1 >= PreviousDrafts.Count)"
+                                                <Button Text="Older previous draft" Tone="ButtonTone.Default" Disabled="@(previousDraftIndex + 1 >= PreviousDrafts.Count)"
                                                         Click="() => previousDraftIndex++" data-testid="project-previous-draft-older" />
                                             </Cluster>
                                         </Actions>
@@ -343,57 +343,57 @@
                         <Stack GapScale="LayoutGap.Large">
                             <Cluster Gap="LayoutGap.Small"
                                      Wrap="FlexWrap.Wrap">
-                                <span class="cda-shell-pill cda-shell-pill--info">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--neutral">@($"Updated: {ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)}")</span>
-                                <span class="cda-shell-pill cda-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
+                                <span class="app-shell-pill app-shell-pill--info">@($"Current phase: {(string.IsNullOrWhiteSpace(Editor.CurrentPhase) ? "Unset" : Editor.CurrentPhase)}")</span>
+                                <span class="app-shell-pill app-shell-pill--neutral">@($"Target: {ProjectsPresentation.FormatDate(Editor.TargetDateUtc)}")</span>
+                                <span class="app-shell-pill app-shell-pill--neutral">@($"Updated: {ProjectsPresentation.FormatTimestamp(LastUpdatedAtUtc)}")</span>
+                                <span class="app-shell-pill app-shell-pill--warning">@($"{MeaningfulOptions.Count} stack decision(s)")</span>
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryCustomerName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--info">@($"Customer: {ActiveProjectSummary.PrimaryCustomerName}")</span>
                                 }
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryDeliveryUnitName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--neutral">@($"Delivery unit: {ActiveProjectSummary.PrimaryDeliveryUnitName}")</span>
                                 }
                                 @if (ActiveProjectSummary is not null && !string.IsNullOrWhiteSpace(ActiveProjectSummary.PrimaryOwnerName)) {
-                                    <span class="cda-shell-pill cda-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
+                                    <span class="app-shell-pill app-shell-pill--warning">@($"Owner: {ActiveProjectSummary.PrimaryOwnerName}")</span>
                                 }
                             </Cluster>
 
-                            <p class="text-sm leading-6 text-slate-600">
+                            <p class="text-sm leading-6 text-chrome-600">
                                 This header uses the saved project name. Use Edit name and details when you want to rename the project.
                             </p>
 
                             <Grid Gap="LayoutGap.Large"
                                   ColumnTemplateXl="minmax(0,1.15fr) minmax(18rem,0.85fr)">
                                 <SurfaceCard>
-                                    <p class="cda-eyebrow">Description</p>
-                                    <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description has been captured for this project yet." : Editor.Description)</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Description</TextBlock>
+                                    <p class="mt-3 text-sm leading-6 text-chrome-700">@(string.IsNullOrWhiteSpace(Editor.Description) ? "No description has been captured for this project yet." : Editor.Description)</p>
 
-                                    <p class="mt-6 cda-eyebrow">Objective</p>
-                                    <p class="mt-3 text-sm leading-6 text-slate-700">@(string.IsNullOrWhiteSpace(Editor.Objective) ? "No explicit objective has been recorded yet." : Editor.Objective)</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mt-6">Objective</TextBlock>
+                                    <p class="mt-3 text-sm leading-6 text-chrome-700">@(string.IsNullOrWhiteSpace(Editor.Objective) ? "No explicit objective has been recorded yet." : Editor.Objective)</p>
                                 </SurfaceCard>
 
                                 <SurfaceCard Soft="true">
-                                    <p class="cda-eyebrow">Next actions</p>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Next actions</TextBlock>
                                     <Grid Gap="LayoutGap.Medium"
                                           Class="mt-4">
                                         <Button Class="w-full"
                                                 Text="Edit name and details"
                                                 Click="SwitchToEditor" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Class="w-full"
                                                 Text="Open dashboard tab"
                                                 Click="OpenProjectDashboard" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Class="w-full"
                                                 Text="Open structure"
                                                 Disabled="@(!Editor.Id.HasValue)"
                                                 Click="HandleOpenStructureAsync" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Class="w-full"
                                                 Text="Open processes"
                                                 Disabled="@(!Editor.Id.HasValue)"
                                                 Click="HandleOpenProcessesAsync" />
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Class="w-full"
                                                 Text="Open calendar"
                                                 Disabled="@(!Editor.Id.HasValue)"
@@ -408,14 +408,14 @@
                                        AlignItems="AlignItems.Center"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div>
-                                        <p class="cda-eyebrow">Phase plan</p>
-                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Delivery sequence</h3>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Phase plan</TextBlock>
+                                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">Delivery sequence</h3>
                                     </div>
                                     <StatusBadge Tone="neutral" Text="@($"{Editor.Phases.Count} phase(s)")" />
                                 </Split>
 
                                 @if (Editor.Phases.Count == 0) {
-                                    <p class="mt-4 text-sm leading-6 text-slate-600">No phase plan exists yet. Use the editor to map the first delivery stages before opening structure or calendar tabs.</p>
+                                    <p class="mt-4 text-sm leading-6 text-chrome-600">No phase plan exists yet. Use the editor to map the first delivery stages before opening structure or calendar tabs.</p>
                                 } else {
                                     <Grid Gap="LayoutGap.Medium"
                                           ColumnsLg="2"
@@ -428,13 +428,13 @@
                                                        JustifyContent="JustifyContent.SpaceBetween"
                                                        Wrap="FlexWrap.Wrap">
                                                     <div class="min-w-0">
-                                                        <p class="text-sm font-semibold text-slate-950">@phase.Name</p>
-                                                        <p class="mt-1 cda-eyebrow cda-eyebrow--tight">@phase.Status</p>
+                                                        <p class="text-sm font-semibold text-chrome-950">@phase.Name</p>
+                                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="mt-1">@phase.Status</TextBlock>
                                                     </div>
                                                     <StatusBadge Tone="@ProjectsPresentation.GetPhaseStatusTone(phase.Status)" Text="@phase.Status.ToString()" />
                                                 </Split>
-                                                <p class="mt-3 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
-                                                <p class="mt-3 text-xs font-medium text-slate-500">@($"{ProjectsPresentation.FormatDate(phase.StartDateUtc)} to {ProjectsPresentation.FormatDate(phase.EndDateUtc)}")</p>
+                                                <p class="mt-3 text-sm leading-6 text-chrome-600">@(string.IsNullOrWhiteSpace(phase.Goal) ? "No goal has been captured for this phase yet." : phase.Goal)</p>
+                                                <p class="mt-3 text-xs font-medium text-chrome-500">@($"{ProjectsPresentation.FormatDate(phase.StartDateUtc)} to {ProjectsPresentation.FormatDate(phase.EndDateUtc)}")</p>
                                             </PanelCard>
                                         }
                                     </Grid>
@@ -447,23 +447,23 @@
                                        AlignItems="AlignItems.Center"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div>
-                                        <p class="cda-eyebrow">Stack profile</p>
-                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Captured platform choices</h3>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Stack profile</TextBlock>
+                                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">Captured platform choices</h3>
                                     </div>
                                     <StatusBadge Tone="warning" Text="@($"{MeaningfulOptions.Count} filled")" />
                                 </Split>
 
                                 @if (MeaningfulOptions.Count == 0) {
-                                    <p class="mt-4 text-sm leading-6 text-slate-600">No stack profile has been captured yet. The editor can record platform, storage, testing, deployment, and external dependency choices.</p>
+                                    <p class="mt-4 text-sm leading-6 text-chrome-600">No stack profile has been captured yet. The editor can record platform, storage, testing, deployment, and external dependency choices.</p>
                                 } else {
                                     <Grid Gap="LayoutGap.Medium"
                                           ColumnsLg="2"
                                           Class="mt-4">
                                         @foreach (var option in MeaningfulOptions.OrderBy(item => item.Category).ThenBy(item => item.OptionName)) {
                                             <PanelCard @key="option" Soft="true">
-                                                <p class="cda-eyebrow cda-eyebrow--tight">@option.Category</p>
-                                                <p class="mt-2 text-sm font-semibold text-slate-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
+                                                <TextBlock TextStyle="TextStyle.EyebrowCaption">@option.Category</TextBlock>
+                                                <p class="mt-2 text-sm font-semibold text-chrome-950">@(string.IsNullOrWhiteSpace(option.OptionName) ? "Not specified" : option.OptionName)</p>
+                                                <p class="mt-2 text-sm leading-6 text-chrome-600">@(string.IsNullOrWhiteSpace(option.Notes) ? "No notes recorded." : option.Notes)</p>
                                             </PanelCard>
                                         }
                                     </Grid>
@@ -479,16 +479,16 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <Stack GapScale="LayoutGap.Tiny">
-                                <p class="cda-eyebrow">Project save state</p>
-                                <p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-slate-600")">@(string.IsNullOrWhiteSpace(Message) ? "Save keeps the grid in sync without leaving the page." : Message)</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Project save state</TextBlock>
+                                <p class="text-sm @(IsErrorMessage ? "text-rose-700" : "text-chrome-600")">@(string.IsNullOrWhiteSpace(Message) ? "Save keeps the grid in sync without leaving the page." : Message)</p>
                             </Stack>
 
                             <Cluster>
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Text="Back"
                                         Disabled="@(WizardStep == 0)"
                                         Click="PreviousStep" />
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Text="Next"
                                         Disabled="@(WizardStep == WizardSteps.Count - 1)"
                                         Click="NextStep" />
@@ -496,22 +496,22 @@
                                         Text="Save project"
                                         Click="@(() => openAfterSubmit = false)"
                                         Disabled="@(!SubmissionReady || !Draft.CanMutate)" data-testid="project-save-button" />
-                                <Button Type="submit" ButtonStyle="ButtonStyle.Info"
+                                <Button Type="submit" Tone="ButtonTone.Info"
                                         Text="Save and open structure" Disabled="@(!SubmissionReady || !Draft.CanMutate)" data-testid="project-save-open-button"
                                         Click="@(() => openAfterSubmit = true)" />
                                 @if (Draft.Definition.CanUndo) {
-                                    <Button Text="Undo comparison" ButtonStyle="ButtonStyle.Light" Disabled="@(!Draft.CanUndoMerge)"
+                                    <Button Text="Undo comparison" Tone="ButtonTone.Default" Disabled="@(!Draft.CanUndoMerge)"
                                             Click="UndoMerge" data-testid="project-merge-undo" />
                                     <SmallText Text="Undo is available until the next edit or Save." />
                                 }
                                 @if (Editor.Id.HasValue) {
-                                    <Button ButtonStyle="ButtonStyle.Light"
+                                    <Button Tone="ButtonTone.Default"
                                             Text="Open dashboard tab"
                                             Click="OpenProjectDashboard" />
-                                    <Button ButtonStyle="ButtonStyle.Light"
+                                    <Button Tone="ButtonTone.Default"
                                             Text="Open processes"
                                             Click="OpenProcesses" />
-                                    <Button ButtonStyle="ButtonStyle.Danger"
+                                    <Button Tone="ButtonTone.Danger"
                                             Text="Delete"
                                             Click="Delete"
                                             Disabled="@(!Draft.CanMutate)" data-testid="project-delete-button" />
@@ -526,12 +526,12 @@
                                AlignItems="AlignItems.Center"
                                JustifyContent="JustifyContent.SpaceBetween">
                             <Stack GapScale="LayoutGap.Tiny">
-                                <p class="cda-eyebrow">Project dashboard</p>
-                                <p class="text-sm text-slate-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Project dashboard</TextBlock>
+                                <p class="text-sm text-chrome-600">Use the modal to inspect and decide. Use tabs only when you want the project overview or a deeper work surface to stay open alongside other work.</p>
                             </Stack>
 
                             <Cluster>
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Text="Edit project"
                                         Click="SwitchToEditor" />
                                 <Button Text="Open dashboard tab"

@@ -33,7 +33,7 @@
         <DetailHeader>
             <div class="agent-capabilities-panel__detail-header">
                 <Stack Gap="0.25rem" Class="agent-capabilities-panel__detail-title">
-                    <p class="cda-eyebrow">Capability assignment</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Capability assignment</TextBlock>
                     <h2 class="agent-capabilities-panel__heading">@(LoadState == AgentCapabilitiesLoadState.Loading ? "Loading capabilities" : selectedAgent?.Name ?? "Select an agent")</h2>
                 </Stack>
 
@@ -83,21 +83,21 @@
                     <Button Text="New tool"
                             Icon="build"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(isBusy || isOpeningCapabilityWizard)"
                             Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Tool))"
                             data-testid="agents-capability-new-tool" />
                     <Button Text="New MCP"
                             Icon="hub"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(isBusy || isOpeningCapabilityWizard)"
                             Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.McpServer))"
                             data-testid="agents-capability-new-mcp" />
                     <Button Text="New skill"
                             Icon="psychology"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(isBusy || isOpeningCapabilityWizard)"
                             Click="@(() => OpenCapabilityWizardAsync(CapabilityKind.Skill))"
                             data-testid="agents-capability-new-skill" />
@@ -174,20 +174,16 @@
                     <FormSection Title="Access preview"
                                  Description="Validate one capability access rule against the selected agent capability set before changing runtime policy templates.">
                         <Grid Gap="LayoutGap.Large" ColumnsLg="5">
-                            <div>
-                                <label class="cda-field-label">Effect</label>
-                                <InputSelect @bind-Value="accessRuleEffect"
-                                             class="cda-input"
+                            <FormField Text="Effect">
+                                <SelectInput @bind-Value="accessRuleEffect"
                                              data-testid="agents-capability-access-effect">
                                     <option value="@AccessEffect.Deny">Deny</option>
                                     <option value="@AccessEffect.Allow">Allow</option>
                                     <option value="@AccessEffect.Require">Require</option>
-                                </InputSelect>
-                            </div>
-                            <div>
-                                <label class="cda-field-label">Scope</label>
-                                <InputSelect @bind-Value="accessRuleScope"
-                                             class="cda-input"
+                                </SelectInput>
+                            </FormField>
+                            <FormField Text="Scope">
+                                <SelectInput @bind-Value="accessRuleScope"
                                              data-testid="agents-capability-access-scope">
                                     <option value="@AccessScope.UiPreview">UI preview</option>
                                     <option value="@AccessScope.AgentDefault">Agent default</option>
@@ -195,12 +191,10 @@
                                     <option value="@AccessScope.WorkflowNode">Workflow node</option>
                                     <option value="@AccessScope.ProcessDefinition">Process definition</option>
                                     <option value="@AccessScope.ProcessStep">Process step</option>
-                                </InputSelect>
-                            </div>
-                            <div>
-                                <label class="cda-field-label">Selector</label>
-                                <InputSelect @bind-Value="accessRuleSelectorKind"
-                                             class="cda-input"
+                                </SelectInput>
+                            </FormField>
+                            <FormField Text="Selector">
+                                <SelectInput @bind-Value="accessRuleSelectorKind"
                                              data-testid="agents-capability-access-selector">
                                     <option value="@SelectorKind.All">All</option>
                                     <option value="@SelectorKind.Kind">Kind</option>
@@ -211,33 +205,27 @@
                                     <option value="@SelectorKind.McpServerKey">MCP server key</option>
                                     <option value="@SelectorKind.McpToolName">MCP tool name</option>
                                     <option value="@SelectorKind.ImplementationKey">Implementation key</option>
-                                </InputSelect>
-                            </div>
-                            <div>
-                                <label class="cda-field-label">Value</label>
-                                <InputText @bind-Value="accessRuleSelectorValue"
-                                           class="cda-input"
+                                </SelectInput>
+                            </FormField>
+                            <FormField Text="Value">
+                                <TextInput @bind-Value="accessRuleSelectorValue"
                                            data-testid="agents-capability-access-value" />
-                            </div>
-                            <div>
-                                <label class="cda-field-label">MCP server key</label>
-                                <InputText @bind-Value="accessRuleSelectorServerKey"
-                                           class="cda-input"
+                            </FormField>
+                            <FormField Text="MCP server key">
+                                <TextInput @bind-Value="accessRuleSelectorServerKey"
                                            data-testid="agents-capability-access-server-key" />
-                            </div>
+                            </FormField>
                         </Grid>
 
                         <Grid Gap="LayoutGap.Large" ColumnsLg="2">
-                            <div>
-                                <label class="cda-field-label">Reason</label>
-                                <InputText @bind-Value="accessRuleReason"
-                                           class="cda-input"
+                            <FormField Text="Reason">
+                                <TextInput @bind-Value="accessRuleReason"
                                            data-testid="agents-capability-access-reason" />
-                            </div>
+                            </FormField>
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.End">
                                 <Button Text="Preview access"
                                         Icon="policy"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Disabled="@isAccessPreviewBusy"
                                         IsBusy="@isAccessPreviewBusy"
                                         Click="PreviewAccessAsync"
@@ -256,9 +244,9 @@
                                 <Stack GapScale="LayoutGap.Small">
                                     @foreach (var issue in accessPreviewResult.ValidationIssues.Take(4)) {
                                         <div>
-                                            <p class="cda-field-label">@issue.Label</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption">@issue.Label</TextBlock>
                                             <p>@issue.Message</p>
-                                            <p class="cda-body-muted">@issue.RepairHint</p>
+                                            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">@issue.RepairHint</TextBlock>
                                         </div>
                                     }
                                 </Stack>
@@ -269,9 +257,9 @@
                                 <Stack GapScale="LayoutGap.Small">
                                     @foreach (var diagnostic in accessPreviewResult.Diagnostics.Take(4)) {
                                         <div>
-                                            <p class="cda-field-label">@diagnostic.Label</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption">@diagnostic.Label</TextBlock>
                                             <p>@diagnostic.Message</p>
-                                            <p class="cda-body-muted">@diagnostic.RepairHint</p>
+                                            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">@diagnostic.RepairHint</TextBlock>
                                         </div>
                                     }
                                 </Stack>
@@ -283,7 +271,7 @@
                         <div class="agent-capabilities-panel__filters">
                             <input @bind="capabilitySearch"
                                    @bind:event="oninput"
-                                   class="cda-input agent-capabilities-panel__filter-input"
+                                   class="form-input ui-input ui-input--outlined agent-capabilities-panel__filter-input"
                                    placeholder="Search capabilities"
                                    data-testid="agents-capability-search" />
                             <TagEditor Value="@capabilityTagFilters"
@@ -293,23 +281,23 @@
                                        MaxTags="6"
                                        TestId="agents-capability-tag-filter"
                                        InputTestId="agents-capability-tag-filter-input" />
-                            <InputSelect @bind-Value="assignmentFilter"
-                                         class="cda-input agent-capabilities-panel__filter-select"
+                            <SelectInput @bind-Value="assignmentFilter"
+                                         class="form-input ui-input ui-input--outlined agent-capabilities-panel__filter-select"
                                          data-testid="agents-capability-assignment-filter">
                                 <option value="@CapabilityAssignmentFilter.All">All</option>
                                 <option value="@CapabilityAssignmentFilter.Assigned">Assigned</option>
                                 <option value="@CapabilityAssignmentFilter.NotAssigned">Not Assigned</option>
-                            </InputSelect>
-                            <InputSelect @bind-Value="typeFilter"
-                                         class="cda-input agent-capabilities-panel__filter-select"
+                            </SelectInput>
+                            <SelectInput @bind-Value="typeFilter"
+                                         class="form-input ui-input ui-input--outlined agent-capabilities-panel__filter-select"
                                          data-testid="agents-capability-type-filter">
                                 <option value="@CapabilityTypeFilter.All">All</option>
                                 <option value="@CapabilityTypeFilter.Mcp">MCP</option>
                                 <option value="@CapabilityTypeFilter.Skill">Skill</option>
                                 <option value="@CapabilityTypeFilter.Tool">Tool</option>
-                            </InputSelect>
+                            </SelectInput>
                             <Button Text="Reset"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="ResetCapabilityFilters" />
                         </div>

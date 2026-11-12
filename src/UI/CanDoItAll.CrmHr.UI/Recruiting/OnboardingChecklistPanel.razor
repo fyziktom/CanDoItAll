@@ -13,8 +13,8 @@
             <SurfaceCard>
                 <EditForm @key="SupportDraft" EditContext="supportContext" OnValidSubmit="SubmitSupportAsync" data-testid="crmhr-recruiting-support-form">
                 <ValidationSummary />
-                <p class="cda-eyebrow">Support network</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Manager, buddy, and mentor</h3>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Support network</TextBlock>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Manager, buddy, and mentor</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                     <PartyPicker Label="Manager"
@@ -47,7 +47,7 @@
                 </Cluster>
 
                 <div class="mt-5">
-                    <p class="cda-eyebrow">Current assignments</p>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Current assignments</TextBlock>
                     <Cluster Gap="LayoutGap.Small" Class="mt-2">
                         <StatusBadge Tone="primary"
                                      Text="@BuildSupportBadge("Manager", CurrentAssignments.ManagerName)" />
@@ -63,34 +63,34 @@
             <SurfaceCard Soft="true">
                 <EditForm @key="TaskDraft" EditContext="taskContext" OnValidSubmit="SubmitTaskAsync" data-testid="crmhr-recruiting-task-form">
                 <ValidationSummary />
-                <p class="cda-eyebrow">Checklist item</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Training or lifecycle task</h3>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Checklist item</TextBlock>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Training or lifecycle task</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Task kind">
-                        <InputSelect @bind-Value="TaskDraft.TaskKind" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Kind))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="TaskDraft.TaskKind" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Kind))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-recruiting-task-kind">
                             @foreach (var taskKind in Enum.GetValues<LifecycleTaskKind>()) {
                                 <option value="@taskKind">@taskKind</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Status">
-                        <InputSelect @bind-Value="TaskDraft.Status" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Status))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="TaskDraft.Status" @bind-Value:after="@(() => TaskInputAsync(RecruitmentTaskField.Status))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-recruiting-task-status">
                             @foreach (var status in Enum.GetValues<LifecycleTaskStatus>()) {
                                 <option value="@status">@status</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Title">
                         <NativeValueInput TValue="string" @bind-Value="TaskDraft.Title" PendingChanged="@(_ => TaskTextAsync(RecruitmentTaskField.Title))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-recruiting-task-title" />
                     </FormField>
                     <PartyPicker Label="Owner"
@@ -105,7 +105,7 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Due date">
                         <NativeValueInput TValue="DateOnly?" DisplayName="Task due date" @bind-Value="TaskDraft.DueDate" PendingChanged="@(pending => TaskInputAsync(RecruitmentTaskField.DueDate, pending))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-recruiting-task-due-date" />
                     </FormField>
                     <ProjectPicker Label="Related project"
@@ -118,7 +118,7 @@
                 <div class="mt-4">
                     <FormField Text="Notes">
                         <NativeValueInput TValue="string" Multiline="true" @bind-Value="TaskDraft.Notes" PendingChanged="@(_ => TaskTextAsync(RecruitmentTaskField.Notes))"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                       class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-recruiting-task-notes" />
                     </FormField>
                 </div>
@@ -128,7 +128,7 @@
                             Type="submit" Disabled="@TaskSaveDisabled"
                             data-testid="crmhr-recruiting-task-save-button" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="ResetTask" Disabled="@WritesDisabled"
                             data-testid="crmhr-recruiting-task-reset-button" />
                 </Cluster>
@@ -137,8 +137,8 @@
         </Grid>
 
         <SurfaceCard Soft="true" Class="mt-6">
-            <p class="cda-eyebrow">Lifecycle board</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">@Tasks.Count task(s)</h3>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Lifecycle board</TextBlock>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Tasks.Count task(s)</h3>
 
             @if (Tasks.Count == 0) {
                 <div class="mt-4">
@@ -155,17 +155,17 @@
                                    AlignItems="AlignItems.Start"
                                    JustifyContent="JustifyContent.SpaceBetween">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@item.Title</p>
-                                    <p class="text-sm text-slate-600">@BuildTaskMeta(item)</p>
+                                    <p class="text-base font-semibold text-chrome-950">@item.Title</p>
+                                    <p class="text-sm text-chrome-600">@BuildTaskMeta(item)</p>
                                     @if (!string.IsNullOrWhiteSpace(item.Notes)) {
-                                        <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Notes</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small">
                                     <StatusBadge Tone="@ResolveTaskTone(item)"
                                                  Text="@item.Status.ToString()" />
                                     <Button Text="Delete"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Size="ButtonSize.Small"
                                             Click="@(() => DeleteTask.InvokeAsync(item))" Disabled="@WritesDisabled"
                                             data-testid="crmhr-recruiting-task-delete-button" />

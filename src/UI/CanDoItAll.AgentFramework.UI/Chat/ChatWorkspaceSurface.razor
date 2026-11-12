@@ -15,7 +15,7 @@
         <ConversationHeader Presentation="@HeaderPresentation" Compact="Compact" ContextContent="@HeaderContext">
             <Actions>
                 @if (Compact) {
-                    <Button Icon="info" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                    <Button Icon="info" Tone="ButtonTone.Default" Size="ButtonSize.Small"
                             Click="@(() => detailsOpen = true)" aria-label="Conversation details" title="Conversation details"
                             data-testid="chat-conversation-details" />
                 }
@@ -120,13 +120,13 @@
 
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                             <Button Text="Approve"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, true) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Tone="@(IsApprovalChoice(approvalId, true) ? ButtonTone.Primary : ButtonTone.Default)"
                                                     Size="ButtonSize.Small"
                                                     Disabled="@IsBusy"
                                                     Click="@(() => SetApprovalChoice(approvalId, true))"
                                                     data-testid="@($"chat-approval-approve-{approvalId}")" />
                                             <Button Text="Reject"
-                                                    ButtonStyle="@(IsApprovalChoice(approvalId, false) ? ButtonStyle.Primary : ButtonStyle.Light)"
+                                                    Tone="@(IsApprovalChoice(approvalId, false) ? ButtonTone.Primary : ButtonTone.Default)"
                                                     Size="ButtonSize.Small"
                                                     Disabled="@IsBusy"
                                                     Click="@(() => SetApprovalChoice(approvalId, false))"
@@ -165,7 +165,7 @@
                     @ComposerActions
                     @AttachmentPicker
                     <Button Icon="add"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@IsBusy"
                             Class="chat-composer__icon-button"
@@ -176,7 +176,7 @@
             </LeadingActions>
             <TrailingActions>
                     <Button Icon="@(IsVoiceRecording ? "stop" : "mic")"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(IsVoiceModeEnabled ? ButtonTone.Primary : ButtonTone.Default)"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceTranscribing || HasPendingApprovals)"
                             IsBusy="@IsVoiceTranscribing"
@@ -186,7 +186,7 @@
                             title="@ResolveVoiceRecordingLabel()"
                             data-testid="chat-voice-record-button" />
                     <Button Icon="volume_up"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy || IsVoiceSpeaking)"
                             IsBusy="@IsVoiceSpeaking"
@@ -196,7 +196,7 @@
                             title="Speak latest assistant message"
                             data-testid="chat-voice-speak-button" />
                     <Button Icon="hearing"
-                            ButtonStyle="@(IsVoiceModeEnabled ? ButtonStyle.Primary : ButtonStyle.Light)"
+                            Tone="@(IsVoiceModeEnabled ? ButtonTone.Primary : ButtonTone.Default)"
                             Size="ButtonSize.Small"
                             Disabled="@(!CanUseVoiceMode || IsBusy)"
                             Class="chat-composer__icon-button"
@@ -218,10 +218,10 @@
 
                     @foreach (var attachmentPath in DraftAttachmentPaths) {
                         <div class="flex items-start justify-between gap-3 rounded-[1rem] border border-emerald-200 bg-white/75 px-3 py-2">
-                            <p class="min-w-0 flex-1 text-sm leading-6 text-slate-700" style="overflow-wrap:anywhere;">@attachmentPath</p>
+                            <p class="min-w-0 flex-1 text-sm leading-6 text-chrome-700" style="overflow-wrap:anywhere;">@attachmentPath</p>
                             <CopyButton Value="@attachmentPath"
                                         DisplayMode="CopyButtonDisplayMode.IconOnly"
-                                        Size="CopyButtonSize.ExtraSmall"
+                                        Size="CopyButtonSize.Small"
                                         AriaLabel="Copy staged attachment path" />
                         </div>
                     }
@@ -247,13 +247,13 @@
                                 data-testid="chat-approve-conversation-button" />
                     }
                     <Button Text="@(PendingApprovals.Count > 1 ? "Approve all once" : "Approve once")"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@IsBusy"
                             IsBusy="@IsBusy"
                             Click="@(() => SubmitUniformDecisionAsync(true))"
                             data-testid="chat-approve-once-button" />
                     <Button Text="@(PendingApprovals.Count > 1 ? "Reject all and continue" : "Reject and continue")"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@IsBusy"
                             Click="@(() => SubmitUniformDecisionAsync(false))"
                             data-testid="chat-reject-button" />

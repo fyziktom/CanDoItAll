@@ -196,7 +196,7 @@ public sealed class ProcessShellSmokeTests : IAsyncLifetime {
         await page.GetByTestId("processes-template-library-search-submit").ClickAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-template-library-preview"), "AI-assisted");
         await page.GetByTestId("processes-template-library-category-processes").ClickAsync();
-        var selectedStyle = new Regex(@"\bcda-button--tone-primary\b");
+        var selectedStyle = new Regex(@"\bui-button--tone-primary\b");
         await Assertions.Expect(page.GetByTestId("processes-template-library-category-processes")).ToHaveClassAsync(selectedStyle);
         var templateItem = page.GetByTestId("processes-template-library-item-process-ai-assisted-change-delivery");
         await templateItem.WaitForAsync();

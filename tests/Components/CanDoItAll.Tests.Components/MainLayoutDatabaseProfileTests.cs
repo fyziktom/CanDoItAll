@@ -44,7 +44,7 @@ public sealed class MainLayoutDatabaseProfileTests
             var activeTabButton = cut.Find("button[role='tab'][aria-selected='true']");
             Assert.Contains("Dashboard", activeTabButton.TextContent, StringComparison.Ordinal);
             Assert.Equal("page", activeTabButton.GetAttribute("aria-current"));
-            Assert.Contains("cda-inline-tab--active", activeTabButton.ParentElement?.ClassName ?? string.Empty, StringComparison.Ordinal);
+            Assert.Contains("app-inline-tab--active", activeTabButton.ParentElement?.ClassName ?? string.Empty, StringComparison.Ordinal);
         });
     }
 

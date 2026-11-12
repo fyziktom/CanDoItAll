@@ -4,24 +4,24 @@
 <Stack Class="p-4" GapScale="LayoutGap.Medium">
     <FormSection Title="Workspace Settings Core scenarios" Description="Synthetic data only. Data Sources, Storage and API Access remain outside this sandbox.">
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+            <SelectInput @bind-Value="scenario" aria-label="Scenario">
                 @foreach (var value in Enum.GetValues<WorkspaceScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Reset scenario" Click="ResetAsync" data-testid="scenario-reset" />
-            <InputSelect @bind-Value="operation" aria-label="Operation">
+            <SelectInput @bind-Value="operation" aria-label="Operation">
                 @foreach (var value in Enum.GetValues<WorkspaceOperation>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Hold next operation" Click="Hold" Disabled="@(held is not null)" />
             <Button Text="Release operation" Click="Release" Disabled="@(held is null)" />
-            <InputSelect @bind-Value="fault" aria-label="Next outcome">
+            <SelectInput @bind-Value="fault" aria-label="Next outcome">
                 @foreach (var value in Enum.GetValues<WorkspaceFault>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Set next outcome" Click="() => store.FaultNext(operation, fault)" />
             <Button Text="Retire profile and authority" Click="Retire" />
         </Cluster>

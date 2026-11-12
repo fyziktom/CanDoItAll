@@ -25,6 +25,8 @@
 @inject ProjectsService ProjectsService
 @inject IConversationShellLauncher ConversationShellLauncher
 @inject IJSRuntime JS
+@inject AppThemeState ThemeState
+@inject AppToolbarState ToolbarState
 
 <AppShell NavigationItems="@NavigationItems"
           Mode="ShellMode"
@@ -38,8 +40,6 @@
           OpenedProjects="OpenedProjectTabs"
           OpenedSessions="OpenedPromptTabs"
           ActiveTabId="@Workbench.ActiveTabId"
-          ProjectContextTitle="@ActiveProjectTitle"
-          PhaseContextTitle="@ActivePhaseTitle"
           SelectWorkspace="HandleSelectWorkspaceAsync"
           Navigate="HandleNavigateAsync"
           OpenWorkbenchItem="HandleOpenWorkbenchItemAsync"
@@ -84,13 +84,25 @@
     </TopBar>
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
-        @if (databaseDialogStartupMode && databaseDialogOpen) {
-            <EmptyState Eyebrow="Database startup"
-                        Title="Continue with the active database to load the workspace"
-                        Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
-        } else {
-            @Body
-        }
+        <AppToolbar PageText="@ActiveNavigation.Title" ContextText="@ActiveProjectContextText" />
+        <AppToolbarOutlet Kind="AppToolbarOutletKind.Stats" />
+        <div class="@(ShellMode == AppShellMode.StandardPage ? "app-page-content" : null)">
+            <AppToolbarOutlet Kind="AppToolbarOutletKind.Help" />
+            @if (databaseDialogStartupMode && databaseDialogOpen)
+            {
+                <EmptyState Eyebrow="Database startup"
+                            Title="Continue with the active database to load the workspace"
+                            Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
+            }
+            else
+            {
+                <div class="app-page-body">
+                    <CascadingValue TValue="IPageHeaderOutlet" Value="ToolbarState" IsFixed="true">
+                        @Body
+                    </CascadingValue>
+                </div>
+            }
+        </div>
     </Body>
 </AppShell>
 

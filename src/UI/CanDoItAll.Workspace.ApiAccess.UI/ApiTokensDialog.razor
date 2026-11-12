@@ -7,10 +7,10 @@
         <Stack GapScale="LayoutGap.Medium">
             <Alert AlertStyle="AlertStyle.Info">Only tokens created after token tracking was introduced are listed. Older tokens remain valid until expiry and cannot be recovered into this list.</Alert>
             <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Small">
-                <TextBox @bind-Value="Controller.Page.DesiredSearch" Immediate="true" Class="min-w-0 flex-1" Placeholder="Search name, subject, ID or scope"
+                <TextInput @bind-Value="Controller.Page.DesiredSearch" Immediate="true" Class="min-w-0 flex-1" Placeholder="Search name, subject, ID or scope"
                          aria-label="Search issued tokens" @onkeydown="OnSearchKeyAsync" data-testid="api-tokens-search" />
-                <Button Text="Search" Icon="search" ButtonStyle="ButtonStyle.Light" Click="Controller.Page.SearchAsync" data-testid="api-tokens-search-submit" />
-                <Button Icon="refresh" aria-label="Refresh tokens" title="Refresh tokens" ButtonStyle="ButtonStyle.Light" Click="Controller.Page.RefreshAsync" />
+                <Button Text="Search" Icon="search" Tone="ButtonTone.Default" Click="Controller.Page.SearchAsync" data-testid="api-tokens-search-submit" />
+                <Button Icon="refresh" aria-label="Refresh tokens" title="Refresh tokens" Tone="ButtonTone.Default" Click="Controller.Page.RefreshAsync" />
             </Cluster>
             @if (Controller.Page.Error is { } error) {
                 <Alert AlertStyle="AlertStyle.Danger" data-testid="api-tokens-error">@error</Alert>
@@ -22,7 +22,7 @@
                 <Alert AlertStyle="@(outcome.IsCommitted ? AlertStyle.Success : AlertStyle.Warning)" data-testid="api-tokens-outcome">
                     @ApiOutcomeText.Describe(outcome)
                     @if (outcome.State == ApiWriteState.Unknown) {
-                        <Button Text="Observe exact identity" Click="Controller.ObserveAsync" ButtonStyle="ButtonStyle.Light" />
+                        <Button Text="Observe exact identity" Click="Controller.ObserveAsync" Tone="ButtonTone.Default" />
                     }
                 </Alert>
             }
@@ -56,19 +56,19 @@
                         </DataGridColumn>
                         <DataGridColumn TItem="ApiTokenMetadata" Title="Actions">
                             <Template Context="token"><Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
-                                <Button Text="Revoke" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small" Disabled="@(!Controller.CanAct(token, ApiWriteAction.RevokeToken))"
+                                <Button Text="Revoke" Tone="ButtonTone.Warning" Size="ButtonSize.Small" Disabled="@(!Controller.CanAct(token, ApiWriteAction.RevokeToken))"
                                         Click="() => Controller.Confirm(token, ApiWriteAction.RevokeToken)" data-testid="api-token-revoke" />
-                                <Button Icon="delete" title="Delete token" aria-label="@($"Delete token {token.DisplayName}")" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                                <Button Icon="delete" title="Delete token" aria-label="@($"Delete token {token.DisplayName}")" Tone="ButtonTone.Danger" Size="ButtonSize.Small"
                                         Disabled="@(!Controller.CanAct(token, ApiWriteAction.DeleteToken))" Click="() => Controller.Confirm(token, ApiWriteAction.DeleteToken)" data-testid="api-token-delete" />
                             </Cluster></Template>
                         </DataGridColumn>
                     </Columns>
                 </DataGrid>
                 <Cluster JustifyContent="JustifyContent.SpaceBetween">
-                    <span class="cda-body-muted" data-testid="api-tokens-page">@(page.TotalCount) token(s) · Page @(Controller.Page.AcceptedQuery!.Offset / ApiPageQuery.PageSize + 1) · Search “@Controller.Page.AcceptedQuery.Search”</span>
+                    <span class="cda-text-block cda-text-block--muted leading-5" data-testid="api-tokens-page">@(page.TotalCount) token(s) · Page @(Controller.Page.AcceptedQuery!.Offset / ApiPageQuery.PageSize + 1) · Search “@Controller.Page.AcceptedQuery.Search”</span>
                     <Cluster Gap="LayoutGap.Tiny">
-                        <Button Icon="chevron_left" aria-label="Previous token page" title="Previous page" ButtonStyle="ButtonStyle.Light" Disabled="@(!Controller.Page.CanPrevious)" Click="Controller.Page.PreviousAsync" />
-                        <Button Icon="chevron_right" aria-label="Next token page" title="Next page" ButtonStyle="ButtonStyle.Light" Disabled="@(!Controller.Page.CanNext)" Click="Controller.Page.NextAsync" />
+                        <Button Icon="chevron_left" aria-label="Previous token page" title="Previous page" Tone="ButtonTone.Default" Disabled="@(!Controller.Page.CanPrevious)" Click="Controller.Page.PreviousAsync" />
+                        <Button Icon="chevron_right" aria-label="Next token page" title="Next page" Tone="ButtonTone.Default" Disabled="@(!Controller.Page.CanNext)" Click="Controller.Page.NextAsync" />
                     </Cluster>
                 </Cluster>
             } else {
@@ -76,18 +76,18 @@
             }
         </Stack>
     </ChildContent>
-    <Footer><Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" /></Footer>
+    <Footer><Button Text="Close" Tone="ButtonTone.Default" Click="OnClose" /></Footer>
 </Dialog>
 @if (Controller.Confirmation is { } confirmation) {
     <Dialog @key="confirmation.Origin" IsOpen="true" Title="@(confirmation.Action == ApiWriteAction.RevokeToken ? "Revoke this token?" : "Delete this token?")"
             Subtitle="@confirmation.Token.DisplayName" Size="ModalSize.Compact" OnClose="() => Controller.CancelConfirmation(confirmation.Origin)" TestId="api-token-confirmation">
         <ChildContent>
             <p>@(confirmation.Action == ApiWriteAction.RevokeToken ? "New API requests using this token will be rejected. The record remains for review." : "The metadata record will be removed and this token will no longer be accepted. This cannot be undone.")</p>
-            <p class="cda-body-muted break-all">@confirmation.Token.Id · @confirmation.Token.Kind</p>
+            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 break-all">@confirmation.Token.Id · @confirmation.Token.Kind</TextBlock>
         </ChildContent>
         <Footer><Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="() => Controller.CancelConfirmation(confirmation.Origin)" />
-            <Button Text="@(confirmation.Action == ApiWriteAction.RevokeToken ? "Revoke token" : "Delete token")" ButtonStyle="ButtonStyle.Danger"
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="() => Controller.CancelConfirmation(confirmation.Origin)" />
+            <Button Text="@(confirmation.Action == ApiWriteAction.RevokeToken ? "Revoke token" : "Delete token")" Tone="ButtonTone.Danger"
                     Click="() => Controller.ApplyAsync(confirmation.Origin)" Disabled="Controller.ConfirmationBlocked" data-testid="api-token-confirm" />
         </Cluster></Footer>
     </Dialog>

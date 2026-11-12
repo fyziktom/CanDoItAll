@@ -21,7 +21,7 @@
                             <span>@owner.Source.Kind · @owner.Source.Owner.Value · @owner.Source.Evidence.Value</span>
                             <StatusBadge Text="@($"{owner.Role} · {owner.State}")" />
                             @if (owner.CanReadContent) {
-                                <Button Text="Load linked content" ButtonStyle="ButtonStyle.Light" Disabled="@isLoading"
+                                <Button Text="Load linked content" Tone="ButtonTone.Default" Disabled="@isLoading"
                                         Click="@(() => LoadContentAsync(renderedOrigin, loaded, owner.Source))" data-testid="history-owner-content" />
                             }
                         </Cluster>
@@ -34,7 +34,7 @@
                     }
                 </FormSection>
                 @if (loaded.Entry.MetadataAuthority == HistoryMetadataAuthority.Standalone) {
-                    <Button Text="Load captured content" ButtonStyle="ButtonStyle.Light" Disabled="@isLoading"
+                    <Button Text="Load captured content" Tone="ButtonTone.Default" Disabled="@isLoading"
                             Click="@(() => LoadContentAsync(renderedOrigin, loaded, null))" data-testid="history-load-content" />
                 }
                 <p>Content loads on request in a separate read-only dialog. API keys are never included.</p>
@@ -44,7 +44,7 @@
         </Stack>
     </ChildContent>
     <Footer>
-        <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => CloseAsync(renderedOrigin))" data-testid="history-detail-close" />
+        <Button Text="Close" Tone="ButtonTone.Default" Click="@(() => CloseAsync(renderedOrigin))" data-testid="history-detail-close" />
     </Footer>
 </Dialog>
 

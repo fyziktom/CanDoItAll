@@ -71,6 +71,8 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.Services.AddAgentFrameworkUi();
             context.Services.AddSingleton<CanDoItAll.Editing.IEditingUiAccess>(new EditingUiTestAccess());
             context.Services.AddScoped<TuningCoordinator>();
+            context.Services.AddScoped<AppToolbarState>();
+            context.Services.AddScoped<AppThemeState>();
             context.Services.AddHttpClient<DevelopmentManagerClient>();
             context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();
             context.Services.AddSingleton(services => (IProjectPendingReferenceStore)services.GetRequiredService<IProjectPendingSubmissionStore>());
