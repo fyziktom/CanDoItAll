@@ -1,26 +1,25 @@
 .process-role-card-grid {
     display: grid;
     gap: 0.85rem;
-    grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
 }
 
 .process-role-card {
     align-items: stretch;
-    aspect-ratio: 1 / 1;
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
     display: grid;
     gap: 0.7rem;
-    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-rows: 1fr auto auto;
     min-width: 0;
     padding: 1rem;
     text-align: center;
 }
 
 .process-role-card__identity {
-    align-content: center;
+    align-content: start;
     display: grid;
     gap: 0.45rem;
     justify-items: center;
@@ -30,10 +29,10 @@
 
 .process-role-card__icon {
     align-items: center;
-    background: #e0f2fe;
-    border: 1px solid rgba(14, 165, 233, 0.24);
+    background: var(--tone-info-soft-bg);
+    border: 1px solid var(--tone-info-soft-border);
     border-radius: 999px;
-    color: #0369a1;
+    color: var(--tone-info-soft-fg);
     display: inline-flex;
     font-size: 1.75rem;
     height: 3.15rem;
@@ -47,7 +46,7 @@
 }
 
 .process-role-card__title {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     font-weight: 750;
     line-height: 1.25;
@@ -58,7 +57,7 @@
 .process-role-card__summary {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-    color: #64748b;
+    color: var(--tone-text-muted);
     display: -webkit-box;
     font-size: 0.75rem;
     line-height: 1.35;
@@ -66,11 +65,11 @@
     overflow: hidden;
 }
 
-.process-role-card__badges {
+.process-role-card ::deep .process-role-card__badges {
     justify-content: center;
 }
 
-.process-role-card__details {
+.process-role-card ::deep .process-role-card__details {
     justify-content: center;
     width: 100%;
 }

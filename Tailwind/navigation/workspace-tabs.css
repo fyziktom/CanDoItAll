@@ -22,7 +22,7 @@
   }
 
   .app-inline-tab {
-    @apply relative inline-flex h-9 w-56 shrink-0 items-center gap-2 rounded-md border border-transparent px-3 text-sm text-chrome-700;
+    @apply inline-flex h-9 w-56 shrink-0 items-center gap-1 rounded-md border border-transparent pr-1 text-sm text-chrome-700;
   }
 
   .app-inline-tab--active {
@@ -34,21 +34,16 @@
     @apply hover:border-chrome-300 hover:bg-chrome-200;
   }
 
-  .app-inline-tab > button:first-child {
-    @apply h-full w-full min-w-0 cursor-pointer;
+  .app-inline-tab__activate {
+    @apply inline-flex h-full min-w-0 flex-1 cursor-pointer items-center gap-1.5 pl-3 text-left;
   }
 
   .app-inline-tab__actions {
-    @apply absolute right-1 hidden items-center rounded border border-chrome-300 bg-chrome-50;
-  }
-
-  .app-inline-tab:hover .app-inline-tab__actions,
-  .app-inline-tab:focus-within .app-inline-tab__actions {
-    display: inline-flex;
+    @apply inline-flex shrink-0 items-center gap-0.5;
   }
 
   .app-inline-tab__action {
-    @apply inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-chrome-600 hover:bg-chrome-200 hover:text-chrome-950;
+    @apply inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded text-chrome-600 hover:bg-chrome-200 hover:text-chrome-950 disabled:cursor-wait disabled:opacity-50;
   }
 
   .app-tab-search {

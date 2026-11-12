@@ -6436,7 +6436,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
-      "sha256_lf": "fab0df263317cec8d97ac1dbff34c8c525a4f41acf98e132ee1602898061f7ba",
+      "sha256_lf": "0fea8062ab4fa0f06d29b1249526ecf9cd3bef156c2c18b0444acbaa37e73449",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6461,7 +6461,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Routes select this layout. It owns startup routed-body admission, navigation/tabs, current workspace context, browser notifications and native conversation composition. Database dialog, flyout/utilities and status presentation now use the light application leaves; native profile admissions remain in existing partials. Supplies the optional PageHeader outlet only to the routed body while independently rendering toolbar/help/statistics; feature lifecycle and domain ownership remain native."
+      "rationale": "Routes select this layout. It owns startup routed-body admission, navigation/tabs, current workspace context, browser notifications and native conversation composition. Database dialog, flyout/utilities and status presentation now use the light application leaves; native profile admissions remain in existing partials. Supplies the optional PageHeader outlet only to the routed body while independently rendering toolbar/help/statistics; feature lifecycle and domain ownership remain native. Flex sizing propagates the bounded viewport to app-page-body while toolbar/help/statistics retain their own height; focused workbenches keep their inner surface."
     },
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/ReconnectModal.razor",
@@ -6767,7 +6767,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
       "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
-      "sha256_lf": "b54a2ecff2c7208ac0dbeb3a736a8bdd5b53a9d883925b81c7f5bdcf26b905b2",
+      "sha256_lf": "d4f0f29dae6df32dc6cfc90f0a32769633c99f2313cc02ab027ed51a91f993db",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -27790,7 +27790,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor.css",
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor.css",
-      "sha256_lf": "c45eee11ddf0afa740d7a41861aefb0bd8daee96230300d0312dc22300aedfe1",
+      "sha256_lf": "8e577a9a01fece4a70fc6c138c1aca6686e7d72a53dc478aa39e682c75c90d87",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -27805,7 +27805,7 @@
       "assets": "CanDoItAll.AppComponents.RecordBrowsing",
       "scenario": "CanDoItAll.AppComponents.RecordBrowsing",
       "evidence": "CanDoItAll.AppComponents.RecordBrowsing",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "Scoped record-browser asset uses declared theme surface, border and text tokens in light and dark modes. Existing category accents, bounded scroll geometry and component state/effect ownership are unchanged."
     },
     {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordPickerDialog.razor",
@@ -27984,7 +27984,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppShell.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppShell.razor",
-      "sha256_lf": "f842c4ee3888bd8175b048f06d7a6ddf53708c10943fde37aff7733f74ef694d",
+      "sha256_lf": "e9122e3a9243627ca5c7a23dc61a8b5d5dce802cc1f6e767617c5c42cd6673a9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppShell",
@@ -28007,7 +28007,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppTabStrip.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppTabStrip.razor",
-      "sha256_lf": "42ddb6c151a184a8bff2edbc746735bd1539712de09081b1b56ea6ea142aef33",
+      "sha256_lf": "b0848988e63a2f327e75f6f3121efc5bedefbe973dcebd505af2905792021c07",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppTabStrip",
@@ -28018,16 +28018,18 @@
       ],
       "native_owner": "Native caller owns data/effects; leaf owns local render/draft lifecycle",
       "visual_owner": "CanDoItAll.AppComponents",
-      "descendants": [],
+      "descendants": [
+        "ContextMenu"
+      ],
       "assets": "CanDoItAll.AppComponents",
       "scenario": "CanDoItAll.AppComponents",
       "evidence": "CanDoItAll.AppComponents",
-      "rationale": "Reviewed controlled workspace-tab renderer. The native caller retains tab activation, ordering, pin/sleep/close/history mutations; local search and keyboard/resize observer lifetime stay here. A single scrolling row, bounded menus and active-tab visibility preserve the content viewport."
+      "rationale": "Controlled workspace-tab renderer with separate activation, action-menu and close hit areas. Typed command names adapt to shared ContextMenu; the native caller retains tab effects. Stable keys and retired-target guards preserve menu identity; local search and browser observer lifetime remain presentation concerns. Sleep availability follows the current host capability and active-tab state; the inline indicator exposes sleeping state without moving host state into the renderer."
     },
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
-      "sha256_lf": "d57486c2eb1592d3d2c44b8ad38ae8d17c3200551400de1a0c5155bb2774cd89",
+      "sha256_lf": "83e8e1696ec5a4961dd5c79384644de8c74b3805600ead5dc6e3e558f1c7a102",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppToolbar",
@@ -28255,7 +28257,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/wwwroot/js/appTabStrip.js",
       "path": "src/UI/CanDoItAll.AppComponents/wwwroot/js/appTabStrip.js",
-      "sha256_lf": "cb14976d9dc66bd461a48ed917d6cda762b36a77b52230daa0d1b5939ff58bb6",
+      "sha256_lf": "30f2949f53dbbe370c333d8d422f8741f76c9eead4caed87401bdf7817905af7",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -28270,7 +28272,7 @@
       "assets": "CanDoItAll.AppComponents",
       "scenario": "CanDoItAll.AppComponents",
       "evidence": "CanDoItAll.AppComponents",
-      "rationale": "Scoped keyboard and ResizeObserver handlers keep the selected workspace tab visible in its horizontal strip; disposal releases handlers and does not scroll the document."
+      "rationale": "Scoped keyboard and ResizeObserver handlers keep the selected workspace tab visible and measure the workbar bottom for fixed maximized-canvas placement; disposal releases handlers and does not scroll the document."
     },
     {
       "identity": "src/UI/CanDoItAll.AppComponents/wwwroot/js/file-tools-host-actions.js",
@@ -32815,7 +32817,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionRoleEditorPanel.razor.css",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionRoleEditorPanel.razor.css",
-      "sha256_lf": "e93b0ccc5c0eff31144bc62607870120d3e15555b739646883a732e193edaaff",
+      "sha256_lf": "f313b27922dec9acdc1b0e008649a71cb26b17e77429dbd2aab9747cc64c9c47",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -32830,7 +32832,7 @@
       "assets": "CanDoItAll.Processes.UI",
       "scenario": "CanDoItAll.Processes.UI",
       "evidence": "CanDoItAll.Processes.UI",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "Scoped role-card layout uses actual pane width and content-sized rows so titles and summaries cannot overlap badges or actions. Declared semantic colors preserve light/dark readability; editor state, domain actions and dialog lifetimes remain unchanged."
     },
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessDefinitionStepEditorPanel.razor",
@@ -32997,7 +32999,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor.css",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor.css",
-      "sha256_lf": "142dd01780d2d7b903a6617b61c618cd4c231a1d683f6a5cb675f13ac2dc3b00",
+      "sha256_lf": "78b4ef5408edd4b971720d20f27efbd24002e8de5e99361fcad9825a5db08ac2",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -33012,7 +33014,7 @@
       "assets": "CanDoItAll.Processes.UI",
       "scenario": "CanDoItAll.Processes.UI",
       "evidence": "CanDoItAll.Processes.UI",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption. The reviewed UI integration uses the canonical foreground token for the selected process identity title so the existing renderer remains readable in dark and light themes; state and effect ownership are unchanged."
     },
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/_Imports.razor",
@@ -33706,7 +33708,7 @@
     {
       "identity": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor",
       "path": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor",
-      "sha256_lf": "a633aa2dc7f9f2a04c70b6a2df205475df1517c9be8c2f0adb50adf66c30091c",
+      "sha256_lf": "836da093f1c66179d84c54c71d21cdbbcce1b99f956f14f71c7a8dc4d5de5f91",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Prompts.UI.Gallery.PromptGallerySearchSurface",
@@ -33728,7 +33730,7 @@
     {
       "identity": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor.css",
       "path": "src/UI/CanDoItAll.Prompts.UI/Gallery/PromptGallerySearchSurface.razor.css",
-      "sha256_lf": "af9dbcc33bd62e01020604a2ad097e4d277ce19d7910446659cb384588e1be88",
+      "sha256_lf": "77fc38a95b9c9cf78262c8c2e74a6699c504b319875fa01a4abdbbf397a620e7",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",

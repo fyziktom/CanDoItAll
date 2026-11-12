@@ -3,7 +3,7 @@
      workbench-shell.css), so the bar sits flush against the surface edge in both StandardPage and
      FocusWorkbench mode — own horizontal padding plus a bottom margin, no breakout needed. */
   .app-toolbar {
-    @apply sticky top-0;
+    @apply sticky top-0 shrink-0;
     @apply z-[40] flex items-center justify-between gap-3 border-b border-chrome-300 bg-chrome-50 px-4 py-3;
     @apply 2xl:px-6;
   }
@@ -24,7 +24,7 @@
      toolbar (full-width rule, no card margin) rather than an inset card like HelpCard. mb-* gives
      breathing room before whatever follows (HelpCard or page content). */
   .app-stats-row {
-    @apply flex items-center justify-between gap-3;
+    @apply flex shrink-0 items-center justify-between gap-3;
     @apply border-b border-chrome-300 px-4 py-3;
   }
 
@@ -38,5 +38,5 @@
 }
 
 .help-card {
-  @apply my-4 xl:my-5 2xl:my-6;
+  @apply shrink-0 my-4 xl:my-5 2xl:my-6;
 }

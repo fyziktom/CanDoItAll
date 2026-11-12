@@ -11,9 +11,15 @@ stay in one horizontally scrolling row. The active tab is brought into view on s
 Left, Right, Home and End select within the row without scrolling the document. The
 All tabs menu and search keep long collections accessible. Pinning, ordering, sleeping,
 closing and recently closed history continue through the existing `WorkbenchStateService`.
+Each tab reserves separate space for its actions menu and close button, so hovering does
+not cover its activation target. The shared context menu provides keyboard operation,
+outside-click dismissal and focus restoration.
+The strip observes its available width and the workbar height. Maximized canvases reserve
+the measured workbar, including the project summary, instead of assuming a fixed offset.
 
-The routed body remains the page scroll owner; focused workbenches keep their own bounded
-surface. Application proof targets large desktop viewports only.
+The shell propagates its remaining height through the routed body. Ordinary content can
+scroll there; fill-height workspaces retain their internal scroll regions and visible
+pagers. Application proof targets large desktop viewports only.
 
 ## Header and theme ownership
 
@@ -31,6 +37,10 @@ Shared controls use the new `ButtonTone`, `TabsDensity`, `TextInput`, `NumberInp
 `SelectInput` and `TextAreaInput` contracts. Native draft-aware controls retain their
 pending-input and `EditContext` semantics. Application styles consume shared theme tokens;
 reusable control styling stays in Components.
+Secondary navigation and shared record cards use the theme's surface, foreground and
+border tokens so their selected and inactive states remain legible in both themes.
+Process role cards size to their containing pane and their content, keeping long role
+names, summaries and action badges separate.
 
 ## Agent identity
 
@@ -49,3 +59,12 @@ The Components MCP source-mode build describes those same contracts and proof ro
 Local validation uses affected production builds, focused shell/avatar/provider tests,
 desktop Playwright MCP journeys and screenshot inspection. The reviewed rendering register
 and `portability-static` remain required. Full .NET suites run through GitHub CI.
+
+Desktop proof covers crowded workspace tabs, search and keyboard selection, close/reopen,
+pinning and ordering, sidebar expansion, human/robot avatar selection, save/reload and
+return to the human default, nested agent dialogs, asynchronous header statistics,
+workforce filtering and pagination, project canvas maximize/restore, Gantt scale changes
+and a saved task. Prompt list/editor layouts, process role cards and floating chat draft
+closure are inspected without sending a provider request. It also checks the
+main module routes and their real screenshots at 1920×1080 and 1536×864. Test data belongs
+to an isolated PostgreSQL fixture; the ordinary application on 5032 is preserved.

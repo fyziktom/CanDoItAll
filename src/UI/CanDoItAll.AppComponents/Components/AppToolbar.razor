@@ -5,7 +5,7 @@
 
 <div class="@CssClassBuilder.Join("app-toolbar", Class)" role="banner">
     <nav class="app-toolbar__crumbs" aria-label="Breadcrumb">
-        <h1 class="app-toolbar__crumb" tabindex="-1">@PageText</h1>
+        <h1 class="app-toolbar__crumb focus:outline-none" tabindex="-1">@PageText</h1>
         @if (!string.IsNullOrWhiteSpace(ContextText))
         {
             <span aria-hidden="true">&gt;</span>

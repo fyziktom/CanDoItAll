@@ -30,10 +30,20 @@ export function observe(strip) {
         tabs[next].click();
     };
     strip.addEventListener('keydown', keydown);
-    const resize = new ResizeObserver(() => revealActive(strip));
+    const workbar = strip.closest('.app-shell-workbar');
+    const shell = workbar?.closest('.app-shell-root');
+    const resize = new ResizeObserver(() => {
+        revealActive(strip);
+        if (workbar && shell) {
+            shell.style.setProperty('--app-canvas-maximize-top-offset', `${workbar.getBoundingClientRect().bottom}px`);
+        }
+    });
     const tabs = strip.querySelector('[role="tablist"]');
     if (tabs) {
         resize.observe(tabs);
+    }
+    if (workbar) {
+        resize.observe(workbar);
     }
     observers.set(strip, { keydown, resize });
 }
@@ -51,6 +61,16 @@ export function closeMenus(strip) {
     for (const menu of strip.querySelectorAll('details[open]')) {
         menu.open = false;
     }
+}
+
+export function getMenuPosition(strip, tabId) {
+    const tab = [...strip.querySelectorAll('[data-tab-id]')].find(item => item.dataset.tabId === tabId);
+    const trigger = tab?.querySelector('.app-inline-tab__menu-trigger');
+    if (!trigger) {
+        return null;
+    }
+    const bounds = trigger.getBoundingClientRect();
+    return [bounds.left, bounds.bottom + 4];
 }
 
 export function revealActive(strip) {

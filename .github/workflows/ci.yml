@@ -33,7 +33,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: 6e41149f624033bc24abad67124b5d6e8f89dc9f
+  CANDOITALL_COMPONENTS_COMMIT: a3f28461c226d72067deeb5a4451446a5424dfbe
   CANDOITALL_FILETOOLS_COMMIT: 18b12495db92f3c1c19a81a8a0a1f2a6a0a1d73c
 
 jobs:
@@ -153,11 +153,14 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
-      - name: Select the Ubuntu archive mirror
+      - name: Use official Ubuntu sources over HTTPS
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i -E \
+            -e 's#https?://([[:alnum:]-]+\.)?archive\.ubuntu\.com/ubuntu/?#https://archive.ubuntu.com/ubuntu/#g' \
+            -e 's#https?://security\.ubuntu\.com/ubuntu/?#https://security.ubuntu.com/ubuntu/#g' \
+            /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate
@@ -394,10 +397,13 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
-      - name: Select the Ubuntu archive mirror
+      - name: Use official Ubuntu sources over HTTPS
         shell: bash
         run: |
-          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i -E \
+            -e 's#https?://([[:alnum:]-]+\.)?archive\.ubuntu\.com/ubuntu/?#https://archive.ubuntu.com/ubuntu/#g' \
+            -e 's#https?://security\.ubuntu\.com/ubuntu/?#https://security.ubuntu.com/ubuntu/#g' \
+            /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate

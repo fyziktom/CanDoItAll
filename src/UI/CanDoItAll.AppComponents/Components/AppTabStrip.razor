@@ -124,6 +124,17 @@
         </Cluster>
     </Split>
 
+    <ContextMenu IsOpen="@(MenuTab is not null)"
+                 X="@menuX"
+                 Y="@menuY"
+                 Heading="@MenuTab?.Title"
+                 AriaLabel="Workspace tab actions"
+                 Items="@TabMenuItems"
+                 ItemSelected="HandleTabCommandAsync"
+                 OnClose="CloseTabMenu"
+                 Style="background:var(--tone-surface);border-color:var(--tone-border-soft)"
+                 TestId="workspace-tab-actions-menu" />
+
     @if (ShowActiveSummary && ActiveTab is not null)
     {
         <div class="app-tab-summary">
@@ -163,12 +174,31 @@
     private IJSObjectReference? module;
     private string? revealedTabId;
     private (string Id, string Title)[] revealedTabs = [];
+    private string? menuTabId;
+    private double menuX;
+    private double menuY;
+
+    private enum TabCommand {
+        MoveLeft,
+        MoveRight,
+        TogglePin,
+        ToggleSleep,
+        CloseOthers,
+        CloseRight
+    }
+
+    protected override void OnParametersSet() {
+        if (menuTabId is not null && MenuTab is null) {
+            CloseTabMenu();
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (module is null && firstRender) {
             module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CanDoItAll.AppComponents/js/appTabStrip.js");
             if (module is not null) {
                 await module.InvokeVoidAsync("observe", stripElement);
+                StateHasChanged();
             }
         }
         var visibleTabs = FilteredTabs.Select(tab => (tab.TabId, tab.Title)).ToArray();
@@ -195,6 +225,54 @@
             await module.InvokeVoidAsync("closeMenus", stripElement);
         }
         await Activate.InvokeAsync(tabId);
+    }
+
+    private async Task OpenTabMenuAsync(string tabId) {
+        if (module is null || !Items.Any(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal))) {
+            return;
+        }
+        var position = await module.InvokeAsync<double[]?>("getMenuPosition", stripElement, tabId);
+        if (!Items.Any(tab => string.Equals(tab.TabId, tabId, StringComparison.Ordinal))) {
+            return;
+        }
+        if (position is not { Length: 2 }) {
+            throw new InvalidOperationException("The workspace tab action trigger is unavailable.");
+        }
+        menuX = position[0];
+        menuY = position[1];
+        menuTabId = tabId;
+    }
+
+    private void CloseTabMenu() => menuTabId = null;
+
+    private WorkbenchTabState? MenuTab => Items.FirstOrDefault(tab => string.Equals(tab.TabId, menuTabId, StringComparison.Ordinal));
+
+    private IReadOnlyList<ContextMenuItem> TabMenuItems => MenuTab is { } tab
+        ? [
+            new() { Id = nameof(TabCommand.MoveLeft), Text = "Move left", Icon = "chevron_left", Disabled = Items[0].TabId == tab.TabId },
+            new() { Id = nameof(TabCommand.MoveRight), Text = "Move right", Icon = "chevron_right", Disabled = Items[^1].TabId == tab.TabId },
+            new() { Id = nameof(TabCommand.TogglePin), Text = tab.IsPinned ? "Unpin tab" : "Pin tab", Icon = "push_pin" },
+            new() { Id = nameof(TabCommand.ToggleSleep), Text = tab.IsSleeping ? "Wake tab" : "Sleep tab", Icon = "bedtime", Disabled = !tab.CanSleep || (IsActive(tab) && !tab.IsSleeping) },
+            new() { Id = nameof(TabCommand.CloseOthers), Text = "Close other tabs", Icon = "close", SeparatorBefore = true },
+            new() { Id = nameof(TabCommand.CloseRight), Text = "Close tabs to the right", Icon = "chevron_right" }
+        ]
+        : [];
+
+    private Task HandleTabCommandAsync(string command) {
+        var tab = MenuTab;
+        CloseTabMenu();
+        if (tab is null) {
+            return Task.CompletedTask;
+        }
+        return command switch {
+            nameof(TabCommand.MoveLeft) => MoveLeft.InvokeAsync(tab.TabId),
+            nameof(TabCommand.MoveRight) => MoveRight.InvokeAsync(tab.TabId),
+            nameof(TabCommand.TogglePin) => TogglePin.InvokeAsync(tab.TabId),
+            nameof(TabCommand.ToggleSleep) => ToggleSleep.InvokeAsync(tab.TabId),
+            nameof(TabCommand.CloseOthers) => CloseOthers.InvokeAsync(tab.TabId),
+            nameof(TabCommand.CloseRight) => CloseRight.InvokeAsync(tab.TabId),
+            _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown workspace tab command.")
+        };
     }
 
     [Parameter]
@@ -267,33 +345,43 @@
                     tab.Route.Contains(searchText, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-    private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="group/tab app-inline-tab @(IsActive(tab) ? "app-inline-tab--active" : "app-inline-tab--inactive")">
+    private RenderFragment RenderTab(WorkbenchTabState tab) => @<div @key="tab.TabId" data-tab-id="@tab.TabId" class="app-inline-tab @(IsActive(tab) ? "app-inline-tab--active" : "app-inline-tab--inactive")">
         <button type="button"
                 role="tab"
                 aria-selected="@(IsActive(tab) ? "true" : "false")"
                 aria-current="@(IsActive(tab) ? "page" : null)"
-                class="inline-flex min-w-0 items-center gap-1.5 text-left"
+                class="app-inline-tab__activate"
                 title="@tab.Title"
                 @onclick="() => Activate.InvokeAsync(tab.TabId)">
-            <span class="max-w-[9rem] truncate font-medium">@tab.Title</span>
+            <span class="min-w-0 flex-1 truncate font-medium">@tab.Title</span>
             @if (tab.IsDirty)
             {
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
             }
             @if (tab.IsPinned)
             {
-                <span class="text-sky-400" aria-hidden="true"><Icon Name="push_pin" /></span>
+                <span class="shrink-0 text-sky-400" aria-hidden="true"><Icon Name="push_pin" /></span>
+            }
+            @if (tab.IsSleeping)
+            {
+                <span class="app-inline-tab__sleep-state shrink-0 text-chrome-500" title="Sleeping"><Icon Name="bedtime" /><span class="sr-only">Sleeping</span></span>
             }
         </button>
 
-        <div class="app-inline-tab__actions group-hover/tab:inline-flex">
-            <button type="button" class="app-inline-tab__action" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)"><Icon Name="chevron_left" /><span class="sr-only">Move left</span></button>
-            <button type="button" class="app-inline-tab__action" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)"><Icon Name="chevron_right" /><span class="sr-only">Move right</span></button>
-            <button type="button" class="app-inline-tab__action" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)"><Icon Name="push_pin" /><span class="sr-only">Pin tab</span></button>
-            <button type="button" class="app-inline-tab__action" title="Sleep/wake" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)"><Icon Name="bedtime" /><span class="sr-only">Sleep or wake tab</span></button>
+        <div class="app-inline-tab__actions">
+            <button type="button"
+                    class="app-inline-tab__action app-inline-tab__menu-trigger"
+                    title="Tab actions"
+                    aria-label="@($"Tab actions for {tab.Title}")"
+                    aria-haspopup="menu"
+                    aria-expanded="@(menuTabId == tab.TabId ? "true" : "false")"
+                    disabled="@(module is null)"
+                    @onclick="() => OpenTabMenuAsync(tab.TabId)">
+                <Icon Name="more_horiz" />
+            </button>
             @if (tab.CanClose)
             {
-                <button type="button" class="app-inline-tab__action" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)"><Icon Name="close" /><span class="sr-only">Close tab</span></button>
+                <button type="button" class="app-inline-tab__action" title="Close tab" aria-label="@($"Close {tab.Title}")" @onclick="() => Close.InvokeAsync(tab.TabId)"><Icon Name="close" /></button>
             }
         </div>
     </div>;

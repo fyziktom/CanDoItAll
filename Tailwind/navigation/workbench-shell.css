@@ -607,20 +607,23 @@
   }
 
   .app-shell-body-surface {
-    @apply min-w-0 bg-chrome-50/92;
+    @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-chrome-50/92;
   }
 
   .app-page-content {
-    @apply px-4 xl:px-5 2xl:px-6;
+    @apply flex min-h-0 flex-1 flex-col px-4 xl:px-5 2xl:px-6;
+  }
+
+  .app-page-content--focus {
+    @apply px-0;
   }
 
   .app-page-body {
-    @apply my-4 xl:my-5 2xl:my-6;
+    @apply min-h-0 flex-1 overflow-y-auto my-4 xl:my-5 2xl:my-6;
   }
 
   .app-shell-body-surface--standard {
-    @apply min-h-0 overflow-y-auto;
-    flex: 1 1 0%;
+    @apply overflow-hidden;
   }
 
   .app-shell-rail {

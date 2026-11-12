@@ -156,9 +156,9 @@
             <Columns>
                 <DataGridColumn TItem="PromptGallerySearchItem" Title="Prompt item">
                     <Template Context="item">
-                        <Stack GapScale="LayoutGap.Tiny" Class="prompt-gallery-search-list__identity">
+                        <Stack GapScale="LayoutGap.Tiny" Class="min-w-96 max-w-3xl">
                             <TextBlock TextStyle="TextStyle.Subtitle2" Value="@item.Title" />
-                            <TextBlock Value="@PromptGalleryText.Excerpt(item)" />
+                            <TextBlock Class="line-clamp-2" Value="@PromptGalleryText.Excerpt(item)" />
                         </Stack>
                     </Template>
                 </DataGridColumn>
@@ -201,7 +201,7 @@
                 }
                 <DataGridColumn TItem="PromptGallerySearchItem" Title="Actions">
                     <Template Context="item">
-                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap">
+                        <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" Class="w-max whitespace-nowrap">
                             <Button Text=""
                                     Icon="@(item.IsFavorite ? "star" : "star_border")"
                                     Tone="@(item.IsFavorite ? ButtonTone.Warning : ButtonTone.Default)"

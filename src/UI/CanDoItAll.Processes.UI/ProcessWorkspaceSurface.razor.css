@@ -30,7 +30,7 @@
 }
 
 .processes-workspace-identity__title {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 750;
     line-height: 1.25;
