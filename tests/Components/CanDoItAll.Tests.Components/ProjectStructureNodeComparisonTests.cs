@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.CanvasLib;
@@ -203,6 +204,70 @@ public sealed class ProjectStructureNodeComparisonTests {
         Assert.Equal(original.Title, stored.Title);
         Assert.Equal(original.Notes, stored.Notes);
         Assert.Equal(ProjectStructureAuthoringResultKind.Rejected, Assert.Single(page.Instance.AuthoringOutcomes).Kind);
+    }
+
+    [Fact]
+    public async Task Unmounting_Canvas_during_comparison_read_waits_for_handled_cancellation() {
+        var hold = new HoldComparisonRead();
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(hold), ServiceLifetime.Singleton));
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var services = harness.Context.Services;
+        var project = (await services.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Retiring comparison owner" })).Value;
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var surface = await workbench.GetStructureAsync(project);
+        var original = await workbench.CreateObjectAsync(project,
+            new(ProjectObjectType.Note, "Original title", "", "Original notes", $"project:{project:D}") {
+                ExpectedProjectAdmission = surface.ExpectedProjectAdmission
+            });
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
+        var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+        var opening = Guid.NewGuid();
+        await page.InvokeAsync(() => canvas.OnComposerOpened(JsonSerializer.Serialize(new CanvasWorkbenchComposerOpening(opening, null,
+            new(original.Id, original.Title, original.Notes)))));
+        var local = new CanvasWorkbenchComposerDraft(opening, 2, false, true, null,
+            new(original.Id, "Local title", "Local notes"));
+        hold.Armed = true;
+        var pending = page.InvokeAsync(() => canvas.OnComposerComparisonRequested(JsonSerializer.Serialize(local)));
+        Task disposal;
+        try {
+            await hold.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            disposal = harness.Context.DisposeRenderedComponentsAsync();
+            await hold.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.False(disposal.IsCompleted);
+        } finally {
+            hold.Release.TrySetResult();
+        }
+        await disposal.WaitAsync(TimeSpan.FromSeconds(20));
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.False(harness.Context.Renderer.UnhandledException.IsCompleted);
+        var stored = Assert.Single((await workbench.GetStructureAsync(project)).Nodes, node => node.Id == original.Id);
+        Assert.Equal(original.Title, stored.Title);
+        Assert.Equal(original.Notes, stored.Notes);
+
+        var reopened = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        reopened.WaitForElement("[data-testid='project-structure-canvas-loaded']");
+        Assert.False(harness.Context.Renderer.UnhandledException.IsCompleted);
+    }
+
+    private sealed class HoldComparisonRead : DbCommandInterceptor {
+        public bool Armed { get; set; }
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource CancellationObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,
+            CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) {
+            if (Armed && eventData.Context is WorkbenchDbContext) {
+                Armed = false;
+                using var registration = cancellationToken.Register(() => CancellationObserved.TrySetResult());
+                Entered.TrySetResult();
+                await Release.Task;
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            return result;
+        }
     }
 
     private sealed class RevokeAfterSql(EditingUiTestAccess access) : SaveChangesInterceptor {

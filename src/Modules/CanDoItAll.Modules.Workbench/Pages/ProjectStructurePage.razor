@@ -2203,7 +2203,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     }
 
     private Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default)
-        => IsCurrentAction(context) ? TrackAuthoringOperationAsync(PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken)) : Task.FromResult(false);
+        => IsCurrentAction(context) ? PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken) : Task.FromResult(false);
 
     private async Task<bool> PersistCapturedViewStateCoreAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken) {
         await canvasViewStateCommitGate.WaitAsync(cancellationToken);
@@ -2229,14 +2229,16 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         persistCts?.Cancel();
     }
 
-    private async Task PersistCurrentViewStateAsync() {
+    private Task PersistCurrentViewStateAsync() => TrackAuthoringOperationAsync(PersistCurrentViewStateCoreAsync());
+
+    private async Task PersistCurrentViewStateCoreAsync() {
         CancelPendingCanvasViewStatePersistence();
         if (string.IsNullOrWhiteSpace(currentViewStateJson)) {
             return;
         }
         var context = CaptureActionContext();
         try {
-            await TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(context, currentViewStateJson));
+            await PersistCapturedViewStateAsync(context, currentViewStateJson);
         } catch (Exception failure) {
             ReportCanvasPreferenceFailure(context, failure);
         }

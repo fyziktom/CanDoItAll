@@ -14306,7 +14306,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Composer.cs",
-      "sha256_lf": "0ce4851fed1b3ae7711a897e0a7897b60311d2c04738766d92fedc096f1ab8b0",
+      "sha256_lf": "5e63945ad8a80766d8c326b58449ddeabd2644199f0144306826292be07da3b9",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureComposerOpening",
@@ -14321,7 +14321,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "ConcurrentEditing.Workbench.NativeOperators",
-      "rationale": "Existing host disposes retired IAsyncDisposable native operator sessions alongside original authoring sessions. Renderer lifetime cannot silently replace original effects or authority.",
+      "rationale": "Existing host disposes retired IAsyncDisposable native operator sessions alongside original authoring sessions. Renderer lifetime cannot silently replace original effects or authority. The native host tracks the complete comparison operation through its cancellation and failure handler, so renderer disposal waits for safe retirement without propagating an already-handled child read failure.",
       "concurrent_editing_review": ".artifacts/concurrent-editing/proof/r2-workbench/operators-manifest.md"
     },
     {
@@ -14389,7 +14389,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Insights.cs",
-      "sha256_lf": "9b9546c1ee298638c3d97e46cc55bef0061758e2b0718b2119fba51a473a122b",
+      "sha256_lf": "b1b1d1b3d732f48b5832d218f07e02070746c62fd4c4e8bce21c22a59becf48d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.InsightsContext, CanDoItAll.Modules.Workbench.Pages.InsightsEffect",
@@ -14404,7 +14404,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "ConcurrentEditing.Workbench.NativeOperators",
-      "rationale": "Typed native command captures canonical original node state; exact accepted artifact is recorded before follow-up/navigation. Native HTTP and real stale/fresh two-engine command paths pass.",
+      "rationale": "Typed native command captures canonical original node state; exact accepted artifact is recorded before follow-up/navigation. Native HTTP and real stale/fresh two-engine command paths pass. View-state persistence remains owned by this host; disposal awaits handled outer operations instead of their raw persistence tasks, preserving access checks and reported outcomes across navigation.",
       "concurrent_editing_review": ".artifacts/concurrent-editing/proof/r2-workbench/operators-manifest.md"
     },
     {
@@ -14839,7 +14839,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "b5069b305539b2c94b46b382459588673b87d7039ba967f2c7abb8c5edcce3a3",
+      "sha256_lf": "13305ed29e1c838f81c5dbe0a8c514f8b5ae662d724df75d4256b1dc36fafbbd",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14876,7 +14876,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "ConcurrentEditing.Workbench.Tasks",
       "evidence": "ConcurrentEditing.Workbench.NativeOperators",
-      "rationale": "Existing native PartyEditor is projected through a neutral optional selection supplement inside the existing floating selection window, fixing measured hidden overflow. Host still owns session/effects. No CSS/BaseLib/reference change.",
+      "rationale": "Existing native PartyEditor is projected through a neutral optional selection supplement inside the existing floating selection window, fixing measured hidden overflow. Host still owns session/effects. No CSS/BaseLib/reference change. View-state persistence remains owned by this host; disposal awaits handled outer operations instead of their raw persistence tasks, preserving access checks and reported outcomes across navigation.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectStructurePage",
