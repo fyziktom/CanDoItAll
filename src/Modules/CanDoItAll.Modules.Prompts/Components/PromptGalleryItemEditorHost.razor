@@ -13,7 +13,7 @@
 
 <NavigationLock OnBeforeInternalNavigation="BeforeNavigationAsync" ConfirmExternalNavigation="@(surface?.IsDirty == true || !session.CanLeave)" />
 @if (preMerge is not null && !session.IsReviewing) {
-    <Button Text="Restore my draft from before this merge" ButtonStyle="ButtonStyle.Light" Click="UndoMerge" data-testid="prompt-editor-undo-merge" />
+    <Button Text="Restore my draft from before this merge" Tone="ButtonTone.Default" Click="UndoMerge" data-testid="prompt-editor-undo-merge" />
 }
 <PromptGalleryItemEditorSurface @ref="surface" Presentation="@session.Presentation" IsReviewing="@session.IsReviewing"
     ReviewRequested="ReadReviewAsync" DirtyChanged="StateHasChanged" Intent="HandleIntentAsync" />
@@ -29,12 +29,12 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="CancelReviewAsync" data-testid="prompt-merge-cancel" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="CancelReviewAsync" data-testid="prompt-merge-cancel" />
             <Cluster Gap="LayoutGap.Small">
                 @if (session.Review?.Fields.Current.IsArchived == true) {
-                    <Button Text="Restore archived item" ButtonStyle="ButtonStyle.Warning" Click="RestoreReviewedAsync" data-testid="prompt-merge-restore" />
+                    <Button Text="Restore archived item" Tone="ButtonTone.Warning" Click="RestoreReviewedAsync" data-testid="prompt-merge-restore" />
                 }
-                <Button Text="Read current again" ButtonStyle="ButtonStyle.Light" Click="ReadReviewAsync" data-testid="prompt-merge-retry" />
+                <Button Text="Read current again" Tone="ButtonTone.Default" Click="ReadReviewAsync" data-testid="prompt-merge-retry" />
                 <Button Text="Apply to my draft" Disabled="@(!IsDraftReviewCurrent || session.Review?.Fields.CanApply != true)"
                     Click="ApplyReviewAsync" data-testid="prompt-merge-apply" />
             </Cluster>
@@ -47,7 +47,7 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Continue editing" Click="ContinueEditing" data-testid="prompt-dirty-continue" />
-            <Button Text="Discard draft and leave" ButtonStyle="ButtonStyle.Danger" Click="DiscardDraft" data-testid="prompt-dirty-discard" />
+            <Button Text="Discard draft and leave" Tone="ButtonTone.Danger" Click="DiscardDraft" data-testid="prompt-dirty-discard" />
         </Cluster>
     </Footer>
 </Dialog>

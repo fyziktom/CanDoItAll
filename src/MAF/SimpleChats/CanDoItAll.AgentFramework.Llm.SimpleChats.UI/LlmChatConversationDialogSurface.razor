@@ -34,7 +34,7 @@
                     }
                 }
                 <FormField Text="Conversation title">
-                    <TextBox Value="@rendered.Title"
+                    <TextInput Value="@rendered.Title"
                              Immediate="true"
                              ValueChanged="value => SendAsync(rendered, notify, ConversationDialogAction.TitleChanged, value)"
                              Disabled="@(start && rendered.IsMutating)" data-testid="@(prefix + "-title")" />

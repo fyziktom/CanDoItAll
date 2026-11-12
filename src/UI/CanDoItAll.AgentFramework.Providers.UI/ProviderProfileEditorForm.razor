@@ -6,9 +6,9 @@
         @if (Active) {
             <StickyActionFooter StatusLabel="Provider profiles">
                 <SecondaryActions>
-                    <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="Clear" />
+                    <Button Text="Clear" Tone="ButtonTone.Default" Click="Clear" />
                     @if (HasSavedProvider && CanManage) {
-                        <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@(IsBusy || WritesBlocked)" Click="Health" />
+                        <Button Text="Health" Tone="ButtonTone.Info" Disabled="@(IsBusy || WritesBlocked)" Click="Health" />
                     }
                 </SecondaryActions>
                 <PrimaryActions>
@@ -23,7 +23,7 @@
                 <DangerActions>
                     @if (HasSavedProvider && CanManage) {
                         <Button Text="Delete"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Disabled="@(IsBusy || WritesBlocked)"
                                 Click="Delete" />
                     }

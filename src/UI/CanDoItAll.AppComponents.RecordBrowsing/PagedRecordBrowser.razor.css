@@ -50,14 +50,14 @@
 }
 
 .paged-record-browser__card {
-    --paged-record-accent: rgb(71 85 105);
-    --paged-record-accent-border: rgb(203 213 225);
-    --paged-record-accent-soft: rgb(241 245 249);
-    --paged-record-accent-text: rgb(51 65 85);
-    background: rgb(255 255 255);
-    border: 1px solid rgb(226 232 240);
+    --paged-record-accent: var(--tone-text-muted);
+    --paged-record-accent-border: var(--tone-border-soft);
+    --paged-record-accent-soft: var(--tone-surface-soft);
+    --paged-record-accent-text: var(--tone-text);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 1rem;
-    color: rgb(15 23 42);
+    color: var(--tone-text);
     display: flex;
     height: 21.5rem;
     min-height: 21.5rem;
@@ -110,13 +110,13 @@
 }
 
 .paged-record-browser__card--selected {
-    background: color-mix(in srgb, var(--paged-record-accent-soft) 56%, white);
+    background: color-mix(in srgb, var(--paged-record-accent) 12%, var(--tone-surface));
     border-color: var(--paged-record-accent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paged-record-accent) 35%, transparent);
 }
 
 .paged-record-browser__card--disabled {
-    background: rgb(241 245 249);
+    background: var(--tone-surface-soft);
     transform: none;
 }
 
@@ -264,7 +264,7 @@
 }
 
 .paged-record-browser__title-slot ::deep .paged-record-browser__title {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     display: -webkit-box;
     font-weight: 700;
     line-height: 1.4;
@@ -284,7 +284,7 @@
 }
 
 .paged-record-browser__subtitle-slot ::deep .paged-record-browser__subtitle {
-    color: rgb(100 116 139);
+    color: var(--tone-text-soft);
     margin: 0;
     overflow: hidden;
     text-align: center;
@@ -293,7 +293,7 @@
 }
 
 .paged-record-browser__description-slot ::deep .paged-record-browser__description {
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     display: -webkit-box;
     line-height: 1.45;
     margin: 0;
@@ -317,7 +317,7 @@
 
 .paged-record-browser__footer {
     align-items: center;
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border-soft);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -327,7 +327,7 @@
 }
 
 .paged-record-browser__footer ::deep .paged-record-browser__meta {
-    color: rgb(100 116 139);
+    color: var(--tone-text-soft);
     margin: 0;
     overflow: hidden;
     text-align: center;
@@ -336,7 +336,7 @@
 }
 
 .paged-record-browser__footer ::deep .paged-record-browser__disabled-reason {
-    color: rgb(180 83 9);
+    color: var(--tone-warning-soft-fg);
     font-weight: 600;
     margin: 0;
     overflow: hidden;
@@ -357,10 +357,10 @@
 }
 
 .paged-record-browser__status > span {
-    background: rgb(241 245 249);
-    border-bottom: 1px solid rgb(203 213 225);
-    border-top: 1px solid rgb(203 213 225);
-    color: rgb(71 85 105);
+    background: var(--tone-surface-soft);
+    border-bottom: 1px solid var(--tone-border-soft);
+    border-top: 1px solid var(--tone-border-soft);
+    color: var(--tone-text-muted);
     display: block;
     font-size: 0.61rem;
     font-weight: 800;
@@ -400,6 +400,6 @@
 }
 
 .paged-record-browser__pager {
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border-soft);
     padding-top: 0.75rem;
 }

@@ -6,7 +6,7 @@
     <div class="team-icon-picker min-w-0" data-testid="material-icon-picker-dialog">
         <Stack GapScale="LayoutGap.Medium">
             <FilterBar ResultText="@($"{Filtered(owner).Count} of {AgentTeamIconCatalog.Options.Count} icon(s)")">
-                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="cda-input min-w-[14rem] flex-1" placeholder="Search icons" data-testid="material-icon-picker-search" />
+                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="form-input ui-input ui-input--outlined min-w-[14rem] flex-1" placeholder="Search icons" data-testid="material-icon-picker-search" />
                 <StatusBadge Tone="info" Text="@owner.Selected" />
             </FilterBar>
             <Grid Gap="LayoutGap.Small" ColumnTemplate="repeat(auto-fit,minmax(6.5rem,1fr))" Class="team-icon-picker__options" data-testid="material-icon-picker-grid">
@@ -70,7 +70,7 @@
     private static string ResolveIconCardClass(Selection owner, string icon) {
         const string baseClass = "flex aspect-square min-w-0 flex-col items-center justify-center gap-2 rounded-lg border px-2 text-center transition";
         return owner.Selected == icon ? $"{baseClass} border-sky-500 bg-sky-50 text-sky-700 shadow-sm ring-2 ring-sky-100"
-            : $"{baseClass} border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50";
+            : $"{baseClass} border-chrome-200 bg-white text-chrome-700 hover:border-chrome-300 hover:bg-chrome-50";
     }
     public void Dispose() => disposed = true;
     private sealed class Selection(string initial, CancellationToken token) {

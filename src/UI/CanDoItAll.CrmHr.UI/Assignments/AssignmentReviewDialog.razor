@@ -38,7 +38,7 @@
                 <MergeFieldView TValue="DateOnly?" Label="End date (UTC)" Field="assignment.End" Format="@(value => value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "None")" HasPendingInput="@State.IsPending(AssignmentField.End)" ShowUnchanged="false" Changed="StateHasChanged" />
                 <MergeFieldView TValue="string" Label="Source" Field="assignment.Source" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged" />
                 <MergeFieldView TValue="string" Label="Notes" Field="assignment.Notes" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged">
-                    <ResultEditor Context="text"><TextArea Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => assignment.Notes.SetResult(value))" aria-label="Merged assignment notes" /></ResultEditor>
+                    <ResultEditor Context="text"><TextAreaInput Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => assignment.Notes.SetResult(value))" aria-label="Merged assignment notes" /></ResultEditor>
                 </MergeFieldView>
                 @RetainedNotes(assignment.RetainedNotes, assignment.Notes)
             }
@@ -52,7 +52,7 @@
                 <MergeFieldView TValue="decimal" Label="Allocation %" Field="staffing.Allocation" Format="@(value => value.ToString(CultureInfo.InvariantCulture))" HasPendingInput="@State.IsPending(StaffingField.Allocation)" ShowUnchanged="false" Changed="StateHasChanged" />
                 <MergeFieldView TValue="StaffingRequestStatus" Label="Status" Field="staffing.Status" Format="@(value => value.ToString())" ShowUnchanged="false" Changed="StateHasChanged" />
                 <MergeFieldView TValue="string" Label="Notes" Field="staffing.Notes" Format="@(value => value)" ShowUnchanged="false" Changed="StateHasChanged">
-                    <ResultEditor Context="text"><TextArea Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => staffing.Notes.SetResult(value))" aria-label="Merged staffing notes" /></ResultEditor>
+                    <ResultEditor Context="text"><TextAreaInput Value="@text" Rows="4" Immediate="true" ValueChanged="@(value => staffing.Notes.SetResult(value))" aria-label="Merged staffing notes" /></ResultEditor>
                 </MergeFieldView>
                 @RetainedNotes(staffing.RetainedNotes, staffing.Notes)
                 <FormField Text="Combined required skills"><TextBlock Value="@string.Join(", ", staffing.Skills.Select(SkillName))" /></FormField>
@@ -61,9 +61,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="crmhr-assignment-review-cancel" />
+            <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="Cancel" data-testid="crmhr-assignment-review-cancel" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="State.Reading" Click="Refresh" data-testid="crmhr-assignment-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="State.Reading" Click="Refresh" data-testid="crmhr-assignment-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(Disabled || !State.CanApply)" Click="Apply" data-testid="crmhr-assignment-review-apply" />
             </Cluster>
         </Cluster>
@@ -83,8 +83,8 @@
     }
     private RenderFragment RetainedNotes(string? retained, MergeField<string> field) => @<Stack GapScale="LayoutGap.Small">
         @if (retained is { } text && (!field.IsResolved || field.Result != text)) {
-            <FormField Text="Your previous comparison text"><TextArea Value="@text" Rows="3" Disabled="true" /></FormField>
-            <Button Text="Use my previous text" ButtonStyle="ButtonStyle.Light" Click="@(() => field.SetResult(text))" />
+            <FormField Text="Your previous comparison text"><TextAreaInput Value="@text" Rows="3" Disabled="true" /></FormField>
+            <Button Text="Use my previous text" Tone="ButtonTone.Default" Click="@(() => field.SetResult(text))" />
         }
     </Stack>;
     private string SkillName(Guid id) => $"{Skills.FirstOrDefault(skill => skill.Id == id)?.Name ?? "Unavailable skill"} ({id.ToString("N")[..8]})";

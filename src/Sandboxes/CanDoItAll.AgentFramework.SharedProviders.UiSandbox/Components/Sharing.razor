@@ -8,7 +8,7 @@
     <Cluster Gap="LayoutGap.Medium">
         <h1>Provider sharing sandbox</h1>
         <label>Scenario
-            <select class="cda-input" value="@selected" @onchange="ChangeScenario" data-testid="sharing-scenario">
+            <select class="form-input ui-input ui-input--outlined" value="@selected" @onchange="ChangeScenario" data-testid="sharing-scenario">
                 @foreach (var value in Enum.GetValues<SharingScenario>()) {
                     <option value="@value">@value</option>
                 }

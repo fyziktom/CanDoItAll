@@ -131,7 +131,7 @@ public sealed class ProviderAdministrationLayoutTests {
         foreach (var id in new[] { "providers-new", "providers-refresh", "providers-connections" }) {
             var button = cut.WaitForElement($"[data-testid='{id}']");
             Assert.False(string.IsNullOrWhiteSpace(button.GetAttribute("aria-label")));
-            Assert.Empty(button.QuerySelectorAll(".cda-button__text"));
+            Assert.Empty(button.QuerySelectorAll(".ui-button__text"));
         }
         Assert.Empty(cut.FindAll("[data-testid='shared-provider-connections-dialog']"));
         Assert.Equal(0, service.ListSourcesCallCount);

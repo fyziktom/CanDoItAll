@@ -13,7 +13,7 @@
         <ToolConfigurationFields Draft="draft.Tool" TestId="@TestId" Locked="@draft.IdentityLocked" />
     } else {
         <FormSection Title="Configuration JSON" Description="This capability kind uses its existing raw JSON configuration.">
-            <AuthoringTextArea @bind-Value="draft.RawConfigurationJson" disabled="@draft.Model.IsBuiltIn" class="cda-input capability-authoring__large-textarea" data-testid="@($"{TestId}-raw-config")" />
+            <AuthoringTextArea @bind-Value="draft.RawConfigurationJson" disabled="@draft.Model.IsBuiltIn" class="form-input ui-input ui-input--outlined capability-authoring__large-textarea" data-testid="@($"{TestId}-raw-config")" />
         </FormSection>
     }
     @if (draft.Model.Kind is CapabilityKind.Tool or CapabilityKind.McpServer) {

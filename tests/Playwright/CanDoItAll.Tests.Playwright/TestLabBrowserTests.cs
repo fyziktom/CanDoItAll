@@ -300,7 +300,7 @@ public sealed class TestLabBrowserTests(PlaywrightAppFixture fixture) {
         var tab = page.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^" + label) });
         await tab.ClickAsync();
         await Assertions.Expect(page.GetByTestId("testlab-workspace")).ToHaveAttributeAsync("data-section", label);
-        await Assertions.Expect(tab).ToHaveClassAsync(new Regex("\\bbg-slate-900\\b"));
+        await Assertions.Expect(tab).ToHaveClassAsync(new Regex("\\bbg-chrome-900\\b"));
     }
     private static async Task OpenAsync(IPage page, string url) {
         await page.GotoAsync(url);

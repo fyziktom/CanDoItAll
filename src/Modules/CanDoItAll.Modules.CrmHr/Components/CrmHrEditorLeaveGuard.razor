@@ -10,7 +10,7 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="@($"{TestIdPrefix}-dirty-continue")" />
-            <Button Text="Discard draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="@($"{TestIdPrefix}-dirty-discard")" />
+            <Button Text="Discard draft and leave" Tone="ButtonTone.Danger" Click="@(() => Complete(true))" data-testid="@($"{TestIdPrefix}-dirty-discard")" />
         </Cluster>
     </Footer>
 </Dialog>

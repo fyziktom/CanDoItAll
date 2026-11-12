@@ -3,7 +3,7 @@
 
 <FormSection Title="Deletion and hierarchy operations" Description="Retained operations keep their original targets. Checking an outcome never submits a new change.">
     <Actions>
-        <Button Text="Refresh retained operations" ButtonStyle="ButtonStyle.Light" Disabled="@Loading" Click="Refresh" data-testid="project-lifecycle-refresh" />
+        <Button Text="Refresh retained operations" Tone="ButtonTone.Default" Disabled="@Loading" Click="Refresh" data-testid="project-lifecycle-refresh" />
     </Actions>
     <ChildContent>
         <Stack GapScale="LayoutGap.Small" data-testid="project-lifecycle-pending">
@@ -13,12 +13,12 @@
             @foreach (var item in Items) {
                 <Cluster Wrap="FlexWrap.Wrap" @key="item.Operation">
                     <TextBlock Value="@($"{Label(item.Kind)} · {item.Operation.Id:D}")" />
-                    <Button Text="Review operation" ButtonStyle="ButtonStyle.Light" Disabled="@Loading"
+                    <Button Text="Review operation" Tone="ButtonTone.Default" Disabled="@Loading"
                             Click="@(() => Open.InvokeAsync(item.Operation))" data-testid="project-lifecycle-open" />
                 </Cluster>
             }
             @if (HasMore) {
-                <Button Text="Show more retained operations" ButtonStyle="ButtonStyle.Light" Click="ShowMore" />
+                <Button Text="Show more retained operations" Tone="ButtonTone.Default" Click="ShowMore" />
             }
             @if (View is { } view) {
                 <Alert AlertStyle="AlertStyle.Info" data-testid="project-lifecycle-recovery">
@@ -26,15 +26,15 @@
                         <TextBlock Value="@view.Message" />
                         <TextBlock TextStyle="TextStyle.Caption" Value="@($"Operation reference: {view.Operation.Id:D}")" />
                         <Cluster Wrap="FlexWrap.Wrap">
-                            <Button Text="Check original outcome" ButtonStyle="ButtonStyle.Light" Disabled="@view.Busy"
+                            <Button Text="Check original outcome" Tone="ButtonTone.Default" Disabled="@view.Busy"
                                     Click="@(() => Send(ProjectLifecyclePendingAction.Check))" data-testid="project-lifecycle-check" />
-                            <Button Text="Retry this exact operation" ButtonStyle="ButtonStyle.Light" Disabled="@(view.Busy || !view.CanRetry)"
+                            <Button Text="Retry this exact operation" Tone="ButtonTone.Default" Disabled="@(view.Busy || !view.CanRetry)"
                                     Click="@(() => Send(ProjectLifecyclePendingAction.RetryOriginal))" data-testid="project-lifecycle-retry" />
                             <Button Text="Apply accepted deletion to original editor" Disabled="@(view.Busy || !view.CanApply)"
                                     Click="@(() => Send(ProjectLifecyclePendingAction.ApplyAccepted))" data-testid="project-lifecycle-apply" />
-                            <Button Text="Cancel undispatched operation" ButtonStyle="ButtonStyle.Light" Disabled="@(view.Busy || !view.CanCancel)"
+                            <Button Text="Cancel undispatched operation" Tone="ButtonTone.Default" Disabled="@(view.Busy || !view.CanCancel)"
                                     Click="@(() => Send(ProjectLifecyclePendingAction.CancelPrepared))" data-testid="project-lifecycle-cancel" />
-                            <Button Text="Finish resolved recovery" ButtonStyle="ButtonStyle.Light" Disabled="@(view.Busy || !view.CanClear)"
+                            <Button Text="Finish resolved recovery" Tone="ButtonTone.Default" Disabled="@(view.Busy || !view.CanClear)"
                                     Click="@(() => Send(ProjectLifecyclePendingAction.ClearResolved))" data-testid="project-lifecycle-clear" />
                         </Cluster>
                     </Stack>

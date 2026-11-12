@@ -35,7 +35,7 @@
                 <PageHeaderActionButton Icon="person_add"
                                         Label="New party"
                                         TooltipText="Create a new shared party record."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="View.CreateNewAsync"
                                         data-testid="crmhr-directory-new-button" />
             </Actions>
@@ -80,9 +80,9 @@
                     <ChildContent>
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">Party editor</p>
-                            <h2 class="cda-title-xl">@View.EditorTitle</h2>
-                            <p class="cda-body-muted">Shared identity and stewardship record.</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Party editor</TextBlock>
+                            <h2 class="cda-text-block cda-text-block--h4">@View.EditorTitle</h2>
+                            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">Shared identity and stewardship record.</TextBlock>
                             @if (View.Editor.PartyType == PartyType.Person && View.Editor.Id.HasValue)
                             {
                                 @if (View.CurrentPrimaryAffiliation is { } primaryAffiliation)
@@ -91,7 +91,7 @@
                                                    Position="TooltipPosition.Bottom"
                                                    Duration="@((TimeSpan?)null)"
                                                    TestId="crmhr-directory-primary-affiliation-tooltip">
-                                        <p class="text-sm font-medium text-slate-700"
+                                        <p class="text-sm font-medium text-chrome-700"
                                            data-testid="crmhr-directory-primary-affiliation">
                                             @CrmHrDirectoryWorkspacePresentation.FormatAffiliation(primaryAffiliation)
                                         </p>
@@ -99,7 +99,7 @@
                                 }
                                 else
                                 {
-                                    <p class="text-sm font-medium text-slate-600"
+                                    <p class="text-sm font-medium text-chrome-600"
                                        data-testid="crmhr-directory-primary-affiliation">
                                         No current organization affiliation
                                     </p>
@@ -125,7 +125,7 @@
                             <Tabs SelectedIndex="@View.SelectedEditorTabIndex"
                                   SelectedIndexChanged="View.HandleEditorTabChangedAsync"
                                   RenderMode="TabRenderMode.Client"
-                                  Variant="TabsVariant.WorkspaceSecondary"
+                                  Density="TabsDensity.Compact"
                                   OverflowMode="TabsOverflowMode.Wrap"
                                   AriaLabel="Party editor sections"
                                   data-testid="crmhr-directory-tabs">
@@ -136,76 +136,66 @@
                             <FormSection Title="Identity"
                                          Description="Capture the durable identity fields that let one record participate in CRM, HR, recruiting, and AI-agent flows.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-                                    <div>
-                                        <label class="cda-field-label">Type</label>
-                                        <InputSelect @bind-Value="View.Editor.PartyType"
-                                                     class="cda-input"
+                                    <FormField Text="Type">
+                                        <SelectInput @bind-Value="View.Editor.PartyType"
                                                      data-testid="crmhr-party-type">
                                             @foreach (var partyType in Enum.GetValues<PartyType>())
                                             {
                                                 <option value="@partyType">@partyType</option>
                                             }
-                                        </InputSelect>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Status</label>
-                                        <InputSelect @bind-Value="View.Editor.LifecycleStatus"
-                                                     class="cda-input"
+                                        </SelectInput>
+                                    </FormField>
+                                    <FormField Text="Status">
+                                        <SelectInput @bind-Value="View.Editor.LifecycleStatus"
                                                      data-testid="crmhr-party-status">
                                             @foreach (var lifecycleStatus in Enum.GetValues<PartyLifecycleStatus>())
                                             {
                                                 <option value="@lifecycleStatus">@lifecycleStatus</option>
                                             }
-                                        </InputSelect>
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">External code</label>
-                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.ExternalCode"
-                                                   class="cda-input"
+                                        </SelectInput>
+                                    </FormField>
+                                    <FormField Text="External code">
+                                        <NativeValueInput aria-label="External code" TValue="string" @bind-Value="View.Editor.ExternalCode"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="crmhr-party-external-code" />
-                                    </div>
+                                    </FormField>
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Display name</label>
-                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.DisplayName"
-                                                   class="cda-input"
+                                    <FormField Text="Display name">
+                                        <NativeValueInput aria-label="Display name" TValue="string" @bind-Value="View.Editor.DisplayName"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="crmhr-party-display-name" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Preferred name</label>
-                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PreferredName"
-                                                   class="cda-input"
+                                    </FormField>
+                                    <FormField Text="Preferred name">
+                                        <NativeValueInput aria-label="Preferred name" TValue="string" @bind-Value="View.Editor.PreferredName"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="crmhr-party-preferred-name" />
-                                    </div>
+                                    </FormField>
                                 </Grid>
 
-                                <div>
-                                    <label class="cda-field-label">Legal name</label>
-                                    <NativeValueInput TValue="string" @bind-Value="View.Editor.LegalName"
-                                               class="cda-input"
+                                <FormField Text="Legal name">
+                                    <NativeValueInput aria-label="Legal name" TValue="string" @bind-Value="View.Editor.LegalName"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-party-legal-name" />
-                                </div>
+                                </FormField>
                             </FormSection>
 
                             <FormSection Title="Classification and contact"
                                          Description="Keep role, tags, and direct contact details near the core identity so CRM, HR, and recruiting flows all start from the same party record.">
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Primary role</label>
-                                        <InputSelect @bind-Value="View.Editor.PrimaryRoleKindText"
-                                                     class="cda-input"
+                                    <FormField Text="Primary role">
+                                        <SelectInput @bind-Value="View.Editor.PrimaryRoleKindText"
                                                      data-testid="crmhr-party-role">
                                             <option value="">No primary role yet</option>
                                             @foreach (var roleKind in Enum.GetValues<PartyRoleKind>())
                                             {
                                                 <option value="@roleKind.ToString()">@roleKind</option>
                                             }
-                                        </InputSelect>
-                                    </div>
+                                        </SelectInput>
+                                    </FormField>
                                     <div>
-                                        <label class="cda-field-label">Tags</label>
+                                        <label class="cda-form-field__label">Tags</label>
                                         <TagEditor @ref="tags" Value="@View.Editor.Tags"
                                                    ValueChanged="HandleTagsChangedAsync"
                                                    PendingInput="@PendingTagInput"
@@ -218,18 +208,16 @@
                                 </Grid>
 
                                 <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                    <div>
-                                        <label class="cda-field-label">Primary email</label>
-                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PrimaryEmail"
-                                                   class="cda-input"
+                                    <FormField Text="Primary email">
+                                        <NativeValueInput aria-label="Primary email" TValue="string" @bind-Value="View.Editor.PrimaryEmail"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="crmhr-party-email" />
-                                    </div>
-                                    <div>
-                                        <label class="cda-field-label">Primary phone</label>
-                                        <NativeValueInput TValue="string" @bind-Value="View.Editor.PrimaryPhone"
-                                                   class="cda-input"
+                                    </FormField>
+                                    <FormField Text="Primary phone">
+                                        <NativeValueInput aria-label="Primary phone" TValue="string" @bind-Value="View.Editor.PrimaryPhone"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="crmhr-party-phone" />
-                                    </div>
+                                    </FormField>
                                 </Grid>
 
                                 <Stack GapScale="LayoutGap.Medium" Class="mt-5">
@@ -237,11 +225,11 @@
                                            AlignItems="AlignItems.Center"
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div>
-                                            <p class="cda-eyebrow">Additional role assignments</p>
-                                            <p class="mt-1 text-sm leading-6 text-slate-600">Keep more than one business role on the same party instead of creating duplicate directory records.</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Additional role assignments</TextBlock>
+                                            <p class="mt-1 text-sm leading-6 text-chrome-600">Keep more than one business role on the same party instead of creating duplicate directory records.</p>
                                         </div>
                                         <Button Text="Add role"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="View.AddAdditionalRole"
                                                 data-testid="crmhr-party-role-add" />
@@ -249,7 +237,7 @@
 
                                     @if (View.Editor.AdditionalRoles.Count == 0)
                                     {
-                                        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             No secondary roles defined yet.
                                         </div>
                                     }
@@ -263,26 +251,25 @@
                                             var role = View.Editor.AdditionalRoles[index];
                                             <PanelCard @key="role" Soft="true">
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
-                                                    <div>
-                                                        <label class="cda-field-label">Role kind</label>
-                                                        <InputSelect @bind-Value="role.RoleKind"
-                                                                     class="cda-input"
+                                                    <FormField Text="Role kind">
+                                                        <SelectInput @bind-Value="role.RoleKind"
                                                                      data-testid="@($"crmhr-party-extra-role-kind-{rowIndex}")">
                                                             @foreach (var roleKind in Enum.GetValues<PartyRoleKind>())
                                                             {
                                                                 <option value="@roleKind">@roleKind</option>
                                                             }
-                                                        </InputSelect>
-                                                    </div>
+                                                        </SelectInput>
+                                                    </FormField>
                                                     <div class="lg:col-span-2">
-                                                        <label class="cda-field-label">Role title</label>
-                                                        <NativeValueInput TValue="string" @bind-Value="role.Title"
-                                                                   class="cda-input"
-                                                                   data-testid="@($"crmhr-party-extra-role-title-{rowIndex}")" />
+                                                        <FormField Text="Role title">
+                                                            <NativeValueInput aria-label="Role title" TValue="string" @bind-Value="role.Title"
+                                                                       class="form-input ui-input ui-input--outlined"
+                                                                       data-testid="@($"crmhr-party-extra-role-title-{rowIndex}")" />
+                                                        </FormField>
                                                     </div>
                                                     <div class="flex items-end justify-end">
                                                         <Button Text="Remove"
-                                                                ButtonStyle="ButtonStyle.Danger"
+                                                                Tone="ButtonTone.Danger"
                                                                 Size="ButtonSize.Small"
                                                                 Click="@(() => View.RemoveAdditionalRole(role))"
                                                                 data-testid="@($"crmhr-party-extra-role-remove-{rowIndex}")" />
@@ -291,37 +278,35 @@
 
                                                 <Grid Gap="LayoutGap.Medium" ColumnsLg="3" Class="mt-4">
                                                     <div>
-                                                        <label class="cda-field-label">Valid from</label>
+                                                        <label class="cda-form-field__label">Valid from</label>
                                                         <InputDate @bind-Value="role.ValidFromUtc"
                                                                    @oninput="@(() => ReportPendingDate(new(role, nameof(PartyRoleAssignmentEditorModel.ValidFromUtc))))"
-                                                                   class="cda-input"
+                                                                   class="form-input ui-input ui-input--outlined"
                                                                    data-testid="@($"crmhr-party-extra-role-start-{rowIndex}")" />
                                                     </div>
                                                     <div>
-                                                        <label class="cda-field-label">Valid to</label>
+                                                        <label class="cda-form-field__label">Valid to</label>
                                                         <InputDate @bind-Value="role.ValidToUtc"
                                                                    @oninput="@(() => ReportPendingDate(new(role, nameof(PartyRoleAssignmentEditorModel.ValidToUtc))))"
-                                                                   class="cda-input"
+                                                                   class="form-input ui-input ui-input--outlined"
                                                                    data-testid="@($"crmhr-party-extra-role-end-{rowIndex}")" />
                                                     </div>
-                                                    <div>
-                                                        <label class="cda-field-label">Notes</label>
-                                                        <NativeValueInput TValue="string" @bind-Value="role.Notes"
-                                                                   class="cda-input"
+                                                    <FormField Text="Notes">
+                                                        <NativeValueInput aria-label="Notes" TValue="string" @bind-Value="role.Notes"
+                                                                   class="form-input ui-input ui-input--outlined"
                                                                    data-testid="@($"crmhr-party-extra-role-notes-{rowIndex}")" />
-                                                    </div>
+                                                    </FormField>
                                                 </Grid>
                                             </PanelCard>
                                         }
                                     }
                                 </Stack>
 
-                                <div>
-                                    <label class="cda-field-label">Summary</label>
-                                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.Editor.Summary"
-                                                   class="cda-input cda-input--textarea min-h-24"
+                                <FormField Text="Summary">
+                                    <NativeValueInput aria-label="Summary" TValue="string" Multiline="true" @bind-Value="View.Editor.Summary"
+                                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-24"
                                                    data-testid="crmhr-party-summary" />
-                                </div>
+                                </FormField>
                             </FormSection>
                                     </Stack>
                                 </TabsItem>
@@ -337,24 +322,21 @@
                                         </Stack>
 
                                         <Grid Gap="LayoutGap.Large" ColumnsMd="3" Class="mt-5">
-                                            <div>
-                                                <label class="cda-field-label">Region</label>
-                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.Region"
-                                                           class="cda-input"
+                                            <FormField Text="Region">
+                                                <NativeValueInput aria-label="Region" TValue="string" @bind-Value="View.Editor.Region"
+                                                           class="form-input ui-input ui-input--outlined"
                                                            data-testid="crmhr-party-region" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Country code</label>
-                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.CountryCode"
-                                                           class="cda-input"
+                                            </FormField>
+                                            <FormField Text="Country code">
+                                                <NativeValueInput aria-label="Country code" TValue="string" @bind-Value="View.Editor.CountryCode"
+                                                           class="form-input ui-input ui-input--outlined"
                                                            data-testid="crmhr-party-country" />
-                                            </div>
-                                            <div>
-                                                <label class="cda-field-label">Time zone</label>
-                                                <NativeValueInput TValue="string" @bind-Value="View.Editor.TimeZone"
-                                                           class="cda-input"
+                                            </FormField>
+                                            <FormField Text="Time zone">
+                                                <NativeValueInput aria-label="Time zone" TValue="string" @bind-Value="View.Editor.TimeZone"
+                                                           class="form-input ui-input ui-input--outlined"
                                                            data-testid="crmhr-party-timezone" />
-                                            </div>
+                                            </FormField>
                                         </Grid>
                                     </FormSection>
                                 </TabsItem>
@@ -372,33 +354,32 @@
                                                          DataTestId="crmhr-directory-sensitive-callout" />
                                 }
 
-                                <label class="cda-inline-option">
-                                    <InputCheckbox @bind-Value="View.Editor.IsSensitive"
+                                <label class="ui-checkbox-option">
+                                    <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="View.Editor.IsSensitive"
                                                    data-testid="crmhr-party-sensitive" />
                                     Mark as sensitive
                                 </label>
 
-                                <div>
-                                    <label class="cda-field-label">Operational notes</label>
-                                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="View.Editor.Notes"
-                                                   class="cda-input cda-input--textarea min-h-28"
+                                <FormField Text="Operational notes">
+                                    <NativeValueInput aria-label="Operational notes" TValue="string" Multiline="true" @bind-Value="View.Editor.Notes"
+                                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-28"
                                                    data-testid="crmhr-party-notes" />
-                                </div>
+                                </FormField>
 
-                                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4"
                                      data-testid="crmhr-confidential-notes-panel">
                                     <Split Gap="LayoutGap.Medium"
                                            AlignItems="AlignItems.Start"
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div class="min-w-0">
-                                            <p class="cda-eyebrow">Confidential notes</p>
-                                            <h3 class="mt-1 text-lg font-semibold text-slate-950">HR-only and sensitive note stream</h3>
-                                            <p class="mt-3 text-sm leading-6 text-slate-600">
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Confidential notes</TextBlock>
+                                            <h3 class="mt-1 text-lg font-semibold text-chrome-950">HR-only and sensitive note stream</h3>
+                                            <p class="mt-3 text-sm leading-6 text-chrome-600">
                                                 Keep high-sensitivity notes separate from broad operational context so downstream CRM-HR screens do not overexpose private detail.
                                             </p>
                                         </div>
                                         <Button Text="Add confidential note"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Type="button"
                                                 Disabled="@(!View.Editor.IsSensitive)"
@@ -414,7 +395,7 @@
                                     }
                                     else if (View.Editor.ConfidentialNotes.Count == 0)
                                     {
-                                        <div class="mt-4 rounded-[1rem] border border-dashed border-slate-300 bg-white/80 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="mt-4 rounded-[1rem] border border-dashed border-chrome-300 bg-white/80 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             No confidential notes stored yet.
                                         </div>
                                     }
@@ -427,32 +408,30 @@
                                                 // per-row copies, never the shared loop variable.
                                                 var rowIndex = index;
                                                 var note = View.Editor.ConfidentialNotes[index];
-                                                <div @key="note" class="rounded-[1rem] border border-slate-200 bg-white px-4 py-4"
+                                                <div @key="note" class="rounded-[1rem] border border-chrome-200 bg-white px-4 py-4"
                                                      data-testid="crmhr-confidential-note-item">
                                                     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
-                                                        <div>
-                                                            <label class="cda-field-label">Category</label>
-                                                            <InputSelect @bind-Value="note.Category"
-                                                                         class="cda-input"
+                                                        <FormField Text="Category">
+                                                            <SelectInput @bind-Value="note.Category"
                                                                          data-testid="@($"crmhr-confidential-note-category-{rowIndex}")">
                                                                 @foreach (var category in CrmHrDirectoryWorkspacePresentation.ConfidentialNoteCategories)
                                                                 {
                                                                     <option value="@category">@category</option>
                                                                 }
-                                                            </InputSelect>
-                                                        </div>
+                                                            </SelectInput>
+                                                        </FormField>
                                                         <div class="md:col-span-2">
-                                                            <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Stewardship</p>
-                                                            <p class="mt-1 text-sm leading-6 text-slate-700">
+                                                            <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Stewardship</p>
+                                                            <p class="mt-1 text-sm leading-6 text-chrome-700">
                                                                 Created @CrmHrDirectoryWorkspacePresentation.FormatMoment(note.CreatedAtUtc) by @CrmHrDirectoryWorkspacePresentation.FormatActor(note.CreatedBy)
                                                             </p>
-                                                            <p class="text-sm leading-6 text-slate-600">
+                                                            <p class="text-sm leading-6 text-chrome-600">
                                                                 Updated @CrmHrDirectoryWorkspacePresentation.FormatMoment(note.UpdatedAtUtc)
                                                             </p>
                                                         </div>
                                                         <div class="flex items-start justify-end">
                                                             <Button Text="Remove"
-                                                                    ButtonStyle="ButtonStyle.Danger"
+                                                                    Tone="ButtonTone.Danger"
                                                                     Size="ButtonSize.Small"
                                                                     Type="button"
                                                                     Click="@(() => View.RemoveConfidentialNote(note))"
@@ -461,10 +440,11 @@
                                                     </Grid>
 
                                                     <div class="mt-4">
-                                                        <label class="cda-field-label">Confidential note</label>
-                                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="note.NoteText"
-                                                                       class="cda-input cda-input--textarea min-h-24"
-                                                                       data-testid="@($"crmhr-confidential-note-text-{rowIndex}")" />
+                                                        <FormField Text="Confidential note">
+                                                            <NativeValueInput aria-label="Confidential note" TValue="string" Multiline="true" @bind-Value="note.NoteText"
+                                                                           class="form-input ui-input ui-input--outlined ui-input--textarea min-h-24"
+                                                                           data-testid="@($"crmhr-confidential-note-text-{rowIndex}")" />
+                                                        </FormField>
                                                     </div>
                                                 </div>
                                             }
@@ -488,11 +468,11 @@
                                     else if (View.PartyActivityFailureMessage is { } activityFailure)
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-activity-error">
-                                            <p class="cda-eyebrow text-rose-700">Activity unavailable</p>
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@activityFailure</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">Activity unavailable</TextBlock>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@activityFailure</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Class="mt-4"
                                                     Click="View.RetryActivityLoadAsync" />
@@ -506,9 +486,9 @@
                                     @ActivityTimeline
 
                                     <SurfaceCard>
-                                        <p class="cda-eyebrow">Project assignments</p>
-                                        <h3 class="mt-1 text-lg font-semibold text-slate-950">Assignments and delivery context</h3>
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Project assignments</TextBlock>
+                                        <h3 class="mt-1 text-lg font-semibold text-chrome-950">Assignments and delivery context</h3>
+                                        <p class="mt-3 text-sm leading-6 text-chrome-600">
                                             Project-party links stay visible here so staffing, ownership, and stakeholder context do not require a separate workbench pass.
                                         </p>
 
@@ -523,12 +503,12 @@
                                         else if (!string.IsNullOrWhiteSpace(View.ProjectAssignmentsLoadError))
                                         {
                                             <SurfaceCard Soft="true" Class="mt-5">
-                                                <p class="cda-eyebrow text-rose-700">Project assignments unavailable</p>
-                                                <h4 class="mt-1 text-base font-semibold text-slate-950">Assignment history could not be loaded</h4>
-                                                <p class="mt-2 text-sm leading-6 text-slate-700">Retry to load the requested assignment page for this party.</p>
+                                                <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">Project assignments unavailable</TextBlock>
+                                                <h4 class="mt-1 text-base font-semibold text-chrome-950">Assignment history could not be loaded</h4>
+                                                <p class="mt-2 text-sm leading-6 text-chrome-700">Retry to load the requested assignment page for this party.</p>
                                                 <Button Text="Retry"
                                                         Icon="refresh"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Class="mt-4"
                                                         Click="View.RetryProjectAssignmentsLoadAsync" />
@@ -547,16 +527,16 @@
                                             <Stack GapScale="LayoutGap.Small" Class="mt-5">
                                                 @foreach (var assignment in View.ProjectAssignmentsPage.Items)
                                                 {
-                                                    <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                                    <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4"
                                                          data-testid="crmhr-party-assignment-item">
                                                         <Split Gap="LayoutGap.Medium">
                                                             <div class="min-w-0">
-                                                                <p class="text-sm font-semibold text-slate-950">@assignment.ProjectName</p>
-                                                                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">@assignment.AssignmentKind / @assignment.NodeKey</p>
-                                                                <p class="mt-2 text-xs text-slate-500">@CrmHrDirectoryWorkspacePresentation.BuildAssignmentSchedule(assignment)</p>
+                                                                <p class="text-sm font-semibold text-chrome-950">@assignment.ProjectName</p>
+                                                                <p class="mt-2 text-xs uppercase tracking-[0.18em] text-chrome-500">@assignment.AssignmentKind / @assignment.NodeKey</p>
+                                                                <p class="mt-2 text-xs text-chrome-500">@CrmHrDirectoryWorkspacePresentation.BuildAssignmentSchedule(assignment)</p>
                                                                 @if (!string.IsNullOrWhiteSpace(assignment.Notes))
                                                                 {
-                                                                    <p class="mt-3 text-sm leading-6 text-slate-600">@assignment.Notes</p>
+                                                                    <p class="mt-3 text-sm leading-6 text-chrome-600">@assignment.Notes</p>
                                                                 }
                                                             </div>
                                                             <Cluster Gap="LayoutGap.Small">
@@ -586,14 +566,14 @@
                                             <Cluster Gap="LayoutGap.Small">
                                                 <Button Text="Previous"
                                                         Icon="chevron_left"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Disabled="@(!View.CanMoveProjectAssignmentsPrevious)"
                                                         Click="@(() => View.HandleProjectAssignmentsPageRequestedAsync(View.ProjectAssignmentsPage.PageIndex - 1))"
                                                         data-testid="crmhr-party-assignments-previous" />
                                                 <Button Text="Next"
                                                         Icon="chevron_right"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Disabled="@(!View.CanMoveProjectAssignmentsNext)"
                                                         Click="@(() => View.HandleProjectAssignmentsPageRequestedAsync(View.ProjectAssignmentsPage.PageIndex + 1))"
@@ -627,11 +607,11 @@
                                     else if (!string.IsNullOrWhiteSpace(View.RelationshipsLoadError))
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-directory-relationships-error">
-                                            <p class="cda-eyebrow text-rose-700">Relationship data unavailable</p>
-                                            <p class="mt-2 text-sm leading-6 text-slate-700">@View.RelationshipsLoadError</p>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">Relationship data unavailable</TextBlock>
+                                            <p class="mt-2 text-sm leading-6 text-chrome-700">@View.RelationshipsLoadError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
-                                                    ButtonStyle="ButtonStyle.Light"
+                                                    Tone="ButtonTone.Default"
                                                     Size="ButtonSize.Small"
                                                     Class="mt-4"
                                                     Click="View.RetryRelationshipsLoadAsync" />
@@ -648,7 +628,7 @@
                                     @if (!View.IsRelationshipsLoading && string.IsNullOrWhiteSpace(View.RelationshipsLoadError)) {
                                     @if (!View.Editor.Id.HasValue)
                                     {
-                                        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                             Save the party first to evaluate duplicate candidates against persisted directory records.
                                         </div>
                                     }
@@ -659,8 +639,8 @@
                                                    AlignItems="AlignItems.Center"
                                                    JustifyContent="JustifyContent.SpaceBetween">
                                                 <div>
-                                                    <p class="cda-eyebrow">Potential duplicates</p>
-                                                    <p class="mt-1 text-sm leading-6 text-slate-600">Candidates are ranked by external code, normalized names, and contact value overlap.</p>
+                                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Potential duplicates</TextBlock>
+                                                    <p class="mt-1 text-sm leading-6 text-chrome-600">Candidates are ranked by external code, normalized names, and contact value overlap.</p>
                                                 </div>
                                                 <StatusBadge Tone="@(View.DuplicateCandidates.Count == 0 ? "success" : "warning")"
                                                              Text="@(View.DuplicateCandidates.Count == 0 ? "No duplicates" : $"{View.DuplicateCandidates.Count} candidate(s)")" />
@@ -668,7 +648,7 @@
 
                                             @if (View.DuplicateCandidates.Count == 0)
                                             {
-                                                <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+                                                <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
                                                     No duplicate candidates are currently detected for this party.
                                                 </div>
                                             }
@@ -681,16 +661,16 @@
                                                                AlignItems="AlignItems.Start"
                                                                JustifyContent="JustifyContent.SpaceBetween">
                                                             <div class="min-w-0">
-                                                                <p class="text-sm font-semibold text-slate-950">@candidate.DisplayName</p>
-                                                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">@candidate.PartyType / @candidate.LifecycleStatus</p>
+                                                                <p class="text-sm font-semibold text-chrome-950">@candidate.DisplayName</p>
+                                                                <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">@candidate.PartyType / @candidate.LifecycleStatus</p>
                                                                 @if (!string.IsNullOrWhiteSpace(candidate.Summary))
                                                                 {
-                                                                    <p class="mt-3 text-sm leading-6 text-slate-700">@candidate.Summary</p>
+                                                                    <p class="mt-3 text-sm leading-6 text-chrome-700">@candidate.Summary</p>
                                                                 }
-                                                                <p class="mt-3 text-sm leading-6 text-slate-700">Reasons: @string.Join(", ", candidate.MatchReasons)</p>
+                                                                <p class="mt-3 text-sm leading-6 text-chrome-700">Reasons: @string.Join(", ", candidate.MatchReasons)</p>
                                                             </div>
                                                             <Button Text="Merge into current party"
-                                                                    ButtonStyle="ButtonStyle.Warning"
+                                                                    Tone="ButtonTone.Warning"
                                                                     Size="ButtonSize.Small"
                                                                     Click="@(() => View.OpenMergeDialogAsync(candidate))"
                                                                     data-testid="@($"crmhr-merge-open-{candidate.Id:N}")" />
@@ -719,7 +699,7 @@
                             <SmallText Text="Changes remain local until Save party succeeds." />
                             <Cluster Gap="LayoutGap.Small">
                                 <Button Text="Close"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="View.CloseEditorDialogAsync"
                                         data-testid="crmhr-directory-record-close" />
                                 <Button Text="Save party"

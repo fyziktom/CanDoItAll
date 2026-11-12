@@ -36,7 +36,7 @@
           Class="project-structure-gantt-task-dialog__schedule-grid">
         <FormField Text="Task title"
                    Class="project-structure-gantt-task-dialog__title-field">
-            <TextBox Value="@title"
+            <TextInput Value="@title"
                      ValueChanged="HandleTitleChangedAsync"
                      Placeholder="Describe the task"
                      Immediate="true"
@@ -89,7 +89,7 @@
                 <Button Text="@preset.Label"
                         Size="ButtonSize.Small"
                         Variant="Variant.Outlined"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Disabled="@IsScheduleReadOnly"
                         data-testid="@($"project-structure-gantt-task-preset-{preset.Hours:0.##}")"
                         Click="@(() => ApplyDurationPreset(preset.Hours))" />
@@ -156,7 +156,7 @@
                         Icon="close"
                         Size="ButtonSize.Small"
                         Variant="Variant.Text"
-                        ButtonStyle="ButtonStyle.Base"
+                        Tone="ButtonTone.Default"
                         data-testid="project-structure-gantt-task-resource-clear"
                         Click="ClearResourceAsync" />
             }

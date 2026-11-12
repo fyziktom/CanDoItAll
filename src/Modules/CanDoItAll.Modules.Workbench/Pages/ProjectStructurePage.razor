@@ -76,7 +76,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 @{
     var hasVisibleAgentChat = FloatingAgentChats.Snapshot().VisibleChat is not null;
-    RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+    RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" Tone="ButtonTone.Default"
                                              aria-label="Structure updates" title="Show structure updates" data-testid="project-structure-changes-toggle"
                                              Click="@(() => changeInbox.ToggleWindow())" />;
 }
@@ -89,7 +89,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     </ToolbarSupplement>
     <EditorActions>
         @if (composerOpening?.Session is { CanUndo: true } nodeEditor) {
-            <Button Text="Undo node comparison" ButtonStyle="ButtonStyle.Light" Disabled="@nodeEditor.Busy"
+            <Button Text="Undo node comparison" Tone="ButtonTone.Default" Disabled="@nodeEditor.Busy"
                     Click="@(() => ApplyNodeComparisonAsync(nodeEditor, undo: true))" data-testid="structure-node-compare-undo" />
         }
     </EditorActions>

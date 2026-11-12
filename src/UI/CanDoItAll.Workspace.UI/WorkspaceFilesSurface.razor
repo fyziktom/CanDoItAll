@@ -1,7 +1,7 @@
 @namespace CanDoItAll.Workspace.UI
 @implements IDisposable
 <Stack GapScale="LayoutGap.Medium">
-    <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="files-refresh" />
+    <Button Text="Refresh references" Tone="ButtonTone.Default" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="files-refresh" />
     @if (State.Error is { } error) {
         <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
     }
@@ -16,20 +16,16 @@
             <EditForm EditContext="State.Draft.EditContext" OnSubmit="State.SaveAsync">
                 <Stack GapScale="LayoutGap.Large">
                     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                        <div>
-                            <label class="cda-field-label">File extension</label>
-                            <TextBox Immediate="true" @bind-Value="State.Draft.Extension" @bind-Value:after="State.Draft.Edited"
-                                       class="cda-input"
+                        <FormField Text="File extension">
+                            <TextInput Immediate="true" @bind-Value="State.Draft.Extension" @bind-Value:after="State.Draft.Edited"
                                        placeholder=".xlsx"
                                        data-testid="file-application-extension" />
-                        </div>
-                        <div>
-                            <label class="cda-field-label">Application executable</label>
-                            <TextBox Immediate="true" @bind-Value="State.Draft.ExecutablePath" @bind-Value:after="State.Draft.Edited"
-                                       class="cda-input"
+                        </FormField>
+                        <FormField Text="Application executable">
+                            <TextInput Immediate="true" @bind-Value="State.Draft.ExecutablePath" @bind-Value:after="State.Draft.Edited"
                                        placeholder="Absolute path to the application executable"
                                        data-testid="file-application-executable" />
-                        </div>
+                        </FormField>
                     </Grid>
 
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -39,11 +35,11 @@
                                 Disabled="@(!State.CanMutate)"
                                 data-testid="file-application-save" />
                         <Button Text="New override"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="State.New" />
                         @if (State.Draft.Selected.HasValue) {
                             <Button Text="Use system default"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Variant="Variant.Outlined"
                                     Disabled="@(!State.CanMutate)"
                                     Click="State.DeleteAsync"

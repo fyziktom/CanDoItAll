@@ -2,11 +2,15 @@
 <FormStack>
     <FormRow Split="true">
         <FormField Text="Time range">
-            <DropDown TValue="ProviderHistoryRange" Data="Ranges" TextProperty="@nameof(RangeOption.Text)" ValueProperty="@nameof(RangeOption.Value)"
-                      @bind-Value="Draft.Range" @bind-Value:after="OnChangedAsync" aria-label="Time range" data-testid="history-range" />
+            <SelectInput TValue="ProviderHistoryRange"
+                      @bind-Value="Draft.Range" @bind-Value:after="OnChangedAsync" aria-label="Time range" data-testid="history-range">
+    @foreach (var option in Ranges) {
+        <option value="@option.Value">@option.Text</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Exact model identity">
-            <TextBox @bind-Value="Draft.Model" @bind-Value:after="OnChangedAsync" Placeholder="All models"
+            <TextInput @bind-Value="Draft.Model" @bind-Value:after="OnChangedAsync" Placeholder="All models"
                      aria-label="Exact model identity" data-testid="history-model" />
         </FormField>
     </FormRow>
@@ -14,83 +18,103 @@
         <FormRow Split="true">
             <FormField Text="From (UTC, inclusive)">
                 <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Draft.FromUtc" @bind-Value:after="OnChangedAsync"
-                           class="cda-input" aria-label="From UTC" data-testid="history-from" />
+                           class="form-input ui-input ui-input--outlined" aria-label="From UTC" data-testid="history-from" />
             </FormField>
             <FormField Text="To (UTC, exclusive)">
                 <InputDate Type="InputDateType.DateTimeLocal" @bind-Value="Draft.ToUtc" @bind-Value:after="OnChangedAsync"
-                           class="cda-input" aria-label="To UTC" data-testid="history-to" />
+                           class="form-input ui-input ui-input--outlined" aria-label="To UTC" data-testid="history-to" />
             </FormField>
         </FormRow>
     }
     <FormRow Split="true">
         <FormField Text="Outcome">
-            <DropDown TValue="HistoryOutcome?" Data="Outcomes" AllowClear="true" Placeholder="All outcomes"
-                      @bind-Value="Draft.Outcome" @bind-Value:after="OnChangedAsync" aria-label="Outcome" data-testid="history-outcome" />
+            <SelectInput TValue="HistoryOutcome?"
+                      @bind-Value="Draft.Outcome" @bind-Value:after="OnChangedAsync" aria-label="Outcome" data-testid="history-outcome">
+    <option value="">All outcomes</option>
+    @foreach (var option in Outcomes) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Managed credential ID">
-            <TextBox @bind-Value="Draft.CredentialId" @bind-Value:after="OnChangedAsync" Placeholder="All credentials (ID, never the API key)"
+            <TextInput @bind-Value="Draft.CredentialId" @bind-Value:after="OnChangedAsync" Placeholder="All credentials (ID, never the API key)"
                      aria-label="Managed credential ID" data-testid="history-credential" />
         </FormField>
     </FormRow>
     @if (AllowProvider) {
         <FormField Text="Provider ID">
-            <TextBox @bind-Value="Draft.ProviderId" @bind-Value:after="OnChangedAsync" Placeholder="All authorized providers"
+            <TextInput @bind-Value="Draft.ProviderId" @bind-Value:after="OnChangedAsync" Placeholder="All authorized providers"
                      aria-label="Provider ID" data-testid="history-provider" />
         </FormField>
     }
-    <Button Text="@(advanced ? "Fewer filters" : "More filters")" ButtonStyle="ButtonStyle.Light"
+    <Button Text="@(advanced ? "Fewer filters" : "More filters")" Tone="ButtonTone.Default"
             Click="@(() => advanced = !advanced)" aria-expanded="@advanced" data-testid="history-more-filters" />
     <FormStack hidden="@(!advanced)" Style="@(advanced ? null : "display:none")" data-testid="history-advanced-filters">
         <FormRow Split="true">
             <FormField Text="Workload">
-                <DropDown TValue="HistoryWorkload?" Data="Workloads" AllowClear="true" Placeholder="All workloads"
-                          @bind-Value="Draft.Workload" @bind-Value:after="OnChangedAsync" aria-label="Workload" />
+                <SelectInput TValue="HistoryWorkload?"
+                          @bind-Value="Draft.Workload" @bind-Value:after="OnChangedAsync" aria-label="Workload">
+    <option value="">All workloads</option>
+    @foreach (var option in Workloads) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
             </FormField>
             <FormField Text="Operation">
-                <DropDown TValue="HistoryOperation?" Data="Operations" AllowClear="true" Placeholder="All operations"
-                          @bind-Value="Draft.Operation" @bind-Value:after="OnChangedAsync" aria-label="Operation" />
+                <SelectInput TValue="HistoryOperation?"
+                          @bind-Value="Draft.Operation" @bind-Value:after="OnChangedAsync" aria-label="Operation">
+    <option value="">All operations</option>
+    @foreach (var option in Operations) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
             </FormField>
         </FormRow>
         <FormRow Split="true">
             <FormField Text="Price evidence">
-                <DropDown TValue="HistoryPriceState?" Data="Prices" AllowClear="true" Placeholder="All price states"
-                          @bind-Value="Draft.PriceState" @bind-Value:after="OnChangedAsync" aria-label="Price evidence" />
+                <SelectInput TValue="HistoryPriceState?"
+                          @bind-Value="Draft.PriceState" @bind-Value:after="OnChangedAsync" aria-label="Price evidence">
+    <option value="">All price states</option>
+    @foreach (var option in Prices) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
             </FormField>
             <FormField Text="Rows per page (1–200)">
-                <InputNumber @bind-Value="Draft.PageSize" @bind-Value:after="OnChangedAsync" class="cda-input"
+                <NumberInput @bind-Value="Draft.PageSize" @bind-Value:after="OnChangedAsync"
                              aria-label="Rows per page" data-testid="history-page-size" />
             </FormField>
         </FormRow>
         <FormRow Split="true">
             <FormField Text="Subject">
-                <TextBox @bind-Value="Draft.Subject" @bind-Value:after="OnChangedAsync" aria-label="Subject" />
+                <TextInput @bind-Value="Draft.Subject" @bind-Value:after="OnChangedAsync" aria-label="Subject" />
             </FormField>
             <FormField Text="Issuer">
-                <TextBox @bind-Value="Draft.Issuer" @bind-Value:after="OnChangedAsync" aria-label="Issuer" />
+                <TextInput @bind-Value="Draft.Issuer" @bind-Value:after="OnChangedAsync" aria-label="Issuer" />
             </FormField>
         </FormRow>
         <FormRow Split="true">
             <FormField Text="Request ID">
-                <TextBox @bind-Value="Draft.RequestId" @bind-Value:after="OnChangedAsync" aria-label="Request ID" />
+                <TextInput @bind-Value="Draft.RequestId" @bind-Value:after="OnChangedAsync" aria-label="Request ID" />
             </FormField>
             <FormField Text="Attempt ID">
-                <TextBox @bind-Value="Draft.AttemptId" @bind-Value:after="OnChangedAsync" aria-label="Attempt ID" />
+                <TextInput @bind-Value="Draft.AttemptId" @bind-Value:after="OnChangedAsync" aria-label="Attempt ID" />
             </FormField>
         </FormRow>
         <FormRow Split="true">
             <FormField Text="External reference type">
-                <TextBox @bind-Value="Draft.ExternalReferenceType" @bind-Value:after="OnChangedAsync"
+                <TextInput @bind-Value="Draft.ExternalReferenceType" @bind-Value:after="OnChangedAsync"
                          Placeholder="For example project or erp.company-project"
                          aria-label="External reference type" data-testid="history-external-reference-type" />
             </FormField>
             <FormField Text="External reference value">
-                <TextBox @bind-Value="Draft.ExternalReferenceValue" @bind-Value:after="OnChangedAsync"
+                <TextInput @bind-Value="Draft.ExternalReferenceValue" @bind-Value:after="OnChangedAsync"
                          Placeholder="Exact third-party identifier"
                          aria-label="External reference value" data-testid="history-external-reference-value" />
             </FormField>
         </FormRow>
         <FormField Text="Correlation ID">
-            <TextBox @bind-Value="Draft.CorrelationId" @bind-Value:after="OnChangedAsync" aria-label="Correlation ID" />
+            <TextInput @bind-Value="Draft.CorrelationId" @bind-Value:after="OnChangedAsync" aria-label="Correlation ID" />
         </FormField>
     </FormStack>
 </FormStack>

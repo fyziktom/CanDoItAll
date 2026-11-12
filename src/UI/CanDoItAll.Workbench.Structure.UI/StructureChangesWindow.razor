@@ -27,7 +27,7 @@
                 <Stack Class="structure-changes__list" GapScale="LayoutGap.Tiny" AlignItems="AlignItems.Stretch"
                        Style="min-height:0;overflow-y:auto;flex:1" role="log" aria-label="Structure updates" aria-live="polite">
                     @foreach (var item in view.Items) {
-                        <Button @key="item.Sequence" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Class="structure-changes__item"
+                        <Button @key="item.Sequence" Variant="Variant.Text" Tone="ButtonTone.Default" Class="structure-changes__item"
                                 Style="width:100%;justify-content:flex-start;text-align:left;white-space:normal;overflow-wrap:anywhere;flex-shrink:0"
                                 Disabled="view.IsBusy" data-testid="@($"project-structure-change-{item.Sequence}")"
                                 Click="@(() => dispatch.InvokeAsync(new StructureChangesRefreshIntent(view.ContextId, item.Sequence)))">

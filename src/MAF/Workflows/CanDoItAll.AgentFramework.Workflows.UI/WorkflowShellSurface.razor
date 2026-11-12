@@ -38,7 +38,7 @@
                 <PageHeaderActionButton Icon="add"
                                         Label="Create starter"
                                         TooltipText="Create the starter workflow definition."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="CreateStarterAsync"
                                         Disabled="@(Presentation.IsBusy || Presentation.CreationBlocked)"
                                         data-testid="workflows-create-starter" />
@@ -91,7 +91,7 @@
         </SurfaceCard>
     } else {
         <Tabs SelectedIndex="@((int)Presentation.ActiveTab)" SelectedIndexChanged="ChangeTabAsync"
-              RenderMode="TabRenderMode.Client" Variant="TabsVariant.WorkspacePrimary" OverflowMode="TabsOverflowMode.Wrap"
+              RenderMode="TabRenderMode.Client" Density="TabsDensity.Normal" OverflowMode="TabsOverflowMode.Wrap"
               AriaLabel="Workflow workspace tabs" data-testid="workflows-tabs">
             <TabsItem Text="Dashboard" Icon="dashboard" data-testid="workflows-tab-dashboard">@Dashboard</TabsItem>
             <TabsItem Text="Workflows" Icon="list_alt" BadgeText="@Presentation.DefinitionCount" data-testid="workflows-tab-workflows">

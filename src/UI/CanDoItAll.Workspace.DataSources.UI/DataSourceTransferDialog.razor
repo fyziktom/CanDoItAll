@@ -40,7 +40,7 @@
                         @if (targetSchemaHealth.CanApplySchema) {
                             <Button Text="Apply target schema"
                                     Icon="database"
-                                    ButtonStyle="ButtonStyle.Warning"
+                                    Tone="ButtonTone.Warning"
                                     Size="ButtonSize.Small"
                                     Disabled="@(Busy || !Operations.CanDispatch)"
                                     IsBusy="@(Operations.IsBusy)"
@@ -71,7 +71,7 @@
                         @if (sourceSchemaHealth.CanApplySchema && Session.SourceId.HasValue) {
                             <Button Text="Apply source schema"
                                     Icon="database"
-                                    ButtonStyle="ButtonStyle.Warning"
+                                    Tone="ButtonTone.Warning"
                                     Size="ButtonSize.Small"
                                     Disabled="@(Busy || !Operations.CanDispatch)"
                                     IsBusy="@(Operations.IsBusy)"
@@ -83,18 +83,18 @@
             }
 
             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
+                <div class="rounded-[1.25rem] border border-chrome-200 bg-chrome-50 px-4 py-3"
                      data-testid="database-transfer-target-summary">
                     <Stack GapScale="LayoutGap.Tiny">
-                        <p class="cda-eyebrow">Target database</p>
-                        <p class="text-base font-semibold text-slate-950">@Session.Target.DisplayName</p>
-                        <p class="text-sm leading-6 text-slate-600 break-all">@Session.Target.Descriptor</p>
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Target database</TextBlock>
+                        <p class="text-base font-semibold text-chrome-950">@Session.Target.DisplayName</p>
+                        <p class="text-sm leading-6 text-chrome-600 break-all">@Session.Target.Descriptor</p>
                     </Stack>
                 </div>
 
                 <div>
-                    <label class="cda-field-label">Copy settings from</label>
-                    <select class="cda-input"
+                    <label class="cda-form-field__label">Copy settings from</label>
+                    <select class="form-input ui-input ui-input--outlined"
                             value="@Session.SourceId?.ToString()"
                             disabled="@(Busy || Session.Sources.Count == 0)"
                             @onchange="ChangeTransferSourceAsync"
@@ -105,7 +105,7 @@
                         }
                     </select>
                     @if (Session.Sources.Count == 0) {
-                        <p class="mt-2 text-sm leading-6 text-slate-600">No other saved database profiles are available as a source.</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-600">No other saved database profiles are available as a source.</p>
                     }
                 </div>
             </Grid>
@@ -113,7 +113,7 @@
             @if (Session.Items.Count > 0) {
                 <Stack GapScale="LayoutGap.Small" data-testid="database-transfer-items">
                     @foreach (var item in Session.Items) {
-                        <label class="rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                        <label class="rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-3"
                                data-testid="@($"database-transfer-item-{item.Descriptor.Key}")">
                             <Split Breakpoint="LayoutBreakpoint.None"
                                    Gap="LayoutGap.Medium"
@@ -122,13 +122,13 @@
                                    Wrap="FlexWrap.Wrap">
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.NoWrap" AlignItems="AlignItems.Start">
                                     <input type="checkbox"
-                                           class="mt-1 h-4 w-4 rounded border-slate-300"
+                                           class="mt-1 h-4 w-4 rounded border-chrome-300"
                                            checked="@Session.IsSelected(item.Descriptor.Key)"
                                            disabled="@(Busy || !item.IsAvailable)"
                                            @onchange="@((args) => ToggleTransferItem(item.Descriptor.Key, args))" />
                                     <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                                            <span class="font-semibold text-slate-950">@item.Descriptor.Label</span>
+                                            <span class="font-semibold text-chrome-950">@item.Descriptor.Label</span>
                                             @if (item.Descriptor.IsSensitive) {
                                                 <StatusBadge Tone="warning" Text="Encrypted" />
                                             }
@@ -136,15 +136,15 @@
                                                 <StatusBadge Tone="neutral" Text="Unavailable" />
                                             }
                                         </Cluster>
-                                        <p class="text-sm leading-6 text-slate-600">@item.Descriptor.Description</p>
-                                        <p class="text-sm leading-6 text-slate-600">@item.Summary</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Descriptor.Description</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Summary</p>
                                         @if (!string.IsNullOrWhiteSpace(item.Warning)) {
                                             <p class="text-sm leading-6 text-amber-700">@item.Warning</p>
                                         }
                                     </Stack>
                                 </Cluster>
 
-                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-slate-500">
+                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-chrome-500">
                                     <span>Source: @item.SourceRecordCount</span>
                                     <span>Target: @item.TargetRecordCount</span>
                                 </Stack>
@@ -169,13 +169,13 @@
                AlignItems="AlignItems.Center"
                JustifyContent="JustifyContent.SpaceBetween"
                Wrap="FlexWrap.Wrap">
-            <p class="text-sm leading-6 text-slate-600">Encrypted values are copied as protected payloads and are not shown here.</p>
+            <p class="text-sm leading-6 text-chrome-600">Encrypted values are copied as protected payloads and are not shown here.</p>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="OnClose" />
                 <Button Text="Transfer selected"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Disabled="@(!Session.CanTransfer)"
                         Click="Session.TransferAsync"
                         data-testid="database-transfer-apply" />

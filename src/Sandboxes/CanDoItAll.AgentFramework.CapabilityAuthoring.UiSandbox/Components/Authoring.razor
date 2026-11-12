@@ -8,7 +8,7 @@
     <Cluster Gap="LayoutGap.Medium">
         <h1>Capability authoring sandbox</h1>
         <label>Scenario
-            <select value="@selected" @onchange="SelectScenario" class="cda-input" data-testid="authoring-scenario">
+            <select value="@selected" @onchange="SelectScenario" class="form-input ui-input ui-input--outlined" data-testid="authoring-scenario">
                 @foreach (var value in Enum.GetValues<AuthoringScenario>()) {
                     <option value="@value">@value</option>
                 }

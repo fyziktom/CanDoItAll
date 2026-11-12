@@ -10,13 +10,13 @@
     <Grid Gap="LayoutGap.Large"
           ColumnTemplateXl="minmax(0,1.65fr) minmax(18rem,0.75fr)">
         <SurfaceCard>
-            <p class="cda-eyebrow">Application editor</p>
-            <h3 class="mt-1 text-lg font-semibold text-slate-950">Candidate and stage</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-600">
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Application editor</TextBlock>
+            <h3 class="mt-1 text-lg font-semibold text-chrome-950">Candidate and stage</h3>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">
                 Select an existing person or bound AI agent, or create a new human candidate inline, then keep role, ownership, stage, and decision on the same record.
             </p>
 
-            <Tabs RenderMode="TabRenderMode.Client" Variant="TabsVariant.ModalCompact"
+            <Tabs RenderMode="TabRenderMode.Client" Density="TabsDensity.Compact"
                   BorderMode="TabsBorderMode.Soft"
                   Tone="TabsTone.Success"
                   OverflowMode="TabsOverflowMode.Wrap"
@@ -44,7 +44,7 @@
                                 }
                                 <FormField Text="Desired role">
                                     <NativeValueInput TValue="string" @bind-Value="Draft.DesiredRole" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.DesiredRole))"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-role" />
                                 </FormField>
                             </Grid>
@@ -54,24 +54,24 @@
                                   ColumnsLg="3">
                                 <FormField Text="New candidate name">
                                     <NativeValueInput TValue="string" @bind-Value="Draft.CandidateName" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.CandidateName))" disabled="@(Draft.Id.HasValue && !RetainedCandidateInput)"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-candidate-name" />
                                 </FormField>
                                 <FormField Text="Email">
                                     <NativeValueInput TValue="string" @bind-Value="Draft.CandidateEmail" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.CandidateEmail))" disabled="@(Draft.Id.HasValue && !RetainedCandidateInput)"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-candidate-email" />
                                 </FormField>
                                 <FormField Text="Phone">
                                     <NativeValueInput TValue="string" @bind-Value="Draft.CandidatePhone" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.CandidatePhone))" disabled="@(Draft.Id.HasValue && !RetainedCandidateInput)"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-candidate-phone" />
                                 </FormField>
                             </Grid>
 
                             <FormField Text="Candidate summary">
                                 <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.CandidateSummary" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.CandidateSummary))" disabled="@(Draft.Id.HasValue && !RetainedCandidateInput)"
-                                               class="cda-input cda-input--textarea"
+                                               class="form-input ui-input ui-input--outlined ui-input--textarea"
                                                data-testid="crmhr-recruiting-candidate-summary" />
                             </FormField>
                         </Stack>
@@ -84,31 +84,31 @@
                                AlignItems="AlignItems.Stretch">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                                 <FormField Text="Stage">
-                                    <InputSelect @bind-Value="Draft.Stage" @bind-Value:after="@(() => ReportAsync(RecruitmentApplicationField.Stage))"
-                                                 class="cda-input"
+                                    <SelectInput @bind-Value="Draft.Stage" @bind-Value:after="@(() => ReportAsync(RecruitmentApplicationField.Stage))"
+                                                 class="form-input ui-input ui-input--outlined"
                                                  data-testid="crmhr-recruiting-stage">
                                         @foreach (var stage in Enum.GetValues<RecruitmentStage>()) {
                                             <option value="@stage">@stage</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </FormField>
                                 <FormField Text="Decision">
-                                    <InputSelect @bind-Value="Draft.Decision" @bind-Value:after="@(() => ReportAsync(RecruitmentApplicationField.Decision))"
-                                                 class="cda-input"
+                                    <SelectInput @bind-Value="Draft.Decision" @bind-Value:after="@(() => ReportAsync(RecruitmentApplicationField.Decision))"
+                                                 class="form-input ui-input ui-input--outlined"
                                                  data-testid="crmhr-recruiting-decision">
                                         @foreach (var decision in Enum.GetValues<RecruitmentDecision>()) {
                                             <option value="@decision">@decision</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </FormField>
                                 <FormField Text="Available from">
                                     <NativeValueInput TValue="DateOnly?" DisplayName="Available from" @bind-Value="Draft.AvailableFrom" PendingChanged="@(pending => ReportAsync(RecruitmentApplicationField.AvailableFrom, pending))"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-available-from" />
                                 </FormField>
                                 <FormField Text="Source">
                                     <NativeValueInput TValue="string" @bind-Value="Draft.Source" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.Source))"
-                                               class="cda-input"
+                                               class="form-input ui-input ui-input--outlined"
                                                data-testid="crmhr-recruiting-source" />
                                 </FormField>
                             </Grid>
@@ -155,13 +155,13 @@
                                AlignItems="AlignItems.Stretch">
                             <FormField Text="Stage note">
                                 <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.StageNotes" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.StageNotes))"
-                                               class="cda-input cda-input--textarea"
+                                               class="form-input ui-input ui-input--outlined ui-input--textarea"
                                                data-testid="crmhr-recruiting-stage-notes" />
                             </FormField>
 
                             <FormField Text="Notes">
                                 <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(RecruitmentApplicationField.Notes))"
-                                               class="cda-input cda-input--textarea"
+                                               class="form-input ui-input ui-input--outlined ui-input--textarea"
                                                data-testid="crmhr-recruiting-notes" />
                             </FormField>
                         </Stack>
@@ -178,7 +178,7 @@
                         data-testid="crmhr-recruiting-save-button" />
                 <Button Text="Reset"
                         Icon="restart_alt"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="ResetApplication" Disabled="@WritesDisabled"
                         data-testid="crmhr-recruiting-reset-button" />
             </Cluster>
@@ -190,8 +190,8 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <div>
-                    <p class="cda-eyebrow">Stage history</p>
-                    <h3 class="mt-1 text-lg font-semibold text-slate-950">@StageHistory.Count update(s)</h3>
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Stage history</TextBlock>
+                    <h3 class="mt-1 text-lg font-semibold text-chrome-950">@StageHistory.Count update(s)</h3>
                 </div>
                 @if (HasWorkforceProfile) {
                     <StatusBadge Tone="success"
@@ -215,10 +215,10 @@
                                    JustifyContent="JustifyContent.SpaceBetween"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0 space-y-1">
-                                    <p class="text-base font-semibold text-slate-950">@item.Summary</p>
-                                    <p class="text-sm text-slate-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>
+                                    <p class="text-base font-semibold text-chrome-950">@item.Summary</p>
+                                    <p class="text-sm text-chrome-600">@item.ChangedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") / @item.ChangedBy</p>
                                     @if (!string.IsNullOrWhiteSpace(item.Notes)) {
-                                        <p class="text-sm leading-6 text-slate-600">@item.Notes</p>
+                                        <p class="text-sm leading-6 text-chrome-600">@item.Notes</p>
                                     }
                                 </div>
                                 <StatusBadge Tone="@ResolveStageTone(item.Stage)"

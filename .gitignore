@@ -53,6 +53,7 @@ codex/bundles/shared-provider-real-catalogs/proof/*
 *.nupkg
 *.snupkg
 *.binlog
+src/App/CanDoItAll.Web/wwwroot/css/output.css
 
 # Runtime template artifacts are maintained source inputs.
 !Templates/Processes/processes/**/artifacts/

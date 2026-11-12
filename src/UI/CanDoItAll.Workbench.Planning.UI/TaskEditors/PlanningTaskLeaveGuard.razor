@@ -14,7 +14,7 @@
     <Footer>
         <Cluster Wrap="FlexWrap.Wrap">
             <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="planning-task-dirty-continue" />
-            <Button Text="Discard local draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="planning-task-dirty-discard" />
+            <Button Text="Discard local draft and leave" Tone="ButtonTone.Danger" Click="@(() => Complete(true))" data-testid="planning-task-dirty-discard" />
         </Cluster>
     </Footer>
 </Dialog>

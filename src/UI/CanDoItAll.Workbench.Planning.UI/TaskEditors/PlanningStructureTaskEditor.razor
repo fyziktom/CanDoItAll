@@ -39,7 +39,7 @@
           Class="project-structure-task-create-dialog__grid">
         <FormField Text="Task title"
                    Class="project-structure-task-create-dialog__wide-field">
-            <TextBox Value="@title"
+            <TextInput Value="@title"
                      ValueChanged="HandleTitleChangedAsync"
                      Placeholder="Describe the task"
                      Immediate="true"
@@ -47,7 +47,7 @@
         </FormField>
 
         <FormField Text="Status lane">
-            <TextBox Value="@subtitle"
+            <TextInput Value="@subtitle"
                      ValueChanged="HandleSubtitleChangedAsync"
                      Placeholder="Sprint, phase, or owner"
                      Immediate="true"
@@ -56,7 +56,7 @@
 
         <FormField Text="Due (UTC)">
             <input type="text" placeholder="yyyy-MM-ddTHH:mm"
-                   class="cda-input"
+                   class="form-input ui-input ui-input--outlined"
                    value="@dueText"
                    aria-label="Task due date in UTC"
                    data-testid="project-structure-task-create-due"
@@ -64,20 +64,20 @@
         </FormField>
 
         <FormField Text="Repository">
-            <DropDown TValue="string"
-                      Data="@RepositoryOptions"
-                      TextProperty="Label"
-                      ValueProperty="Value"
+            <SelectInput TValue="string"
                       Value="@repositoryNodeId"
                       ValueChanged="HandleRepositoryChangedAsync"
-                      Placeholder="Optional repository"
-                      AllowClear="true"
-                      data-testid="project-structure-task-create-repository" />
+                      data-testid="project-structure-task-create-repository">
+    <option value="">Optional repository</option>
+    @foreach (var option in RepositoryOptions) {
+        <option value="@option.Value">@option.Label</option>
+    }
+</SelectInput>
         </FormField>
 
         <FormField Text="Notes"
                    Class="project-structure-task-create-dialog__wide-field">
-            <TextArea Value="@notes"
+            <TextAreaInput Value="@notes"
                       ValueChanged="HandleNotesChangedAsync"
                       Placeholder="Definition of done or context"
                       Rows="4"
@@ -122,7 +122,7 @@
                         Icon="close"
                         Size="ButtonSize.Small"
                         Variant="Variant.Text"
-                        ButtonStyle="ButtonStyle.Base"
+                        Tone="ButtonTone.Default"
                         data-testid="project-structure-task-create-assignee-clear"
                         Click="ClearResourceAsync" />
             }

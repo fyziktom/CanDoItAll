@@ -140,7 +140,7 @@ public sealed class LlmChatConversationWorkspaceTests
         var open = rename ? $"llm-chat-rename-{ConversationId:D}" : "llm-chat-new";
         var title = rename ? "llm-chat-rename-title" : "llm-chat-start-title";
         await cut.WaitForElement($"[data-testid='{open}']").ClickAsync();
-        var queued = cut.FindComponents<TextBox>().Single(component =>
+        var queued = cut.FindComponents<TextInput>().Single(component =>
             component.Find("input").GetAttribute("data-testid") == title).Instance.ValueChanged;
         await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
         await cut.Find($"[data-testid='{open}']").ClickAsync();

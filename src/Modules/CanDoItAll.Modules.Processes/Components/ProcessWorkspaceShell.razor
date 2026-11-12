@@ -2420,15 +2420,15 @@
             _ => "neutral"
         };
 
-    private static ButtonStyle ResolveCommandButtonStyle(ProcessWorkspaceCommandProjection command)
+    private static ButtonTone ResolveCommandButtonTone(ProcessWorkspaceCommandProjection command)
         => command.Kind switch {
-            ProcessWorkspaceCommandKind.RefreshProjections => ButtonStyle.Light,
-            ProcessWorkspaceCommandKind.OpenAgentContext => ButtonStyle.Info,
-            ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonStyle.Light,
-            ProcessWorkspaceCommandKind.FeedDefaults => ButtonStyle.Info,
-            ProcessWorkspaceCommandKind.LaunchRun => ButtonStyle.Success,
-            ProcessWorkspaceCommandKind.CreateDefinition => ButtonStyle.Primary,
-            _ => ButtonStyle.Light
+            ProcessWorkspaceCommandKind.RefreshProjections => ButtonTone.Default,
+            ProcessWorkspaceCommandKind.OpenAgentContext => ButtonTone.Info,
+            ProcessWorkspaceCommandKind.OpenLiveDashboard => ButtonTone.Default,
+            ProcessWorkspaceCommandKind.FeedDefaults => ButtonTone.Info,
+            ProcessWorkspaceCommandKind.LaunchRun => ButtonTone.Success,
+            ProcessWorkspaceCommandKind.CreateDefinition => ButtonTone.Primary,
+            _ => ButtonTone.Default
         };
 
     private static string FormatObservedAt(DateTimeOffset observedAtUtc)

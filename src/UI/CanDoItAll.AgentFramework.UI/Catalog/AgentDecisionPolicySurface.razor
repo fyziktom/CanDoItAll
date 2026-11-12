@@ -19,7 +19,7 @@
             @if (State.Pending?.Stage == AgentDecisionPolicyPendingStage.Prepared) {
                 <Alert AlertStyle="AlertStyle.Info" data-testid="agent-policy-prepared">
                     <TextBlock Value="This submission is stored on this browser and has not been dispatched." />
-                    <Button Text="Discard unsent submission" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanDiscardPrepared)"
+                    <Button Text="Discard unsent submission" Tone="ButtonTone.Secondary" Disabled="@(!State.CanDiscardPrepared)"
                             Click="@(() => SendAsync(AgentDecisionPolicyIntent.DiscardPrepared))" data-testid="agent-policy-discard-prepared" />
                 </Alert>
             }
@@ -34,39 +34,39 @@
                     <FormStack>
                         <FormRow Split="true">
                             <FormField Text="When to read data">
-                                <InputSelect TValue="ReadBasisMode?" @bind-Value="State.Draft.ReadBasisMode" class="cda-input" aria-label="When to read data" data-testid="agent-policy-read">
+                                <SelectInput TValue="ReadBasisMode?" @bind-Value="State.Draft.ReadBasisMode" aria-label="When to read data" data-testid="agent-policy-read">
                                     <option value="">Inherit workspace choice</option>
                                     <option value="@ReadBasisMode.RunSnapshot">Keep the starting run snapshot</option>
                                     <option value="@ReadBasisMode.StepSnapshot">Read again for each logical step</option>
-                                </InputSelect>
+                                </SelectInput>
                             </FormField>
                             <FormField Text="When captured data changes">
-                                <InputSelect TValue="OnBasisChange?" @bind-Value="State.Draft.OnBasisChange" class="cda-input" aria-label="When captured data changes" data-testid="agent-policy-change">
+                                <SelectInput TValue="OnBasisChange?" @bind-Value="State.Draft.OnBasisChange" aria-label="When captured data changes" data-testid="agent-policy-change">
                                     <option value="">Inherit workspace choice</option>
                                     <option value="@OnBasisChange.PauseForReview">Pause for review</option>
                                     <option value="@OnBasisChange.Fail">Stop the decision</option>
                                     <option value="@OnBasisChange.Replan">Prepare a new plan within its allowance</option>
-                                </InputSelect>
+                                </SelectInput>
                             </FormField>
                         </FormRow>
                         <FormRow Split="true">
                             <FormField Text="Publishing results">
-                                <InputSelect TValue="PublicationFreshness?" @bind-Value="State.Draft.PublicationFreshness" class="cda-input" aria-label="Publishing results" data-testid="agent-policy-freshness">
+                                <SelectInput TValue="PublicationFreshness?" @bind-Value="State.Draft.PublicationFreshness" aria-label="Publishing results" data-testid="agent-policy-freshness">
                                     <option value="">Inherit workspace choice</option>
                                     <option value="@PublicationFreshness.RequireCurrent">Require current data</option>
                                     <option value="@PublicationFreshness.PinnedObservation">Historical observation, where supported</option>
-                                </InputSelect>
+                                </SelectInput>
                             </FormField>
                             <FormField Text="Maximum automatic replans">
-                                <InputNumber TValue="int?" @bind-Value="State.Draft.MaximumReplans" class="cda-input" min="0" aria-label="Maximum automatic replans" data-testid="agent-policy-replans" />
+                                <NumberInput TValue="int?" @bind-Value="State.Draft.MaximumReplans" min="0" aria-label="Maximum automatic replans" data-testid="agent-policy-replans" />
                             </FormField>
                         </FormRow>
                         <FormRow Split="true">
                             <FormField Text="Maximum work duration">
-                                <TextBox Immediate="true" @bind-Value="State.Draft.MaximumWorkDuration" Placeholder="Inherit, or 00:05:00" maxlength="32" data-testid="agent-policy-work" />
+                                <TextInput Immediate="true" @bind-Value="State.Draft.MaximumWorkDuration" Placeholder="Inherit, or 00:05:00" maxlength="32" data-testid="agent-policy-work" />
                             </FormField>
                             <FormField Text="Maximum age of captured data">
-                                <TextBox Immediate="true" @bind-Value="State.Draft.MaximumBasisAge" Placeholder="Inherit, or 00:10:00" maxlength="32" data-testid="agent-policy-age" />
+                                <TextInput Immediate="true" @bind-Value="State.Draft.MaximumBasisAge" Placeholder="Inherit, or 00:10:00" maxlength="32" data-testid="agent-policy-age" />
                             </FormField>
                         </FormRow>
                         <TextBlock Value="Use hours:minutes:seconds for durations; an optional days. prefix and fractional seconds are supported. Zero automatic replans disables automatic replanning. Each operation must support the selected choices and still checks current access and publication rules." />
@@ -79,9 +79,9 @@
                     <TextBlock Value="@($"Original policy: {Describe(State.Original?.Policy)}")" />
                     <TextBlock Value="@($"Current policy: {Describe(current.Policy)}")" />
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                        <Button Text="Use current values" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanAdopt)"
+                        <Button Text="Use current values" Tone="ButtonTone.Secondary" Disabled="@(!State.CanAdopt)"
                                 Click="@(() => SendAsync(AgentDecisionPolicyIntent.UseCurrentValues))" data-testid="agent-policy-use-current" />
-                        <Button Text="Keep my draft against this version" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanAdopt)"
+                        <Button Text="Keep my draft against this version" Tone="ButtonTone.Secondary" Disabled="@(!State.CanAdopt)"
                                 Click="@(() => SendAsync(AgentDecisionPolicyIntent.KeepDraft))" data-testid="agent-policy-keep-draft" />
                     </Cluster>
                 </Alert>
@@ -92,12 +92,12 @@
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
             <Button Text="Save policy" Type="submit" form="@FormId" Disabled="@(!State.CanSave)" IsBusy="@State.Busy" data-testid="agent-policy-save" />
             @if (!State.RecoveryReady || State.RecoveryBlocked || State.Pending is not null || State.Unconfirmed is not null) {
-                <Button Text="Check retained save" ButtonStyle="ButtonStyle.Secondary" Disabled="@(!State.CanRecover)"
+                <Button Text="Check retained save" Tone="ButtonTone.Secondary" Disabled="@(!State.CanRecover)"
                         Click="@(() => SendAsync(AgentDecisionPolicyIntent.Recover))" data-testid="agent-policy-recover" />
             }
-            <Button Text="Read current policy" ButtonStyle="ButtonStyle.Light" Disabled="@(State.Busy || State.Retired)"
+            <Button Text="Read current policy" Tone="ButtonTone.Default" Disabled="@(State.Busy || State.Retired)"
                     Click="@(() => SendAsync(AgentDecisionPolicyIntent.ReadCurrent))" data-testid="agent-policy-read-current" />
-            <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => SendAsync(AgentDecisionPolicyIntent.Close))" data-testid="agent-policy-close" />
+            <Button Text="Close" Tone="ButtonTone.Default" Click="@(() => SendAsync(AgentDecisionPolicyIntent.Close))" data-testid="agent-policy-close" />
         </Cluster>
     </Footer>
 </Dialog>

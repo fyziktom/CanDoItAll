@@ -3,18 +3,18 @@
            AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.SpaceBetween">
         <div>
-            <p class="cda-eyebrow">Additional contact methods</p>
-            <p class="mt-1 text-sm leading-6 text-slate-600">Keep secondary email, phone, website, messaging, or social handles attached to the same party record.</p>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Additional contact methods</TextBlock>
+            <p class="mt-1 text-sm leading-6 text-chrome-600">Keep secondary email, phone, website, messaging, or social handles attached to the same party record.</p>
         </div>
         <Button Text="Add contact"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Size="ButtonSize.Small"
                 Click="OpenContactWizard"
                 data-testid="crmhr-contact-add" />
     </Split>
 
     @if (ContactPoints.Count == 0) {
-        <div class="rounded-[1.25rem] border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div class="rounded-[1.25rem] border border-dashed border-chrome-300 bg-chrome-50/70 px-4 py-4 text-sm leading-6 text-chrome-600">
             No extra contact methods yet.
         </div>
     } else {
@@ -23,31 +23,29 @@
             var rowIndex = row.Index;
             <PanelCard @key="item" Soft="true">
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="5">
-                    <div>
-                        <label class="cda-field-label">Type</label>
-                        <InputSelect @bind-Value="item.ContactType"
-                                     class="cda-input"
+                    <FormField Text="Type">
+                        <SelectInput @bind-Value="item.ContactType"
                                      data-testid="@($"crmhr-contact-type-{rowIndex}")">
                             @foreach (var contactType in Enum.GetValues<PartyContactType>()) {
                                 <option value="@contactType">@contactType</option>
                             }
-                        </InputSelect>
-                    </div>
-                    <div>
-                        <label class="cda-field-label">Label</label>
-                        <NativeValueInput TValue="string" @bind-Value="item.Label"
-                                   class="cda-input"
+                        </SelectInput>
+                    </FormField>
+                    <FormField Text="Label">
+                        <NativeValueInput aria-label="Label" TValue="string" @bind-Value="item.Label"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="@($"crmhr-contact-label-{rowIndex}")" />
-                    </div>
+                    </FormField>
                     <div class="lg:col-span-2">
-                        <label class="cda-field-label">Value</label>
-                        <NativeValueInput TValue="string" @bind-Value="item.Value"
-                                   class="cda-input"
-                                   data-testid="@($"crmhr-contact-value-{rowIndex}")" />
+                        <FormField Text="Value">
+                            <NativeValueInput aria-label="Value" TValue="string" @bind-Value="item.Value"
+                                       class="form-input ui-input ui-input--outlined"
+                                       data-testid="@($"crmhr-contact-value-{rowIndex}")" />
+                        </FormField>
                     </div>
                     <div class="flex items-end">
                         <Button Text="Remove"
-                                ButtonStyle="ButtonStyle.Danger"
+                                Tone="ButtonTone.Danger"
                                 Size="ButtonSize.Small"
                                 Click="@(() => RemoveContactPoint(item))"
                                 data-testid="@($"crmhr-contact-remove-{rowIndex}")" />
@@ -55,17 +53,16 @@
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsLg="2" Class="mt-4">
-                    <label class="cda-inline-option">
-                        <InputCheckbox @bind-Value="item.IsPublic"
+                    <label class="ui-checkbox-option">
+                        <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="item.IsPublic"
                                        data-testid="@($"crmhr-contact-public-{rowIndex}")" />
                         Publicly shareable
                     </label>
-                    <div>
-                        <label class="cda-field-label">Notes</label>
-                        <NativeValueInput TValue="string" @bind-Value="item.Notes"
-                                   class="cda-input"
+                    <FormField Text="Notes">
+                        <NativeValueInput aria-label="Notes" TValue="string" @bind-Value="item.Notes"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="@($"crmhr-contact-notes-{rowIndex}")" />
-                    </div>
+                    </FormField>
                 </Grid>
             </PanelCard>
         }
@@ -89,7 +86,7 @@
                    data-testid="crmhr-contact-wizard-steps">
                 <StepsItem Text="Type" Icon="category">
                     <Stack GapScale="LayoutGap.Medium">
-                        <p class="text-sm leading-6 text-slate-600">
+                        <p class="text-sm leading-6 text-chrome-600">
                             Select the contact channel to add.
                         </p>
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
@@ -116,7 +113,7 @@
                         <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                             <FormField Text="Value">
                                 <NativeValueInput TValue="string" @bind-Value="contactDraft.Value"
-                                           class="cda-input"
+                                           class="form-input ui-input ui-input--outlined"
                                            aria-invalid="@(!string.IsNullOrEmpty(contactValidationError) ? "true" : "false")"
                                            data-testid="crmhr-contact-wizard-value" />
                                 @if (!string.IsNullOrEmpty(contactValidationError)) {
@@ -130,7 +127,7 @@
 
                             <FormField Text="Label">
                                 <NativeValueInput TValue="string" @bind-Value="contactDraft.Label"
-                                           class="cda-input"
+                                           class="form-input ui-input ui-input--outlined"
                                            data-testid="crmhr-contact-wizard-label" />
                             </FormField>
                         </Grid>
@@ -145,14 +142,14 @@
                                        InputTestId="crmhr-contact-wizard-tags-input" />
                         </FormField>
 
-                        <label class="cda-inline-option">
-                            <InputCheckbox @bind-Value="contactDraft.IsPublic"
+                        <label class="ui-checkbox-option">
+                            <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="contactDraft.IsPublic"
                                            data-testid="crmhr-contact-wizard-public" />
                             Publicly shareable
                         </label>
 
                         <FormField Text="Notes">
-                            <TextArea Value="@contactDraft.Notes"
+                            <TextAreaInput Value="@contactDraft.Notes"
                                       ValueChanged="UpdateContactNotes"
                                       Size="TextAreaSize.Standard"
                                       Placeholder="Optional context for this contact method"
@@ -170,13 +167,13 @@
                    Wrap="FlexWrap.Wrap">
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="CancelContactWizard"
                             data-testid="crmhr-contact-wizard-cancel" />
                     @if (contactWizardStep == ContactWizardStep.Details) {
                         <Button Text="Back"
                                 Icon="arrow_back"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="MoveToContactTypeStep"
                                 data-testid="crmhr-contact-wizard-back" />
                     }
@@ -290,7 +287,7 @@
     private string ResolveContactTypeCardClass(PartyContactType contactType) {
         var selectionClasses = contactDraft?.ContactType == contactType
             ? "border-sky-500 bg-sky-50 text-sky-950 ring-2 ring-sky-200"
-            : "border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-sky-50/60";
+            : "border-chrome-200 bg-white text-chrome-800 hover:border-sky-300 hover:bg-sky-50/60";
 
         return $"aspect-square w-full flex flex-col items-center justify-center gap-3 text-center {selectionClasses}";
     }

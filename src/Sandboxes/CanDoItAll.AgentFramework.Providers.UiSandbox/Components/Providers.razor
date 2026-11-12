@@ -7,7 +7,7 @@
     <Cluster Gap="LayoutGap.Medium">
         <h1>Provider profiles sandbox</h1>
         <label>Scenario
-            <select class="cda-input" value="@selected" @onchange="ChangeScenario" data-testid="provider-scenario">
+            <select class="form-input ui-input ui-input--outlined" value="@selected" @onchange="ChangeScenario" data-testid="provider-scenario">
                 @foreach (var value in Enum.GetValues<ProviderScenario>()) {
                     <option value="@value">@value</option>
                 }

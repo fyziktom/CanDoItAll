@@ -6,7 +6,7 @@
 }
 
 @media (max-width: 960px) {
-    .agent-runtime-details-dialog ::deep .cda-grid {
+    .agent-runtime-details-dialog ::deep .app-grid {
         grid-template-columns: 1fr !important;
     }
 }

@@ -16,7 +16,7 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
             @if (rendered.DatabaseSelection is not null) {
-                <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/90 p-4"
+                <div class="rounded-[1.5rem] border border-chrome-200 bg-chrome-50/90 p-4"
                      data-testid="database-dialog-current-selection">
                     <Split Breakpoint="LayoutBreakpoint.None"
                            Gap="LayoutGap.Medium"
@@ -24,8 +24,8 @@
                            JustifyContent="JustifyContent.SpaceBetween"
                            Wrap="FlexWrap.Wrap">
                         <Stack GapScale="LayoutGap.Tiny" Class="min-w-0">
-                            <p class="cda-eyebrow">Current runtime profile</p>
-                            <p class="text-base font-semibold text-slate-950">@rendered.DatabaseSelection.DisplayName</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Current runtime profile</TextBlock>
+                            <p class="text-base font-semibold text-chrome-950">@rendered.DatabaseSelection.DisplayName</p>
                             @if (rendered.DatabaseSelection.HasPendingRestartActivation) {
                                 <p class="text-sm leading-6 text-amber-700">
                                     Pending restart: @rendered.DatabaseSelection.PendingRestartDisplayName
@@ -51,8 +51,8 @@
                                Wrap="FlexWrap.Wrap">
                             <Stack GapScale="LayoutGap.Tiny"
                                    Class="min-w-0 flex-1">
-                                <p class="cda-eyebrow">Runtime target</p>
-                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Runtime target</TextBlock>
+                                <p class="rounded-[1rem] border border-chrome-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-chrome-600 break-all"
                                    data-testid="database-dialog-active-target">@rendered.DatabaseSelection.Descriptor</p>
                             </Stack>
                             <CopyButton Value="@rendered.DatabaseSelection.Descriptor"
@@ -69,8 +69,8 @@
                                Wrap="FlexWrap.Wrap">
                             <Stack GapScale="LayoutGap.Tiny"
                                    Class="min-w-0 flex-1">
-                                <p class="cda-eyebrow">Workspace root</p>
-                                <p class="rounded-[1rem] border border-slate-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-slate-600 break-all"
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Workspace root</TextBlock>
+                                <p class="rounded-[1rem] border border-chrome-200 bg-white/90 px-3 py-2 font-mono text-xs leading-5 text-chrome-600 break-all"
                                    data-testid="database-dialog-workspace-root">@rendered.DatabaseSelection.WorkspaceRoot</p>
                             </Stack>
                             <CopyButton Value="@rendered.DatabaseSelection.WorkspaceRoot"
@@ -81,7 +81,7 @@
                         </Split>
                     </Stack>
 
-                    <p class="mt-3 text-xs text-slate-500">Selection source: @rendered.DatabaseSelection.Resolution</p>
+                    <p class="mt-3 text-xs text-chrome-500">Selection source: @rendered.DatabaseSelection.Resolution</p>
                 </div>
             }
 
@@ -150,19 +150,19 @@
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 @if (rendered.IsStartupMode) {
                     <Button Text="Continue"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@rendered.DatabaseDialogBusy"
                             Click="@(() => ContinueWithCurrentDatabase.InvokeAsync(openingId))"
                             data-testid="database-startup-continue" />
                 } else {
                     <Button Text="Close"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@rendered.DatabaseDialogBusy"
                             Click="@(() => CloseDatabaseDialog.InvokeAsync(openingId))" />
                 }
 
                 <Button Text="Open Data Sources"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@rendered.DatabaseDialogBusy"
                         Click="@(() => OpenDatabaseSettings.InvokeAsync(openingId))"
                         data-testid="database-startup-open-settings" />
@@ -170,7 +170,7 @@
 
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Button Text="@ResolveSwitchButtonText(rendered)"
-                        ButtonStyle="ButtonStyle.Warning"
+                        Tone="ButtonTone.Warning"
                         Disabled="@(rendered.DatabaseDialogBusy || !rendered.CanSwitchSelectedProfile)"
                         Click="@(() => ActivateAsync(openingId, selectedProfileId))"
                         data-testid="database-startup-switch" />

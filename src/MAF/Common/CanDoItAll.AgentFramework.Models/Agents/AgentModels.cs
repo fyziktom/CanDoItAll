@@ -228,7 +228,12 @@ public static class AgentAvatarImageCatalog
         CreateBundledAvatarUrl(8)
     ];
 
+    public static IReadOnlyList<string> BundledRobotAvatarUrls { get; } = Enumerable.Range(1, 8)
+        .Select(number => $"{BundledAvatarBasePath}robot-{number:00}.svg")
+        .ToArray();
+
     private static readonly HashSet<string> BundledAvatarUrlSet = BundledAvatarUrls
+        .Concat(BundledRobotAvatarUrls)
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public static bool IsBundledAvatarUrl(string? avatarImageUrl)

@@ -2,8 +2,16 @@
     <Stack GapScale="LayoutGap.Medium">
         <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
         <Cluster Gap="LayoutGap.Small">
-            <DropDown TValue="ContentTextKind" Data="kinds" @bind-Value="kind" Change="@(_ => Reopen())" Style="width:10rem" aria-label="Text kind" />
-            <DropDown TValue="ContentTextOutcomeKind" Data="outcomes" @bind-Value="outcome" Style="width:12rem" aria-label="Owner outcome" />
+            <SelectInput TValue="ContentTextKind" @bind-Value="kind" @bind-Value:after="Reopen" Style="width:10rem" aria-label="Text kind">
+    @foreach (var option in kinds) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
+            <SelectInput TValue="ContentTextOutcomeKind" @bind-Value="outcome" Style="width:12rem" aria-label="Owner outcome">
+    @foreach (var option in outcomes) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
             <CheckBox TValue="bool" @bind-Value="hold" aria-label="Hold submission" />
             <TextBlock TextStyle="TextStyle.Caption" Value="Hold" />
             <Button Text="Release" Click="@(() => pending?.TrySetResult())" />

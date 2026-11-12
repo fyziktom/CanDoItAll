@@ -22,7 +22,7 @@
                     @if (View.NextAutomaticRefreshAtUtc.HasValue) {
                         <TextBlock TextStyle="TextStyle.Caption"
                                    Value="@AutomaticRefreshText"
-                                   Class="whitespace-nowrap text-slate-500"
+                                   Class="whitespace-nowrap text-chrome-500"
                                    data-testid="dashboard-refresh-countdown" />
                     }
                     <PageHeaderActionButton Icon="refresh"
@@ -82,7 +82,7 @@
                                    title="@project.Name"
                                    class="group block h-full min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
                                    data-testid="@BuildTestId("dashboard-project", project.ProjectId)">
-                                    <ActionCard Class="h-full min-h-24 overflow-hidden !p-3 transition group-hover:-translate-y-0.5 group-hover:border-sky-300 group-hover:bg-sky-50 group-hover:shadow-md">
+                                    <ActionCard Class="h-full min-h-24 overflow-hidden !p-3 transition group-hover:-tranchrome-y-0.5 group-hover:border-sky-300 group-hover:bg-sky-50 group-hover:shadow-md">
                                         <Stack GapScale="LayoutGap.Tiny"
                                                Class="h-full min-w-0">
                                             <Split Breakpoint="LayoutBreakpoint.None"
@@ -92,13 +92,13 @@
                                                    Wrap="FlexWrap.NoWrap">
                                                 <TextBlock TextStyle="TextStyle.Subtitle2"
                                                            Value="@project.Name"
-                                                           Class="min-w-0 flex-1 truncate text-slate-900" />
+                                                           Class="min-w-0 flex-1 truncate text-chrome-900" />
                                                 <StatusBadge Tone="@MapStatusTone(project.Status.Tone)"
                                                              Text="@project.Status.Label" />
                                             </Split>
                                             <TextBlock TextStyle="TextStyle.Caption"
                                                        Value="@BuildProjectMeta(project)"
-                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-slate-500" />
+                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-chrome-500" />
                                         </Stack>
                                     </ActionCard>
                                 </a>
@@ -155,7 +155,7 @@
                                  Description="Active runs when present; otherwise the five most recently updated runs.">
                         <Tabs SelectedIndex="@((int)View.Activity)"
                               SelectedIndexChanged="ChangeActivityAsync"
-                              Variant="TabsVariant.WorkspaceSecondary"
+                              Density="TabsDensity.Compact"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="Dashboard activity"

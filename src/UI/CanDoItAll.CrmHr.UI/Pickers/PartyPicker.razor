@@ -19,7 +19,7 @@
                     @if (EffectiveSelectedPartyId.HasValue)
                     {
                         <Button Text="Clear"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="ClearSelectionAsync"
                                 data-testid="@($"{TestIdPrefix}-clear")" />
@@ -37,8 +37,8 @@
     @if (ResolvedSelectedParty is not null)
     {
         <PanelCard data-testid="@($"{TestIdPrefix}-summary")">
-            <div class="space-y-1 text-sm text-slate-600">
-                <p class="font-semibold text-slate-900">@ResolvedSelectedParty.DisplayName</p>
+            <div class="space-y-1 text-sm text-chrome-600">
+                <p class="font-semibold text-chrome-900">@ResolvedSelectedParty.DisplayName</p>
                 @if (ResolvedSelectedParty.IsSensitive)
                 {
                     <p class="text-amber-700">Sensitive handling enabled for this party.</p>

@@ -14,13 +14,13 @@
             <details>
                 <summary>Previous comparison retained for copying</summary>
                 <Stack GapScale="LayoutGap.Small">
-                    <FormField Text="Previous title result"><TextBox Value="@(Previous.Title.IsResolved ? Previous.Title.Result : Previous.Title.Local)" ReadOnly="true" /></FormField>
+                    <FormField Text="Previous title result"><TextInput Value="@(Previous.Title.IsResolved ? Previous.Title.Result : Previous.Title.Local)" ReadOnly="true" /></FormField>
                     @if (!Previous.Schema.InlineNote) {
-                        <FormField Text="Previous subtitle result"><TextBox Value="@(Previous.Subtitle.IsResolved ? Previous.Subtitle.Result : Previous.Subtitle.Local)" ReadOnly="true" data-testid="structure-node-previous-subtitle" /></FormField>
+                        <FormField Text="Previous subtitle result"><TextInput Value="@(Previous.Subtitle.IsResolved ? Previous.Subtitle.Result : Previous.Subtitle.Local)" ReadOnly="true" data-testid="structure-node-previous-subtitle" /></FormField>
                     }
-                    <FormField Text="Previous notes result"><TextArea Value="@(Previous.Notes.IsResolved ? Previous.Notes.Result : Previous.Notes.Local)" ReadOnly="true" /></FormField>
+                    <FormField Text="Previous notes result"><TextAreaInput Value="@(Previous.Notes.IsResolved ? Previous.Notes.Result : Previous.Notes.Local)" ReadOnly="true" /></FormField>
                     @foreach (var row in Previous.Fields) {
-                        <FormField Text="@row.Definition.Label"><TextArea Value="@row.ResultInput" ReadOnly="true" /></FormField>
+                        <FormField Text="@row.Definition.Label"><TextAreaInput Value="@row.ResultInput" ReadOnly="true" /></FormField>
                     }
                 </Stack>
             </details>
@@ -28,8 +28,8 @@
     </ChildContent>
     <Footer>
         <Cluster Wrap="FlexWrap.Wrap">
-            <Button Text="Return to editor" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="structure-node-compare-cancel" />
-            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="@(Busy || Review?.HasPendingInput == true)" data-testid="structure-node-compare-refresh" />
+            <Button Text="Return to editor" Tone="ButtonTone.Default" Click="Cancel" data-testid="structure-node-compare-cancel" />
+            <Button Text="Refresh comparison" Tone="ButtonTone.Default" Click="Refresh" Disabled="@(Busy || Review?.HasPendingInput == true)" data-testid="structure-node-compare-refresh" />
             <Button Text="Apply to draft" Click="Apply" Disabled="@(Busy || Review?.CanApply != true)" data-testid="structure-node-compare-apply" />
         </Cluster>
     </Footer>

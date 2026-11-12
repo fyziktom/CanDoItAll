@@ -18,20 +18,20 @@
         @if (view.CanStop) {
             <Button Text="Stop"
                     Icon="stop_circle"
-                    ButtonStyle="ButtonStyle.Danger"
+                    Tone="ButtonTone.Danger"
                     Click="@(() => StopAsync(view, stop))" Disabled="@(view.IsBusy || submitting == view.OpeningId)"
                     data-testid="project-structure-web-preview-stop" />
         }
         <Button Text="Open in browser"
                 Icon="open_in_new"
-                ButtonStyle="ButtonStyle.Primary"
+                Tone="ButtonTone.Primary"
                 Href="@view.Url.AbsoluteUri"
                 Target="_blank"
                 Rel="noopener noreferrer"
                 data-testid="project-structure-web-preview-open-browser" />
         <Button Text="Close"
                 Variant="Variant.Text"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 Click="close" />
     </Actions>
     <Body>

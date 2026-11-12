@@ -157,7 +157,7 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="Close"
                         data-testid="crmhr-opportunity-detail-close" />
                 <Cluster Gap="LayoutGap.Small">
@@ -165,14 +165,14 @@
                     {
                         <Button Text="Open linked project"
                                 Icon="folder_open"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Click="OpenLinkedProject"
                                 data-testid="crmhr-opportunity-open-project" />
                     }
                     @if (Opportunity.Stage == OpportunityStage.Won)
                     {
                         <Button Text="Convert to project"
-                                ButtonStyle="ButtonStyle.Info"
+                                Tone="ButtonTone.Info"
                                 Click="Convert"
                                 data-testid="crmhr-opportunity-convert-button" />
                     }

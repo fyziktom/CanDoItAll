@@ -12,13 +12,13 @@
         </Alert>
     }
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" JustifyContent="JustifyContent.End">
-        <Button Text="Cancel" ButtonStyle="ButtonStyle.Light"
+        <Button Text="Cancel" Tone="ButtonTone.Default"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Cancel)))"
                 data-testid="floating-agent-chat-cancel-close" />
-        <Button Text="Keep active" Icon="schedule" ButtonStyle="ButtonStyle.Light"
+        <Button Text="Keep active" Icon="schedule" Tone="ButtonTone.Default"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.KeepActive)))"
                 data-testid="floating-agent-chat-keep-active" />
-        <Button Text="@(rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")" Icon="stop_circle" ButtonStyle="ButtonStyle.Danger" Disabled="@(!rendered.CanStop)"
+        <Button Text="@(rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")" Icon="stop_circle" Tone="ButtonTone.Danger" Disabled="@(!rendered.CanStop)"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Stop)))"
                 data-testid="floating-agent-chat-stop" />
     </Cluster>

@@ -8,8 +8,8 @@
                    AlignItems="AlignItems.Center"
                    JustifyContent="JustifyContent.SpaceBetween">
                 <div class="min-w-0">
-                    <p class="cda-eyebrow cda-eyebrow--tight">Current allocations</p>
-                    <h2 class="mt-1 truncate text-lg font-semibold tracking-tight text-slate-950">
+                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Current allocations</TextBlock>
+                    <h2 class="mt-1 truncate text-lg font-semibold tracking-tight text-chrome-950">
                         @(string.IsNullOrWhiteSpace(ProjectName) ? "Project resource plan" : ProjectName)
                     </h2>
                     <SmallText Text="@($"{TotalCount} saved allocation(s)")" />
@@ -17,7 +17,7 @@
                 <TooltipTarget Text="Create project allocation"
                                Position="TooltipPosition.Bottom"
                                TestId="crmhr-allocation-create-tooltip">
-                    <Button Class="cda-button--quick"
+                    <Button Class="ui-button--quick"
                             Icon="add"
                             Disabled="@(!CanCreate || isPreparingCreate)"
                             IsBusy="@isPreparingCreate"
@@ -30,22 +30,22 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching allocation(s)")">
                 <input value="@SearchText"
                        @oninput="HandleAllocationSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, task, or notes"
                        data-testid="crmhr-allocation-filter-search" />
-                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                <SelectInput TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleAllocationRoleChangedAsync"
                              ValueExpression="@(() => RoleFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-allocation-filter-role">
                     <option value="">All allocation roles</option>
                     @foreach (var role in AllocationRoles) {
                         <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
 
             @if (Allocations.Count == 0) {
@@ -97,54 +97,54 @@
                 <SurfaceCard Soft="true" data-testid="crmhr-allocation-candidates-surface">
                     <Stack GapScale="LayoutGap.Medium">
                         <div>
-                            <p class="cda-eyebrow cda-eyebrow--tight">Candidate finder</p>
-                            <h3 class="mt-1 text-base font-semibold text-slate-950">Available staffing candidates</h3>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Candidate finder</TextBlock>
+                            <h3 class="mt-1 text-base font-semibold text-chrome-950">Available staffing candidates</h3>
                         </div>
 
                         <CompactFilterBar ResultText="@($"{CandidateTotalCount} matching candidate(s)")">
                             <input value="@CandidateSearchText"
                                    @oninput="HandleCandidateSearchInputAsync"
-                                   class="cda-input cda-input--toolbar h-10 min-w-[15rem] flex-1"
+                                   class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[15rem] flex-1"
                                    style="width: auto; flex: 1 1 20rem;"
                                    placeholder="Search people or delivery units"
                                    data-testid="crmhr-allocation-candidate-search" />
-                            <InputSelect TValue="string"
+                            <SelectInput TValue="string"
                                          Value="@CandidateSkillFilter"
                                          ValueChanged="HandleCandidateSkillChangedAsync"
                                          ValueExpression="@(() => CandidateSkillFilter)"
-                                         class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                                         class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[13rem]"
                                          style="width: 13rem; flex: 0 1 13rem;"
                                          data-testid="crmhr-allocation-candidate-skill">
                                 <option value="">All skills</option>
                                 @foreach (var skill in SkillCatalog.OrderBy(item => item.Category).ThenBy(item => item.Name)) {
                                     <option value="@skill.Id.ToString("D")">@skill.Name (@skill.Category)</option>
                                 }
-                            </InputSelect>
-                            <InputSelect TValue="string"
+                            </SelectInput>
+                            <SelectInput TValue="string"
                                          Value="@CandidateAvailabilityFilter"
                                          ValueChanged="HandleCandidateAvailabilityChangedAsync"
                                          ValueExpression="@(() => CandidateAvailabilityFilter)"
-                                         class="cda-input cda-input--toolbar h-10 min-w-[10rem]"
+                                         class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[10rem]"
                                          style="width: 10rem; flex: 0 1 10rem;"
                                          data-testid="crmhr-allocation-candidate-availability">
                                 <option value="">Any availability</option>
                                 @foreach (var availabilityState in Enum.GetValues<WorkforceAvailabilityState>()) {
                                     <option value="@availabilityState.ToString()">@availabilityState</option>
                                 }
-                            </InputSelect>
+                            </SelectInput>
                             <TooltipTarget Text="Refresh staffing candidates" Position="TooltipPosition.Bottom">
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
+                                        Class="ui-button--quick"
                                         Icon="search"
                                         aria-label="Refresh staffing candidates"
                                         Click="SearchCandidates"
                                         data-testid="crmhr-allocation-candidate-search-button" />
                             </TooltipTarget>
                             <TooltipTarget Text="Reset candidate filters" Position="TooltipPosition.Bottom">
-                                <Button ButtonStyle="ButtonStyle.Light"
+                                <Button Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
-                                        Class="cda-button--quick"
+                                        Class="ui-button--quick"
                                         Icon="restart_alt"
                                         aria-label="Reset candidate filters"
                                         Click="ResetCandidateFilters"
@@ -170,26 +170,26 @@
                                                    AlignItems="AlignItems.Start"
                                                    JustifyContent="JustifyContent.SpaceBetween">
                                                 <div class="min-w-0">
-                                                    <p class="truncate text-base font-semibold text-slate-950">@candidate.DisplayName</p>
+                                                    <p class="truncate text-base font-semibold text-chrome-950">@candidate.DisplayName</p>
                                                     <div class="mt-2 flex min-w-0 items-center gap-2"
                                                          title="@candidate.OtherAffiliationsSummary">
                                                         <StatusBadge Tone="@ResolveClassificationTone(candidate.Classification)"
                                                                      Text="@ResolveClassificationLabel(candidate.Classification)" />
                                                         @if (!string.IsNullOrWhiteSpace(candidate.PrimaryAffiliationText))
                                                         {
-                                                            <span class="truncate text-xs text-slate-600">
+                                                            <span class="truncate text-xs text-chrome-600">
                                                                 @candidate.PrimaryAffiliationText
                                                             </span>
                                                         }
                                                     </div>
-                                                    <p class="mt-1 text-sm leading-5 text-slate-600">@BuildCandidateMeta(candidate)</p>
+                                                    <p class="mt-1 text-sm leading-5 text-chrome-600">@BuildCandidateMeta(candidate)</p>
                                                 </div>
                                                 <StatusBadge Tone="@ResolveAvailabilityTone(candidate.AvailabilityState)"
                                                              Text="@candidate.AvailabilityState.ToString()" />
                                             </Split>
 
                                             @if (!string.IsNullOrWhiteSpace(candidate.SkillSummary)) {
-                                                <p class="line-clamp-2 text-sm leading-5 text-slate-600">@candidate.SkillSummary</p>
+                                                <p class="line-clamp-2 text-sm leading-5 text-chrome-600">@candidate.SkillSummary</p>
                                             }
 
                                             <CardActions Secondary="true" Class="mt-auto pt-3">
@@ -214,14 +214,14 @@
                                 <Cluster Gap="LayoutGap.Small">
                                     <Button Text="Previous"
                                             Icon="chevron_left"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Disabled="@(CandidatePageIndex <= 0)"
                                             Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex - 1))"
                                             data-testid="crmhr-staffing-candidates-previous" />
                                     <Button Text="Next"
                                             Icon="chevron_right"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Disabled="@(CandidatePageIndex + 1 >= CandidateTotalPages)"
                                             Click="@(() => CandidatePageChanged.InvokeAsync(CandidatePageIndex + 1))"
@@ -234,13 +234,13 @@
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                     <FormField Text="Allocation role">
-                        <InputSelect @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-allocation-role">
                             @foreach (var role in AllocationRoles) {
                                 <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <PartyPicker Label="Party"
                                  TestIdPrefix="crmhr-allocation-party"
@@ -263,28 +263,28 @@
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                     <FormField Text="Allocation %">
                         <NativeValueInput DisplayName="allocation percentage" TValue="decimal?" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(AssignmentField.Allocation, value))"
-                                     class="cda-input"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-allocation-percent" />
                     </FormField>
                     <FormField Text="Starts on">
                         <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartsOn" PendingChanged="@(value => ReportAsync(AssignmentField.Start, value))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-allocation-start-date" />
                     </FormField>
                     <FormField Text="Ends on">
                         <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndsOn" PendingChanged="@(value => ReportAsync(AssignmentField.End, value))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-allocation-end-date" />
                     </FormField>
                 </Grid>
 
                 <FormField Text="Notes">
                     <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(AssignmentField.Notes))"
-                                   class="cda-input cda-input--textarea min-h-[7rem]"
+                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                    data-testid="crmhr-allocation-notes" />
                 </FormField>
 
-                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                <label class="inline-flex items-center gap-2 text-sm text-chrome-700">
                     <InputCheckbox @bind-Value="Draft.IsPrimary" @bind-Value:after="PrimaryChangedAsync"
                                    data-testid="crmhr-allocation-primary" />
                     <span>Mark as primary</span>
@@ -293,7 +293,7 @@
         @if (Draft.IsPrimary) {
                 <Stack GapScale="LayoutGap.Small">
                     <SmallText Text="@(Draft.PrimaryOriginal is { } basis ? $"Reviewed primary scope: {basis.PrimaryIds.Length} current primary assignment(s)." : "Review the current primary for this role and node before saving.")" />
-                    <Button Text="Review current primary" ButtonStyle="ButtonStyle.Light" Disabled="@(isAllocationSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
+                    <Button Text="Review current primary" Tone="ButtonTone.Default" Disabled="@(isAllocationSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
                 </Stack>
             }
             </EditForm>
@@ -305,13 +305,13 @@
                    JustifyContent="JustifyContent.SpaceBetween"
                    Wrap="FlexWrap.Wrap">
                 <Button Text="Reset"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Disabled="@(isAllocationSaving || WritesDisabled)"
                         Click="ResetEditorAsync"
                         data-testid="crmhr-allocation-reset-button" />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="@(isAllocationSaving || WritesDisabled)"
                             Click="CloseAllocationDialogAsync" />
                     <Button Text="@(Draft.AssignmentId.HasValue ? "Save changes" : "Save allocation")"

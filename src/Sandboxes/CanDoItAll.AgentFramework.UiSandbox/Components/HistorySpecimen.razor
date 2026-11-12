@@ -4,8 +4,11 @@
     <h1 class="cda-title-xl">Request History sandbox</h1>
     <p>Synthetic scenarios with separate page, metadata and content reads. Every workspace starts without a read.</p>
     <FormField Text="Scenario">
-        <DropDown TValue="HistoryScenario" Data="HistoryScenarios.Options" TextProperty="@nameof(HistoryScenarioOption.Text)"
-                  ValueProperty="@nameof(HistoryScenarioOption.Value)" @bind-Value="scenario" aria-label="History scenario" data-testid="history-scenario" />
+        <SelectInput TValue="HistoryScenario" @bind-Value="scenario" aria-label="History scenario" data-testid="history-scenario">
+    @foreach (var option in HistoryScenarios.Options) {
+        <option value="@option.Value">@option.Text</option>
+    }
+</SelectInput>
     </FormField>
 </header>
 <main class="catalog-sandbox__frame" data-testid="sandbox-history-specimen" data-interactive="@interactive.ToString().ToLowerInvariant()">

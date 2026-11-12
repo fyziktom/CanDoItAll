@@ -33,7 +33,7 @@ public sealed class PartyContactMethodsEditorTests {
 
         await cut.InvokeAsync(() => cut.FindComponent<TagEditor>()
             .Instance.ValueChanged.InvokeAsync(["sales", "preferred"]));
-        await cut.InvokeAsync(() => cut.FindComponent<TextArea>()
+        await cut.InvokeAsync(() => cut.FindComponent<TextAreaInput>()
             .Instance.ValueChanged.InvokeAsync("Available during business hours."));
 
         cut.Find("[data-testid='crmhr-contact-wizard-back']").Click();
@@ -55,7 +55,7 @@ public sealed class PartyContactMethodsEditorTests {
             cut.FindComponent<TagEditor>().Instance.Value);
         Assert.Equal(
             "Available during business hours.",
-            cut.FindComponent<TextArea>().Instance.Value);
+            cut.FindComponent<TextAreaInput>().Instance.Value);
 
         cut.Find("[data-testid='crmhr-contact-wizard-cancel']").Click();
 
@@ -87,7 +87,7 @@ public sealed class PartyContactMethodsEditorTests {
             .Change(false);
         await cut.InvokeAsync(() => cut.FindComponent<TagEditor>()
             .Instance.ValueChanged.InvokeAsync(["urgent", " urgent ", "support"]));
-        await cut.InvokeAsync(() => cut.FindComponent<TextArea>()
+        await cut.InvokeAsync(() => cut.FindComponent<TextAreaInput>()
             .Instance.ValueChanged.InvokeAsync("Escalation line."));
 
         cut.Find("[data-testid='crmhr-contact-wizard-finish']").Click();

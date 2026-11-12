@@ -5,14 +5,14 @@
 @if (State.IsOutdated || State.IsUnknown || Message is not null) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-opportunity-freshness">
         <TextBlock Value="@(Message ?? (State.IsUnknown ? "The save outcome is unknown. Your submission and draft are retained; resubmission is blocked." : "The saved opportunity changed. Review its current values before saving your draft."))" />
-        <Button Text="Review saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(ReadingReview || State.IsSaving || State.Draft.Id is null)" Click="ReviewRequested" data-testid="crmhr-opportunity-review-open" />
+        <Button Text="Review saved changes" Tone="ButtonTone.Default" Disabled="@(ReadingReview || State.IsSaving || State.Draft.Id is null)" Click="ReviewRequested" data-testid="crmhr-opportunity-review-open" />
     </Alert>
 }
 @if (State.HasPendingInput) {
     <SmallText Text="Finish the active number, date or picker before applying a comparison or saving." />
 }
 @if (State.CanUndo) {
-    <Button Text="Undo merge edits" Disabled="@(State.IsSaving || State.IsUnknown)" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-opportunity-merge-undo" />
+    <Button Text="Undo merge edits" Disabled="@(State.IsSaving || State.IsUnknown)" Tone="ButtonTone.Default" Click="UndoRequested" data-testid="crmhr-opportunity-merge-undo" />
 }
 <Dialog IsOpen="@(State.Review is not null)" Title="Review opportunity changes" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-opportunity-review-dialog">
     <ChildContent>
@@ -34,13 +34,13 @@
                 @if (review.GroupError is { } error) {
                     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
                 }
-                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+                <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" Tone="ButtonTone.Default" Click="@(() => showUnchanged = !showUnchanged)" />
                 <MergeFieldView TValue="string" Label="Title" Field="@review.Title" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Title, text))" aria-label="Merged title" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Title, text))" aria-label="Merged title" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="OpportunityStageDecision" Label="Stage, loss reason and stage note" Field="@review.StageDecision" Format="@(value => $"{value.Stage}\nLoss reason: {value.LostReason}\nStage note: {value.StageNotes}")" ShowUnchanged="@showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="string" Label="Relationship stage" Field="@review.RelationshipStage" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.RelationshipStage, text))" aria-label="Merged relationship stage" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.RelationshipStage, text))" aria-label="Merged relationship stage" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="OpportunitySource" Label="Source" Field="@review.Source" Format="@(value => value.ToString())" ShowUnchanged="@showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="Guid" Label="Owner" Field="@review.Owner" Format="PartyName" ShowUnchanged="@showUnchanged" Changed="Changed" />
@@ -49,16 +49,16 @@
                 <MergeFieldView TValue="int" Label="Probability" Field="@review.Probability" Format="@(value => value.ToString())" ShowUnchanged="@showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="DateOnly?" Label="Expected close" Field="@review.ExpectedClose" Format="@(value => value?.ToString("yyyy-MM-dd") ?? "None")" ShowUnchanged="@showUnchanged" Changed="Changed" />
                 <MergeFieldView TValue="string" Label="Competitor" Field="@review.Competitor" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Competitor, text))" aria-label="Merged competitor" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Competitor, text))" aria-label="Merged competitor" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="string" Label="Partner contribution" Field="@review.PartnerContribution" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.PartnerContribution, text))" aria-label="Merged partner contribution" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.PartnerContribution, text))" aria-label="Merged partner contribution" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="string" Label="Summary" Field="@review.Summary" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Summary, text))" aria-label="Merged summary" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Summary, text))" aria-label="Merged summary" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="string" Label="Notes" Field="@review.Notes" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
-                    <ResultEditor Context="value"><TextArea Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Notes, text))" aria-label="Merged notes" /></ResultEditor>
+                    <ResultEditor Context="value"><TextAreaInput Value="@value" Immediate="true" Rows="4" ValueChanged="@(text => SetTextAsync(review.Notes, text))" aria-label="Merged notes" /></ResultEditor>
                 </MergeFieldView>
                 <MergeFieldView TValue="OpportunityProjectReference" Label="Linked project" Field="@review.Project" Format="@(value => ProjectName(value, review))" ShowUnchanged="@showUnchanged" Changed="Changed" />
                 <PartyMergeRows TRow="CrmOpportunityPartyLinkEditorModel" Title="Linked parties" Rows="@review.Rows" WholeCollection="@review.WholeCollection"
@@ -68,9 +68,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" Disabled="@ReadingReview" ButtonStyle="ButtonStyle.Light" Click="ReviewRequested" data-testid="crmhr-opportunity-review-refresh" />
+                <Button Text="Refresh comparison" Disabled="@ReadingReview" Tone="ButtonTone.Default" Click="ReviewRequested" data-testid="crmhr-opportunity-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(ReadingReview || !State.CanApply)" Click="ApplyRequested" data-testid="crmhr-opportunity-review-apply" />
             </Cluster>
         </Cluster>

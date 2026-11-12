@@ -3,18 +3,18 @@
         <TextBlock TextStyle="TextStyle.H4" Value="@($"{Name} specimen")" />
         <Cluster>
             <FormField Text="Editor">
-                <InputSelect class="cda-input" @bind-Value="Kind" @bind-Value:after="Reset" data-testid="operators-party-kind">
+                <SelectInput @bind-Value="Kind" @bind-Value:after="Reset" data-testid="operators-party-kind">
                     @foreach (var kind in Enum.GetValues<PartyEditorKind>()) {
                         <option value="@kind">@kind</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <FormField Text="Scenario">
-                <InputSelect class="cda-input" @bind-Value="Scenario" @bind-Value:after="Reset" data-testid="operators-party-scenario">
+                <SelectInput @bind-Value="Scenario" @bind-Value:after="Reset" data-testid="operators-party-scenario">
                     @foreach (var scenario in Enum.GetValues<PartyScenarioKind>()) {
                         <option value="@scenario">@scenario</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </FormField>
             <Button Text="Remount" Click="Reset" />
         </Cluster>

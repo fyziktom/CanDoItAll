@@ -4,7 +4,7 @@
         Subtitle="Review pending files and owner follow-up."
         OnClose="OnClose" TestId="storage-recovery-dialog">
     <HeaderActions>
-        <Button Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light" Disabled="Session.IsBusy"
+        <Button Text="Refresh" Icon="refresh" Tone="ButtonTone.Default" Disabled="Session.IsBusy"
                 Click="Session.RefreshAsync" data-testid="storage-recovery-refresh" />
     </HeaderActions>
     <ChildContent>
@@ -33,20 +33,20 @@
                     </DataGridColumn>
                     <DataGridColumn TItem="RecoveryItem" Title="Review">
                         <Template Context="item">
-                            <Button Text="Inspect" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="@(Session.IsBusy || !Session.PagesCurrent)"
+                            <Button Text="Inspect" Tone="ButtonTone.Default" Size="ButtonSize.Small" Disabled="@(Session.IsBusy || !Session.PagesCurrent)"
                                     Click="@(() => Session.SelectAsync(item))" data-testid="@($"storage-recovery-inspect-{item.Target.IntentId:N}")" />
                         </Template>
                     </DataGridColumn>
                 </Columns>
             </DataGrid>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <Button Text="Previous placements" ButtonStyle="ButtonStyle.Light" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.PlacementOffset == 0)"
+                <Button Text="Previous placements" Tone="ButtonTone.Default" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.PlacementOffset == 0)"
                         Click="@(() => Session.PageAsync(RecoveryFeed.Placements, false))" />
-                <Button Text="Next placements" ButtonStyle="ButtonStyle.Light" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.Placements.NextOffset is null)"
+                <Button Text="Next placements" Tone="ButtonTone.Default" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.Placements.NextOffset is null)"
                         Click="@(() => Session.PageAsync(RecoveryFeed.Placements, true))" data-testid="storage-recovery-next-placements" />
-                <Button Text="Previous owner follow-ups" ButtonStyle="ButtonStyle.Light" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.FollowUpOffset == 0)"
+                <Button Text="Previous owner follow-ups" Tone="ButtonTone.Default" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.FollowUpOffset == 0)"
                         Click="@(() => Session.PageAsync(RecoveryFeed.OwnerFollowUps, false))" />
-                <Button Text="Next owner follow-ups" ButtonStyle="ButtonStyle.Light" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.FollowUps.NextOffset is null)"
+                <Button Text="Next owner follow-ups" Tone="ButtonTone.Default" Disabled="@(Session.IsBusy || !Session.PagesCurrent || Session.FollowUps.NextOffset is null)"
                         Click="@(() => Session.PageAsync(RecoveryFeed.OwnerFollowUps, true))" data-testid="storage-recovery-next-owners" />
             </Cluster>
             @if (Session.Selected is { } detail) {
@@ -122,7 +122,7 @@
             }
         </Stack>
     </ChildContent>
-    <Footer><Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="OnClose" data-testid="storage-recovery-close" /></Footer>
+    <Footer><Button Text="Close" Tone="ButtonTone.Default" Click="OnClose" data-testid="storage-recovery-close" /></Footer>
 </Dialog>
 
 @code {

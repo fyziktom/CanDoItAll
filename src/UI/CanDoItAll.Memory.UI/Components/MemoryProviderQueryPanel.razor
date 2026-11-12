@@ -8,21 +8,21 @@
                Value="@MemoryProviderUiAvailability.QueryDiagnostic(Provider, Editor.UseAsyncQuery)" />
 
     <FormField Text="Query">
-        <TextArea Immediate="true" Value="@Editor.Query"
+        <TextAreaInput Immediate="true" Value="@Editor.Query"
                   ValueChanged="@(value => Editor.Query = value)"
                   Rows="6"
                   data-testid="memory-ui-query-text" />
     </FormField>
-    <FormField Text="Source module"><TextBox Immediate="true" @bind-Value="Editor.SourceModule" data-testid="memory-ui-query-module" /></FormField>
-    <FormField Text="Source record ID"><TextBox Immediate="true" @bind-Value="Editor.SourceRecordId" data-testid="memory-ui-query-record" /></FormField>
-    <FormField Text="Citation"><TextBox Immediate="true" @bind-Value="Editor.Citation" data-testid="memory-ui-query-citation" /></FormField>
+    <FormField Text="Source module"><TextInput Immediate="true" @bind-Value="Editor.SourceModule" data-testid="memory-ui-query-module" /></FormField>
+    <FormField Text="Source record ID"><TextInput Immediate="true" @bind-Value="Editor.SourceRecordId" data-testid="memory-ui-query-record" /></FormField>
+    <FormField Text="Citation"><TextInput Immediate="true" @bind-Value="Editor.Citation" data-testid="memory-ui-query-citation" /></FormField>
     <MemoryProviderBooleanField Label="Async query"
                                 Value="@Editor.UseAsyncQuery"
                                 ValueChanged="@(value => Editor.UseAsyncQuery = value)"
                                 TestId="memory-ui-query-async" />
     <Button Text="Run query"
             Icon="play_arrow"
-            ButtonStyle="ButtonStyle.Primary"
+            Tone="ButtonTone.Primary"
             Size="ButtonSize.Small"
             Click="OnRun"
             Disabled="@(!CanRun || IsBusy)"

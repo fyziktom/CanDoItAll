@@ -11,7 +11,7 @@
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
             <label for="crmhr-sandbox-scenario">Scenario</label>
             <select id="crmhr-sandbox-scenario"
-                    class="cda-input"
+                    class="form-input ui-input ui-input--outlined"
                     value="@CrmHrDirectoryWorkspaceSandboxContext.Token(context.Scenario)"
                     @onchange="ChangeScenario"
                     data-testid="crmhr-sandbox-scenario">
@@ -20,7 +20,7 @@
                     <option value="@CrmHrDirectoryWorkspaceSandboxContext.Token(scenario)">@scenario</option>
                 }
             </select>
-            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <Button Text="@LayoutLabel" Tone="ButtonTone.Default" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
             <a href="/crm-hr/workspaces/crm" data-testid="crmhr-sandbox-crm-link">CRM workspace sandbox</a>
             <a href="/crm-hr/workspaces/workforce" data-testid="crmhr-sandbox-workforce-link">Workforce workspace sandbox</a>
             <a href="/crm-hr/workspaces/recruiting" data-testid="crmhr-sandbox-recruiting-link">Recruiting workspace sandbox</a>

@@ -13,50 +13,62 @@
 
     <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
         <FormField Text="Instance id">
-            <TextBox Immediate="true" Value="@Editor.InstanceId"
+            <TextInput Immediate="true" Value="@Editor.InstanceId"
                      ValueChanged="@(value => Editor.InstanceId = value)"
                      data-testid="memory-ui-editor-instance-id" />
         </FormField>
         <FormField Text="Display name">
-            <TextBox Immediate="true" Value="@Editor.DisplayName"
+            <TextInput Immediate="true" Value="@Editor.DisplayName"
                      ValueChanged="@(value => Editor.DisplayName = value)"
                      data-testid="memory-ui-editor-display-name" />
         </FormField>
         <FormField Text="Driver">
-            <DropDown TValue="MemoryProviderDriverKind"
-                      Data="@DriverKinds"
+            <SelectInput TValue="MemoryProviderDriverKind"
                       Value="@Editor.DriverKind"
                       ValueChanged="@(value => Editor.DriverKind = value)"
-                      data-testid="memory-ui-editor-driver" />
+                      data-testid="memory-ui-editor-driver">
+    @foreach (var option in DriverKinds) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Health">
-            <DropDown TValue="MemoryProviderHealthState"
-                      Data="@HealthStates"
+            <SelectInput TValue="MemoryProviderHealthState"
                       Value="@Editor.HealthState"
                       ValueChanged="@(value => Editor.HealthState = value)"
-                      data-testid="memory-ui-editor-health" />
+                      data-testid="memory-ui-editor-health">
+    @foreach (var option in HealthStates) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Workspace">
-            <DropDown TValue="MemoryProviderWorkspaceScope"
-                      Data="@WorkspaceScopes"
+            <SelectInput TValue="MemoryProviderWorkspaceScope"
                       Value="@Editor.WorkspaceScope"
                       ValueChanged="@(value => Editor.WorkspaceScope = value)"
-                      data-testid="memory-ui-editor-workspace" />
+                      data-testid="memory-ui-editor-workspace">
+    @foreach (var option in WorkspaceScopes) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Fallback">
-            <DropDown TValue="MemoryProviderFallbackBehavior"
-                      Data="@FallbackBehaviors"
+            <SelectInput TValue="MemoryProviderFallbackBehavior"
                       Value="@Editor.FallbackBehavior"
                       ValueChanged="@(value => Editor.FallbackBehavior = value)"
-                      data-testid="memory-ui-editor-fallback" />
+                      data-testid="memory-ui-editor-fallback">
+    @foreach (var option in FallbackBehaviors) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         </FormField>
         <FormField Text="Provider kind">
-            <TextBox Immediate="true" Value="@Editor.ProviderKind"
+            <TextInput Immediate="true" Value="@Editor.ProviderKind"
                      ValueChanged="@(value => Editor.ProviderKind = value)"
                      data-testid="memory-ui-editor-provider-kind" />
         </FormField>
         <FormField Text="Provider UI URL">
-            <TextBox Immediate="true" Value="@Editor.ProviderUiUrl"
+            <TextInput Immediate="true" Value="@Editor.ProviderUiUrl"
                      ValueChanged="@(value => Editor.ProviderUiUrl = value)"
                      Disabled="@(!Editor.SupportsIframeUi)"
                      data-testid="memory-ui-editor-provider-ui-url" />
@@ -85,7 +97,7 @@
 
     <Button Text="Save provider"
             Icon="save"
-            ButtonStyle="ButtonStyle.Primary"
+            Tone="ButtonTone.Primary"
             Size="ButtonSize.Small"
             Click="OnSave"
             Disabled="@IsBusy"

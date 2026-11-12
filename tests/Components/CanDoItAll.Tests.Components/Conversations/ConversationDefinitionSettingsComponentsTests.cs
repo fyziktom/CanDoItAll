@@ -111,7 +111,10 @@ public sealed class ConversationDefinitionSettingsComponentsTests
             .ToList();
         Assert.Equal(["None", "Provider one", "Provider two (disabled)"], optionText);
 
-        cut.Find("[data-testid='provider-selector']").Change("1");
+        var secondValue = cut.FindAll("[data-testid='provider-selector'] option")
+            .Single(option => option.TextContent == "Provider two (disabled)").GetAttribute("value");
+        Assert.Equal(secondKey.Value, secondValue);
+        cut.Find("[data-testid='provider-selector']").Change(secondValue);
         Assert.Equal(secondKey, selected);
 
         var errorCut = context.Render<ConversationProviderSelector>(parameters => parameters
@@ -147,7 +150,9 @@ public sealed class ConversationDefinitionSettingsComponentsTests
             .ToList();
         Assert.Equal(["Provider default (model-one)", "model-two"], optionText);
 
-        cut.Find("[data-testid='model-choice']").Change("0");
+        var defaultValue = cut.FindAll("[data-testid='model-choice'] option")
+            .Single(option => option.TextContent == "Provider default (model-one)").GetAttribute("value");
+        cut.Find("[data-testid='model-choice']").Change(defaultValue);
         Assert.Equal(string.Empty, selected);
 
         cut.Find("[data-testid='model-override']").Change(true);

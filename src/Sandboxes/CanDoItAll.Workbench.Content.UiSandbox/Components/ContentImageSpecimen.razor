@@ -3,8 +3,16 @@
 <SurfaceCard data-testid="content-image-specimen" data-name="@Name">
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
-        <DropDown TValue="ContentScenarioState" Data="@(Enum.GetValues<ContentScenarioState>())" @bind-Value="scenario" Change="@(_ => Reopen())" aria-label="Image state" Style="width:11rem" />
-        <DropDown TValue="ContentImagePhase" Data="@(Enum.GetValues<ContentImagePhase>())" @bind-Value="resultPhase" aria-label="Image outcome" Style="width:11rem" />
+        <SelectInput TValue="ContentScenarioState" @bind-Value="scenario" @bind-Value:after="Reopen" aria-label="Image state" Style="width:11rem">
+    @foreach (var option in (Enum.GetValues<ContentScenarioState>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
+        <SelectInput TValue="ContentImagePhase" @bind-Value="resultPhase" aria-label="Image outcome" Style="width:11rem">
+    @foreach (var option in (Enum.GetValues<ContentImagePhase>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         <Button Text="New opening" Click="Reopen" />
         <Button Text="Release" Click="() => release?.TrySetResult()" />
     </Cluster>

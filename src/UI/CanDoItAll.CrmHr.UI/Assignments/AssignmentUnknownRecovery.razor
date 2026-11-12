@@ -2,9 +2,9 @@
     <Stack GapScale="LayoutGap.Small">
         <SmallText Text="Read saved records to review the pending operation. Refresh never repeats the write. Discarding removes only the local pending draft; the server outcome remains unconfirmed." />
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Review saved records" ButtonStyle="ButtonStyle.Light" Click="Refresh"
+            <Button Text="Review saved records" Tone="ButtonTone.Default" Click="Refresh"
                 data-testid="@($"{TestIdPrefix}-review-records")" />
-            <Button Text="Discard local pending operation" ButtonStyle="ButtonStyle.Danger" Disabled="@(!CanDiscard)" Click="Discard"
+            <Button Text="Discard local pending operation" Tone="ButtonTone.Danger" Disabled="@(!CanDiscard)" Click="Discard"
                 data-testid="@($"{TestIdPrefix}-discard-unknown")" />
         </Cluster>
     </Stack>

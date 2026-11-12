@@ -33,7 +33,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: ccb643e6e6f383ca0e5260b6edf41b00a606ee28
+  CANDOITALL_COMPONENTS_COMMIT: b220ecf3fbc2306257314a999f237d20ed25ddc0
   CANDOITALL_FILETOOLS_COMMIT: 18b12495db92f3c1c19a81a8a0a1f2a6a0a1d73c
 
 jobs:
@@ -153,11 +153,14 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
-      - name: Select the Ubuntu archive mirror
+      - name: Use official Ubuntu sources over HTTPS
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i -E \
+            -e 's#https?://([[:alnum:]-]+\.)?archive\.ubuntu\.com/ubuntu/?#https://archive.ubuntu.com/ubuntu/#g' \
+            -e 's#https?://security\.ubuntu\.com/ubuntu/?#https://security.ubuntu.com/ubuntu/#g' \
+            /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate
@@ -394,10 +397,13 @@ jobs:
         with:
           global-json-file: CanDoItAll/global.json
 
-      - name: Select the Ubuntu archive mirror
+      - name: Use official Ubuntu sources over HTTPS
         shell: bash
         run: |
-          sudo sed -i 's#^URIs:.*#URIs: https://mirrors.edge.kernel.org/ubuntu/#' /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i -E \
+            -e 's#https?://([[:alnum:]-]+\.)?archive\.ubuntu\.com/ubuntu/?#https://archive.ubuntu.com/ubuntu/#g' \
+            -e 's#https?://security\.ubuntu\.com/ubuntu/?#https://security.ubuntu.com/ubuntu/#g' \
+            /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update --error-on=any
 
       - name: Start PostgreSQL for the stable integration gate
@@ -555,6 +561,7 @@ jobs:
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json
+          -HangTimeoutMinutes 30
           -ResultsDirectory "${{ runner.temp }}/test-results"
           -LogPrefix "host-${{ matrix.name }}-${{ matrix.shard }}"
 
@@ -569,6 +576,7 @@ jobs:
           -Filter "Category!=Playwright&Category!=LiveProcess&Category!=LongRunning&Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true"
           -ShardIndex ${{ matrix.shard }} -ShardCount 3
           -WeightsPath ./tools/Validation/TestShardWeights.json
+          -HangTimeoutMinutes 30
           -ResultsDirectory "${{ runner.temp }}/test-results"
           -LogPrefix "full-${{ matrix.name }}-${{ matrix.shard }}"
 

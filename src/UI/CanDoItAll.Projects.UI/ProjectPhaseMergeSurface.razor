@@ -8,12 +8,12 @@
     @if (Row.Fields is { } fields) {
         <MergeFieldView TValue="string" Label="Phase name" Field="fields.Name" Format="Text" ShowUnchanged="ShowUnchanged" Changed="Changed">
             <ResultEditor Context="value">
-                <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(fields.Name, value))" ValueExpression="@(() => fields.Name.Local)" class="cda-input" aria-label="Merged phase name" />
+                <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(fields.Name, value))" ValueExpression="@(() => fields.Name.Local)" class="form-input ui-input ui-input--outlined" aria-label="Merged phase name" />
             </ResultEditor>
         </MergeFieldView>
         <MergeFieldView TValue="string" Label="Phase goal" Field="fields.Goal" Format="Text" ShowUnchanged="ShowUnchanged" Changed="Changed">
             <ResultEditor Context="value">
-                <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(fields.Goal, value))" ValueExpression="@(() => fields.Goal.Local)" class="cda-input cda-input--textarea" aria-label="Merged phase goal" />
+                <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(fields.Goal, value))" ValueExpression="@(() => fields.Goal.Local)" class="form-input ui-input ui-input--outlined ui-input--textarea" aria-label="Merged phase goal" />
             </ResultEditor>
         </MergeFieldView>
         <MergeFieldView TValue="ProjectPhaseStatus" Label="Phase status" Field="fields.Status" Format="@(value => value.ToString())" ShowUnchanged="ShowUnchanged" Changed="Changed" />
@@ -22,11 +22,11 @@
                 <Grid ColumnsLg="2" Gap="LayoutGap.Small">
                     <FormField Text="Result start">
                         <NativeValueInput TValue="DateTime?" Value="value.Start" ValueChanged="@(date => Set(fields.Dates, value with { Start = date }))" ValueExpression="@(() => fields.Dates.Local.Start)"
-                                          PendingChanged="@(pending => ResultPending.InvokeAsync(new(new(ProjectMergeInputField.PhaseStart, Row.Key), pending)))" class="cda-input" aria-label="Merged phase start" />
+                                          PendingChanged="@(pending => ResultPending.InvokeAsync(new(new(ProjectMergeInputField.PhaseStart, Row.Key), pending)))" class="form-input ui-input ui-input--outlined" aria-label="Merged phase start" />
                     </FormField>
                     <FormField Text="Result end">
                         <NativeValueInput TValue="DateTime?" Value="value.End" ValueChanged="@(date => Set(fields.Dates, value with { End = date }))" ValueExpression="@(() => fields.Dates.Local.End)"
-                                          PendingChanged="@(pending => ResultPending.InvokeAsync(new(new(ProjectMergeInputField.PhaseEnd, Row.Key), pending)))" class="cda-input" aria-label="Merged phase end" />
+                                          PendingChanged="@(pending => ResultPending.InvokeAsync(new(new(ProjectMergeInputField.PhaseEnd, Row.Key), pending)))" class="form-input ui-input ui-input--outlined" aria-label="Merged phase end" />
                     </FormField>
                 </Grid>
             </ResultEditor>

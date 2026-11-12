@@ -20,7 +20,7 @@
         <Stack Gap="1.5rem" Class="project-structure-page__stack">
             <Tabs @key="shell.ContextId" SelectedIndex="SelectedView" SelectedIndexChanged="@(value => Dispatch.InvokeAsync(new StructureViewIntent(shell.ContextId, value)))"
                   FillHeight="@(SelectedView == 1)" PanelOverflowMode="@(SelectedView == 1 ? TabsPanelOverflowMode.Hidden : TabsPanelOverflowMode.Visible)"
-                  AriaLabel="Project structure views" Variant="TabsVariant.WorkspaceSecondary" RenderMode="TabRenderMode.Client">
+                  AriaLabel="Project structure views" Density="TabsDensity.Compact" RenderMode="TabRenderMode.Client">
                 <TabsItem Text="Canvas" Icon="account_tree">
         @{
             var view = shell;
@@ -98,7 +98,7 @@
                                     <TextBlock Value="@view.Feedback" />
                                     @if (view.HasPendingCleanup)
                                     {
-                                        <Button ButtonStyle="ButtonStyle.Light"
+                                        <Button Tone="ButtonTone.Default"
                                                 Text="Retry cleanup"
                                                 Disabled="@view.IsRetryingCleanup"
                                                 data-testid="project-structure-deletion-retry"

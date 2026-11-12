@@ -8,12 +8,12 @@
         <MergeFieldView TValue="ProjectOptionCategory" Label="Option category" Field="fields.Category" Format="@(value => value.ToString())" ShowUnchanged="ShowUnchanged" Changed="Changed" />
         <MergeFieldView TValue="string" Label="Option name" Field="fields.Name" Format="Text" ShowUnchanged="ShowUnchanged" Changed="Changed">
             <ResultEditor Context="value">
-                <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(fields.Name, value))" ValueExpression="@(() => fields.Name.Local)" class="cda-input" aria-label="Merged option name" />
+                <NativeValueInput TValue="string" Value="@value" ValueChanged="@(value => Set(fields.Name, value))" ValueExpression="@(() => fields.Name.Local)" class="form-input ui-input ui-input--outlined" aria-label="Merged option name" />
             </ResultEditor>
         </MergeFieldView>
         <MergeFieldView TValue="string" Label="Option notes" Field="fields.Notes" Format="Text" ShowUnchanged="ShowUnchanged" Changed="Changed">
             <ResultEditor Context="value">
-                <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(fields.Notes, value))" ValueExpression="@(() => fields.Notes.Local)" class="cda-input cda-input--textarea" aria-label="Merged option notes" />
+                <NativeValueInput TValue="string" Multiline="true" Value="@value" ValueChanged="@(value => Set(fields.Notes, value))" ValueExpression="@(() => fields.Notes.Local)" class="form-input ui-input ui-input--outlined ui-input--textarea" aria-label="Merged option notes" />
             </ResultEditor>
         </MergeFieldView>
     } else {

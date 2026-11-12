@@ -15,7 +15,7 @@
                     Icon="@(isChecked ? "check_box" : "check_box_outline_blank")"
                     Size="ButtonSize.Small"
                     Variant="@(isChecked ? Variant.Filled : Variant.Outlined)"
-                    ButtonStyle="@(isChecked ? ButtonStyle.Info : ButtonStyle.Base)"
+                    Tone="@(isChecked ? ButtonTone.Info : ButtonTone.Default)"
                     Disabled="@preventsEmptySelection"
                     aria-pressed="@(isChecked ? "true" : "false")"
                     data-testid="@option.TestId"

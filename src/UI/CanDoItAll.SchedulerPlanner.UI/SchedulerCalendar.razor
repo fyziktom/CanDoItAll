@@ -5,10 +5,10 @@
 <div class="scheduler-calendar-root">
     <SurfaceCard data-testid="scheduler-calendar-card">
         <Split Gap="LayoutGap.Small">
-            <div><TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" /><h2 class="text-base font-semibold text-slate-900">Planned and dispatched runs</h2></div>
+            <div><TextBlock TextStyle="TextStyle.Eyebrow" Value="Calendar" /><h2 class="text-base font-semibold text-chrome-900">Planned and dispatched runs</h2></div>
             <StatusBadge Tone="info" Text="@($"{Surface.Events.Count} bounded event(s)")" />
         </Split>
-        <p class="text-xs text-slate-500">Up to 18 planned occurrences per enabled plan over 30 days, combined maximum 160. Recent history comes from the current bounded query.</p>
+        <p class="text-xs text-chrome-500">Up to 18 planned occurrences per enabled plan over 30 days, combined maximum 160. Recent history comes from the current bounded query.</p>
         <div class="scheduler-planner-calendar-shell mt-4" @ref="host" data-testid="scheduler-calendar">
             <CanvasCalendar Surface="Surface" HostClass="scheduler-planner-calendar-host" SelectionChanged="SelectionChanged" StateChanged="StateChangedAsync" />
         </div>

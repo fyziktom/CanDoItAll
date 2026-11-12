@@ -7,23 +7,22 @@
         @Warning
     </Alert>
 
-    <label class="cda-inline-option">
-        <input type="checkbox"
-               @bind="riskAcknowledged"
-               data-testid="@($"{TestIdPrefix}-risk-acknowledgement")" />
+    <CheckboxOption TValue="bool"
+                    @bind-Value="riskAcknowledged"
+                    data-testid="@($"{TestIdPrefix}-risk-acknowledgement")">
         @Acknowledgement
-    </label>
+    </CheckboxOption>
 
     <Cluster Gap="LayoutGap.Small"
              Wrap="FlexWrap.Wrap"
              JustifyContent="JustifyContent.End">
         <Button Text="Cancel"
-                ButtonStyle="ButtonStyle.Light"
+                Tone="ButtonTone.Default"
                 Click="CancelAsync"
                 data-testid="@($"{TestIdPrefix}-cancel")" />
         <Button Text="@ConfirmText"
                 Icon="warning"
-                ButtonStyle="ButtonStyle.Warning"
+                Tone="ButtonTone.Warning"
                 Disabled="@(!riskAcknowledged)"
                 Click="ConfirmAsync"
                 data-testid="@($"{TestIdPrefix}-confirm")" />

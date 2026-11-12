@@ -1,16 +1,13 @@
 <FormSection Title="Next action"
              Description="Capture the follow-up commitment explicitly so overdue work is visible on the CRM surface instead of hiding in notes.">
     <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-        <div>
-            <label class="cda-field-label">Next action</label>
-            <NativeValueInput TValue="string" @bind-Value="Model.NextActionText" PendingChanged="@(_ => SetTextAsync())"
-                       class="cda-input"
+        <FormField Text="Next action">
+            <NativeValueInput aria-label="Next action" TValue="string" @bind-Value="Model.NextActionText" PendingChanged="@(_ => SetTextAsync())"
+                       class="form-input ui-input ui-input--outlined"
                        data-testid="crmhr-next-action-text" />
-        </div>
-        <div>
-            <label class="cda-field-label">Owner</label>
-            <InputSelect @bind-Value="Model.NextActionOwnerPartyId"
-                         class="cda-input"
+        </FormField>
+        <FormField Text="Owner">
+            <SelectInput @bind-Value="Model.NextActionOwnerPartyId"
                          data-testid="crmhr-next-action-owner">
                 <option value="">Select owner</option>
                 @foreach (var option in OwnerOptions)
@@ -20,14 +17,14 @@
                 @if (Model.NextActionOwnerPartyId is Guid retained && !OwnerOptions.Any(option => option.Id == retained)) {
                     <option value="@retained">@(SelectedOwnerLabel ?? $"Previously selected owner ({retained:D})")</option>
                 }
-            </InputSelect>
-        </div>
+            </SelectInput>
+        </FormField>
     </Grid>
 
     <div class="mt-5 max-w-sm">
-        <label class="cda-field-label">Due on</label>
+        <label class="cda-form-field__label">Due on</label>
         <InputDate @bind-Value="Model.NextActionDueOn"
-                   class="cda-input"
+                   class="form-input ui-input ui-input--outlined"
                    data-testid="crmhr-next-action-due-on" />
     </div>
 </FormSection>

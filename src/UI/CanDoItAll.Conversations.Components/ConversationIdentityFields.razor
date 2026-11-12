@@ -3,7 +3,7 @@
 <Stack GapScale="LayoutGap.Large" Class="@Class" data-testid="@TestId">
     <FormRow Split="@ShowRole">
         <FormField Text="@NameLabel">
-            <TextBox Value="@Name"
+            <TextInput Value="@Name"
                      Immediate="@Immediate"
                      ValueChanged="NameChanged"
                      Disabled="@Disabled"
@@ -17,7 +17,7 @@
         @if (ShowRole)
         {
             <FormField Text="@RoleLabel">
-                <TextBox Value="@Role"
+                <TextInput Value="@Role"
                          Immediate="@Immediate"
                          ValueChanged="RoleChanged"
                          Disabled="@Disabled"
@@ -49,14 +49,14 @@
                             Size="AvatarSize.Large"
                             Shape="AvatarShape.Rounded" />
                     <Stack GapScale="LayoutGap.XSmall">
-                        <span class="cda-field-label">@AvatarLabel</span>
+                        <span class="cda-form-field__label">@AvatarLabel</span>
                         @if (!string.IsNullOrWhiteSpace(AvatarStatus))
                         {
                             <strong>@AvatarStatus</strong>
                         }
                         @if (!string.IsNullOrWhiteSpace(AvatarDescription))
                         {
-                            <small class="text-sm text-slate-600">@AvatarDescription</small>
+                            <small class="text-sm text-chrome-600">@AvatarDescription</small>
                         }
                     </Stack>
                 </Stack>
@@ -76,7 +76,7 @@
     }
 
     <FormField Text="@SummaryLabel" Class="conversation-identity-fields__full-field">
-        <TextArea Value="@Summary"
+        <TextAreaInput Value="@Summary"
                   Immediate="@Immediate"
                   ValueChanged="SummaryChanged"
                   Size="TextAreaSize.Standard"
@@ -94,9 +94,9 @@
         <FormField Text="@InstructionsLabel" Class="conversation-identity-fields__full-field">
             @if (!string.IsNullOrWhiteSpace(InstructionsDescription))
             {
-                <p class="mb-2 text-sm leading-6 text-slate-600">@InstructionsDescription</p>
+                <p class="mb-2 text-sm leading-6 text-chrome-600">@InstructionsDescription</p>
             }
-            <TextArea Value="@Instructions"
+            <TextAreaInput Value="@Instructions"
                       Immediate="@Immediate"
                       ValueChanged="InstructionsChanged"
                       Size="TextAreaSize.Extended"

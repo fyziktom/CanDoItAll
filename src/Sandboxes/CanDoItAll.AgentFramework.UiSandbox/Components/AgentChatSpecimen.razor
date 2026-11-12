@@ -3,7 +3,7 @@
 <header class="catalog-sandbox__controls">
     <h1 class="cda-title-xl">Agent chat sandbox</h1>
     <label for="agent-chat-scenario">Scenario</label>
-    <select id="agent-chat-scenario" class="cda-input" value="@fixture.Scenario" @onchange="ChangeScenario">
+    <select id="agent-chat-scenario" class="form-input ui-input ui-input--outlined" value="@fixture.Scenario" @onchange="ChangeScenario">
         @foreach (var scenario in Enum.GetValues<AgentChatScenario>()) {
             <option value="@scenario">@scenario</option>
         }

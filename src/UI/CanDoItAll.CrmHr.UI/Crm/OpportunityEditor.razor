@@ -12,10 +12,11 @@
                       ColumnsLg="3">
                     <Stack GapScale="LayoutGap.XSmall"
                            Class="lg:col-span-2">
-                        <label class="cda-field-label">Opportunity title</label>
-                        <NativeValueInput TValue="string" @bind-Value="Model.Title" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Title))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Title))"
-                                   class="cda-input"
-                                   data-testid="crmhr-opportunity-title" />
+                        <FormField Text="Opportunity title">
+                            <NativeValueInput aria-label="Opportunity title" TValue="string" @bind-Value="Model.Title" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Title))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Title))"
+                                       class="form-input ui-input ui-input--outlined"
+                                       data-testid="crmhr-opportunity-title" />
+                        </FormField>
                     </Stack>
                     <PanelCard Soft="true">
                         <Stack GapScale="LayoutGap.XSmall">
@@ -31,41 +32,45 @@
                       ColumnsLg="4"
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Stage</label>
-                        <InputSelect @bind-Value="Model.Stage" @bind-Value:after="@(() => ChangedAsync(OpportunityField.StageDecision))"
-                                     class="cda-input"
-                                     data-testid="crmhr-opportunity-stage">
-                            @foreach (var stage in Enum.GetValues<OpportunityStage>())
-                            {
-                                <option value="@stage">@stage</option>
-                            }
-                        </InputSelect>
+                        <FormField Text="Stage">
+                            <SelectInput @bind-Value="Model.Stage" @bind-Value:after="@(() => ChangedAsync(OpportunityField.StageDecision))"
+                                         class="form-input ui-input ui-input--outlined"
+                                         data-testid="crmhr-opportunity-stage">
+                                @foreach (var stage in Enum.GetValues<OpportunityStage>())
+                                {
+                                    <option value="@stage">@stage</option>
+                                }
+                            </SelectInput>
+                        </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Source</label>
-                        <InputSelect @bind-Value="Model.OpportunitySource" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Source))"
-                                     class="cda-input"
-                                     data-testid="crmhr-opportunity-source">
-                            @foreach (var source in Enum.GetValues<OpportunitySource>())
-                            {
-                                <option value="@source">@source</option>
-                            }
-                        </InputSelect>
+                        <FormField Text="Source">
+                            <SelectInput @bind-Value="Model.OpportunitySource" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Source))"
+                                         class="form-input ui-input ui-input--outlined"
+                                         data-testid="crmhr-opportunity-source">
+                                @foreach (var source in Enum.GetValues<OpportunitySource>())
+                                {
+                                    <option value="@source">@source</option>
+                                }
+                            </SelectInput>
+                        </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Currency</label>
-                        <NativeValueInput TValue="string" @bind-Value="Model.CurrencyCode" @bind-Value:after="@(() => ChangedAsync(OpportunityField.CommercialValue))" PendingChanged="@(_ => SetTextAsync(OpportunityField.CommercialValue))"
-                                   class="cda-input"
-                                   maxlength="3"
-                                   data-testid="crmhr-opportunity-currency" />
+                        <FormField Text="Currency">
+                            <NativeValueInput aria-label="Currency" TValue="string" @bind-Value="Model.CurrencyCode" @bind-Value:after="@(() => ChangedAsync(OpportunityField.CommercialValue))" PendingChanged="@(_ => SetTextAsync(OpportunityField.CommercialValue))"
+                                       class="form-input ui-input ui-input--outlined"
+                                       maxlength="3"
+                                       data-testid="crmhr-opportunity-currency" />
+                        </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Amount</label>
-                        <InputNumber @bind-Value="Model.Amount"
-                                     @oninput="@(() => ChangedAsync(OpportunityField.CommercialValue, true))"
-                                     @bind-Value:after="@(() => ParsedAsync(OpportunityField.CommercialValue))"
-                                     class="cda-input"
-                                     data-testid="crmhr-opportunity-amount" />
+                        <FormField Text="Amount">
+                            <NumberInput @bind-Value="Model.Amount"
+                                         @oninput="@(() => ChangedAsync(OpportunityField.CommercialValue, true))"
+                                         @bind-Value:after="@(() => ParsedAsync(OpportunityField.CommercialValue))"
+                                         class="form-input ui-input ui-input--outlined"
+                                         data-testid="crmhr-opportunity-amount" />
+                        </FormField>
                     </Stack>
                 </Grid>
 
@@ -73,19 +78,20 @@
                       ColumnsLg="2"
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Probability %</label>
-                        <InputNumber @bind-Value="Model.ProbabilityPercent"
-                                     @oninput="@(() => ChangedAsync(OpportunityField.Probability, true))"
-                                     @bind-Value:after="@(() => ParsedAsync(OpportunityField.Probability))"
-                                     class="cda-input"
-                                     data-testid="crmhr-opportunity-probability" />
+                        <FormField Text="Probability %">
+                            <NumberInput @bind-Value="Model.ProbabilityPercent"
+                                         @oninput="@(() => ChangedAsync(OpportunityField.Probability, true))"
+                                         @bind-Value:after="@(() => ParsedAsync(OpportunityField.Probability))"
+                                         class="form-input ui-input ui-input--outlined"
+                                         data-testid="crmhr-opportunity-probability" />
+                        </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Expected close</label>
+                        <label class="cda-form-field__label">Expected close</label>
                         <InputDate @bind-Value="Model.ExpectedCloseOn"
                                      @oninput="@(() => ChangedAsync(OpportunityField.ExpectedClose, true))"
                                      @bind-Value:after="@(() => ParsedAsync(OpportunityField.ExpectedClose))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-opportunity-close-date" />
                     </Stack>
                 </Grid>
@@ -106,14 +112,14 @@
                             @if (Model.LinkedProjectId.HasValue)
                             {
                                 <Button Text="Clear"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="ClearLinkedProject"
                                         data-testid="crmhr-opportunity-project-clear" />
                             }
                             <Button Text="Select project"
                                     Icon="folder_open"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="OpenProjectPicker"
                                     data-testid="crmhr-opportunity-project-select" />
@@ -143,7 +149,7 @@
                             </Stack>
                             <Button Text="Choose owner"
                                     Icon="person_search"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => OpenPartyPicker(OpportunityPartySelectionKind.Owner))"
                                     data-testid="crmhr-opportunity-owner" />
@@ -165,14 +171,14 @@
                                 @if (Model.DeliveryUnitPartyId.HasValue)
                                 {
                                     <Button Text="Clear"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Click="ClearDeliveryUnitAsync"
                                             data-testid="crmhr-opportunity-delivery-unit-clear" />
                                 }
                                 <Button Text="Choose unit"
                                         Icon="account_tree"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => OpenPartyPicker(OpportunityPartySelectionKind.DeliveryUnit))"
                                         data-testid="crmhr-opportunity-delivery-unit" />
@@ -191,7 +197,7 @@
                         <SmallText Text="Partner, sponsor, billing, technical, delivery, and stakeholder links" />
                         <Button Text="Add linked party"
                                 Icon="person_add"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
                                 Click="AddPartyLink"
                                 data-testid="crmhr-opportunity-party-add" />
@@ -220,27 +226,28 @@
                                                    Value="@ResolveLinkedPartyLabel(partyLink)" />
                                         <Button Text="Choose party"
                                                 Icon="person_search"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => OpenLinkedPartyPicker(partyLink))"
                                                 data-testid="@($"crmhr-opportunity-party-{rowIndex}")" />
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall">
-                                        <label class="cda-field-label">Role</label>
-                                        <InputSelect @bind-Value="partyLink.Role" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Parties))"
-                                                     class="cda-input"
-                                                     data-testid="@($"crmhr-opportunity-party-role-{rowIndex}")">
-                                            @foreach (var role in PartyRoleOptions)
-                                            {
-                                                <option value="@role">@ResolvePartyRoleLabel(role)</option>
-                                            }
-                                        </InputSelect>
+                                        <FormField Text="Role">
+                                            <SelectInput @bind-Value="partyLink.Role" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Parties))"
+                                                         class="form-input ui-input ui-input--outlined"
+                                                         data-testid="@($"crmhr-opportunity-party-role-{rowIndex}")">
+                                                @foreach (var role in PartyRoleOptions)
+                                                {
+                                                    <option value="@role">@ResolvePartyRoleLabel(role)</option>
+                                                }
+                                            </SelectInput>
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall"
                                            AlignItems="AlignItems.End"
                                            JustifyContent="JustifyContent.End">
                                         <Button Text="Remove"
-                                                ButtonStyle="ButtonStyle.Danger"
+                                                Tone="ButtonTone.Danger"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => RemovePartyLink(partyLink))"
                                                 data-testid="@($"crmhr-opportunity-party-remove-{rowIndex}")" />
@@ -261,16 +268,18 @@
                 <Grid Gap="LayoutGap.Medium"
                       ColumnsLg="2">
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Summary</label>
-                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Summary" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Summary))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Summary))"
-                                       class="cda-input cda-input--textarea min-h-[8rem]"
-                                       data-testid="crmhr-opportunity-summary" />
+                        <FormField Text="Summary">
+                            <NativeValueInput aria-label="Summary" TValue="string" Multiline="true" @bind-Value="Model.Summary" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Summary))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Summary))"
+                                           class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[8rem]"
+                                           data-testid="crmhr-opportunity-summary" />
+                        </FormField>
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Notes</label>
-                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Notes))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Notes))"
-                                       class="cda-input cda-input--textarea min-h-[8rem]"
-                                       data-testid="crmhr-opportunity-notes" />
+                        <FormField Text="Notes">
+                            <NativeValueInput aria-label="Notes" TValue="string" Multiline="true" @bind-Value="Model.Notes" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Notes))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Notes))"
+                                           class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[8rem]"
+                                           data-testid="crmhr-opportunity-notes" />
+                        </FormField>
                     </Stack>
                 </Grid>
 
@@ -278,30 +287,33 @@
                       ColumnsLg="3"
                       Class="mt-4">
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Stage note</label>
+                        <label class="cda-form-field__label">Stage note</label>
                         <SmallText Text="Saved with a stage change. Use Notes for ordinary updates." />
                         <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.StageNotes" @bind-Value:after="@(() => ChangedAsync(OpportunityField.StageDecision))" PendingChanged="@(_ => SetTextAsync(OpportunityField.StageDecision))"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
+                                       class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
                                        data-testid="crmhr-opportunity-stage-notes" />
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Competitor</label>
-                        <NativeValueInput TValue="string" @bind-Value="Model.CompetitorName" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Competitor))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Competitor))"
-                                   class="cda-input"
-                                   data-testid="crmhr-opportunity-competitor" />
+                        <FormField Text="Competitor">
+                            <NativeValueInput aria-label="Competitor" TValue="string" @bind-Value="Model.CompetitorName" @bind-Value:after="@(() => ChangedAsync(OpportunityField.Competitor))" PendingChanged="@(_ => SetTextAsync(OpportunityField.Competitor))"
+                                       class="form-input ui-input ui-input--outlined"
+                                       data-testid="crmhr-opportunity-competitor" />
+                        </FormField>
                         @if (Model.Stage == OpportunityStage.Lost)
                         {
-                            <label class="cda-field-label">Lost reason</label>
-                            <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.LostReason" @bind-Value:after="@(() => ChangedAsync(OpportunityField.StageDecision))" PendingChanged="@(_ => SetTextAsync(OpportunityField.StageDecision))"
-                                           class="cda-input cda-input--textarea min-h-[6rem]"
-                                           data-testid="crmhr-opportunity-lost-reason" />
+                            <FormField Text="Lost reason">
+                                <NativeValueInput aria-label="Lost reason" TValue="string" Multiline="true" @bind-Value="Model.LostReason" @bind-Value:after="@(() => ChangedAsync(OpportunityField.StageDecision))" PendingChanged="@(_ => SetTextAsync(OpportunityField.StageDecision))"
+                                               class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[6rem]"
+                                               data-testid="crmhr-opportunity-lost-reason" />
+                            </FormField>
                         }
                     </Stack>
                     <Stack GapScale="LayoutGap.XSmall">
-                        <label class="cda-field-label">Partner contribution</label>
-                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.PartnerContributionSummary" @bind-Value:after="@(() => ChangedAsync(OpportunityField.PartnerContribution))" PendingChanged="@(_ => SetTextAsync(OpportunityField.PartnerContribution))"
-                                       class="cda-input cda-input--textarea min-h-[7rem]"
-                                       data-testid="crmhr-opportunity-partner-contribution" />
+                        <FormField Text="Partner contribution">
+                            <NativeValueInput aria-label="Partner contribution" TValue="string" Multiline="true" @bind-Value="Model.PartnerContributionSummary" @bind-Value:after="@(() => ChangedAsync(OpportunityField.PartnerContribution))" PendingChanged="@(_ => SetTextAsync(OpportunityField.PartnerContribution))"
+                                           class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]"
+                                           data-testid="crmhr-opportunity-partner-contribution" />
+                        </FormField>
                     </Stack>
                 </Grid>
             </ChildContent>

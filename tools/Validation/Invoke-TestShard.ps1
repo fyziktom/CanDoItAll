@@ -7,6 +7,8 @@ param(
     [string]$ResultsDirectory,
     [string]$LogPrefix = 'shard',
     [string]$WeightsPath,
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$HangTimeoutMinutes = 0,
     [bool]$UseLocalCanDoItAllLibraries = $true,
     [switch]$ListOnly
 )
@@ -29,6 +31,10 @@ if ([string]::IsNullOrWhiteSpace($ResultsDirectory)) {
 }
 New-Item -ItemType Directory -Force -Path $ResultsDirectory | Out-Null
 $localLibraries = "-p:UseLocalCanDoItAllLibraries=$($UseLocalCanDoItAllLibraries.ToString().ToLowerInvariant())"
+[string[]]$hangArguments = @()
+if ($HangTimeoutMinutes -gt 0) {
+    $hangArguments = @('--blame-hang-timeout', "${HangTimeoutMinutes}m", '--blame-hang-dump-type', 'none')
+}
 
 $weights = @{}
 $defaultCaseSeconds = 1.0
@@ -150,8 +156,11 @@ foreach ($projectPath in $Project) {
     & dotnet test $projectPath --configuration $Configuration --no-build --no-restore `
         --filter $shardFilter `
         --logger "trx;LogFileName=$LogPrefix-$assemblyName.trx" `
+        --logger "console;verbosity=normal" `
         --results-directory $ResultsDirectory `
-        $localLibraries
+        @hangArguments `
+        $localLibraries `
+        -- xUnit.DiagnosticMessages=true xUnit.LongRunningTestSeconds=60
     if ($LASTEXITCODE -ne 0) {
         $failures++
     }

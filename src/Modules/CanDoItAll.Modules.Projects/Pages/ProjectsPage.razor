@@ -45,7 +45,7 @@ tests: component:ProjectsPageTests, e2e:projects-smoke
     </Header>
 
     <ChildContent>
-        <Button Text="Manage retained save references" ButtonStyle="ButtonStyle.Light" Click="OpenReferencesAsync" data-testid="project-reference-manage" />
+        <Button Text="Manage retained save references" Tone="ButtonTone.Default" Click="OpenReferencesAsync" data-testid="project-reference-manage" />
         <ProjectPendingListSurface Items="VisiblePendingSaves" Loading="pendingLoading" Error="@pendingError"
                                    HasMore="@(pendingVisible < pendingSaves.Count)" Refresh="RefreshPendingSavesAsync"
                                    ShowMore="ShowMorePendingSaves" Open="OpenPendingSaveAsync" />

@@ -93,6 +93,8 @@ builder.Services.AddScoped<IProjectLifecyclePendingStore, BrowserProjectLifecycl
 builder.Services.AddScoped<CanDoItAll.AgentFramework.UI.Catalog.IAgentDecisionPolicyPendingStore, BrowserAgentDecisionPolicyPendingStore>();
 builder.Services.AddSingleton(new ProjectLifecyclePendingStoreLimits(64, 2 * 1024 * 1024, 16));
 builder.Services.AddScoped<TuningCoordinator>();
+builder.Services.AddScoped<AppThemeState>();
+builder.Services.AddScoped<AppToolbarState>();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = webHostOptions.TrustedProxies.Length == 0 ? ForwardedHeaders.None :

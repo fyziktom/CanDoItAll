@@ -12,12 +12,12 @@
             break;
         case ConfigurationFieldType.Json:
         case ConfigurationFieldType.MultilineText:
-            <TextArea Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
+            <TextAreaInput Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
                       Rows="4" Class="@InputClass" Style="width:100%" data-testid="@TestId" />
             break;
         case ConfigurationFieldType.Select:
         case ConfigurationFieldType.SecretReference:
-            <InputSelect TValue="string" Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged"
+            <SelectInput TValue="string" Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged"
                          ValueExpression="() => TextValue" class="@($"{InputClass} w-full")" data-testid="@TestId">
                 @if (Field.FieldType == ConfigurationFieldType.SecretReference) {
                     <option value="">None</option>
@@ -35,10 +35,10 @@
                         <option value="@option.Value">@option.Label</option>
                     }
                 }
-            </InputSelect>
+            </SelectInput>
             break;
         default:
-            <TextBox Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
+            <TextInput Value="@Input.Text(Field.Key)" ValueChanged="HandleTextChanged" Immediate="true"
                      Class="@InputClass" Style="width:100%" data-testid="@TestId" />
             break;
     }
@@ -52,7 +52,7 @@
     [Parameter, EditorRequired] public ConfigurationState State { get; set; } = default!;
     [Parameter] public ConfigurationInputDraft? Draft { get; set; }
     [Parameter] public IReadOnlyList<ConfigurationSecretOption> Secrets { get; set; } = [];
-    [Parameter] public string InputClass { get; set; } = "cda-input";
+    [Parameter] public string InputClass { get; set; } = "form-input ui-input ui-input--outlined";
     [Parameter] public string? TestId { get; set; }
     [Parameter] public EventCallback<ConfigurationState> StateChanged { get; set; }
     private ConfigurationInputDraft? ownedDraft;
