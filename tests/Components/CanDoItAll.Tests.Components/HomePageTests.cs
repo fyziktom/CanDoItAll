@@ -86,8 +86,9 @@ public sealed class HomePageTests
             cut.FindComponents<Grid>(),
             grid => grid.Instance.Columns == 3);
 
-        var workflowCard = cut.Find("[data-testid='dashboard-workflows-card']");
-        Assert.Contains("Active workflows", workflowCard.TextContent, StringComparison.Ordinal);
+        var workflowTab = cut.Find("[data-testid='dashboard-workflows-tab']");
+        Assert.Contains("Active workflows", workflowTab.TextContent, StringComparison.Ordinal);
+        Assert.Equal("true", workflowTab.GetAttribute("aria-selected"));
         var workflow = cut.Find($"[data-testid='dashboard-workflow-{WorkflowRunId:N}']");
         Assert.Equal(
             $"/agents/workflows?workflowId={WorkflowId:D}&runId={WorkflowRunId:D}",
@@ -96,8 +97,12 @@ public sealed class HomePageTests
         Assert.DoesNotContain("Preparing release artifacts", workflow.TextContent, StringComparison.Ordinal);
         Assert.Equal("Preparing release artifacts", workflow.GetAttribute("title"));
 
-        var processCard = cut.Find("[data-testid='dashboard-processes-card']");
-        Assert.Contains("Recent processes", processCard.TextContent, StringComparison.Ordinal);
+        var processTab = cut.Find("[data-testid='dashboard-processes-tab']");
+        Assert.Contains("Recent processes", processTab.TextContent, StringComparison.Ordinal);
+        await processTab.ClickAsync(new());
+        cut.WaitForAssertion(() => Assert.Equal(
+            "true",
+            cut.Find("[data-testid='dashboard-processes-tab']").GetAttribute("aria-selected")));
 
         var process = cut.Find($"[data-testid='dashboard-process-{ProcessRunId:N}']");
         Assert.Equal(

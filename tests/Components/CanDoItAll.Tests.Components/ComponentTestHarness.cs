@@ -62,6 +62,7 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
                 .Setup<CanDoItAll.Components.BaseLib.NativeFormValidity>("inspect", _ => true)
                 .SetResult(new(true));
             context.AddAuthorization();
+            context.AddBunitPersistentComponentState();
             var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
 
             TestApplicationBootstrap.ConfigureDefaultServices(

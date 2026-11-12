@@ -29,7 +29,7 @@ public sealed class ProviderProfilesSeamTests {
         }
         var selected = initialLoad ? reads.First : reads.Second;
         cut.WaitForElement("[data-testid='providers-editor-loading']");
-        Assert.Equal(selected.Name, cut.Find("h2.cda-title-xl").TextContent);
+        Assert.Equal(selected.Name, cut.Find("[data-testid='agents-provider-profiles-panel'] > div > section:last-child h2").TextContent);
         Assert.Empty(cut.FindAll("[data-testid='provider-editor-tabs']"));
 
         await cut.InvokeAsync(() => pending.SetResult(reads.Draft(selected.Id)));
@@ -57,7 +57,7 @@ public sealed class ProviderProfilesSeamTests {
             await Node(cut, "Second").ClickAsync();
         }
         cut.WaitForElement("[data-testid='providers-load-failed']");
-        Assert.Equal(catalogFails ? "New provider profile" : "Second", cut.Find("h2.cda-title-xl").TextContent);
+        Assert.Equal(catalogFails ? "New provider profile" : "Second", cut.Find("[data-testid='agents-provider-profiles-panel'] > div > section:last-child h2").TextContent);
         Assert.Empty(cut.FindAll("form"));
         Assert.Empty(cut.FindAll("[data-testid='providers-save']"));
         reads.Catalog = _ => Task.FromResult(reads.Snapshot);
@@ -90,7 +90,7 @@ public sealed class ProviderProfilesSeamTests {
         };
         var old = Node(cut, "Second").ClickAsync();
         cut.WaitForElement("[data-testid='providers-editor-loading']");
-        Assert.Equal("Second", cut.Find("h2.cda-title-xl").TextContent);
+        Assert.Equal("Second", cut.Find("[data-testid='agents-provider-profiles-panel'] > div > section:last-child h2").TextContent);
         reads.Editor = (id, _) => Task.FromResult(reads.Draft(id));
         if (newDraft) {
             await cut.Find("[data-testid='providers-new']").ClickAsync();
