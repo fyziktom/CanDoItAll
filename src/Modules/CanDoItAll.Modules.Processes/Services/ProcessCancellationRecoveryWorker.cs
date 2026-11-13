@@ -29,6 +29,7 @@ internal sealed class ProcessCancellationRecoveryWorker(IServiceScopeFactory sco
                     var result = await coordinator.RunSliceAsync(origin, settings.Limits, stoppingToken).ConfigureAwait(false);
                     delay = result.Status switch {
                         ProcessCancellationRecoverySliceStatus.Idle => settings.IdleDelay,
+                        ProcessCancellationRecoverySliceStatus.TimedOut when result.RootRunId is not null => settings.Limits.YieldDelay,
                         ProcessCancellationRecoverySliceStatus.TimedOut or ProcessCancellationRecoverySliceStatus.InvalidEvidence => settings.Limits.FailureDelay,
                         _ => settings.Limits.YieldDelay
                     };

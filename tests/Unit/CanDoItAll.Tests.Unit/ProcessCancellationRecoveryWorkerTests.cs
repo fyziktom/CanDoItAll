@@ -44,6 +44,32 @@ public sealed class ProcessCancellationRecoveryWorkerTests {
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task Timeout_yields_to_another_root_only_when_the_original_root_was_claimed(bool claimedRoot) {
+        await using var fixture = new Fixture { HoldClaim = !claimedRoot, HoldStage = claimedRoot };
+        fixture.Clock.CaptureFirstDeadline = true;
+        await fixture.Worker.StartAsync(default);
+        (await fixture.Clock.NextAsync()).Fire();
+        await fixture.Held.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        (await fixture.Clock.FirstDeadline.Task.WaitAsync(TimeSpan.FromSeconds(5))).Fire();
+        var pacing = await fixture.Clock.NextAsync();
+        Assert.Equal(claimedRoot ? fixture.Options.Limits.YieldDelay : fixture.Options.Limits.FailureDelay, pacing.Duration);
+        Assert.True(fixture.Unwound);
+        Assert.True(Assert.Single(fixture.Ports).Disposed);
+        Assert.Equal(0, fixture.Checkpoints);
+
+        fixture.HoldClaim = false;
+        fixture.HoldStage = false;
+        pacing.Fire();
+        Assert.Equal(fixture.Options.Limits.YieldDelay, (await fixture.Clock.NextAsync()).Duration);
+        Assert.Equal(2, fixture.Origins.Count);
+        Assert.Equal(2, fixture.Ports.Count);
+        Assert.All(fixture.Ports, port => Assert.True(port.Disposed));
+        Assert.Equal(1, fixture.Checkpoints);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task Shutdown_awaits_held_owner_unwind_before_scope_disposal(bool seed) {
         await using var fixture = new Fixture { HoldStage = !seed, HoldSeed = seed };
         await fixture.Worker.StartAsync(default);
@@ -101,7 +127,8 @@ public sealed class ProcessCancellationRecoveryWorkerTests {
         internal TaskCompletionSource Held { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool Empty { get; init; }
         internal bool FailClaims { get; init; }
-        internal bool HoldStage { get; init; }
+        internal bool HoldClaim { get; set; }
+        internal bool HoldStage { get; set; }
         internal bool HoldSeed { get; init; }
         internal bool Unwound { get; private set; }
         internal int Checkpoints { get; set; }
@@ -142,17 +169,20 @@ public sealed class ProcessCancellationRecoveryWorkerTests {
     private sealed class Ports(Fixture fixture) : IProcessCancellationRecoveryQueue, IProcessCancellationRecoveryStep, IDisposable {
         internal bool Disposed { get; private set; }
 
-        public Task<ProcessCancellationRecoveryClaim?> ClaimAsync(ProcessCancellationRecoveryOrigin origin, TimeSpan leaseDuration,
+        public async Task<ProcessCancellationRecoveryClaim?> ClaimAsync(ProcessCancellationRecoveryOrigin origin, TimeSpan leaseDuration,
             CancellationToken cancellationToken = default) {
             fixture.Origins.Add(origin);
             if (fixture.FailClaims) {
                 throw new IOException("Selected queue failure.");
             }
+            if (fixture.HoldClaim) {
+                await fixture.WaitAsync(cancellationToken);
+            }
             ProcessCancellationRecoveryClaim? claim = fixture.Empty ? null : new(new(Guid.NewGuid()), origin,
                 origin == ProcessCancellationRecoveryOrigin.LiveBarrier ? RuntimeCommandId.New() : null,
                 Guid.NewGuid(), 1, 0, DateTimeOffset.UtcNow.Add(leaseDuration), 0,
                 ProcessCancellationRecoveryPosition.Initial, null, ProcessCancellationRecoveryPending.None);
-            return Task.FromResult(claim);
+            return claim;
         }
 
         public async Task<ProcessCancellationRecoveryCheckpoint> AdvanceAsync(ProcessCancellationRecoveryClaim claim, CancellationToken cancellationToken) {
@@ -187,11 +217,19 @@ public sealed class ProcessCancellationRecoveryWorkerTests {
 
     private sealed class PacingClock : TimeProvider {
         private readonly Channel<PacingTimer> pending = Channel.CreateUnbounded<PacingTimer>();
+        internal bool CaptureFirstDeadline { get; set; }
+        internal TaskCompletionSource<PacingTimer> FirstDeadline { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal ChannelReader<PacingTimer> Pending => pending.Reader;
         internal async Task<PacingTimer> NextAsync() => await pending.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
 
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) {
             if (dueTime >= TimeSpan.FromSeconds(1)) {
+                if (CaptureFirstDeadline) {
+                    var deadline = new PacingTimer(callback, state, dueTime);
+                    if (FirstDeadline.TrySetResult(deadline)) {
+                        return deadline;
+                    }
+                }
                 return System.CreateTimer(callback, state, dueTime, period);
             }
             var timer = new PacingTimer(callback, state, dueTime);
