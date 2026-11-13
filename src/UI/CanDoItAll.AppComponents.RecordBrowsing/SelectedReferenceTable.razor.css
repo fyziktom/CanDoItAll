@@ -1,5 +1,5 @@
 .selected-reference-table {
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.75rem;
     container-type: inline-size;
     min-width: 0;
@@ -8,12 +8,12 @@
 }
 
 .selected-reference-table--disabled {
-    background: rgb(248 250 252);
+    background: var(--tone-surface-soft);
 }
 
 .selected-reference-table__table {
     border-collapse: collapse;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     table-layout: fixed;
     width: 100%;
 }
@@ -28,19 +28,19 @@
 }
 
 .selected-reference-table__table th {
-    background: rgb(248 250 252);
-    color: rgb(71 85 105);
+    background: var(--tone-surface-soft);
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.025em;
 }
 
 .selected-reference-table__table tbody tr {
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border);
 }
 
 .selected-reference-table__table tbody tr:hover {
-    background: rgb(248 250 252 / 0.7);
+    background: color-mix(in srgb, var(--tone-surface-soft) 70%, transparent);
 }
 
 .selected-reference-table__primary {
@@ -58,17 +58,17 @@
 }
 
 .selected-reference-table__detail {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.78rem;
     line-height: 1.35;
     overflow-wrap: anywhere;
 }
 
 .selected-reference-table__table code {
-    background: rgb(241 245 249);
-    border: 1px solid rgb(226 232 240);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border);
     border-radius: 0.35rem;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     display: inline-block;
     font-size: 0.75rem;
     line-height: 1.35;
@@ -88,8 +88,8 @@
 
 .selected-reference-table__empty {
     align-items: flex-start;
-    background: rgb(248 250 252);
-    color: rgb(71 85 105);
+    background: var(--tone-surface-soft);
+    color: var(--tone-text-muted);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -97,7 +97,7 @@
 }
 
 .selected-reference-table__empty strong {
-    color: rgb(30 41 59);
+    color: var(--tone-text-strong);
     font-size: 0.875rem;
 }
 

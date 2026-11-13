@@ -51,7 +51,7 @@
                                         @onclick="() => SelectFromMenuAsync(tab.TabId)">
                                     <span class="min-w-0">
                                         <span class="block truncate font-semibold text-chrome-900">@tab.Title</span>
-                                        <span class="block truncate text-xs text-chrome-500">@tab.TabGroup / @tab.Route</span>
+                                        <span class="block truncate text-xs text-[var(--tone-text-muted)]">@tab.TabGroup / @tab.Route</span>
                                     </span>
                                     @if (tab.IsSleeping)
                                     {
@@ -81,7 +81,7 @@
                                  Class="app-tab-recent-header">
                             <Stack GapScale="LayoutGap.XSmall" Class="min-w-0">
                                 <p class="text-sm font-semibold text-chrome-900">Recently closed</p>
-                                <p class="truncate text-xs text-chrome-500">
+                                <p class="truncate text-xs text-[var(--tone-text-muted)]">
                                     Stored in this browser · latest @WorkbenchTabHistoryPolicy.RecentTabCapacity kept
                                 </p>
                             </Stack>
@@ -97,7 +97,7 @@
                         <div class="app-tab-menu__list">
                             @if (FilteredRecentTabs.Count == 0)
                             {
-                                <p class="rounded-xl border border-dashed border-chrome-200 px-3 py-4 text-center text-sm text-chrome-500">
+                                <p class="rounded-xl border border-dashed border-chrome-200 px-3 py-4 text-center text-sm text-[var(--tone-text-muted)]">
                                     No recently closed tabs match your search.
                                 </p>
                             }
@@ -111,7 +111,7 @@
                                             @onclick="() => ReopenRecent.InvokeAsync(recent.TabId)">
                                         <span class="min-w-0">
                                             <span class="block truncate font-semibold text-chrome-900">@recent.Title</span>
-                                            <span class="block truncate text-xs text-chrome-500">@recent.TabGroup / @recent.Route</span>
+                                            <span class="block truncate text-xs text-[var(--tone-text-muted)]">@recent.TabGroup / @recent.Route</span>
                                         </span>
                                         <span class="text-chrome-500" aria-hidden="true"><Icon Name="restore" /></span>
                                     </button>
@@ -145,7 +145,7 @@
                 {
                     <span class="app-tab-summary-chip app-tab-summary-chip--info">@ActiveTab.ProjectName</span>
                 }
-                <span class="truncate text-[10px] text-chrome-400">@ActiveTab.Route</span>
+                <span class="truncate text-[10px] text-[var(--tone-text-muted)]">@ActiveTab.Route</span>
             </Cluster>
 
             <Cluster Wrap="FlexWrap.NoWrap"

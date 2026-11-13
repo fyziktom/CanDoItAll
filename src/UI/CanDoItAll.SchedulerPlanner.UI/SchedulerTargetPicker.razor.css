@@ -19,10 +19,10 @@
     gap: 0.45rem;
     min-height: 2.25rem;
     padding: 0.42rem 0.65rem;
-    border: 1px solid rgba(203, 213, 225, 0.86);
+    border: 1px solid var(--tone-border);
     border-radius: 999px;
-    background: #fff;
-    color: #334155;
+    background: var(--tone-surface);
+    color: var(--tone-text);
     font-size: 0.82rem;
     font-weight: 700;
     white-space: nowrap;
@@ -38,9 +38,9 @@
     position: relative;
     min-height: 100%;
     overflow: hidden;
-    border: 1px solid rgba(226, 232, 240, 0.95);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 1.1rem;
-    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+    background: linear-gradient(180deg, var(--tone-surface) 0%, var(--tone-surface-soft) 100%);
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
@@ -48,13 +48,13 @@
 .scheduler-picker-root ::deep .scheduler-target-card:hover,
 .scheduler-picker-root ::deep .scheduler-target-card:focus-within {
     transform: translateY(-1px);
-    border-color: rgba(79, 70, 229, 0.32);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 18px 38px rgba(79, 70, 229, 0.14);
 }
 
 .scheduler-picker-root ::deep .scheduler-target-card--selected {
-    border-color: rgba(79, 70, 229, 0.58);
-    background: linear-gradient(180deg, #eef2ff 0%, #fff 100%);
+    border-color: var(--tone-info-soft-border);
+    background: linear-gradient(180deg, var(--tone-info-soft-bg) 0%, var(--tone-surface) 100%);
 }
 
 .scheduler-picker-root ::deep .scheduler-target-card__select {
@@ -70,7 +70,7 @@
 }
 
 .scheduler-picker-root ::deep .scheduler-target-card__select:focus-visible {
-    outline: 2px solid rgba(79, 70, 229, 0.55);
+    outline: 2px solid var(--tone-info-soft-fg);
     outline-offset: -4px;
 }
 
@@ -88,7 +88,7 @@
 
 .scheduler-picker-root ::deep .scheduler-target-card__name {
     margin: 0.7rem 0 0;
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     font-weight: 800;
     line-height: 1.25;
@@ -96,7 +96,7 @@
 
 .scheduler-picker-root ::deep .scheduler-target-card__role {
     margin: 0.2rem 0 0;
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.78rem;
     font-weight: 700;
     line-height: 1.25;
@@ -107,7 +107,7 @@
     min-height: 3.75rem;
     margin: 0;
     overflow: hidden;
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.82rem;
     font-weight: 500;
     line-height: 1.5;

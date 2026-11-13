@@ -32,7 +32,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 0.55rem;
-    background: rgb(255 255 255 / 0.72);
+    background: color-mix(in srgb, var(--tone-surface) 72%, transparent);
     color: var(--agents-overview-stat-icon);
 }
 
@@ -51,7 +51,7 @@
     font-weight: 800;
     line-height: 1;
     text-transform: uppercase;
-    color: rgb(51 65 85 / 0.78);
+    color: color-mix(in srgb, var(--tone-text) 78%, transparent);
 }
 
 .agents-overview-stat-badge__value {
@@ -60,49 +60,49 @@
     white-space: nowrap;
     font-size: 0.95rem;
     line-height: 1.12;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
 }
 
 .agents-overview-stat-badge--info {
-    --agents-overview-stat-bg: #eef6ff;
-    --agents-overview-stat-border: #bae6fd;
-    --agents-overview-stat-fg: #075985;
-    --agents-overview-stat-icon: #0284c7;
+    --agents-overview-stat-bg: var(--tone-info-soft-bg);
+    --agents-overview-stat-border: var(--tone-info-soft-border);
+    --agents-overview-stat-fg: var(--tone-info-soft-fg);
+    --agents-overview-stat-icon: var(--tone-info-soft-fg);
 }
 
 .agents-overview-stat-badge--success {
-    --agents-overview-stat-bg: #ecfdf5;
-    --agents-overview-stat-border: #bbf7d0;
-    --agents-overview-stat-fg: #065f46;
-    --agents-overview-stat-icon: #059669;
+    --agents-overview-stat-bg: var(--tone-success-soft-bg);
+    --agents-overview-stat-border: var(--tone-success-soft-border);
+    --agents-overview-stat-fg: var(--tone-success-soft-fg);
+    --agents-overview-stat-icon: var(--tone-success-soft-fg);
 }
 
 .agents-overview-stat-badge--warning {
-    --agents-overview-stat-bg: #fffbeb;
-    --agents-overview-stat-border: #fde68a;
-    --agents-overview-stat-fg: #92400e;
-    --agents-overview-stat-icon: #d97706;
+    --agents-overview-stat-bg: var(--tone-warning-soft-bg);
+    --agents-overview-stat-border: var(--tone-warning-soft-border);
+    --agents-overview-stat-fg: var(--tone-warning-soft-fg);
+    --agents-overview-stat-icon: var(--tone-warning-soft-fg);
 }
 
 .agents-overview-stat-badge--danger {
-    --agents-overview-stat-bg: #fff1f2;
-    --agents-overview-stat-border: #fecdd3;
-    --agents-overview-stat-fg: #9f1239;
-    --agents-overview-stat-icon: #e11d48;
+    --agents-overview-stat-bg: var(--tone-danger-soft-bg);
+    --agents-overview-stat-border: var(--tone-danger-soft-border);
+    --agents-overview-stat-fg: var(--tone-danger-soft-fg);
+    --agents-overview-stat-icon: var(--tone-danger-soft-fg);
 }
 
 .agents-overview-stat-badge--accent {
-    --agents-overview-stat-bg: #f5f3ff;
-    --agents-overview-stat-border: #ddd6fe;
-    --agents-overview-stat-fg: #5b21b6;
-    --agents-overview-stat-icon: #7c3aed;
+    --agents-overview-stat-bg: var(--tone-secondary-soft-bg);
+    --agents-overview-stat-border: var(--tone-secondary-soft-border);
+    --agents-overview-stat-fg: var(--tone-secondary-soft-fg);
+    --agents-overview-stat-icon: var(--tone-secondary-soft-fg);
 }
 
 .agents-overview-stat-badge--neutral {
-    --agents-overview-stat-bg: #f8fafc;
-    --agents-overview-stat-border: #cbd5e1;
-    --agents-overview-stat-fg: #334155;
-    --agents-overview-stat-icon: #475569;
+    --agents-overview-stat-bg: var(--tone-surface-soft);
+    --agents-overview-stat-border: var(--tone-border);
+    --agents-overview-stat-fg: var(--tone-text);
+    --agents-overview-stat-icon: var(--tone-text-muted);
 }
 
 .agents-overview-scope ::deep .agents-overview-main-grid {
@@ -143,20 +143,20 @@
     justify-content: center;
     gap: 0.18rem;
     overflow: hidden;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.65rem;
-    background: rgb(255 255 255);
+    background: var(--tone-surface);
     padding: 0.35rem 0.45rem;
     text-align: center;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
     transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 .agents-overview-team-shortcut:hover {
-    border-color: rgb(125 211 252);
-    background: rgb(240 249 255);
-    color: rgb(3 105 161);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
+    color: var(--tone-info-soft-fg);
 }
 
 .agents-overview-team-shortcut ::deep .cda-material-icon {
@@ -184,7 +184,7 @@
     font-size: 0.68rem;
     font-weight: 600;
     line-height: 1.1;
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
 }
 
 @media (max-width: 1279px) {

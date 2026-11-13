@@ -233,7 +233,7 @@
                                     {
                                         <SurfaceCard Soft="true"
                                                      data-testid="crmhr-workforce-allocations-error">
-                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">Allocation workspace unavailable</TextBlock>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-[var(--tone-danger-soft-fg)]">Allocation workspace unavailable</TextBlock>
                                             <p class="mt-2 text-sm leading-6 text-chrome-700">@View.CapacityWorkspaceError</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"
@@ -268,7 +268,7 @@
                                     @if (View.WorkforceHistoryFailureMessage is { } historyFailure)
                                     {
                                         <SurfaceCard Soft="true" data-testid="crmhr-workforce-history-error">
-                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">History unavailable</TextBlock>
+                                            <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-[var(--tone-danger-soft-fg)]">History unavailable</TextBlock>
                                             <p class="mt-2 text-sm leading-6 text-chrome-700">@historyFailure</p>
                                             <Button Text="Retry"
                                                     Icon="refresh"

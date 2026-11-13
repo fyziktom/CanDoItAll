@@ -88,7 +88,7 @@
             </AfterMessages>
             <AfterPendingMessage>
                 @if (HasPendingApprovals) {
-                    <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-4">
+                    <div class="rounded-[1.5rem] border border-[var(--tone-warning-soft-border)] bg-[var(--tone-warning-soft-bg)] p-4">
                         <Stack GapScale="LayoutGap.Medium">
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                 <StatusBadge Tone="warning" Text="Approval required" />
@@ -99,7 +99,7 @@
                             @foreach (var approval in PendingApprovals) {
                                 var approvalId = approval.ApprovalId;
                                 var argumentSummary = approval.ArgumentSummary;
-                                <div class="rounded-[1.2rem] border border-amber-200 bg-white px-4 py-3">
+                                <div class="rounded-[1.2rem] border border-[var(--tone-warning-soft-border)] bg-[var(--tone-surface)] px-4 py-3">
                                     <Stack GapScale="LayoutGap.Small">
                                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                                             <StatusBadge Tone="info" Text="@approval.ToolKind" />
@@ -208,7 +208,7 @@
             <Footer>
 
         @if (DraftAttachmentPaths.Count > 0) {
-            <div class="mt-4 rounded-[1.35rem] border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+            <div class="mt-4 rounded-[1.35rem] border border-[var(--tone-success-soft-border)] bg-[var(--tone-success-soft-bg)] px-4 py-3">
                 <Stack GapScale="LayoutGap.Small">
                     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                         <StatusBadge Tone="success" Text="@($"{DraftAttachmentPaths.Count} staged")" />
@@ -217,7 +217,7 @@
                     </Cluster>
 
                     @foreach (var attachmentPath in DraftAttachmentPaths) {
-                        <div class="flex items-start justify-between gap-3 rounded-[1rem] border border-emerald-200 bg-white/75 px-3 py-2">
+                        <div class="flex items-start justify-between gap-3 rounded-[1rem] border border-[var(--tone-success-soft-border)] bg-[var(--tone-surface)] px-3 py-2">
                             <p class="min-w-0 flex-1 text-sm leading-6 text-chrome-700" style="overflow-wrap:anywhere;">@attachmentPath</p>
                             <CopyButton Value="@attachmentPath"
                                         DisplayMode="CopyButtonDisplayMode.IconOnly"

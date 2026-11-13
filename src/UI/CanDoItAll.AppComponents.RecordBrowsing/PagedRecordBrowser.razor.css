@@ -230,30 +230,30 @@
 
 .paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--info .cda-status-badge,
 .paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--info .cda-status-badge {
-    background: rgb(224 242 254);
-    border-color: rgb(125 211 252);
-    color: rgb(3 105 161);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
 }
 
 .paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--accent .cda-status-badge,
 .paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--accent .cda-status-badge {
-    background: rgb(245 243 255);
-    border-color: rgb(196 181 253);
-    color: rgb(91 33 182);
+    background: var(--tone-secondary-soft-bg);
+    border-color: var(--tone-secondary-soft-border);
+    color: var(--tone-secondary-soft-fg);
 }
 
 .paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--success .cda-status-badge,
 .paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--success .cda-status-badge {
-    background: rgb(236 253 245);
-    border-color: rgb(110 231 183);
-    color: rgb(4 120 87);
+    background: var(--tone-success-soft-bg);
+    border-color: var(--tone-success-soft-border);
+    color: var(--tone-success-soft-fg);
 }
 
 .paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--warning .cda-status-badge,
 .paged-record-browser__card-tags ::deep .paged-record-browser__badge-tone--warning .cda-status-badge {
-    background: rgb(255 251 235);
-    border-color: rgb(252 211 77);
-    color: rgb(180 83 9);
+    background: var(--tone-warning-soft-bg);
+    border-color: var(--tone-warning-soft-border);
+    color: var(--tone-warning-soft-fg);
 }
 
 .paged-record-browser__kind-row ::deep .paged-record-browser__badge-tone--teal .cda-status-badge,
@@ -376,27 +376,27 @@
 }
 
 .paged-record-browser__status--info > span {
-    background: rgb(224 242 254);
-    border-color: rgb(125 211 252);
-    color: rgb(3 105 161);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
 }
 
 .paged-record-browser__status--success > span {
-    background: rgb(220 252 231);
-    border-color: rgb(134 239 172);
-    color: rgb(21 128 61);
+    background: var(--tone-success-soft-bg);
+    border-color: var(--tone-success-soft-border);
+    color: var(--tone-success-soft-fg);
 }
 
 .paged-record-browser__status--warning > span {
-    background: rgb(254 249 195);
-    border-color: rgb(253 224 71);
-    color: rgb(161 98 7);
+    background: var(--tone-warning-soft-bg);
+    border-color: var(--tone-warning-soft-border);
+    color: var(--tone-warning-soft-fg);
 }
 
 .paged-record-browser__status--danger > span {
-    background: rgb(254 226 226);
-    border-color: rgb(252 165 165);
-    color: rgb(185 28 28);
+    background: var(--tone-danger-soft-bg);
+    border-color: var(--tone-danger-soft-border);
+    color: var(--tone-danger-soft-fg);
 }
 
 .paged-record-browser__pager {

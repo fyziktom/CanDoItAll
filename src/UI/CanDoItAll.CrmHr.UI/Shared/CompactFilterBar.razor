@@ -16,7 +16,7 @@
         @if (Actions is not null || !string.IsNullOrWhiteSpace(ResultText)) {
             <Cluster Gap="LayoutGap.Small"
                      Wrap="FlexWrap.NoWrap"
-                     Class="ml-auto text-[11px] font-medium text-chrome-500">
+                     Class="ml-auto text-[11px] font-medium text-[var(--tone-text-muted)]">
                 @if (!string.IsNullOrWhiteSpace(ResultText)) {
                     <span>@ResultText</span>
                 }

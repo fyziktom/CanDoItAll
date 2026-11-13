@@ -16,9 +16,9 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-selection-chip {
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(241, 245, 249, 0.96);
-    color: #0f172a;
+    border: 1px solid var(--tone-border);
+    background: color-mix(in srgb, var(--tone-surface-soft) 96%, transparent);
+    color: var(--tone-text-strong);
 }
 
 .workbench-insights-selection ::deep .project-structure-selection-chip--status,
@@ -123,13 +123,13 @@
     gap: 0.24rem;
     padding: 0.72rem 0.8rem;
     border-radius: 0.92rem;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.92));
+    border: 1px solid var(--tone-border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface) 94%, transparent), color-mix(in srgb, var(--tone-surface-soft) 92%, transparent));
 }
 
 .workbench-insights-selection ::deep .project-structure-quick-signal span,
 .workbench-insights-selection ::deep .project-structure-advanced-details__summary-copy small {
-    color: rgba(71, 85, 105, 0.88);
+    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -137,7 +137,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-quick-signal strong {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.92rem;
     line-height: 1.3;
 }
@@ -175,7 +175,7 @@
 
 .workbench-insights-selection ::deep .project-structure-action-band {
     padding-top: 0.35rem;
-    border-top: 1px solid rgba(226, 232, 240, 0.82);
+    border-top: 1px solid var(--tone-border);
 }
 
 .workbench-insights-selection ::deep .project-structure-action-band:first-child {
@@ -184,7 +184,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-action-band > span {
-    color: rgba(71, 85, 105, 0.88);
+    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -225,7 +225,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-advanced-details__summary-copy strong {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.92rem;
 }
 
@@ -240,8 +240,8 @@
     width: 1.9rem;
     height: 1.9rem;
     border-radius: 0.72rem;
-    background: rgba(241, 245, 249, 0.95);
-    color: rgba(15, 23, 42, 0.72);
+    background: color-mix(in srgb, var(--tone-surface-soft) 95%, transparent);
+    color: color-mix(in srgb, var(--tone-text-strong) 72%, transparent);
     transition: transform 120ms ease;
 }
 
@@ -254,7 +254,7 @@
     gap: 0.8rem;
     margin-top: 0.85rem;
     padding-top: 0.85rem;
-    border-top: 1px solid rgba(226, 232, 240, 0.82);
+    border-top: 1px solid var(--tone-border);
 }
 
 .workbench-insights-selection ::deep .project-structure-advanced-summary-grid {
@@ -265,7 +265,7 @@
     display: grid;
     gap: 0.3rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    border-bottom: 1px solid var(--tone-border);
 }
 
 .workbench-insights-selection ::deep .project-structure-fact-row:last-child {
@@ -274,7 +274,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-fact-row span {
-    color: rgba(71, 85, 105, 0.88);
+    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -282,61 +282,61 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-fact-row strong {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     line-height: 1.5;
 }
 
 .workbench-insights-selection ::deep .project-structure-inline-feedback {
     padding: 0.65rem 0.78rem;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    border: 1px solid var(--tone-border);
     border-radius: 0.95rem;
-    background: rgba(248, 250, 252, 0.92);
-    color: rgba(15, 23, 42, 0.82);
+    background: color-mix(in srgb, var(--tone-surface-soft) 92%, transparent);
+    color: color-mix(in srgb, var(--tone-text-strong) 82%, transparent);
     font-size: 0.78rem;
     line-height: 1.42;
 }
 
 .workbench-insights-selection ::deep .project-structure-inline-feedback[data-tone="mint"] {
-    border-color: rgba(5, 150, 105, 0.2);
-    background: rgba(236, 253, 245, 0.92);
+    border-color: var(--tone-success-soft-border);
+    background: var(--tone-success-soft-bg);
 }
 
 .workbench-insights-selection ::deep .project-structure-inline-feedback[data-tone="warn"] {
-    border-color: rgba(217, 119, 6, 0.2);
-    background: rgba(255, 247, 237, 0.94);
+    border-color: var(--tone-warning-soft-border);
+    background: var(--tone-warning-soft-bg);
 }
 
 .workbench-insights-selection ::deep .project-structure-inline-feedback[data-tone="info"] {
-    border-color: rgba(14, 165, 233, 0.2);
-    background: rgba(240, 249, 255, 0.94);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .workbench-insights-selection ::deep .project-structure-inline-feedback[data-tone="accent"] {
-    border-color: rgba(14, 165, 233, 0.2);
-    background: rgba(240, 249, 255, 0.94);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .workbench-insights-selection ::deep .project-structure-document-preview {
     width: 100%;
     height: 22rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgba(248, 250, 252, 0.94);
+    background: color-mix(in srgb, var(--tone-surface-soft) 94%, transparent);
 }
 
 .workbench-insights-selection ::deep .project-structure-preview-empty {
     display: grid;
     gap: 0.35rem;
     padding: 1rem 1.05rem;
-    border: 1px dashed rgba(148, 163, 184, 0.48);
+    border: 1px dashed var(--tone-border);
     border-radius: 1rem;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.94));
-    color: rgba(51, 65, 85, 0.92);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface-soft) 96%, transparent), color-mix(in srgb, var(--tone-surface-soft) 94%, transparent));
+    color: color-mix(in srgb, var(--tone-text) 92%, transparent);
     font-size: 0.88rem;
     line-height: 1.5;
 }
 
 .workbench-insights-selection ::deep .project-structure-document-preview--text {
-    background: #ffffff;
+    background: var(--tone-surface);
 }

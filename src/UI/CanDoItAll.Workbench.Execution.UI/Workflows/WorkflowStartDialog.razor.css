@@ -8,5 +8,5 @@
 .project-structure-checkbox-row input {
     width: 1rem;
     height: 1rem;
-    accent-color: #2563eb;
+    accent-color: var(--tone-info-soft-fg);
 }

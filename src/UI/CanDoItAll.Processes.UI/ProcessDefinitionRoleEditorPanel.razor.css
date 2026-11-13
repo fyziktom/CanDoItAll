@@ -75,8 +75,8 @@
 }
 
 .process-role-dialog-hero {
-    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: linear-gradient(135deg, var(--tone-surface-soft) 0%, var(--tone-info-soft-bg) 100%);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.55rem;
@@ -89,7 +89,7 @@
 }
 
 .process-role-dialog-hero h3 {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 750;
     line-height: 1.25;
@@ -98,10 +98,10 @@
 
 .process-role-dialog-hero__icon {
     align-items: center;
-    background: #ffffff;
-    border: 1px solid rgba(14, 165, 233, 0.24);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-info-soft-border);
     border-radius: 999px;
-    color: #0369a1;
+    color: var(--tone-info-soft-fg);
     display: inline-flex;
     font-size: 1.8rem;
     height: 3.25rem;
@@ -115,8 +115,8 @@
 }
 
 .process-role-dialog-section {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     padding: 1rem;
 }
@@ -126,8 +126,8 @@
 }
 
 .process-role-bindings {
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.65rem;
@@ -135,8 +135,8 @@
 }
 
 .process-role-bindings__row {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     padding: 0.7rem;
 }

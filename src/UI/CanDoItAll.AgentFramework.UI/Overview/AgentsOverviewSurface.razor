@@ -30,7 +30,7 @@
             <Stack Gap="0.2rem">
                 <TextBlock TextStyle="TextStyle.EyebrowCaption">Usage scope</TextBlock>
                 <span class="text-sm text-chrome-600">Catalog and live runtime counts stay workspace-wide. Usage, tokens, cost, rankings, charts, and dialogs use @UsageCaption.</span>
-                <span class="text-xs text-chrome-500">Last 3m means the previous three calendar months. Longer periods may take longer.</span>
+                <span class="text-xs text-[var(--tone-text-muted)]">Last 3m means the previous three calendar months. Longer periods may take longer.</span>
             </Stack>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <Cluster role="group" aria-label="Usage workload">
@@ -71,7 +71,7 @@
     </SurfaceCard>
 
     @if (State.HasUsage && State.AcceptedQuery is { } accepted) {
-        <p class="text-xs text-chrome-500" data-testid="agents-overview-window">
+        <p class="text-xs text-[var(--tone-text-muted)]" data-testid="agents-overview-window">
             @UsageCaption · @accepted.Window.FromUtc.ToString("u") ≤ usage &lt; @accepted.Window.ToUtc.ToString("u") · Generated @State.GeneratedAtUtc?.ToString("u")
         </p>
     }

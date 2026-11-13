@@ -110,7 +110,7 @@
                                     <Split Gap="LayoutGap.Small">
                                         <div class="min-w-0">
                                             <p class="break-words text-sm font-semibold text-chrome-950">@item.DisplayName</p>
-                                            <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-chrome-500">@item.TypeLabel / @item.LifecycleLabel</p>
+                                            <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">@item.TypeLabel / @item.LifecycleLabel</p>
                                             @if (!string.IsNullOrWhiteSpace(item.Summary))
                                             {
                                                 <p class="mt-2 break-words text-sm leading-6 text-chrome-600">@item.Summary</p>
@@ -182,7 +182,7 @@
                                 data-testid="crmhr-home-route-assignments" />
                     </Grid>
 
-                    <div class="mt-6 rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-4">
+                    <div class="mt-6 rounded-[1.25rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-4">
                         <TextBlock TextStyle="TextStyle.EyebrowCaption">Current signal</TextBlock>
                         <p class="mt-2 text-sm leading-6 text-chrome-700" data-testid="crmhr-home-signal">
                             @if (Presentation.Overview is { } signal)
@@ -236,14 +236,14 @@
                             <Stack GapScale="LayoutGap.Small" Class="mt-5">
                                 @foreach (var item in ready.SensitivePreview)
                                 {
-                                    <div class="max-w-full rounded-[1rem] border border-chrome-200 bg-white/90 px-4 py-4"
+                                    <div class="max-w-full rounded-[1rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-4"
                                          data-testid="crmhr-home-sensitive-item">
                                         <Split Gap="LayoutGap.Small"
                                                AlignItems="AlignItems.Start"
                                                JustifyContent="JustifyContent.SpaceBetween">
                                             <div class="min-w-0">
                                                 <p class="break-words text-sm font-semibold text-chrome-950">@item.DisplayName</p>
-                                                <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-chrome-500">@item.TypeLabel / @item.LifecycleLabel</p>
+                                                <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">@item.TypeLabel / @item.LifecycleLabel</p>
                                             </div>
                                             <StatusBadge Tone="warning" Text="Sensitive" NoWrap="true" />
                                         </Split>
@@ -288,7 +288,7 @@
                                            JustifyContent="JustifyContent.SpaceBetween">
                                         <div class="min-w-0">
                                             <p class="break-words text-sm font-semibold text-chrome-950">@opportunity.Title</p>
-                                            <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-chrome-500">
+                                            <p class="mt-1 break-words text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">
                                                 @opportunity.AccountDisplayName / @opportunity.StageLabel / @opportunity.SourceLabel
                                             </p>
                                             <p class="mt-2 break-words text-sm text-chrome-600">Owner: @opportunity.OwnerDisplayName</p>

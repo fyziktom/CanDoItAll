@@ -13,7 +13,7 @@
     {
         <SurfaceCard Soft="true"
                      data-testid="@($"{TestIdPrefix}-error")">
-            <p class="text-sm font-semibold text-rose-700">Affiliations could not be loaded.</p>
+            <p class="text-sm font-semibold text-[var(--tone-danger-soft-fg)]">Affiliations could not be loaded.</p>
             <p class="mt-1 text-xs leading-5 text-chrome-600">@loadError</p>
         </SurfaceCard>
     }
@@ -33,7 +33,7 @@
                     </option>
                 }
             </SelectInput>
-            <p class="mt-1 text-xs leading-5 text-chrome-500">
+            <p class="mt-1 text-xs leading-5 text-[var(--tone-text-muted)]">
                 This preserves the company and worker relationship used for the assignment.
             </p>
         </FormField>

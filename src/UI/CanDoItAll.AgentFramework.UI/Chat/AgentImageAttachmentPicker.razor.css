@@ -1,9 +1,9 @@
 .chat-attachment-upload-button {
     align-items: center;
-    background: rgb(248 250 252);
-    border: 1px solid rgb(203 213 225);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border);
     border-radius: 0.65rem;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     cursor: pointer;
     display: inline-flex;
     height: 2.125rem;
@@ -23,13 +23,13 @@
 }
 
 .chat-attachment-upload-button:hover {
-    background: rgb(240 249 255);
-    border-color: rgb(125 211 252);
-    color: rgb(14 116 144);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
 }
 
 .chat-attachment-upload-button:focus-within {
-    outline: 2px solid rgb(14 165 233);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: 2px;
 }
 

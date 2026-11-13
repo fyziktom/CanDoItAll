@@ -22,7 +22,7 @@
                     @if (View.NextAutomaticRefreshAtUtc.HasValue) {
                         <TextBlock TextStyle="TextStyle.Caption"
                                    Value="@AutomaticRefreshText"
-                                   Class="whitespace-nowrap text-chrome-500"
+                                   Class="whitespace-nowrap"
                                    data-testid="dashboard-refresh-countdown" />
                     }
                     <PageHeaderActionButton Icon="refresh"
@@ -80,9 +80,9 @@
                             @foreach (var project in projectData.Projects) {
                                 <a href="@BuildProjectHref(project.ProjectId)"
                                    title="@project.Name"
-                                   class="group block h-full min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                   class="group block h-full min-w-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tone-info-solid-bg)] focus-visible:ring-offset-2"
                                    data-testid="@BuildTestId("dashboard-project", project.ProjectId)">
-                                    <ActionCard Class="h-full min-h-24 overflow-hidden !p-3 transition group-hover:-tranchrome-y-0.5 group-hover:border-sky-300 group-hover:bg-sky-50 group-hover:shadow-md">
+                                    <ActionCard Class="h-full min-h-24 overflow-hidden !p-3 transition group-hover:-tranchrome-y-0.5 group-hover:border-[var(--tone-info-soft-border)] group-hover:bg-[var(--tone-info-soft-bg)] group-hover:shadow-md">
                                         <Stack GapScale="LayoutGap.Tiny"
                                                Class="h-full min-w-0">
                                             <Split Breakpoint="LayoutBreakpoint.None"
@@ -98,7 +98,7 @@
                                             </Split>
                                             <TextBlock TextStyle="TextStyle.Caption"
                                                        Value="@BuildProjectMeta(project)"
-                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate text-chrome-500" />
+                                                       Class="mt-auto block w-full min-w-0 max-w-full truncate" />
                                         </Stack>
                                     </ActionCard>
                                 </a>
@@ -174,7 +174,7 @@
                                         @foreach (var workflow in data.Workflows) {
                                             <a href="@BuildWorkflowHref(workflow.WorkflowId, workflow.RunId)"
                                                title="@workflow.Summary"
-                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tone-info-solid-bg)] focus-visible:ring-offset-2"
                                                data-testid="@BuildTestId("dashboard-workflow", workflow.RunId)">
                                                 <SelectionListItem Title="@workflow.WorkflowName"
                                                                    Meta="@FormatUpdatedAt(workflow.UpdatedAtUtc)"
@@ -202,7 +202,7 @@
                                     <Stack GapScale="LayoutGap.Tiny">
                                         @foreach (var process in data.Processes) {
                                             <a href="@BuildProcessHref(process.RunId)"
-                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2"
+                                               class="block w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tone-info-solid-bg)] focus-visible:ring-offset-2"
                                                data-testid="@BuildTestId("dashboard-process", process.RunId)">
                                                 <SelectionListItem Title="@process.ProcessName"
                                                                    Meta="@BuildProcessMeta(process)"

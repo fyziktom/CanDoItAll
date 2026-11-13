@@ -16,11 +16,11 @@
 
     @if (IsLoading)
     {
-        <p class="mt-2 text-sm leading-6 text-chrome-500">@LoadingMessage</p>
+        <p class="mt-2 text-sm leading-6 text-[var(--tone-text-muted)]">@LoadingMessage</p>
     }
     else if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <p class="mt-2 text-sm leading-6 text-rose-700">@ErrorMessage</p>
+        <p class="mt-2 text-sm leading-6 text-[var(--tone-danger-soft-fg)]">@ErrorMessage</p>
     }
     else if (Options.Count == 0 && !string.IsNullOrWhiteSpace(EmptyMessage))
     {

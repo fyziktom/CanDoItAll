@@ -1,6 +1,6 @@
 .scheduler-workspace-root ::deep .scheduler-delete-summary h3 {
     margin: 0.35rem 0 0;
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 800;
     line-height: 1.3;
@@ -8,7 +8,7 @@
 
 .scheduler-workspace-root ::deep .scheduler-delete-summary p {
     margin: 0.45rem 0 0;
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.85rem;
     font-weight: 600;
     line-height: 1.55;
@@ -39,7 +39,7 @@
 
 .scheduler-workspace-root ::deep .scheduler-delete-summary {
     padding: 1rem;
-    border: 1px solid rgba(254, 205, 211, 0.9);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 0.5rem;
-    background: #fff1f2;
+    background: var(--tone-danger-soft-bg);
 }

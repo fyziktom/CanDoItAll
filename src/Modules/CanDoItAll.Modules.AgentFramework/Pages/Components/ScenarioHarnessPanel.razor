@@ -20,7 +20,7 @@
                         var isSelected = string.Equals(selectedScenarioId, definition.Id, StringComparison.OrdinalIgnoreCase);
                         var snapshot = TryGetSnapshot(definition.Id);
                         <button type="button"
-                                class="block w-full rounded-[1.4rem] text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
+                                class="block w-full rounded-[1.4rem] text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tone-info-solid-bg)] focus-visible:ring-offset-2"
                                 @onclick="@(async () => await SelectScenarioAsync(definition.Id))"
                                 data-testid="@($"scenario-card-{definition.Id.ToLowerInvariant()}")">
                             <ActionCard Active="@isSelected">

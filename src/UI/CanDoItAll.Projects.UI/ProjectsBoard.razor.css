@@ -29,15 +29,15 @@
 }
 
 .projects-board__package-message--success {
-    border: 1px solid rgb(187 247 208);
-    background: rgb(240 253 244);
-    color: rgb(22 101 52);
+    border: 1px solid var(--tone-success-soft-border);
+    background: var(--tone-success-soft-bg);
+    color: var(--tone-success-soft-fg);
 }
 
 .projects-board__package-message--error {
-    border: 1px solid rgb(254 202 202);
-    background: rgb(254 242 242);
-    color: rgb(153 27 27);
+    border: 1px solid var(--tone-danger-soft-border);
+    background: var(--tone-danger-soft-bg);
+    color: var(--tone-danger-soft-fg);
 }
 
 @media (min-width: 1024px) {

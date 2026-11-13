@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-12T12:47:12.936695+00:00",
+  "generated_utc": "2026-11-12T23:50:16.808418+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -78910,7 +78910,7 @@
     {
       "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourcesPanel.razor",
       "category": "absolute-path-field",
-      "source_fingerprint": "b2838656f9e181d620006c6287f3e90c714a9485b6038dd79b390371c3975f4c",
+      "source_fingerprint": "ce6087af16c6f382c0d7075716352171c8d27e0c299ae23ae75bbf76657687f6",
       "count": 1
     },
     {

@@ -54,7 +54,7 @@
                         <Template Context="run">
                             <div>
                                 <p class="font-semibold text-chrome-900">@run.PlanName</p>
-                                <p class="text-xs text-chrome-500">@run.TargetKind / @run.TargetName</p>
+                                <p class="text-xs text-[var(--tone-text-muted)]">@run.TargetKind / @run.TargetName</p>
                             </div>
                         </Template>
                     </DataGridColumn>
@@ -76,7 +76,7 @@
                             <div class="space-y-1">
                                 <span class="text-sm text-chrome-600">@ResolveRunResult(run)</span>
                                 @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None) {
-                                    <p class="text-xs font-medium text-chrome-500">@FormatRunPolicy(run.RetryCategory)</p>
+                                    <p class="text-xs font-medium text-[var(--tone-text-muted)]">@FormatRunPolicy(run.RetryCategory)</p>
                                 }
                             </div>
                         </Template>

@@ -280,7 +280,7 @@
                                 @if (View.AccountActivityFailureMessage is { } accountActivityFailure)
                                 {
                                     <SurfaceCard Soft="true" data-testid="crmhr-account-activity-error">
-                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-rose-700">Account activity unavailable</TextBlock>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="text-[var(--tone-danger-soft-fg)]">Account activity unavailable</TextBlock>
                                         <p class="mt-2 text-sm leading-6 text-chrome-700">@accountActivityFailure</p>
                                         <Button Text="Retry"
                                                 Icon="refresh"

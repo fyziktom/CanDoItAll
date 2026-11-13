@@ -162,8 +162,8 @@
                                 <FactTable>
                                     <div class="grid gap-x-4 gap-y-3 md:grid-cols-2">
                                         @foreach (var routingDefault in Session.Routes.Value) {
-                                            <div class="min-w-0 rounded-[1.1rem] border border-chrome-200 bg-white/90 px-4 py-3">
-                                                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-chrome-500">@Session.PurposeLabel(routingDefault.Purpose)</p>
+                                            <div class="min-w-0 rounded-[1.1rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-3">
+                                                <p class="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-[var(--tone-text-muted)]">@Session.PurposeLabel(routingDefault.Purpose)</p>
                                                 <p class="mt-1 text-sm text-chrome-700">@(string.IsNullOrWhiteSpace(routingDefault.Name) ? "No workspace default assigned" : routingDefault.Name)</p>
                                             </div>
                                         }

@@ -30,10 +30,10 @@ body {
     position: fixed;
     inset: auto 1rem 1rem 1rem;
     z-index: 1000;
-    border: 1px solid #fecaca;
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 1rem;
-    background: #fff1f2;
-    color: #9f1239;
+    background: var(--tone-danger-soft-bg);
+    color: var(--tone-danger-soft-fg);
     box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
     padding: 0.875rem 1rem;
 }

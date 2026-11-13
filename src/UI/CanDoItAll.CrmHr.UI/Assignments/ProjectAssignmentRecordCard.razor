@@ -39,7 +39,7 @@
         <p class="text-sm leading-5 text-chrome-600">@BuildAssignmentMeta()</p>
         @if (!string.IsNullOrWhiteSpace(Assignment.NodeKey))
         {
-            <p class="truncate font-mono text-xs text-chrome-500" title="@Assignment.NodeKey">@Assignment.NodeKey</p>
+            <p class="truncate font-mono text-xs text-[var(--tone-text-muted)]" title="@Assignment.NodeKey">@Assignment.NodeKey</p>
         }
         @if (!string.IsNullOrWhiteSpace(Assignment.Notes))
         {

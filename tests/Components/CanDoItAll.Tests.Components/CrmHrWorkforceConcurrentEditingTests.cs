@@ -267,14 +267,18 @@ public sealed class CrmHrWorkforceConcurrentEditingTests {
         await cut.Find("[data-testid='crmhr-workforce-dirty-discard']").ClickAsync(new());
         await closing;
         Assert.False(view.IsRecordDialogOpen);
-        await cut.Find("[data-testid='crmhr-workforce-item']").ClickAsync(new());
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindComponents<WorkforceProfileForm>()));
+        cut.WaitForElement("[data-testid='crmhr-workforce-item']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-workforce-item']").ClickAsync(new()));
         Assert.True(view.IsRecordDialogOpen);
         Assert.NotNull(view.SelectedWorkspace);
         Assert.Equal(party, view.SelectedWorkspace.PartyId);
         Assert.NotNull(view.SelectedWorkspace.Profile.Id);
         Assert.False(view.SelectedIsExternalContactWithoutProfile);
-        cut.WaitForElement("[data-testid='crmhr-workforce-tab-profile']").Click();
+        cut.WaitForElement("[data-testid='crmhr-workforce-tab-profile']");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='crmhr-workforce-tab-profile']").ClickAsync(new()));
         cut.WaitForElement("[data-testid='crmhr-workforce-job-title']");
+        Assert.NotSame(oldForm, cut.FindComponent<WorkforceProfileForm>().Instance);
         var next = view.ProfileEditor;
 
         await cut.InvokeAsync(oldForm.SubmitAsync);

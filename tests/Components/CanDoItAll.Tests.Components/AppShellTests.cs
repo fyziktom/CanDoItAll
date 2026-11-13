@@ -109,10 +109,10 @@ public sealed class AppShellTests : BunitContext
 
         Assert.NotNull(bodyRegion);
         Assert.Equal(
-            "height:100vh;height:100dvh;min-height:0;overflow:hidden;",
+            "height:100vh;height:100dvh;min-height:0;overflow:clip;",
             root.GetAttribute("style"));
         Assert.Equal(
-            "height:100%;min-height:0;overflow:hidden;",
+            "height:100%;min-height:0;overflow:clip;",
             frame.GetAttribute("style"));
         Assert.Contains("app-shell-body-surface--standard", surface.ClassList);
         Assert.Contains("flex", bodyRegion.ClassList);

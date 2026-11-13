@@ -66,9 +66,9 @@
                                 </Cluster>
                             </div>
 
-                            <div class="rounded-[1.2rem] border border-chrome-200 bg-white/85 px-4 py-3">
+                            <div class="rounded-[1.2rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-3">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Path or endpoint</p>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Path or endpoint</p>
                                     <CopyButton Value="@capability.EndpointOrPath"
                                                 Disabled="@string.IsNullOrWhiteSpace(capability.EndpointOrPath)"
                                                 DisplayMode="CopyButtonDisplayMode.IconOnly"
@@ -80,11 +80,11 @@
 
                             @if (capability.LastVerifiedAtUtc.HasValue || !string.IsNullOrWhiteSpace(capability.ProofNotes))
                             {
-                                <div class="rounded-[1.2rem] border border-chrome-200 bg-white/85 px-4 py-3">
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Proof</p>
+                                <div class="rounded-[1.2rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-3">
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Proof</p>
                                     @if (capability.LastVerifiedAtUtc.HasValue)
                                     {
-                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-chrome-500">Checked @CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(capability.LastVerifiedAtUtc.Value)</p>
+                                        <p class="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--tone-text-muted)]">Checked @CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(capability.LastVerifiedAtUtc.Value)</p>
                                     }
                                     <p class="mt-2 text-sm leading-6 text-chrome-700">@ResolveProofNotes(capability)</p>
                                 </div>
@@ -128,7 +128,7 @@
 
                                 <div>
                                     <div class="flex flex-wrap items-start justify-between gap-3">
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Key</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Key</p>
                                         <CopyButton Value="@selectedCapability.Key"
                                                     Disabled="@string.IsNullOrWhiteSpace(selectedCapability.Key)"
                                                     DisplayMode="CopyButtonDisplayMode.IconOnly"
@@ -140,7 +140,7 @@
 
                                 <div>
                                     <div class="flex flex-wrap items-start justify-between gap-3">
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Path or endpoint</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Path or endpoint</p>
                                         <CopyButton Value="@selectedCapability.EndpointOrPath"
                                                     Disabled="@string.IsNullOrWhiteSpace(selectedCapability.EndpointOrPath)"
                                                     DisplayMode="CopyButtonDisplayMode.IconOnly"
@@ -151,7 +151,7 @@
                                 </div>
 
                                 <div>
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Description</p>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Description</p>
                                     <p class="mt-2 text-sm leading-6 text-chrome-700">@selectedCapability.Description</p>
                                 </div>
                             </Stack>
@@ -167,14 +167,14 @@
                                 @if (selectedCapability.LastVerifiedAtUtc.HasValue)
                                 {
                                     <div>
-                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Last verified</p>
+                                        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Last verified</p>
                                         <p class="mt-2 text-sm leading-6 text-chrome-700">@CanDoItAll.AgentFramework.UI.Chat.ChatPresentationTime.Format(selectedCapability.LastVerifiedAtUtc.Value)</p>
                                     </div>
                                 }
 
                                 <div>
-                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-chrome-500">Configuration JSON</p>
-                                    <pre class="mt-2 overflow-x-auto rounded-[1.1rem] border border-chrome-200 bg-white px-4 py-3 text-sm leading-6 text-chrome-700">@ResolveConfigurationJson(selectedCapability)</pre>
+                                    <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--tone-text-muted)]">Configuration JSON</p>
+                                    <pre class="mt-2 overflow-x-auto rounded-[1.1rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-3 text-sm leading-6 text-chrome-700">@ResolveConfigurationJson(selectedCapability)</pre>
                                 </div>
                             </Stack>
                         </WorkspacePanel>

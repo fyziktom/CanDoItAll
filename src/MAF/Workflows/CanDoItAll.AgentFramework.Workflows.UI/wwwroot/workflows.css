@@ -40,12 +40,12 @@
     margin-top: 0.25rem;
     font-size: 1rem;
     font-weight: 700;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
 }
 
 .workflows-muted {
     margin: 0;
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     font-size: 0.875rem;
     line-height: 1.6;
 }
@@ -53,7 +53,7 @@
 .workflows-section {
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border);
 }
 
 .workflows-catalog-item,
@@ -62,11 +62,11 @@
     display: grid;
     gap: 0.35rem;
     padding: 0.7rem 0.8rem;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
-    background: rgb(255 255 255);
+    background: var(--tone-surface);
     text-align: left;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
 }
 
 .workflows-run-item {
@@ -94,14 +94,14 @@
 
 .workflows-catalog-item:hover,
 .workflows-run-item:hover {
-    border-color: rgb(59 130 246);
-    background: rgb(248 250 252);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-surface-soft);
 }
 
 .workflows-catalog-item--selected,
 .workflows-run-item--selected {
-    border-color: rgb(37 99 235);
-    background: rgb(239 246 255);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .workflows-catalog-item__title {
@@ -110,12 +110,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 700;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
 }
 
 .workflows-catalog-item__meta,
 .workflows-run-item small {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
 }
 
@@ -123,21 +123,21 @@
     display: grid;
     gap: 0.25rem;
     padding: 0.65rem 0.75rem;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
-    background: rgb(248 250 252);
+    background: var(--tone-surface-soft);
 }
 
 .workflows-fact span,
 .workflows-field span {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
 .workflows-fact strong {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.9rem;
 }
 
@@ -150,17 +150,17 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     font-size: 0.875rem;
 }
 
 .workflows-error-note {
     margin: 0;
-    border: 1px solid rgba(185, 28, 28, 0.24);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 0.5rem;
     padding: 0.65rem 0.75rem;
-    background: rgba(254, 226, 226, 0.72);
-    color: #991b1b;
+    background: var(--tone-danger-soft-bg);
+    color: var(--tone-danger-soft-fg);
     font-size: 0.85rem;
     line-height: 1.45;
 }
@@ -182,10 +182,10 @@
     display: grid;
     gap: 0.35rem;
     padding: 0.7rem 0.8rem;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
-    background: rgb(248 250 252);
-    color: rgb(51 65 85);
+    background: var(--tone-surface-soft);
+    color: var(--tone-text);
     font-size: 0.875rem;
 }
 
@@ -203,7 +203,7 @@
 .workflows-issue strong,
 .workflows-artifact strong,
 .workflows-request strong {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
 }
 
 .workflows-run-list {
@@ -235,7 +235,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     margin-top: 0.75rem;
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 700;
 }
@@ -276,19 +276,19 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.7rem;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
-    background: rgb(255 255 255);
+    background: var(--tone-surface);
 }
 
 .workflows-template-catalogue-item:hover {
-    border-color: rgb(59 130 246);
-    background: rgb(248 250 252);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-surface-soft);
 }
 
 .workflows-template-catalogue-item--selected {
-    border-color: rgb(37 99 235);
-    background: rgb(239 246 255);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .workflows-template-catalogue-item__select {
@@ -298,27 +298,27 @@
     border: 0;
     padding: 0;
     background: transparent;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     text-align: left;
 }
 
 .workflows-template-catalogue-item__select strong {
     min-width: 0;
     overflow: hidden;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.9rem;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .workflows-template-catalogue-item__select span {
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     font-size: 0.82rem;
     line-height: 1.45;
 }
 
 .workflows-template-catalogue-item__select small {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
 }
 
@@ -371,7 +371,7 @@
     overflow: auto;
     margin: 0.5rem 0 0;
     padding: 0.85rem;
-    border: 1px solid rgb(203 213 225);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
     background: rgb(15 23 42);
     color: rgb(226 232 240);

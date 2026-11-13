@@ -23,7 +23,7 @@
 }
 
 ::deep .agent-capabilities-panel__heading {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 1.125rem;
     font-weight: 700;
     line-height: 1.25;

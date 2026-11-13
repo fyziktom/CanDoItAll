@@ -1,5 +1,5 @@
 .chat-composer-panel {
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border);
     flex: 0 0 auto;
     margin-top: 0.45rem;
     padding-top: 0.45rem;

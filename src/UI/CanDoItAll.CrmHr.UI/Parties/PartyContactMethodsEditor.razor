@@ -117,7 +117,7 @@
                                            aria-invalid="@(!string.IsNullOrEmpty(contactValidationError) ? "true" : "false")"
                                            data-testid="crmhr-contact-wizard-value" />
                                 @if (!string.IsNullOrEmpty(contactValidationError)) {
-                                    <p class="mt-1 text-sm text-rose-700"
+                                    <p class="mt-1 text-sm text-[var(--tone-danger-soft-fg)]"
                                        role="alert"
                                        data-testid="crmhr-contact-wizard-validation">
                                         @contactValidationError
@@ -286,8 +286,8 @@
 
     private string ResolveContactTypeCardClass(PartyContactType contactType) {
         var selectionClasses = contactDraft?.ContactType == contactType
-            ? "border-sky-500 bg-sky-50 text-sky-950 ring-2 ring-sky-200"
-            : "border-chrome-200 bg-white text-chrome-800 hover:border-sky-300 hover:bg-sky-50/60";
+            ? "border-[var(--tone-info-soft-border)] bg-[var(--tone-info-soft-bg)] text-[var(--tone-info-soft-fg)] ring-2 ring-[var(--tone-info-soft-border)]"
+            : "border-chrome-200 bg-[var(--tone-surface)] text-chrome-800 hover:border-[var(--tone-info-soft-border)] hover:bg-[var(--tone-info-soft-bg)]";
 
         return $"aspect-square w-full flex flex-col items-center justify-center gap-3 text-center {selectionClasses}";
     }

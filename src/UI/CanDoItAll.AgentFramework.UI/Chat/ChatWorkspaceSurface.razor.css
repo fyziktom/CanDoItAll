@@ -1,5 +1,5 @@
 .chat-panel-header__empty-title {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.25;
@@ -22,7 +22,7 @@
 }
 
 .chat-thread-title-edit ::deep .cda-editable__value {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.25;
@@ -48,10 +48,10 @@
 .agent-execution-stream__item,
 .agent-execution-stream__summary,
 .agent-execution-stream__history {
-    background: rgb(248 250 252 / 0.92);
-    border: 1px solid rgb(226 232 240);
+    background: color-mix(in srgb, var(--tone-surface-soft) 92%, transparent);
+    border: 1px solid var(--tone-border);
     border-radius: 0.9rem;
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     cursor: pointer;
     padding: 0.75rem 0.9rem;
     text-align: left;
@@ -65,35 +65,35 @@
 .agent-execution-stream__item:hover,
 .agent-execution-stream__summary:hover,
 .agent-execution-stream__history:hover {
-    background: rgb(240 249 255);
-    border-color: rgb(125 211 252);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
 }
 
 .agent-execution-stream__item:focus-visible,
 .agent-execution-stream__summary:focus-visible,
 .agent-execution-stream__history:focus-visible {
-    outline: 2px solid rgb(14 165 233);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: 2px;
 }
 
 .agent-execution-stream__summary {
-    background: rgb(255 255 255 / 0.94);
+    background: color-mix(in srgb, var(--tone-surface) 94%, transparent);
 }
 
 .agent-execution-stream__phase {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.8rem;
     font-weight: 700;
 }
 
 .agent-execution-stream__time {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
 }
 
 .agent-execution-stream__preview {
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     display: block;
     font-size: 0.875rem;
     line-height: 1.55;
@@ -101,7 +101,7 @@
 }
 
 .agent-execution-stream__history {
-    color: rgb(37 99 235);
+    color: var(--tone-info-soft-fg);
     font-size: 0.82rem;
     font-weight: 700;
     padding-block: 0.6rem;

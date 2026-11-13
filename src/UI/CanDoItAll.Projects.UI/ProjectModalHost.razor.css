@@ -18,8 +18,8 @@
 .projects-modal-host ::deep [data-testid="projects-editor-modal"] > .absolute,
 .projects-modal-host ::deep [data-testid="projects-detail-modal"] > .absolute {
     background:
-        radial-gradient(circle at top, rgba(148, 163, 184, 0.18), transparent 38%),
-        rgba(15, 23, 42, 0.62);
+        radial-gradient(circle at top, color-mix(in srgb, var(--tone-surface-soft) 18%, transparent), transparent 38%),
+        var(--tone-scrim);
     backdrop-filter: blur(16px);
 }
 
@@ -27,9 +27,9 @@
 .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog {
     z-index: 361 !important;
     border-radius: 2.15rem;
-    border-color: rgba(226, 232, 240, 0.9);
+    border-color: var(--tone-border);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.97));
+        linear-gradient(180deg, color-mix(in srgb, var(--tone-surface) 99%, transparent), color-mix(in srgb, var(--tone-surface-soft) 97%, transparent));
     box-shadow:
         0 42px 120px rgba(15, 23, 42, 0.28),
         0 10px 30px rgba(15, 23, 42, 0.08);
@@ -39,7 +39,7 @@
 .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > header {
     padding: 1.55rem 1.7rem 1.3rem;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+        linear-gradient(180deg, color-mix(in srgb, var(--tone-surface) 98%, transparent), color-mix(in srgb, var(--tone-surface-soft) 94%, transparent));
 }
 
 .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > div,
@@ -49,7 +49,7 @@
 
 .projects-modal-host ::deep [data-testid="projects-editor-modal"] .projects-modal-host__dialog > footer,
 .projects-modal-host ::deep [data-testid="projects-detail-modal"] .projects-modal-host__dialog > footer {
-    background: rgba(248, 250, 252, 0.9);
+    background: color-mix(in srgb, var(--tone-surface-soft) 90%, transparent);
     backdrop-filter: blur(18px);
 }
 
@@ -63,10 +63,10 @@
     justify-content: center;
     width: 2.85rem;
     height: 2.85rem;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    border: 1px solid var(--tone-border);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #0f172a;
+    background: color-mix(in srgb, var(--tone-surface) 94%, transparent);
+    color: var(--tone-text-strong);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     transition:
         transform 140ms ease,
@@ -77,13 +77,13 @@
 
 .projects-modal-host__close:hover {
     transform: translateY(-1px);
-    border-color: rgba(96, 165, 250, 0.34);
-    background: rgba(255, 255, 255, 1);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-surface);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
 }
 
 .projects-modal-host__close:focus-visible {
-    outline: 2px solid rgba(59, 130, 246, 0.4);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: 3px;
 }
 

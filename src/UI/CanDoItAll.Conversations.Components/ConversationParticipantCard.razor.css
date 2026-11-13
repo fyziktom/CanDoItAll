@@ -1,8 +1,8 @@
 .agent-selection-card {
-    background: rgb(248 250 252);
-    border: 1px solid rgb(226 232 240);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     display: flex;
     flex-direction: column;
     min-height: 15rem;
@@ -14,14 +14,14 @@
 
 .agent-selection-card:hover,
 .agent-selection-card:focus-within {
-    border-color: rgb(14 165 233);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 12px 28px rgb(15 23 42 / 0.08);
     transform: translateY(-1px);
 }
 
 .agent-selection-card--selected {
-    background: rgb(240 249 255);
-    border-color: rgb(56 189 248);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
     box-shadow: inset 0 0 0 1px rgb(56 189 248 / 0.4);
 }
 
@@ -38,7 +38,7 @@
 }
 
 .agent-selection-card--enterprise {
-    background: rgb(255 255 255);
+    background: var(--tone-surface);
     height: 21.5rem;
     min-height: 21.5rem;
 }
@@ -64,7 +64,7 @@
 
 .agent-selection-card__actions {
     align-items: center;
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border);
     display: flex;
     flex: 0 0 auto;
     gap: 0.5rem;
@@ -114,16 +114,16 @@
 }
 
 .agent-selection-card__select:focus-visible {
-    outline: 2px solid rgb(14 165 233);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: -0.25rem;
 }
 
 .agent-selection-card__favorite {
     align-items: center;
-    background: rgb(255 255 255 / 0.92);
-    border: 1px solid rgb(226 232 240);
+    background: color-mix(in srgb, var(--tone-surface) 92%, transparent);
+    border: 1px solid var(--tone-border);
     border-radius: 999px;
-    color: rgb(148 163 184);
+    color: var(--tone-text-soft);
     cursor: pointer;
     display: inline-flex;
     height: 2rem;
@@ -138,16 +138,16 @@
 
 .agent-selection-card__favorite:hover:not(:disabled),
 .agent-selection-card__favorite:focus-visible {
-    border-color: rgb(250 204 21);
-    color: rgb(202 138 4);
+    border-color: var(--tone-warning-soft-border);
+    color: var(--tone-warning-soft-fg);
     outline: none;
     transform: scale(1.04);
 }
 
 .agent-selection-card__favorite--active {
-    background: rgb(254 249 195);
-    border-color: rgb(250 204 21);
-    color: rgb(202 138 4);
+    background: var(--tone-warning-soft-bg);
+    border-color: var(--tone-warning-soft-border);
+    color: var(--tone-warning-soft-fg);
 }
 
 .agent-selection-card__favorite:disabled {
@@ -233,7 +233,7 @@
 }
 
 .agent-selection-card__name {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.45;
@@ -252,7 +252,7 @@
 }
 
 .agent-selection-card__role {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.16em;
@@ -271,7 +271,7 @@
 }
 
 .agent-selection-card__summary {
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     display: -webkit-box;
     font-size: 0.85rem;
     line-height: 1.55;
@@ -310,9 +310,9 @@
 }
 
 .agent-selection-card--enterprise .agent-selection-card__tags ::deep .agent-selection-card__tag-target .cda-status-badge {
-    background: rgb(224 242 254);
-    border-color: rgb(125 211 252);
-    color: rgb(3 105 161);
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
     display: block;
     max-width: 100%;
     overflow: hidden;
@@ -321,7 +321,7 @@
 }
 
 .agent-selection-card__meta {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
     display: flex;
     flex-wrap: wrap;
     font-size: 0.75rem;
@@ -332,7 +332,7 @@
 
 .agent-selection-card--enterprise .agent-selection-card__meta {
     align-items: center;
-    border-top: 1px solid rgb(226 232 240);
+    border-top: 1px solid var(--tone-border);
     flex-wrap: nowrap;
     height: 100%;
     justify-content: center;
@@ -355,7 +355,7 @@
 .agent-selection-card__info {
     align-items: center;
     border-radius: 999px;
-    color: rgb(14 116 144);
+    color: var(--tone-info-soft-fg);
     display: inline-flex;
     font-size: 1rem;
     height: 1.4rem;
@@ -364,10 +364,10 @@
 }
 
 .agent-selection-card__status-ribbon {
-    background: rgb(224 242 254);
-    border-bottom: 1px solid rgb(125 211 252);
-    border-top: 1px solid rgb(125 211 252);
-    color: rgb(3 105 161);
+    background: var(--tone-info-soft-bg);
+    border-bottom: 1px solid var(--tone-info-soft-border);
+    border-top: 1px solid var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
     display: block;
     font-size: 0.61rem;
     font-weight: 800;
@@ -385,19 +385,19 @@
 }
 
 .agent-selection-card__status-ribbon--success {
-    background: rgb(220 252 231);
-    border-color: rgb(134 239 172);
-    color: rgb(21 128 61);
+    background: var(--tone-success-soft-bg);
+    border-color: var(--tone-success-soft-border);
+    color: var(--tone-success-soft-fg);
 }
 
 .agent-selection-card__status-ribbon--warning {
-    background: rgb(254 249 195);
-    border-color: rgb(253 224 71);
-    color: rgb(161 98 7);
+    background: var(--tone-warning-soft-bg);
+    border-color: var(--tone-warning-soft-border);
+    color: var(--tone-warning-soft-fg);
 }
 
 .agent-selection-card__status-ribbon--neutral {
-    background: rgb(241 245 249);
-    border-color: rgb(203 213 225);
-    color: rgb(71 85 105);
+    background: var(--tone-surface-soft);
+    border-color: var(--tone-border);
+    color: var(--tone-text-muted);
 }

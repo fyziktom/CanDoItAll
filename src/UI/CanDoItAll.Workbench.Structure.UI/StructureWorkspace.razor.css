@@ -65,7 +65,7 @@
     flex-wrap: nowrap;
     padding-right: 0.3rem;
     margin-right: 0.15rem;
-    border-right: 1px solid rgba(148, 163, 184, 0.22);
+    border-right: 1px solid var(--tone-border);
 }
 
 .project-structure-page ::deep .project-structure-toolbar-tools > * {
@@ -91,8 +91,8 @@
 }
 
 .project-structure-page ::deep .project-structure-toolbar-toggle.is-active {
-    border-color: rgba(37, 99, 235, 0.24);
-    background: rgba(239, 246, 255, 0.92);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .project-structure-page ::deep .project-structure-toolbar-recompose {
@@ -118,17 +118,17 @@
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-signals-window"] {
     gap: 0.72rem;
     background:
-        radial-gradient(circle at top left, rgba(125, 211, 252, 0.2), transparent 42%),
-        radial-gradient(circle at bottom right, rgba(110, 231, 183, 0.18), transparent 44%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
-    border-color: rgba(148, 163, 184, 0.22);
+        radial-gradient(circle at top left, var(--tone-info-soft-bg), transparent 42%),
+        radial-gradient(circle at bottom right, var(--tone-success-solid-bg), transparent 44%),
+        linear-gradient(180deg, color-mix(in srgb, var(--tone-surface) 96%, transparent), color-mix(in srgb, var(--tone-surface-soft) 98%, transparent));
+    border-color: var(--tone-border);
     box-shadow: 0 28px 54px rgba(15, 23, 42, 0.18);
 }
 
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-signals-window"]::after {
     background:
-        linear-gradient(135deg, transparent 0 54%, rgba(125, 211, 252, 0.24) 54% 60%, transparent 60% 100%),
-        linear-gradient(135deg, transparent 0 72%, rgba(110, 231, 183, 0.3) 72% 78%, transparent 78% 100%);
+        linear-gradient(135deg, transparent 0 54%, var(--tone-info-soft-bg) 54% 60%, transparent 60% 100%),
+        linear-gradient(135deg, transparent 0 72%, var(--tone-success-solid-bg) 72% 78%, transparent 78% 100%);
 }
 
 .project-structure-page ::deep .cw-floating-window[data-testid="project-structure-signals-window"] .cw-floating-window__body {
@@ -164,7 +164,7 @@
 .project-structure-page ::deep .cw-floating-window .cw-panel-copy,
 .project-structure-inline-copy {
     margin: 0;
-    color: rgba(51, 65, 85, 0.9);
+    color: color-mix(in srgb, var(--tone-text) 90%, transparent);
     font-size: 0.85rem;
     line-height: 1.45;
 }
@@ -194,32 +194,32 @@
 
 .project-structure-page ::deep .project-structure-inline-feedback {
     padding: 0.65rem 0.78rem;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    border: 1px solid var(--tone-border);
     border-radius: 0.95rem;
-    background: rgba(248, 250, 252, 0.92);
-    color: rgba(15, 23, 42, 0.82);
+    background: color-mix(in srgb, var(--tone-surface-soft) 92%, transparent);
+    color: color-mix(in srgb, var(--tone-text-strong) 82%, transparent);
     font-size: 0.78rem;
     line-height: 1.42;
 }
 
 .project-structure-page ::deep .project-structure-inline-feedback[data-tone="mint"] {
-    border-color: rgba(5, 150, 105, 0.2);
-    background: rgba(236, 253, 245, 0.92);
+    border-color: var(--tone-success-soft-border);
+    background: var(--tone-success-soft-bg);
 }
 
 .project-structure-page ::deep .project-structure-inline-feedback[data-tone="warn"] {
-    border-color: rgba(217, 119, 6, 0.2);
-    background: rgba(255, 247, 237, 0.94);
+    border-color: var(--tone-warning-soft-border);
+    background: var(--tone-warning-soft-bg);
 }
 
 .project-structure-page ::deep .project-structure-inline-feedback[data-tone="info"] {
-    border-color: rgba(14, 165, 233, 0.2);
-    background: rgba(240, 249, 255, 0.94);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .project-structure-page ::deep .project-structure-inline-feedback[data-tone="accent"] {
-    border-color: rgba(14, 165, 233, 0.2);
-    background: rgba(240, 249, 255, 0.94);
+    border-color: var(--tone-info-soft-border);
+    background: var(--tone-info-soft-bg);
 }
 
 .project-structure-page ::deep .project-structure-clipboard-feedback {
@@ -248,7 +248,7 @@
 .project-structure-preview-dialog__audio {
     width: 100%;
     min-height: 3.25rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgba(248, 250, 252, 0.94);
+    background: color-mix(in srgb, var(--tone-surface-soft) 94%, transparent);
 }

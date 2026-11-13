@@ -159,7 +159,7 @@
   }
 
   .app-shell-nav-badge-dot {
-    @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.55rem] font-bold leading-none text-chrome-950;
+    @apply absolute right-0.5 top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--tone-info-solid-bg)] px-1 text-[0.55rem] font-bold leading-none text-[var(--tone-info-solid-fg)];
   }
 
   .app-shell-nav-label-row {
@@ -169,7 +169,7 @@
   .app-shell-nav-badge-inline {
     @apply inline-flex min-w-6 shrink-0 items-center;
     /*@apply justify-cente;*/
-    @apply rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-sky-200;
+    @apply rounded-full border border-[var(--tone-info-soft-border)] bg-[var(--tone-info-soft-bg)] px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-nav-overflow-anchor {
@@ -206,7 +206,7 @@
   }
 
   .app-shell-nav-overflow-panel {
-    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-chrome-50/10 bg-chrome-950 p-2 text-chrome-100 opacity-0 shadow-2xl shadow-chrome-950/30 transition duration-150 ease-out;
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-[var(--tone-border)] bg-[var(--tone-surface)] p-2 text-[var(--tone-text)] opacity-0 shadow-2xl shadow-neutral-950/30 transition duration-150 ease-out;
     left: calc(100% + 0.75rem);
     top: 50%;
     transform: translate3d(0.35rem, -50%, 0);
@@ -226,7 +226,7 @@
   }
 
   .app-shell-nav-overflow-panel__arrow {
-    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-chrome-50/10 bg-chrome-950;
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-[var(--tone-border)] bg-[var(--tone-surface)];
     transform: translateY(-50%) rotate(45deg);
   }
 
@@ -246,16 +246,16 @@
   }
 
   .app-shell-nav-overflow-card {
-    @apply relative grid h-16 w-16 place-items-center rounded-xl border p-1 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+    @apply relative grid h-16 w-16 place-items-center rounded-xl border p-1 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tone-info-solid-bg)];
     grid-template-rows: 1.55rem minmax(0, 1fr);
   }
 
   .app-shell-nav-overflow-card--active {
-    @apply border-sky-300/40 bg-sky-400/15 text-chrome-50;
+    @apply border-[var(--tone-info-soft-border)] bg-[var(--tone-info-soft-bg)] text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-nav-overflow-card--inactive {
-    @apply border-chrome-50/10 bg-chrome-50/5 text-chrome-300 hover:bg-chrome-50/10 hover:text-chrome-50;
+    @apply border-[var(--tone-border-soft)] bg-[var(--tone-surface-soft)] text-[var(--tone-text)] hover:bg-[var(--tone-default-soft-hover)] hover:text-[var(--tone-text-strong)];
   }
 
   .app-shell-nav-overflow-card__icon {
@@ -267,7 +267,7 @@
   }
 
   .app-shell-nav-overflow-card__badge {
-    @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-sky-300 px-1 text-[0.5rem] font-bold leading-none text-chrome-950;
+    @apply absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--tone-info-solid-bg)] px-1 text-[0.5rem] font-bold leading-none text-[var(--tone-info-solid-fg)];
   }
 
   .app-shell-opened-work-anchor {
@@ -275,7 +275,7 @@
   }
 
   .app-shell-opened-work-panel {
-    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-chrome-50/10 bg-chrome-950 p-2 text-chrome-100 opacity-0 shadow-2xl shadow-chrome-950/30 transition duration-150 ease-out;
+    @apply invisible pointer-events-none absolute z-[95] rounded-xl border border-[var(--tone-border)] bg-[var(--tone-surface)] p-2 text-[var(--tone-text)] opacity-0 shadow-2xl shadow-neutral-950/30 transition duration-150 ease-out;
     left: calc(100% + 0.75rem);
     top: 50%;
     transform: translate3d(0.35rem, -50%, 0);
@@ -295,7 +295,7 @@
   }
 
   .app-shell-opened-work-panel__arrow {
-    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-chrome-50/10 bg-chrome-950;
+    @apply absolute left-[-0.45rem] top-1/2 h-3.5 w-3.5 border-b border-l border-[var(--tone-border)] bg-[var(--tone-surface)];
     transform: translateY(-50%) rotate(45deg);
   }
 
@@ -316,19 +316,19 @@
   }
 
   .app-shell-opened-work-card {
-    @apply grid h-16 w-full grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300;
+    @apply grid h-16 w-full grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tone-info-solid-bg)];
   }
 
   .app-shell-opened-work-card--active {
-    @apply border-sky-300/40 bg-sky-400/15 text-chrome-50;
+    @apply border-[var(--tone-info-soft-border)] bg-[var(--tone-info-soft-bg)] text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-opened-work-card--inactive {
-    @apply border-chrome-50/10 bg-chrome-50/5 text-chrome-300 hover:bg-chrome-50/10 hover:text-chrome-50;
+    @apply border-[var(--tone-border-soft)] bg-[var(--tone-surface-soft)] text-[var(--tone-text)] hover:bg-[var(--tone-default-soft-hover)] hover:text-[var(--tone-text-strong)];
   }
 
   .app-shell-opened-work-card__icon {
-    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-chrome-50/10 text-sm;
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--tone-default-soft-bg)] text-sm;
   }
 
   .app-shell-opened-work-card__title {
@@ -336,7 +336,7 @@
   }
 
   .app-shell-nav-tooltip {
-    @apply max-w-[18rem] rounded-xl border border-chrome-700 bg-chrome-950 p-0 text-chrome-100 shadow-2xl shadow-chrome-950/20;
+    @apply max-w-[18rem] rounded-xl border border-[var(--tone-border)] bg-[var(--tone-surface)] p-0 text-[var(--tone-text)] shadow-2xl shadow-neutral-950/20;
   }
 
   .app-shell-tooltip-card {
@@ -344,15 +344,15 @@
   }
 
   .app-shell-tooltip-title {
-    @apply text-sm font-semibold text-chrome-50;
+    @apply text-sm font-semibold text-[var(--tone-text-strong)];
   }
 
   .app-shell-tooltip-body {
-    @apply text-xs leading-5 text-chrome-300;
+    @apply text-xs leading-5 text-[var(--tone-text-muted)];
   }
 
   .app-shell-tooltip-badge {
-    @apply inline-flex rounded-full bg-sky-400/15 px-2 py-0.5 text-[0.62rem] font-semibold text-sky-100;
+    @apply inline-flex rounded-full bg-[var(--tone-info-soft-bg)] px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-utility-area {
@@ -468,7 +468,7 @@
   }
 
   .app-shell-db-flyout__fact span {
-    @apply text-chrome-500;
+    @apply text-[var(--tone-text-muted)];
   }
 
   .app-shell-db-flyout__fact strong {
@@ -500,7 +500,7 @@
   }
 
   .app-shell-db-flyout__empty {
-    @apply w-full rounded-xl border border-dashed border-chrome-200 bg-chrome-50 px-3 py-2 text-sm text-chrome-500;
+    @apply w-full rounded-xl border border-dashed border-chrome-200 bg-chrome-50 px-3 py-2 text-sm text-[var(--tone-text-muted)];
   }
 
   .app-shell-db-flyout__dialog-button {
@@ -568,7 +568,7 @@
   }
 
   .app-shell-status-panel .app-shell-status-popover__description {
-    @apply m-0 text-xs font-normal leading-4 text-chrome-500;
+    @apply m-0 text-xs font-normal leading-4 text-[var(--tone-text-muted)];
   }
 
   .app-tab-menu__panel--recent {
@@ -639,7 +639,7 @@
   }
 
   .app-shell-pill--neutral {
-    @apply border-chrome-200 bg-chrome-100 text-chrome-500;
+    @apply border-chrome-200 bg-chrome-100 text-[var(--tone-text-muted)];
   }
 
   .app-shell-pill--info {

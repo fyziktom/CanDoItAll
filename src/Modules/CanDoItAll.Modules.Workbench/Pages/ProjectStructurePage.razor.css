@@ -1,19 +1,19 @@
 .project-structure-document-preview {
     width: 100%;
     height: 22rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgba(248, 250, 252, 0.94);
+    background: color-mix(in srgb, var(--tone-surface-soft) 94%, transparent);
 }
 
 .project-structure-preview-empty {
     display: grid;
     gap: 0.35rem;
     padding: 1rem 1.05rem;
-    border: 1px dashed rgba(148, 163, 184, 0.48);
+    border: 1px dashed var(--tone-border);
     border-radius: 1rem;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.94));
-    color: rgba(51, 65, 85, 0.92);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface-soft) 96%, transparent), color-mix(in srgb, var(--tone-surface-soft) 94%, transparent));
+    color: color-mix(in srgb, var(--tone-text) 92%, transparent);
     font-size: 0.88rem;
     line-height: 1.5;
 }
@@ -26,7 +26,7 @@
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-    background: rgba(15, 23, 42, 0.58);
+    background: var(--tone-scrim);
     backdrop-filter: blur(10px);
 }
 
@@ -43,9 +43,9 @@
     grid-template-rows: auto minmax(0, 1fr);
     gap: 1rem;
     padding: 1.1rem;
-    border: 1px solid rgba(148, 163, 184, 0.26);
+    border: 1px solid var(--tone-border);
     border-radius: 1.5rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface) 98%, transparent), color-mix(in srgb, var(--tone-surface-soft) 96%, transparent));
     box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
     overflow: hidden;
 }
@@ -96,13 +96,13 @@
 .project-structure-preview-dialog__frame {
     width: 100%;
     height: min(70dvh, 52rem);
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgba(248, 250, 252, 0.96);
+    background: color-mix(in srgb, var(--tone-surface-soft) 96%, transparent);
 }
 
 .project-structure-document-preview--text {
-    background: #ffffff;
+    background: var(--tone-surface);
 }
 
 .project-structure-text-asset-preview {
@@ -112,11 +112,11 @@
     overflow: auto;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
     padding: 0.85rem;
-    background: #ffffff;
-    color: #0f172a;
+    background: var(--tone-surface);
+    color: var(--tone-text-strong);
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     font-size: 0.82rem;
     line-height: 1.5;
@@ -127,8 +127,8 @@
     max-height: min(70dvh, 52rem);
     object-fit: contain;
     border-radius: 1rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(248, 250, 252, 0.96);
+    border: 1px solid var(--tone-border);
+    background: color-mix(in srgb, var(--tone-surface-soft) 96%, transparent);
 }
 
 .project-structure-summary-dialog {
@@ -146,9 +146,9 @@
     gap: 0.85rem;
     align-items: center;
     padding: 0.85rem 0.95rem 0.85rem calc(0.95rem + (var(--summary-depth) * 0.9rem));
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.88);
+    background: color-mix(in srgb, var(--tone-surface) 88%, transparent);
 }
 
 .project-structure-summary-row__node,
@@ -160,12 +160,12 @@
 
 .project-structure-summary-row__node strong,
 .project-structure-summary-row__meta span {
-    color: #0f172a;
+    color: var(--tone-text-strong);
 }
 
 .project-structure-summary-row__node span,
 .project-structure-summary-row__meta span:last-child {
-    color: rgba(71, 85, 105, 0.88);
+    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
     font-size: 0.82rem;
 }
 

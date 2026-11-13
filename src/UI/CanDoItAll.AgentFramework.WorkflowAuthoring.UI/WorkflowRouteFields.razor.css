@@ -6,7 +6,7 @@
 }
 
 .workflow-canvas-field span {
-    color: var(--cda-color-text-muted, #64748b);
+    color: var(--tone-text-muted);
     font-size: 0.78rem;
     font-weight: 700;
 }
@@ -16,7 +16,7 @@
     align-items: center;
     gap: 0.45rem;
     margin-top: 0.75rem;
-    color: var(--cda-color-text-muted, #64748b);
+    color: var(--tone-text-muted);
     font-size: 0.84rem;
     font-weight: 700;
 }

@@ -6,24 +6,24 @@
 }
 
 .agent-execution-log-dialog-entry {
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
-    background: rgb(255 255 255);
+    background: var(--tone-surface);
     padding: 1rem;
 }
 
 .agent-execution-log-dialog-entry--highlight {
-    border-color: rgb(14 165 233);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 0 0 3px rgb(14 165 233 / 0.12);
 }
 
 .agent-execution-log-dialog-entry__message {
     max-height: 22rem;
     overflow: auto;
-    border: 1px solid rgb(226 232 240);
+    border: 1px solid var(--tone-border);
     border-radius: 0.85rem;
-    background: rgb(248 250 252);
-    color: rgb(15 23 42);
+    background: var(--tone-surface-soft);
+    color: var(--tone-text-strong);
     font: inherit;
     font-size: 0.875rem;
     line-height: 1.6;

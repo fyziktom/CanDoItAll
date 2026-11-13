@@ -18,7 +18,7 @@
 }
 
 .live-processes-title {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 750;
     line-height: 1.25;
@@ -33,18 +33,18 @@
 }
 
 .live-processes-summary {
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    background: rgba(255, 255, 255, 0.88);
+    background: color-mix(in srgb, var(--tone-surface) 88%, transparent);
     padding: 0.75rem;
 }
 
 .live-processes-alert {
     align-items: center;
-    background: #fff1f2;
-    border: 1px solid #fecdd3;
+    background: var(--tone-danger-soft-bg);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 0.5rem;
-    color: #9f1239;
+    color: var(--tone-danger-soft-fg);
     display: flex;
     font-size: 0.875rem;
     font-weight: 650;
@@ -53,15 +53,15 @@
 }
 
 .live-processes-alert--success {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #065f46;
+    background: var(--tone-success-soft-bg);
+    border-color: var(--tone-success-soft-border);
+    color: var(--tone-success-soft-fg);
 }
 
 .live-processes-alert--mock {
-    background: #f0f9ff;
-    border-color: #bae6fd;
-    color: #075985;
+    background: var(--tone-info-soft-bg);
+    border-color: var(--tone-info-soft-border);
+    color: var(--tone-info-soft-fg);
 }
 
 .live-processes-tabs-frame,
@@ -129,8 +129,8 @@
 .live-processes-activity-card,
 .live-processes-attention-card,
 .live-processes-agent-card {
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: color-mix(in srgb, var(--tone-surface) 94%, transparent);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.65rem;
@@ -144,23 +144,23 @@
 }
 
 .live-processes-attention-card {
-    border-color: rgba(245, 158, 11, 0.52);
+    border-color: var(--tone-warning-soft-border);
     align-content: start;
     grid-template-columns: minmax(0, 1fr);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
 }
 
 .live-processes-activity-card--active {
-    border-color: rgba(16, 185, 129, 0.42);
+    border-color: var(--tone-success-soft-border);
 }
 
 .live-processes-activity-card--attention {
-    border-color: rgba(245, 158, 11, 0.52);
+    border-color: var(--tone-warning-soft-border);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
 }
 
 .live-processes-activity-card--failed {
-    border-color: rgba(220, 38, 38, 0.46);
+    border-color: var(--tone-danger-soft-border);
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
 }
 
@@ -176,7 +176,7 @@
 .live-processes-activity-card__title,
 .live-processes-attention-card__title,
 .live-processes-agent-card__name {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.9rem;
     font-weight: 750;
     line-height: 1.3;
@@ -199,7 +199,7 @@
 }
 
 .live-processes-run-title__hash {
-    color: #64748b;
+    color: var(--tone-text-muted);
     flex: 0 0 auto;
     font-size: 0.78rem;
     font-weight: 700;
@@ -207,7 +207,7 @@
 }
 
 .live-processes-activity-card__percent {
-    color: #0f766e;
+    color: var(--tone-success-soft-fg);
     flex: 0 0 auto;
     font-size: 0.95rem;
     font-weight: 800;
@@ -224,10 +224,10 @@
 
 .live-processes-activity-card__fields > span {
     align-items: start;
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    color: #334155;
+    color: var(--tone-text);
     display: grid;
     font-size: 0.75rem;
     gap: 0.18rem;
@@ -239,7 +239,7 @@
 
 .live-processes-activity-card__fields > span > i,
 .live-processes-activity-card__fields > span > .material-symbols-outlined {
-    color: #64748b;
+    color: var(--tone-text-muted);
     margin-top: 0.05rem;
 }
 
@@ -257,7 +257,7 @@
 }
 
 .live-processes-activity-card__fields strong {
-    color: #64748b;
+    color: var(--tone-text-muted);
     display: block;
     font-size: 0.68rem;
     font-weight: 750;
@@ -267,7 +267,7 @@
 .live-processes-activity-card__summary,
 .live-processes-attention-card__summary,
 .live-processes-agent-card__summary {
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.8125rem;
     line-height: 1.5;
     margin: 0;
@@ -275,7 +275,7 @@
 
 .live-processes-activity-card__time,
 .live-processes-agent-card__role {
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 650;
     margin: 0;
@@ -293,10 +293,10 @@
 .live-processes-activity-card__metrics span,
 .live-processes-run-detail-hero__metrics span,
 .live-processes-tool-card__meta span {
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 999px;
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.75rem;
     font-weight: 650;
     line-height: 1.2;
@@ -317,14 +317,14 @@
 .live-processes-run-progress__label,
 .live-processes-run-progress__value,
 .live-processes-run-card__progress-label {
-    color: #334155;
+    color: var(--tone-text);
     font-size: 0.75rem;
     font-weight: 700;
     line-height: 1.2;
 }
 
 .live-processes-run-progress__value {
-    color: #64748b;
+    color: var(--tone-text-muted);
 }
 
 .live-processes-run-progress--detail {
@@ -344,8 +344,8 @@
 
 .live-processes-attention-card__decision {
     align-items: start;
-    background: #fffbeb;
-    border: 1px solid rgba(245, 158, 11, 0.28);
+    background: var(--tone-warning-soft-bg);
+    border: 1px solid var(--tone-warning-soft-border);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.55rem;
@@ -355,12 +355,12 @@
 
 .live-processes-attention-card__decision i,
 .live-processes-attention-card__decision .material-symbols-outlined {
-    color: #d97706;
+    color: var(--tone-warning-soft-fg);
     margin-top: 0.05rem;
 }
 
 .live-processes-attention-card__decision p {
-    color: #92400e;
+    color: var(--tone-warning-soft-fg);
     font-size: 0.8125rem;
     font-weight: 650;
     line-height: 1.45;
@@ -404,17 +404,17 @@
 }
 
 .live-processes-agent-detail__activity {
-    color: #334155;
+    color: var(--tone-text);
     font-size: 0.875rem;
     line-height: 1.6;
     margin: 0;
 }
 
 .live-processes-agent-detail__error {
-    background: #fff1f2;
-    border: 1px solid #fecdd3;
+    background: var(--tone-danger-soft-bg);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 0.5rem;
-    color: #9f1239;
+    color: var(--tone-danger-soft-fg);
     font-size: 0.8125rem;
     line-height: 1.5;
     margin: 0;
@@ -422,7 +422,7 @@
 }
 
 .live-processes-agent-detail__row {
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.8125rem;
     line-height: 1.5;
     margin: 0.5rem 0 0;
@@ -430,8 +430,8 @@
 
 .live-processes-run-card {
     align-items: stretch;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: color-mix(in srgb, var(--tone-surface) 92%, transparent);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.5rem;
@@ -440,7 +440,7 @@
 }
 
 .live-processes-run-card--selected {
-    border-color: rgba(37, 99, 235, 0.55);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
@@ -466,13 +466,13 @@
 }
 
 .live-processes-run-card__title {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.9rem;
     font-weight: 750;
 }
 
 .live-processes-run-card__summary {
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.8125rem;
     line-height: 1.5;
 }
@@ -482,7 +482,7 @@
 }
 
 .live-processes-run-card__progress-label {
-    color: #475569;
+    color: var(--tone-text);
 }
 
 .live-processes-run-card__open {
@@ -490,17 +490,17 @@
 }
 
 .live-processes-event-row {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     padding: 0.75rem;
 }
 
 .live-processes-event-row .live-processes-run-title {
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 999px;
-    color: #334155;
+    color: var(--tone-text);
     max-width: min(100%, 18rem);
     padding: 0.18rem 0.45rem;
 }
@@ -515,8 +515,8 @@
 
 .live-processes-operator-action-row {
     align-items: start;
-    background: #ffffff;
-    border: 1px solid rgba(245, 158, 11, 0.38);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-warning-soft-border);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.75rem;
@@ -532,7 +532,7 @@
 }
 
 .live-processes-operator-action-row__title {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.875rem;
     font-weight: 750;
     line-height: 1.35;
@@ -544,27 +544,27 @@
 .live-processes-operator-action-row__decision,
 .live-processes-operator-action-row__instruction,
 .live-processes-operator-action-row__disabled {
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.8125rem;
     line-height: 1.5;
     margin: 0;
 }
 
 .live-processes-operator-action-row__problem {
-    color: #334155;
+    color: var(--tone-text);
     font-weight: 650;
 }
 
 .live-processes-operator-action-row__decision {
-    color: #92400e;
+    color: var(--tone-warning-soft-fg);
 }
 
 .live-processes-operator-action-row__instruction {
-    color: #0f766e;
+    color: var(--tone-success-soft-fg);
 }
 
 .live-processes-operator-action-row__disabled {
-    color: #9f1239;
+    color: var(--tone-danger-soft-fg);
 }
 
 .live-processes-operator-action-row__note {
@@ -578,8 +578,8 @@
 
 .live-processes-tool-family-card,
 .live-processes-tool-card {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border-soft);
     border-left: 4px solid #64748b;
     border-radius: 0.5rem;
     min-width: 0;
@@ -596,10 +596,10 @@
 .live-processes-tool-family-card__icon,
 .live-processes-tool-card__icon {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.26);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.45rem;
-    color: #334155;
+    color: var(--tone-text);
     display: inline-flex;
     flex: 0 0 auto;
     height: 2rem;
@@ -615,7 +615,7 @@
 
 .live-processes-tool-family-card__title,
 .live-processes-tool-card__name {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.875rem;
     font-weight: 750;
     line-height: 1.3;
@@ -623,7 +623,7 @@
 
 .live-processes-tool-family-card__summary,
 .live-processes-tool-card__summary {
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     line-height: 1.45;
     margin: 0;
@@ -727,7 +727,7 @@
 }
 
 .live-processes-run-detail-hero__main h2 {
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1.05rem;
     font-weight: 750;
     line-height: 1.25;
@@ -736,22 +736,22 @@
 
 .live-processes-run-detail-hero__main p,
 .live-processes-run-detail-hero__aside p {
-    color: #475569;
+    color: var(--tone-text);
     font-size: 0.875rem;
     line-height: 1.55;
     margin: 0;
 }
 
 .live-processes-run-detail-hero__aside {
-    background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
     padding: 0.75rem;
 }
 
 .live-processes-run-detail-decision {
-    background: #fffbeb;
-    border: 1px solid rgba(245, 158, 11, 0.34);
+    background: var(--tone-warning-soft-bg);
+    border: 1px solid var(--tone-warning-soft-border);
     border-radius: 0.5rem;
     display: grid;
     gap: 0.65rem;
@@ -759,7 +759,7 @@
 }
 
 .live-processes-run-detail-decision p {
-    color: #92400e;
+    color: var(--tone-warning-soft-fg);
     font-weight: 650;
 }
 

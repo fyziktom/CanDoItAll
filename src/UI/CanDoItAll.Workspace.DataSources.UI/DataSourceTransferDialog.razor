@@ -14,7 +14,7 @@
         <DataSourceReceipts Operations="Operations" />
         <Stack GapScale="LayoutGap.Large">
             @if (!string.IsNullOrWhiteSpace(Session.Message)) {
-                <div class="rounded-xl border border-amber-300 p-3"
+                <div class="rounded-xl border border-[var(--tone-warning-soft-border)] p-3"
                      data-testid="database-transfer-message">
                     @Session.Message
                 </div>
@@ -113,7 +113,7 @@
             @if (Session.Items.Count > 0) {
                 <Stack GapScale="LayoutGap.Small" data-testid="database-transfer-items">
                     @foreach (var item in Session.Items) {
-                        <label class="rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-3"
+                        <label class="rounded-[1.25rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-3"
                                data-testid="@($"database-transfer-item-{item.Descriptor.Key}")">
                             <Split Breakpoint="LayoutBreakpoint.None"
                                    Gap="LayoutGap.Medium"
@@ -139,12 +139,12 @@
                                         <p class="text-sm leading-6 text-chrome-600">@item.Descriptor.Description</p>
                                         <p class="text-sm leading-6 text-chrome-600">@item.Summary</p>
                                         @if (!string.IsNullOrWhiteSpace(item.Warning)) {
-                                            <p class="text-sm leading-6 text-amber-700">@item.Warning</p>
+                                            <p class="text-sm leading-6 text-[var(--tone-warning-soft-fg)]">@item.Warning</p>
                                         }
                                     </Stack>
                                 </Cluster>
 
-                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-chrome-500">
+                                <Stack GapScale="LayoutGap.Tiny" Class="text-right text-xs leading-5 text-[var(--tone-text-muted)]">
                                     <span>Source: @item.SourceRecordCount</span>
                                     <span>Target: @item.TargetRecordCount</span>
                                 </Stack>

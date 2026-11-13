@@ -61,20 +61,20 @@
 
             @foreach (var row in preview.Rows)
             {
-                <div class="rounded-[1.25rem] border border-chrome-200 bg-white px-4 py-4" data-testid="crmhr-import-row">
+                <div class="rounded-[1.25rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-4" data-testid="crmhr-import-row">
                     <Split Gap="LayoutGap.Small"
                            AlignItems="AlignItems.Start"
                            JustifyContent="JustifyContent.SpaceBetween">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-chrome-950">Row @row.RowNumber: @row.Party.DisplayName</p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-chrome-500">@row.Party.PartyType / @row.Party.LifecycleStatus</p>
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">@row.Party.PartyType / @row.Party.LifecycleStatus</p>
                             @if (row.Messages.Count > 0)
                             {
-                                <p class="mt-2 text-sm leading-6 text-rose-700">@string.Join(" ", row.Messages)</p>
+                                <p class="mt-2 text-sm leading-6 text-[var(--tone-danger-soft-fg)]">@string.Join(" ", row.Messages)</p>
                             }
                             @if (row.DuplicateCandidates.Count > 0)
                             {
-                                <p class="mt-2 text-sm leading-6 text-amber-700">Duplicates: @string.Join(", ", row.DuplicateCandidates.Select(item => item.DisplayName))</p>
+                                <p class="mt-2 text-sm leading-6 text-[var(--tone-warning-soft-fg)]">Duplicates: @string.Join(", ", row.DuplicateCandidates.Select(item => item.DisplayName))</p>
                             }
                         </div>
                         <StatusBadge Tone="@(row.CanImport ? "success" : "warning")"

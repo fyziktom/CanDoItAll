@@ -661,8 +661,8 @@
         return candidate.AvailabilityState == WorkforceAvailabilityState.Overallocated
                || Draft.AllocationPercent.HasValue
                && Draft.AllocationPercent.Value > candidate.AvailablePercent
-            ? "rounded-[1.2rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
-            : "rounded-[1.2rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700";
+            ? "rounded-[1.2rem] border border-[var(--tone-danger-soft-border)] bg-[var(--tone-danger-soft-bg)] px-4 py-3 text-sm font-medium text-[var(--tone-danger-soft-fg)]"
+            : "rounded-[1.2rem] border border-[var(--tone-success-soft-border)] bg-[var(--tone-success-soft-bg)] px-4 py-3 text-sm font-medium text-[var(--tone-success-soft-fg)]";
     }
 
     private string BuildSelectedCandidateMessage(StaffingCandidateItemModel candidate) {

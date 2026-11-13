@@ -9,9 +9,9 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    border: 1px solid rgba(226, 232, 240, 0.9);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    background: rgba(248, 250, 252, 0.82);
+    background: color-mix(in srgb, var(--tone-surface-soft) 82%, transparent);
 }
 
 .scheduler-schedules-root ::deep .scheduler-list-toolbar h2 {
@@ -25,7 +25,7 @@
 }
 
 .scheduler-schedules-root ::deep .scheduler-list-toolbar__result {
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 800;
     white-space: nowrap;
@@ -49,24 +49,24 @@
     max-width: 21.5rem;
     min-height: 100%;
     padding: 0.85rem;
-    border: 1px solid rgba(226, 232, 240, 0.95);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    background: #fff;
+    background: var(--tone-surface);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 .scheduler-schedules-root ::deep .scheduler-plan-card--enabled {
-    border-top: 3px solid rgba(5, 150, 105, 0.72);
+    border-top: 3px solid var(--tone-success-soft-border);
 }
 
 .scheduler-schedules-root ::deep .scheduler-plan-card--paused {
-    border-top: 3px solid rgba(100, 116, 139, 0.55);
-    background: #f8fafc;
+    border-top: 3px solid var(--tone-border);
+    background: var(--tone-surface-soft);
 }
 
 .scheduler-schedules-root ::deep .scheduler-plan-card__title {
     margin: 0.55rem 0 0;
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 800;
     line-height: 1.25;
@@ -74,7 +74,7 @@
 
 .scheduler-schedules-root ::deep .scheduler-plan-card__target {
     margin: 0.2rem 0 0;
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.8rem;
     font-weight: 700;
     line-height: 1.35;
@@ -82,7 +82,7 @@
 
 .scheduler-schedules-root ::deep .scheduler-plan-card__cron {
     margin: 0;
-    color: #334155;
+    color: var(--tone-text);
     font-size: 0.88rem;
     font-weight: 600;
     line-height: 1.55;
@@ -101,14 +101,14 @@
 .scheduler-schedules-root ::deep .scheduler-plan-card__meta {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     padding: 0.8rem;
-    border: 1px solid rgba(226, 232, 240, 0.88);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    background: rgba(248, 250, 252, 0.85);
+    background: color-mix(in srgb, var(--tone-surface-soft) 85%, transparent);
 }
 
 .scheduler-schedules-root ::deep .scheduler-plan-card__meta span {
     display: block;
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0;
@@ -118,7 +118,7 @@
 .scheduler-schedules-root ::deep .scheduler-plan-card__meta strong {
     display: block;
     margin-top: 0.2rem;
-    color: #0f172a;
+    color: var(--tone-text-strong);
     font-size: 0.78rem;
     font-weight: 800;
     line-height: 1.35;
@@ -127,10 +127,10 @@
 .scheduler-schedules-root ::deep .scheduler-plan-card__error {
     margin: 0;
     padding: 0.7rem 0.8rem;
-    border: 1px solid rgba(254, 205, 211, 0.92);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 0.5rem;
-    background: #fff1f2;
-    color: #be123c;
+    background: var(--tone-danger-soft-bg);
+    color: var(--tone-danger-soft-fg);
     font-size: 0.78rem;
     font-weight: 700;
     line-height: 1.45;

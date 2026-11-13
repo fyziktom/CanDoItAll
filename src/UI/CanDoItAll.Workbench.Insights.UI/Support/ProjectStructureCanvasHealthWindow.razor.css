@@ -21,18 +21,18 @@
     gap: 0.2rem;
     padding: 0.7rem 0.8rem;
     border-radius: 0.95rem;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--tone-border);
+    background: color-mix(in srgb, var(--tone-surface) 82%, transparent);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__metric span {
     font-size: 0.76rem;
-    color: rgba(15, 23, 42, 0.64);
+    color: color-mix(in srgb, var(--tone-text-strong) 64%, transparent);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__metric strong {
     font-size: 1rem;
-    color: #0f172a;
+    color: var(--tone-text-strong);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__spotlight span {
@@ -40,7 +40,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: rgba(15, 23, 42, 0.58);
+    color: color-mix(in srgb, var(--tone-text-strong) 58%, transparent);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__spotlight ul {
@@ -48,7 +48,7 @@
     padding-left: 1rem;
     display: grid;
     gap: 0.25rem;
-    color: rgba(15, 23, 42, 0.72);
+    color: color-mix(in srgb, var(--tone-text-strong) 72%, transparent);
     font-size: 0.82rem;
 }
 

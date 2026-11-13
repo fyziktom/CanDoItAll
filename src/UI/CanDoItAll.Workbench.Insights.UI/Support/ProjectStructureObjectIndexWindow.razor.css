@@ -53,10 +53,10 @@
     min-height: 7rem;
     display: grid;
     place-items: center;
-    border: 1px dashed rgba(148, 163, 184, 0.42);
+    border: 1px dashed var(--tone-border);
     border-radius: 0.8rem;
-    background: rgba(248, 250, 252, 0.86);
-    color: rgba(71, 85, 105, 0.9);
+    background: color-mix(in srgb, var(--tone-surface-soft) 86%, transparent);
+    color: color-mix(in srgb, var(--tone-text-muted) 90%, transparent);
     font-size: 0.86rem;
     font-weight: 650;
     text-align: center;
@@ -78,9 +78,9 @@
     min-width: 14rem;
     max-width: min(20rem, calc(100vw - 2rem));
     transform: translate(0.35rem, 0.35rem);
-    border: 1px solid rgba(148, 163, 184, 0.38);
+    border: 1px solid var(--tone-border);
     border-radius: 0.9rem;
-    background: rgba(255, 255, 255, 0.98);
+    background: color-mix(in srgb, var(--tone-surface) 98%, transparent);
     box-shadow: 0 28px 64px rgba(15, 23, 42, 0.18);
     backdrop-filter: blur(18px);
     overflow: hidden;
@@ -90,8 +90,8 @@
     display: grid;
     gap: 0.2rem;
     padding: 0.8rem 0.9rem 0.7rem;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.95);
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.92));
+    border-bottom: 1px solid var(--tone-border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface-soft) 98%, transparent), color-mix(in srgb, var(--tone-surface-soft) 92%, transparent));
 }
 
 .project-structure-outline-context-menu__eyebrow {
@@ -99,13 +99,13 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(71, 85, 105, 0.88);
+    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
 }
 
 .project-structure-outline-context-menu__title {
     font-size: 0.88rem;
     font-weight: 700;
-    color: rgba(15, 23, 42, 0.94);
+    color: color-mix(in srgb, var(--tone-text-strong) 94%, transparent);
 }
 
 .project-structure-outline-context-menu__actions {
@@ -123,7 +123,7 @@
     border: 0;
     border-radius: 0.7rem;
     background: transparent;
-    color: rgba(15, 23, 42, 0.88);
+    color: color-mix(in srgb, var(--tone-text-strong) 88%, transparent);
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
@@ -133,27 +133,27 @@
 }
 
 .project-structure-outline-context-menu__action:hover {
-    background: rgba(241, 245, 249, 0.92);
+    background: color-mix(in srgb, var(--tone-surface-soft) 92%, transparent);
     transform: translateX(1px);
 }
 
 .project-structure-outline-context-menu__action:focus-visible {
-    outline: 2px solid rgba(37, 99, 235, 0.45);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: 2px;
 }
 
 .project-structure-outline-context-menu__action[data-tone="mint"] {
-    color: rgba(5, 122, 85, 0.96);
+    color: var(--tone-success-soft-fg);
 }
 
 .project-structure-outline-context-menu__action[data-tone="accent"] {
-    color: rgba(29, 78, 216, 0.94);
+    color: var(--tone-info-soft-fg);
 }
 
 .project-structure-outline-context-menu__action[data-tone="warn"] {
-    color: rgba(180, 83, 9, 0.96);
+    color: var(--tone-warning-soft-fg);
 }
 
 .project-structure-outline-context-menu__action[data-tone="danger"] {
-    color: rgba(190, 24, 93, 0.96);
+    color: var(--tone-danger-soft-fg);
 }

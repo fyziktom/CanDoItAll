@@ -6,8 +6,8 @@
 
 .project-structure-agent-details__hero {
     align-items: center;
-    background: #f8fbff;
-    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border);
     border-radius: 1rem;
     display: grid;
     gap: 0.95rem;
@@ -16,7 +16,7 @@
 }
 
 .project-structure-agent-details__eyebrow {
-    color: #536988;
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
@@ -30,13 +30,13 @@
 }
 
 .project-structure-agent-details h3 {
-    color: #17233d;
+    color: var(--tone-text-strong);
     font-size: 1.15rem;
     font-weight: 800;
 }
 
 .project-structure-agent-details p {
-    color: #617493;
+    color: var(--tone-text-muted);
     font-size: 0.86rem;
     line-height: 1.5;
 }
@@ -51,10 +51,10 @@
 
 .project-structure-agent-details__chips span,
 .project-structure-agent-details__tag-list span {
-    background: #eef6ff;
-    border: 1px solid rgba(44, 129, 220, 0.18);
+    background: var(--tone-info-soft-bg);
+    border: 1px solid var(--tone-info-soft-border);
     border-radius: 999px;
-    color: #244064;
+    color: var(--tone-text);
     font-size: 0.76rem;
     font-weight: 700;
     padding: 0.28rem 0.58rem;
@@ -67,8 +67,8 @@
 }
 
 .project-structure-agent-details__panel {
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.23);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border);
     border-radius: 0.9rem;
     display: grid;
     gap: 0.75rem;
@@ -81,7 +81,7 @@
 }
 
 .project-structure-agent-details h4 {
-    color: #17233d;
+    color: var(--tone-text-strong);
     font-size: 0.9rem;
     font-weight: 800;
 }
@@ -98,14 +98,14 @@
 }
 
 .project-structure-agent-details dt {
-    color: #536988;
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .project-structure-agent-details dd {
-    color: #17233d;
+    color: var(--tone-text-strong);
     font-size: 0.86rem;
     font-weight: 650;
     margin: 0;

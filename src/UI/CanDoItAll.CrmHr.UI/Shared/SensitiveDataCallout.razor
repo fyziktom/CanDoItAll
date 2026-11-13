@@ -26,12 +26,12 @@
         </Split>
 
         <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-5">
-            <div class="rounded-[1.2rem] border border-chrome-200 bg-white/90 px-4 py-4">
-                <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Last changed by</p>
+            <div class="rounded-[1.2rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-4">
+                <p class="text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">Last changed by</p>
                 <p class="mt-1 text-sm font-medium text-chrome-950">@FormatActor(LastChangedBy)</p>
             </div>
-            <div class="rounded-[1.2rem] border border-chrome-200 bg-white/90 px-4 py-4">
-                <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Handling rule</p>
+            <div class="rounded-[1.2rem] border border-chrome-200 bg-[var(--tone-surface)] px-4 py-4">
+                <p class="text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">Handling rule</p>
                 <p class="mt-1 text-sm font-medium text-chrome-950">
                     @(IsSensitive ? "Keep HR-only notes separate and avoid broad search exposure." : "Operational notes remain broadly visible across CRM-HR flows.")
                 </p>

@@ -4,7 +4,7 @@
 @using CanDoItAll.SharedKernel
 
 @if (!string.IsNullOrWhiteSpace(DatabaseSwitchAlert)) {
-    <div class="mb-3 rounded-[1.35rem] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+    <div class="mb-3 rounded-[1.35rem] border border-[var(--tone-warning-soft-border)] bg-[var(--tone-warning-soft-bg)] px-4 py-3 text-sm text-[var(--tone-warning-soft-fg)]"
          data-testid="database-switch-alert">
         @DatabaseSwitchAlert
     </div>

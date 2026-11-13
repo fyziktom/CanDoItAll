@@ -306,15 +306,15 @@
                         <Stack GapScale="LayoutGap.Large">
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="3">
                                 <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Context</p>
+                                    <p class="text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">Context</p>
                                     <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.ContextLabel</p>
                                 </div>
                                 <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Messages</p>
+                                    <p class="text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">Messages</p>
                                     <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.Messages.Count</p>
                                 </div>
                                 <div class="rounded-[1.2rem] border border-chrome-200 bg-chrome-50/80 px-4 py-4">
-                                    <p class="text-xs uppercase tracking-[0.18em] text-chrome-500">Participants</p>
+                                    <p class="text-xs uppercase tracking-[0.18em] text-[var(--tone-text-muted)]">Participants</p>
                                     <p class="mt-1 text-sm font-medium text-chrome-950">@workspace.SelectedThread.Participants.Count</p>
                                 </div>
                             </Grid>
@@ -329,7 +329,7 @@
                                                 <Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap">
                                                     <div>
                                                         <p class="text-sm font-semibold text-chrome-900">@collaborationMessage.AuthorName</p>
-                                                        <p class="mt-1 text-xs text-chrome-500">@collaborationMessage.AuthorKind / @collaborationMessage.MessageKind</p>
+                                                        <p class="mt-1 text-xs text-[var(--tone-text-muted)]">@collaborationMessage.AuthorKind / @collaborationMessage.MessageKind</p>
                                                     </div>
                                                     <Cluster Gap="LayoutGap.Small">
                                                         @if (collaborationMessage.RaisesEscalation) {

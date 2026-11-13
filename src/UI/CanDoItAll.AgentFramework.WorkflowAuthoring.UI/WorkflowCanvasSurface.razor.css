@@ -1,12 +1,12 @@
 .workflow-canvas-editor-shell {
-    --workflow-canvas-panel-border: rgba(71, 85, 105, 0.2);
+    --workflow-canvas-panel-border: var(--tone-border);
 }
 
 .workflow-canvas-panel {
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
     padding: 0.9rem;
-    background: rgba(255, 255, 255, 0.74);
+    background: color-mix(in srgb, var(--tone-surface) 74%, transparent);
 }
 
 .workflow-canvas-panel-title {
@@ -57,7 +57,7 @@
     border-radius: 8px;
     padding: 0.65rem 0.75rem;
     margin-top: 0.75rem;
-    background: #fff;
+    background: var(--tone-surface);
 }
 
 .workflow-canvas-executor-summary__badges {
@@ -134,7 +134,7 @@
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
     padding: 0.85rem;
-    background: rgba(255, 255, 255, 0.82);
+    background: color-mix(in srgb, var(--tone-surface) 82%, transparent);
 }
 
 .workflow-canvas-dialog-section--fill {
@@ -173,14 +173,14 @@
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
     padding: 0.7rem 0.8rem;
-    background: #fff;
+    background: var(--tone-surface);
     color: inherit;
     text-align: left;
 }
 
 .workflow-canvas-node-picker:hover,
 .workflow-canvas-node-picker--selected {
-    border-color: #0e7490;
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.14);
 }
 
@@ -196,17 +196,17 @@
     display: grid;
     gap: 0.35rem;
     margin-top: 0.75rem;
-    border: 1px solid rgba(14, 116, 144, 0.18);
+    border: 1px solid var(--tone-info-soft-border);
     border-radius: 8px;
     padding: 0.75rem;
     background:
-        linear-gradient(180deg, rgba(240, 253, 250, 0.78), rgba(255, 251, 235, 0.38)),
-        #fff;
+        linear-gradient(180deg, var(--tone-success-soft-bg), var(--tone-warning-soft-bg)),
+        var(--tone-surface);
 }
 
 .workflow-canvas-route-editing {
     margin: 0.45rem 0 0;
-    color: #0f766e;
+    color: var(--tone-success-soft-fg);
     font-size: 0.78rem;
     font-weight: 800;
 }
@@ -228,7 +228,7 @@
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
     padding: 0.75rem;
-    background: #fff;
+    background: var(--tone-surface);
 }
 
 .workflow-canvas-legacy-edge-fields {
@@ -245,7 +245,7 @@
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
     padding: 0.75rem;
-    background: #fff;
+    background: var(--tone-surface);
 }
 
 .workflow-canvas-edge-row {
@@ -284,11 +284,11 @@
 }
 
 .workflow-canvas-error {
-    border: 1px solid rgba(185, 28, 28, 0.24);
+    border: 1px solid var(--tone-danger-soft-border);
     border-radius: 8px;
     padding: 0.65rem 0.75rem;
-    background: rgba(254, 226, 226, 0.72);
-    color: #991b1b;
+    background: var(--tone-danger-soft-bg);
+    color: var(--tone-danger-soft-fg);
     font-size: 0.88rem;
 }
 
@@ -352,64 +352,64 @@
         gap: 0.35rem;
         border-radius: 999px;
         padding: 0.34rem 0.58rem;
-        background: var(--workflow-canvas-stat-bg, #f8fafc);
-        border-color: var(--workflow-canvas-stat-border, #cbd5e1);
+        background: var(--workflow-canvas-stat-bg, var(--tone-surface-soft));
+        border-color: var(--workflow-canvas-stat-border, var(--tone-border));
         box-shadow: none;
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip span {
-        color: var(--workflow-canvas-stat-label, #475569);
+        color: var(--workflow-canvas-stat-label, var(--tone-text-muted));
         font-size: 0.62rem;
         letter-spacing: 0.08em;
         line-height: 1;
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip strong {
-        color: var(--workflow-canvas-stat-value, #0f172a);
+        color: var(--workflow-canvas-stat-value, var(--tone-text-strong));
         font-size: 0.82rem;
         line-height: 1;
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="info"] {
-        --workflow-canvas-stat-bg: #eef6ff;
-        --workflow-canvas-stat-border: #bae6fd;
-        --workflow-canvas-stat-label: #0369a1;
-        --workflow-canvas-stat-value: #075985;
+        --workflow-canvas-stat-bg: var(--tone-info-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-info-soft-border);
+        --workflow-canvas-stat-label: var(--tone-info-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-info-soft-fg);
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="secondary"] {
-        --workflow-canvas-stat-bg: #f5f3ff;
-        --workflow-canvas-stat-border: #ddd6fe;
-        --workflow-canvas-stat-label: #6d28d9;
-        --workflow-canvas-stat-value: #5b21b6;
+        --workflow-canvas-stat-bg: var(--tone-secondary-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-secondary-soft-border);
+        --workflow-canvas-stat-label: var(--tone-secondary-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-secondary-soft-fg);
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="accent"] {
-        --workflow-canvas-stat-bg: #fdf4ff;
-        --workflow-canvas-stat-border: #f5d0fe;
-        --workflow-canvas-stat-label: #a21caf;
-        --workflow-canvas-stat-value: #86198f;
+        --workflow-canvas-stat-bg: var(--tone-secondary-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-secondary-soft-border);
+        --workflow-canvas-stat-label: var(--tone-secondary-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-secondary-soft-fg);
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="warning"] {
-        --workflow-canvas-stat-bg: #fffbeb;
-        --workflow-canvas-stat-border: #fde68a;
-        --workflow-canvas-stat-label: #b45309;
-        --workflow-canvas-stat-value: #92400e;
+        --workflow-canvas-stat-bg: var(--tone-warning-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-warning-soft-border);
+        --workflow-canvas-stat-label: var(--tone-warning-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-warning-soft-fg);
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="success"] {
-        --workflow-canvas-stat-bg: #ecfdf5;
-        --workflow-canvas-stat-border: #bbf7d0;
-        --workflow-canvas-stat-label: #047857;
-        --workflow-canvas-stat-value: #065f46;
+        --workflow-canvas-stat-bg: var(--tone-success-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-success-soft-border);
+        --workflow-canvas-stat-label: var(--tone-success-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-success-soft-fg);
     }
 
     .workflow-canvas-editor-shell ::deep .cw-stat-chip[data-tone="danger"] {
-        --workflow-canvas-stat-bg: #fff1f2;
-        --workflow-canvas-stat-border: #fecdd3;
-        --workflow-canvas-stat-label: #be123c;
-        --workflow-canvas-stat-value: #9f1239;
+        --workflow-canvas-stat-bg: var(--tone-danger-soft-bg);
+        --workflow-canvas-stat-border: var(--tone-danger-soft-border);
+        --workflow-canvas-stat-label: var(--tone-danger-soft-fg);
+        --workflow-canvas-stat-value: var(--tone-danger-soft-fg);
     }
 
     .workflow-canvas-definition-panel {
