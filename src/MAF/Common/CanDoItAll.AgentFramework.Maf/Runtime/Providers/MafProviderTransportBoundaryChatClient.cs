@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using CanDoItAll.AgentFramework.Models;
@@ -101,6 +100,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
     private readonly Func<ProviderProfile, TimeSpan> resolveStreamingAbsoluteTimeout;
     private readonly Func<ProviderProfile, TimeSpan> resolveStreamingCleanupTimeout;
     private readonly ILogger<MafProviderTransportBoundaryChatClient> logger;
+    private readonly TimeProvider timeProvider;
 
     public MafProviderTransportBoundaryChatClient(
         IChatClient innerClient,
@@ -126,7 +126,8 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         Func<ProviderProfile, TimeSpan>? resolveStreamingIdleTimeout = null,
         Func<ProviderProfile, TimeSpan>? resolveStreamingAbsoluteTimeout = null,
         Func<ProviderProfile, TimeSpan>? resolveStreamingCleanupTimeout = null,
-        ILogger<MafProviderTransportBoundaryChatClient>? logger = null)
+        ILogger<MafProviderTransportBoundaryChatClient>? logger = null,
+        TimeProvider? timeProvider = null)
         : base(innerClient)
     {
         this.provider = provider ?? throw new ArgumentNullException(nameof(provider));
@@ -141,6 +142,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         this.resolveStreamingCleanupTimeout = resolveStreamingCleanupTimeout ??
                                               (_ => DefaultStreamingCleanupTimeout);
         this.logger = logger ?? NullLogger<MafProviderTransportBoundaryChatClient>.Instance;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public override async Task<ChatResponse> GetResponseAsync(
@@ -205,7 +207,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         IAsyncEnumerator<ChatResponseUpdate>? enumerator = null;
         Task<bool>? inFlightMoveNext = null;
         Exception? primaryFailure = null;
-        var streamStartedAt = Stopwatch.GetTimestamp();
+        var streamStartedAt = timeProvider.GetTimestamp();
         var lastSemanticProgressAt = streamStartedAt;
         try
         {
@@ -251,7 +253,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
                         .MoveNextAsync()
                         .AsTask();
                     hasNext = await inFlightMoveNext
-                        .WaitAsync(watchdog.Remaining, cancellationToken)
+                        .WaitAsync(watchdog.Remaining, timeProvider, cancellationToken)
                         .ConfigureAwait(false);
                     inFlightMoveNext = null;
                 }
@@ -289,7 +291,7 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
                 var update = enumerator.Current;
                 if (HasSemanticProgress(update))
                 {
-                    lastSemanticProgressAt = Stopwatch.GetTimestamp();
+                    lastSemanticProgressAt = timeProvider.GetTimestamp();
                 }
 
                 yield return update;
@@ -483,14 +485,14 @@ internal sealed class MafProviderTransportBoundaryChatClient : DelegatingChatCli
         }
     }
 
-    private static (TimeSpan Remaining, bool IsAbsoluteDeadline) ResolveWatchdogDeadline(
+    private (TimeSpan Remaining, bool IsAbsoluteDeadline) ResolveWatchdogDeadline(
         long streamStartedAt,
         long lastSemanticProgressAt,
         TimeSpan semanticIdleTimeout,
         TimeSpan absoluteTimeout)
     {
-        var semanticRemaining = semanticIdleTimeout - Stopwatch.GetElapsedTime(lastSemanticProgressAt);
-        var absoluteRemaining = absoluteTimeout - Stopwatch.GetElapsedTime(streamStartedAt);
+        var semanticRemaining = semanticIdleTimeout - timeProvider.GetElapsedTime(lastSemanticProgressAt);
+        var absoluteRemaining = absoluteTimeout - timeProvider.GetElapsedTime(streamStartedAt);
         return absoluteRemaining <= semanticRemaining
             ? (absoluteRemaining, true)
             : (semanticRemaining, false);
