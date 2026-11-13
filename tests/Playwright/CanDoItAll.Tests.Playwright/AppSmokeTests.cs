@@ -3050,8 +3050,7 @@ public sealed partial class AppSmokeTests
                 const button = Array.from(document.querySelectorAll('button'))
                     .find(candidate => regex.test(normalize(candidate.textContent)));
                 return button instanceof HTMLButtonElement &&
-                    button.className.includes('bg-chrome-900') &&
-                    button.className.includes('text-white');
+                    button.classList.contains('ui-secondary-tab--selected');
             }",
             tabPattern);
         await page.WaitForSelectorAsync($"text={readyText}");

@@ -303,8 +303,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
                     Assert.Fail("Rejected an unexpected or repeated artifact effect: " + tool);
                 }
                 var summary = AgentToolArgumentDisplayFormatter.DescribeArguments(JsonSerializer.Serialize(expected, SharedProviderConsumerFixture.Json), tool);
-                var card = decision.Locator("xpath=ancestor::div[contains(@class, 'bg-white')][1]");
-                await Assertions.Expect(card).ToContainTextAsync(summary);
+                var card = decision.Locator("xpath=ancestor::div[./span[contains(concat(' ', normalize-space(@class), ' '), ' cda-text-block--caption ')]][1]");
+                await Assertions.Expect(card.Locator(":scope > .cda-text-block--caption")).ToHaveTextAsync(summary);
                 await fixture.EvidenceAsync($"wb6-approval-{runId:N}-{approved.Count}", new { runId, approvalId, tool, ExpectedArguments = expected, DisplaySummary = summary });
                 await fixture.ScreenshotAsync($"wb6-approval-{runId:N}-{approved.Count}");
                 decided.Add(approvalId);
