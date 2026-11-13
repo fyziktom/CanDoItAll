@@ -99,7 +99,8 @@ public sealed class UserUiPreferencesStoreTests {
         var account = UserUiPreferencesAccount.ForUser(Guid.NewGuid());
         var store = CreateStore(environment);
         await store.ReadAsync(account);
-        await Writer().WriteBytesAsync(environment.ControlPlaneRootPath, PreferencesPath(environment, account), new byte[4097], DurableFileWriteOptions.Private);
+        var bytes = Encoding.UTF8.GetBytes("""{"schemaVersion":1,"theme":0,"mainMenuCollapsed":true}""".PadRight(4097));
+        await Writer().WriteBytesAsync(environment.ControlPlaneRootPath, PreferencesPath(environment, account), bytes, DurableFileWriteOptions.Private);
         await Assert.ThrowsAsync<InvalidDataException>(() => store.ReadAsync(account));
     }
 
