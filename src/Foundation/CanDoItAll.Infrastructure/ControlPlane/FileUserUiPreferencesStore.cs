@@ -59,10 +59,7 @@ public sealed class FileUserUiPreferencesStore(IControlPlanePathResolver paths, 
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
                 BufferSize = MaximumBytes
             });
-            if (!OperatingSystem.IsWindows() && File.GetUnixFileMode(stream.SafeFileHandle) !=
-                (UnixFileMode.UserRead | UnixFileMode.UserWrite)) {
-                throw new InvalidDataException("The UI preference file is not private.");
-            }
+            ExistingPrivateFileReader.RequirePrivateFile(stream);
             var bytes = new byte[MaximumBytes + 1];
             var length = 0;
             while (length < bytes.Length) {

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-13T22:00:11.925888+00:00",
+  "generated_utc": "2026-11-13T23:17:14.406274+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15825,
+  "allowance_count": 15826,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -10185,12 +10185,6 @@
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
-      "category": "os-branch",
-      "source_fingerprint": "1b00c44f14abe2086035aacb7390df24475c1829c4a25f403eb16dc372bf14ca",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
       "category": "path-api",
       "source_fingerprint": "8868790eb949c1fa329d8b8b5ed1138d6eed59d91b5cef8f2cf562a540b62dbb",
       "count": 1
@@ -10199,18 +10193,6 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
       "category": "path-api",
       "source_fingerprint": "995af2218a1d70c642b1083110ab146d6151717e0fbb01d8c0c8a31e89c38776",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
-      "category": "permissions",
-      "source_fingerprint": "9a981aca3797abdd393ea2ed23f7c306dfaec77d191308c26610ffa5f33e208f",
-      "count": 1
-    },
-    {
-      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
-      "category": "permissions",
-      "source_fingerprint": "f3ba78e4999a7a64ccb9bdc1489e47cc4fdcd9209df2a90df79ee6c7630d375e",
       "count": 1
     },
     {
@@ -10605,8 +10587,20 @@
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "cab7f27c1b0edfb0b810284aa47f3c4c311e03cbaf5a9c90bd381b1737be3c9b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
       "category": "os-branch",
       "source_fingerprint": "7c6de0e5d0d80724fc757170db41f907e7c150719d29d7fa2d3b7dc5edbe3d81",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
+      "category": "os-branch",
+      "source_fingerprint": "92e1bbac42453509dce947dad221ecf8ad201fe13d73a7bb2d9e368def5392fb",
       "count": 1
     },
     {
@@ -10624,7 +10618,19 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
       "category": "permissions",
+      "source_fingerprint": "974c1b406f8f72109a6f3927454824d742c91e91e920717ebe1253852e87c815",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
+      "category": "permissions",
       "source_fingerprint": "ba9ce4fc6281d4d79d9767b2a08c6931ef427ea969f1c473d9ef6c433d367807",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/ExistingPrivateFileReader.cs",
+      "category": "permissions",
+      "source_fingerprint": "be9ab82069aabc6e3d38f27ee0b2474a002607a41356a9ecf812168f332698b7",
       "count": 1
     },
     {

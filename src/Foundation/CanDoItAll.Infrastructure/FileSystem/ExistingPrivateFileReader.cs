@@ -6,6 +6,13 @@ internal static class ExistingPrivateFileReader {
     private const UnixFileMode SharedAccess = UnixFileMode.GroupRead | UnixFileMode.GroupWrite |
         UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
 
+    internal static void RequirePrivateFile(FileStream stream) {
+        if (!OperatingSystem.IsWindows() && File.GetUnixFileMode(stream.SafeFileHandle) !=
+            (UnixFileMode.UserRead | UnixFileMode.UserWrite)) {
+            throw new InvalidDataException("The existing file is not private.");
+        }
+    }
+
     internal static string RequireDirectory(string root, string directory) {
         var policy = new PhysicalFileSystemPathPolicyFactory().Create(root, PhysicalFileSystemCaseSensitivity.Sensitive);
         string path = policy.ResolveContainedPath(directory);
