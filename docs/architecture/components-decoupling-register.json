@@ -6272,7 +6272,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/App.razor",
       "path": "src/App/CanDoItAll.Web/Components/App.razor",
-      "sha256_lf": "ec37e94669250847ae4ac38947650921c13211f875b82c0f501f331407ae0256",
+      "sha256_lf": "b5639bcaad6988ee60eb9c7d620ff17243148b7ac7d2a1e261b296d221f7fb47",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.App",
@@ -6290,7 +6290,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Native document, routing, reconnect or error recovery boundary; framework lifecycle and application route discovery stay here.",
+      "rationale": "Native document, routing, reconnect and error recovery boundary. The native preference owner resolves the initial document theme before rendering; account storage and authority remain outside the renderer.",
       "excluded_lexical_candidates": [
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Components/Routes.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.CapabilityAuthoring.UiSandbox/Program.cs",
@@ -6396,7 +6396,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
-      "sha256_lf": "16d10e354896f4d48a363fefb5ac535c5f41fbf8d61279093a85d3fed3576bc4",
+      "sha256_lf": "d1dd3ab02103008303321248cc101175cc045c8ea7e21fc5c01addbd4bc59e7e",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6411,7 +6411,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Native shell lifecycle, workspace admission and preference hydration. Coordinates the scoped preference owner, passes controlled navigation state, and disposes subscriptions; preference persistence and account authority remain in native services."
     },
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.Workbench.cs",
@@ -6436,7 +6436,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
-      "sha256_lf": "0fea8062ab4fa0f06d29b1249526ecf9cd3bef156c2c18b0444acbaa37e73449",
+      "sha256_lf": "775460fa51035ce058a849b2dc08d1e6bf0978b2f7bd8c11c3170708e2176d0c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6446,7 +6446,7 @@
         "src/App/CanDoItAll.Web/Components/Layout/MainLayout.State.cs",
         "src/App/CanDoItAll.Web/Components/Routes.razor"
       ],
-      "native_owner": "NavigationManager Navigation; WorkbenchStateService Workbench; IDatabaseSwitchNotificationService DatabaseSwitchNotificationService; CollaborationService CollaborationService; DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService; ProjectsService ProjectsService; IConversationShellLauncher ConversationShellLauncher; IJSRuntime JS",
+      "native_owner": "NavigationManager Navigation; WorkbenchStateService Workbench; IDatabaseSwitchNotificationService DatabaseSwitchNotificationService; CollaborationService CollaborationService; DatabaseProfileWorkspaceService DatabaseProfileWorkspaceService; ProjectsService ProjectsService; IConversationShellLauncher ConversationShellLauncher; IJSRuntime JS; UserUiPreferencesState Preferences",
       "visual_owner": "AppShell, AppToolbar, AppToolbarOutlet, ConversationShellHost, DatabaseProfileDialogSurface, ShellStatusBar, ShellUtilitiesSurface, WorkspaceAgentChatContextProvider",
       "descendants": [
         "AppShell",
@@ -6461,7 +6461,7 @@
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Routes select this layout. It owns startup routed-body admission, navigation/tabs, current workspace context, browser notifications and native conversation composition. Database dialog, flyout/utilities and status presentation now use the light application leaves; native profile admissions remain in existing partials. Supplies the optional PageHeader outlet only to the routed body while independently rendering toolbar/help/statistics; feature lifecycle and domain ownership remain native. Flex sizing propagates the bounded viewport to app-page-body while toolbar/help/statistics retain their own height; focused workbenches keep their inner surface."
+      "rationale": "Routes select this layout. It owns startup routed-body admission, navigation/tabs, current workspace context, browser notifications and native conversation composition. Database dialog, flyout/utilities and status presentation now use the light application leaves; native profile admissions remain in existing partials. Supplies the optional PageHeader outlet only to the routed body while independently rendering toolbar/help/statistics; feature lifecycle and domain ownership remain native. Flex sizing propagates the bounded viewport to app-page-body while toolbar/help/statistics retain their own height; focused workbenches keep their inner surface. Personal theme and controlled menu state come from the native preference owner; the shell presents load/save failure and retry."
     },
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/ReconnectModal.razor",
@@ -6727,7 +6727,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Program.cs",
       "path": "src/App/CanDoItAll.Web/Program.cs",
-      "sha256_lf": "8ba41289e2aab379c5579cc9108b6792dd38acc55553e02793b578d4e1122b9f",
+      "sha256_lf": "027e149d648f8b5517f966b02ff3a4d9cfe73a7eb8c78932cd8be0f2a34cb033",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.PostgreSqlDevDatabaseProfileRequest, CanDoItAll.Web.Program",
@@ -6807,7 +6807,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/js/appTheme.js",
       "path": "src/App/CanDoItAll.Web/wwwroot/js/appTheme.js",
-      "sha256_lf": "bd05770085b3b09711b08f00e21a32577c18cc6abbd7b3008725b8f48526db59",
+      "sha256_lf": "adbb643033a2a4efbc427fed3b961ecccf8dea75c4b89c445a1d4330988de844",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -6815,15 +6815,15 @@
       "classification": "NON_RENDERING",
       "caller": [
         "src/App/CanDoItAll.Web/Components/App.razor",
-        "src/UI/CanDoItAll.AppComponents/AppThemeState.cs"
+        "src/App/CanDoItAll.Web/Infrastructure/UserUiPreferencesState.cs"
       ],
-      "native_owner": "AppThemeState owns the selected theme and invokes the browser effect",
+      "native_owner": "UserUiPreferencesState selects account or anonymous browser storage and invokes the document theme effect",
       "visual_owner": "No reusable rendering body",
       "descendants": [],
       "assets": "CanDoItAll.Web",
       "scenario": "CanDoItAll.Web",
       "evidence": "CanDoItAll.Web",
-      "rationale": "Loaded once by the application document; applies the selected semantic theme and browser color scheme without domain reads or writes."
+      "rationale": "Application browser adapter applies semantic theme and color scheme, and validates separate versioned anonymous preference cookies. Authenticated account preferences never enter browser storage."
     },
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/js/browserState.js",
@@ -27984,7 +27984,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppShell.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppShell.razor",
-      "sha256_lf": "5a092a1b45a9ab7159d0018d140ddfd3743e437c83d6df7b7b5a52070bf9b638",
+      "sha256_lf": "03fb992973e1c4d11a732ae316d0b49d9d58b917dd667b9980705cebc4266394",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppShell",
@@ -28002,7 +28002,7 @@
       "assets": "CanDoItAll.AppComponents",
       "scenario": "CanDoItAll.AppComponents",
       "evidence": "CanDoItAll.AppComponents",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
+      "rationale": "Native application navigation and tab callback adapter. Supports controlled menu state with an awaited change callback; the owning Web preference service persists it. Uncontrolled scenario callers default to minimized navigation."
     },
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppTabStrip.razor",
@@ -28029,7 +28029,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
-      "sha256_lf": "83e8e1696ec5a4961dd5c79384644de8c74b3805600ead5dc6e3e558f1c7a102",
+      "sha256_lf": "ac0bfbf9355f506e7729835fea2084a6786964c850bb292cc73b7fca8cff6d71",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppToolbar",
@@ -28038,7 +28038,7 @@
       "caller": [
         "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor"
       ],
-      "native_owner": "AppToolbarState owns header presentation and visibility preferences; AppThemeState owns the theme preference",
+      "native_owner": "AppToolbarState owns header presentation and help/statistics visibility; IUserUiPreferencesState exposes typed theme preference state and changes",
       "visual_owner": "CanDoItAll.AppComponents",
       "descendants": [
         "Icon",
@@ -28047,7 +28047,7 @@
       "assets": "CanDoItAll.AppComponents",
       "scenario": "CanDoItAll.AppComponents",
       "evidence": "CanDoItAll.AppComponents",
-      "rationale": "Renders the active page/context and published actions. Toolbar-only subscriptions avoid a routed-body rendering feedback loop and are disposed with the renderer."
+      "rationale": "Renders the active page/context and published actions. Theme changes use the preference owner and disable while loading, saving or failed. Subscriptions are disposed with the renderer."
     },
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppToolbarActions.razor",

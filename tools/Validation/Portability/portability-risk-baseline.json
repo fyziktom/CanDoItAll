@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-12T23:50:16.808418+00:00",
+  "generated_utc": "2026-11-13T22:00:11.925888+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15819,
+  "allowance_count": 15825,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -10169,6 +10169,48 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileApplicationPreferences.cs",
       "category": "path-api",
       "source_fingerprint": "ff22885ccc6cd69d4e995f45c1b1d051e5498b5d3443620169243ed9f2b91081",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "004aa44f25702db96110899356d72845f9334216e0fe792c2c3738086b098f3b",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "atomic-write",
+      "source_fingerprint": "37173cd357dff51aa59794be7acd202125a740ec8954049711633c227763e6d3",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "os-branch",
+      "source_fingerprint": "1b00c44f14abe2086035aacb7390df24475c1829c4a25f403eb16dc372bf14ca",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "8868790eb949c1fa329d8b8b5ed1138d6eed59d91b5cef8f2cf562a540b62dbb",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "path-api",
+      "source_fingerprint": "995af2218a1d70c642b1083110ab146d6151717e0fbb01d8c0c8a31e89c38776",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "permissions",
+      "source_fingerprint": "9a981aca3797abdd393ea2ed23f7c306dfaec77d191308c26610ffa5f33e208f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/ControlPlane/FileUserUiPreferencesStore.cs",
+      "category": "permissions",
+      "source_fingerprint": "f3ba78e4999a7a64ccb9bdc1489e47cc4fdcd9209df2a90df79ee6c7630d375e",
       "count": 1
     },
     {
@@ -76799,12 +76841,6 @@
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppTabStrip.razor",
       "category": "case-policy",
       "source_fingerprint": "db3b0bc19da36bc515e555eadbd3376291a76ab4d7e02dd8f4c9ccb020cd4f4d",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
-      "category": "case-policy",
-      "source_fingerprint": "7bab4a04cb5f740503ce08b0abf2acf3a98d89e862f3d3a5f309e91511cd1cbf",
       "count": 1
     },
     {

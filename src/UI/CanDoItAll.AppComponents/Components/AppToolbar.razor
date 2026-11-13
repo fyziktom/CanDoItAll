@@ -1,7 +1,8 @@
 @namespace CanDoItAll.AppComponents
 @implements IDisposable
 @inject AppToolbarState ToolbarState
-@inject AppThemeState ThemeState
+@using CanDoItAll.SharedKernel
+@inject IUserUiPreferencesState Preferences
 
 <div class="@CssClassBuilder.Join("app-toolbar", Class)" role="banner">
     <nav class="app-toolbar__crumbs" aria-label="Breadcrumb">
@@ -43,6 +44,7 @@
                 Variant="Variant.Outlined"
                 Size="ButtonSize.Small"
                 aria-pressed="@(IsDark ? "true" : "false")"
+                Disabled="@(!Preferences.CanEdit)"
                 Click="ToggleThemeAsync" />
     </div>
 </div>
@@ -60,22 +62,22 @@
     [Parameter]
     public string? Class { get; set; }
 
-    private bool IsDark => string.Equals(ThemeState.ThemeKey, CadThemes.Dark, StringComparison.OrdinalIgnoreCase);
+    private bool IsDark => Preferences.Current.Theme == UiThemeMode.Dark;
 
     protected override void OnInitialized()
     {
         ToolbarState.Changed += HandleChanged;
-        ThemeState.Changed += HandleChanged;
+        Preferences.Changed += HandleChanged;
     }
 
     private void HandleChanged() => InvokeAsync(StateHasChanged);
 
     private Task ToggleThemeAsync()
-        => ThemeState.SetThemeKeyAsync(IsDark ? CadThemes.Light : CadThemes.Dark);
+        => Preferences.UpdateAsync(new(Theme: IsDark ? UiThemeMode.Light : UiThemeMode.Dark));
 
     public void Dispose()
     {
         ToolbarState.Changed -= HandleChanged;
-        ThemeState.Changed -= HandleChanged;
+        Preferences.Changed -= HandleChanged;
     }
 }

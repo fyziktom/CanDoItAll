@@ -164,14 +164,35 @@ public partial class MainLayout
         Workbench.Changed += HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed += HandleDatabaseSwitchChanged;
         CollaborationService.Changed += HandleCollaborationChanged;
-        ThemeState.Changed += HandleThemeStateChanged;
+        Preferences.Changed += HandlePreferencesChanged;
         InitializeToolbarVisibility();
         activeWorkspaceId = ResolveWorkspaceId(CurrentUri.AbsolutePath);
         _ = RunLayoutWorkAsync(nameof(LoadCollaborationShellStateAsync), LoadCollaborationShellStateAsync);
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
-        => firstRender ? RunLayoutWorkAsync(nameof(InitializeLayoutAsync), InitializeLayoutAsync) : Task.CompletedTask;
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            await Preferences.ConnectBrowserAsync();
+            await RunLayoutWorkAsync(nameof(InitializeLayoutAsync), InitializeLayoutAsync);
+        }
+    }
+
+    protected override async Task OnInitializedAsync() {
+        ApplicationState.TryTakeFromJson<UserUiPreferences>(UiPreferencesPersistenceKey, out var persisted);
+        await Preferences.InitializeAsync(persisted);
+        preferencesPersistingSubscription = ApplicationState.RegisterOnPersisting(() => {
+            if (Preferences.IsReady && Preferences.IsAnonymous) {
+                ApplicationState.PersistAsJson(UiPreferencesPersistenceKey, Preferences.Current);
+            }
+            return Task.CompletedTask;
+        });
+    }
+
+    private const string UiPreferencesPersistenceKey = "user-ui-preferences-v1";
+    private PersistingComponentStateSubscription preferencesPersistingSubscription;
+
+    private Task SaveNavigationModeAsync(AppShellNavigationMode mode) =>
+        Preferences.UpdateAsync(new(MainMenuCollapsed: mode == AppShellNavigationMode.Collapsed));
 
     private async Task InitializeLayoutAsync() {
         if (layoutInitializationBusy) {
@@ -223,15 +244,16 @@ public partial class MainLayout
         Workbench.Changed -= HandleWorkbenchChanged;
         DatabaseSwitchNotificationService.Changed -= HandleDatabaseSwitchChanged;
         CollaborationService.Changed -= HandleCollaborationChanged;
-        ThemeState.Changed -= HandleThemeStateChanged;
+        Preferences.Changed -= HandlePreferencesChanged;
         toolbarVisibilityPersistingSubscription.Dispose();
+        preferencesPersistingSubscription.Dispose();
         _ = ReleaseDatabaseSwitchListenerAsync();
         if (pendingLayoutWork == 0) {
             layoutLifetime.Dispose();
         }
     }
 
-    private void HandleThemeStateChanged()
+    private void HandlePreferencesChanged()
         => InvokeAsync(StateHasChanged);
 
 }

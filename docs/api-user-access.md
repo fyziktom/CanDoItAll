@@ -12,7 +12,7 @@ for example `Api__UserAuthentication__Enabled`.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `Api:UserAuthentication:Enabled` | `false` | Maps login, current-session and logout operations. |
+| `Api:UserAuthentication:Enabled` | `false` | Maps login, current-session, personal UI preferences and logout operations. |
 | `Api:AccessManagement:Enabled` | `false` | Independently maps account and token administration over HTTP. |
 | `Api:BootstrapAdmin:UserName` | `admin` | Reserved configured administrator name; never an ordinary account. |
 | `Api:BootstrapAdmin:PasswordHash` | empty | Required supported password hash when user authentication is enabled. No default password. |
@@ -74,6 +74,21 @@ registered bearer token, expiry and safe session identity. `GET /api/access/me` 
 identity; `POST /api/access/logout` revokes just the current session and returns 204.
 There are no refresh tokens: authenticate again after expiry. Do not persist passwords in
 browser storage. Token-bearing responses and access operations use `Cache-Control: no-store`.
+
+`GET /api/access/preferences` reads the current registered account's UI preferences.
+`PATCH /api/access/preferences` merges the supplied `theme` (0 Light, 1 Dark) and
+`mainMenuCollapsed` fields; omitted or null fields retain their saved values. New accounts
+default to Light and a minimized main menu. These self operations need no business grants,
+reject machine credentials and caller-selected account identifiers, and remain available
+when HTTP account administration is disabled.
+
+Preferences are stored privately under the control-plane root, separately from credentials
+and active workspace databases. They follow the stable account GUID across browsers and
+devices; renaming an account retains them, while deleting and recreating a username does
+not transfer them. The configured administrator has its own separate preference identity.
+Concurrent patches retain unrelated fields. Invalid or unavailable stored preferences fail
+explicitly instead of being replaced with defaults. Anonymous browser preferences are
+separate and do not become the synthetic local operator's shared account preferences.
 
 Send tokens only in the `Authorization: Bearer ...` header, including for event streams;
 query-string tokens are rejected. Keep credentials out of URLs and request logs. Production

@@ -12,7 +12,7 @@
         <aside class="@ResolveSidebarClass()"
                @ref="sidebarElement"
                data-testid="app-shell-sidebar"
-               data-navigation-mode="@navigationMode.ToString().ToLowerInvariant()">
+               data-navigation-mode="@EffectiveNavigationMode.ToString().ToLowerInvariant()">
             <div class="app-shell-sidebar__inner">
                 <div class="app-shell-sidebar__top">
                     @if (AllowNavigationExpansion)
@@ -21,6 +21,7 @@
                                 class="app-shell-toggle-button"
                                 aria-label="@ResolveNavigationToggleLabel()"
                                 aria-pressed="@IsNavigationExpanded"
+                                disabled="@NavigationModeBusy"
                                 data-testid="shell-navigation-toggle"
                                 @onclick="ToggleNavigationMode">
                             <Icon Name="@(IsNavigationExpanded ? "chevron_left" : "chevron_right")" />
@@ -401,7 +402,16 @@
     public AppShellMode Mode { get; set; } = AppShellMode.StandardPage;
 
     [Parameter]
-    public AppShellNavigationMode DefaultNavigationMode { get; set; } = AppShellNavigationMode.Expanded;
+    public AppShellNavigationMode DefaultNavigationMode { get; set; } = AppShellNavigationMode.Collapsed;
+
+    [Parameter]
+    public AppShellNavigationMode? NavigationMode { get; set; }
+
+    [Parameter]
+    public EventCallback<AppShellNavigationMode> NavigationModeChanged { get; set; }
+
+    [Parameter]
+    public bool NavigationModeBusy { get; set; }
 
     [Parameter]
     public bool AllowNavigationExpansion { get; set; } = true;
@@ -502,7 +512,9 @@
     [Parameter]
     public RenderFragment? BottomUtilities { get; set; }
 
-    private bool IsNavigationExpanded => navigationMode == AppShellNavigationMode.Expanded;
+    private AppShellNavigationMode EffectiveNavigationMode => NavigationMode ?? navigationMode;
+
+    private bool IsNavigationExpanded => EffectiveNavigationMode == AppShellNavigationMode.Expanded;
 
     private int NavigationRowCapacity => measuredNavigationRowCapacity
         ?? (IsNavigationExpanded ? ExpandedNavigationFallbackRowCapacity : CollapsedNavigationFallbackRowCapacity);
@@ -579,11 +591,20 @@
         return InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleNavigationMode()
-    {
-        navigationMode = IsNavigationExpanded
+    private async Task ToggleNavigationMode() {
+        if (NavigationModeBusy) {
+            return;
+        }
+
+        var nextMode = IsNavigationExpanded
             ? AppShellNavigationMode.Collapsed
             : AppShellNavigationMode.Expanded;
+
+        if (NavigationMode is null) {
+            navigationMode = nextMode;
+        }
+
+        await NavigationModeChanged.InvokeAsync(nextMode);
     }
 
     private string ResolveBodyRegionClass()

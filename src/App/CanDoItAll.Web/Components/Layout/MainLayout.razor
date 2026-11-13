@@ -25,11 +25,14 @@
 @inject ProjectsService ProjectsService
 @inject IConversationShellLauncher ConversationShellLauncher
 @inject IJSRuntime JS
-@inject AppThemeState ThemeState
+@inject CanDoItAll.Web.Infrastructure.UserUiPreferencesState Preferences
 @inject AppToolbarState ToolbarState
 
 <AppShell NavigationItems="@NavigationItems"
           Mode="ShellMode"
+          NavigationMode="@(Preferences.Current.MainMenuCollapsed ? AppShellNavigationMode.Collapsed : AppShellNavigationMode.Expanded)"
+          NavigationModeChanged="SaveNavigationModeAsync"
+          NavigationModeBusy="@(!((IUserUiPreferencesState)Preferences).CanEdit)"
           ShowRightRail="false"
           ShowTabSummary="@(ShellMode == AppShellMode.FocusWorkbench)"
           Workspaces="workspaces"
@@ -63,6 +66,17 @@
                                ActivateProfile="SwitchDatabaseProfileFromFlyoutAsync" />
     </BottomUtilities>
     <TopBar>
+        @if (Preferences.Failure != UserUiPreferencesFailure.None) {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="ui-preferences-failure">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="@(Preferences.Failure == UserUiPreferencesFailure.Load
+                        ? "Your theme and menu preferences could not be loaded. Retry when account or browser storage is available."
+                        : "Your preference change could not be confirmed. Reload preferences before trying again.")" />
+                    <Button Text="Reload preferences" Icon="refresh" Click="Preferences.RetryAsync"
+                            Disabled="Preferences.IsBusy" data-testid="ui-preferences-retry" />
+                </Stack>
+            </Alert>
+        }
         @if (layoutInitializationFailed) {
             <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="layout-initialization-failure">
                 <Stack GapScale="LayoutGap.Small">

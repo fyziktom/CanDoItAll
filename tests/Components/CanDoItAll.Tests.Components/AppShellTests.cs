@@ -17,6 +17,108 @@ public sealed class AppShellTests : BunitContext
     }
 
     [Fact]
+    public void Navigation_is_collapsed_by_default() {
+        var cut = Render<AppShell>();
+
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        Assert.Equal("Expand navigation", cut.Find("[data-testid='shell-navigation-toggle']").GetAttribute("aria-label"));
+    }
+
+    [Fact]
+    public async Task Uncontrolled_navigation_keeps_its_initial_default_and_toggles_locally() {
+        List<AppShellNavigationMode> changes = [];
+        var cut = Render<AppShell>(parameters => parameters
+            .Add(component => component.DefaultNavigationMode, AppShellNavigationMode.Expanded)
+            .Add(component => component.NavigationModeChanged, changes.Add));
+
+        cut.Render(parameters => parameters.Add(component => component.DefaultNavigationMode, AppShellNavigationMode.Collapsed));
+        Assert.Equal("expanded", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync());
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+
+        cut.Render(parameters => parameters.Add(component => component.DefaultNavigationMode, AppShellNavigationMode.Expanded));
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync());
+        Assert.Equal("expanded", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        Assert.Equal([AppShellNavigationMode.Collapsed, AppShellNavigationMode.Expanded], changes);
+    }
+
+    [Fact]
+    public async Task Controlled_navigation_awaits_the_callback_and_only_changes_with_owner_parameters() {
+        var entered = new TaskCompletionSource<AppShellNavigationMode>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        var cut = Render<AppShell>(parameters => parameters
+            .Add(component => component.NavigationMode, AppShellNavigationMode.Collapsed)
+            .Add(component => component.NavigationModeChanged, async nextMode => {
+                calls++;
+                entered.SetResult(nextMode);
+                await release.Task;
+            }));
+
+        var click = cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync());
+        try {
+            Assert.Equal(AppShellNavigationMode.Expanded, await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.False(click.IsCompleted);
+            Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        } finally {
+            release.TrySetResult();
+            await click;
+        }
+
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        cut.Render(parameters => parameters.Add(component => component.NavigationMode, AppShellNavigationMode.Expanded));
+        Assert.Equal("expanded", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        Assert.Equal("Collapse navigation", cut.Find("[data-testid='shell-navigation-toggle']").GetAttribute("aria-label"));
+
+        cut.Render(parameters => parameters.Add(component => component.NavigationMode, AppShellNavigationMode.Collapsed));
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task Failed_controlled_navigation_change_preserves_the_owner_state() {
+        var failure = new IOException("Preference write failed.");
+        var cut = Render<AppShell>(parameters => parameters
+            .Add(component => component.NavigationMode, AppShellNavigationMode.Expanded)
+            .Add(component => component.NavigationModeChanged, _ => Task.FromException(failure)));
+
+        var thrown = await Assert.ThrowsAsync<IOException>(() =>
+            cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync()));
+
+        Assert.Same(failure, thrown);
+        Assert.Equal("expanded", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+    }
+
+    [Fact]
+    public async Task Busy_navigation_preference_disables_only_its_toggle() {
+        var changes = 0;
+        string? destination = null;
+        var cut = Render<AppShell>(parameters => parameters
+            .Add(component => component.NavigationMode, AppShellNavigationMode.Collapsed)
+            .Add(component => component.NavigationModeBusy, true)
+            .Add(component => component.NavigationModeChanged, _ => changes++)
+            .Add(component => component.NavigationItems, ShellNavigation.Items)
+            .Add(component => component.Navigate, route => destination = route));
+
+        Assert.True(cut.Find("[data-testid='shell-navigation-toggle']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync());
+        Assert.Equal(0, changes);
+
+        Assert.False(cut.Find("[data-testid='shell-nav-dashboard']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shell-nav-dashboard']").ClickAsync());
+        Assert.Equal("/", destination);
+
+        cut.Render(parameters => parameters.Add(component => component.NavigationModeBusy, false));
+        Assert.False(cut.Find("[data-testid='shell-navigation-toggle']").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='shell-navigation-toggle']").ClickAsync());
+        Assert.Equal(1, changes);
+        Assert.Equal("collapsed", cut.Find("[data-testid='app-shell-sidebar']").GetAttribute("data-navigation-mode"));
+    }
+
+    [Fact]
     public void Renders_current_navigation_without_removed_module_items()
     {
         var cut = Render<AppShell>(parameters => parameters

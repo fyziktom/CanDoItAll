@@ -4,6 +4,8 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages.Components;
+using CanDoItAll.SharedKernel;
+using CanDoItAll.Web.Api;
 using CanDoItAll.Web.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -61,6 +63,8 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.JSInterop.SetupModule("./_content/CanDoItAll.Components.BaseLib/Components/Forms/NativeFormInspector.razor.js")
                 .Setup<CanDoItAll.Components.BaseLib.NativeFormValidity>("inspect", _ => true)
                 .SetResult(new(true));
+            context.JSInterop.Setup<UserUiPreferences>("CanDoItAll.appTheme.getPreferences", _ => true)
+                .SetResult(UserUiPreferences.Default);
             context.AddAuthorization();
             context.AddBunitPersistentComponentState();
             var configuration = TestApplicationBootstrap.BuildConfiguration(activeProfile, options?.ConfigurationOverrides);
@@ -73,7 +77,11 @@ internal sealed class ComponentTestHarness : IAsyncDisposable
             context.Services.AddSingleton<CanDoItAll.Editing.IEditingUiAccess>(new EditingUiTestAccess());
             context.Services.AddScoped<TuningCoordinator>();
             context.Services.AddScoped<AppToolbarState>();
-            context.Services.AddScoped<AppThemeState>();
+            context.Services.AddHttpContextAccessor();
+            context.Services.AddSingleton<IUserUiPreferencesStore, FileUserUiPreferencesStore>();
+            context.Services.AddScoped<UserUiPreferencesService>();
+            context.Services.AddScoped<UserUiPreferencesState>();
+            context.Services.AddScoped<IUserUiPreferencesState>(services => services.GetRequiredService<UserUiPreferencesState>());
             context.Services.AddHttpClient<DevelopmentManagerClient>();
             context.Services.AddSingleton<IProjectPendingSubmissionStore, ProjectPendingSubmissionTestStore>();
             context.Services.AddSingleton(services => (IProjectPendingReferenceStore)services.GetRequiredService<IProjectPendingSubmissionStore>());
