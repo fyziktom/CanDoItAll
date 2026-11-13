@@ -544,7 +544,7 @@
   }
 
   .app-shell-status-trigger {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-chrome-200 bg-chrome-50/85 text-chrome-500 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400;
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-chrome-200 shadow-sm transition hover:border-[var(--tone-info-solid-bg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tone-info-solid-bg)];
   }
 
   .app-shell-status-trigger > span {
@@ -560,7 +560,7 @@
   }
 
   .app-shell-status-popover__icon {
-    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--tone-info-soft-bg)] text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-status-panel .app-shell-status-popover__title {
@@ -643,7 +643,7 @@
   }
 
   .app-shell-pill--info {
-    @apply border-sky-200 bg-sky-50 text-sky-700;
+    @apply border-[var(--tone-info-soft-border)] bg-[var(--tone-info-soft-bg)] text-[var(--tone-info-soft-fg)];
   }
 
   .app-shell-stat-card {
