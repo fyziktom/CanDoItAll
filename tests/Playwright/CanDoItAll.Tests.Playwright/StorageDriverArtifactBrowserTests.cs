@@ -307,10 +307,14 @@ public sealed partial class AppSmokeTests
     {
         await OpenCanvasCreateComposerAsync(page, selector, "PDF", "add-file-pdf");
         await page.Locator(".cw-canvas-composer.is-dialog").WaitForAsync();
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__dropzone"));
         await page.Locator(".cw-canvas-composer__file-input").SetInputFilesAsync([uploadedFile]);
         await page.WaitForFunctionAsync("() => !!document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.trim()");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync(title);
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync(folder);
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync(notes);
         await page.WaitForFunctionAsync(
             @"() => {

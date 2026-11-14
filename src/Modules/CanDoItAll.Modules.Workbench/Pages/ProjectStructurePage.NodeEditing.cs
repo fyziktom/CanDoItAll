@@ -500,8 +500,8 @@ public partial class ProjectStructurePage
         var action = new CanvasWorkbenchAction
         {
             ActionId = $"edit:{definition.ActionId}",
-            Label = "Edit",
-            Description = $"Edit {ProjectStructureCanvasCatalog.ResolveNodeLabel(node).ToLowerInvariant()} settings.",
+            Label = $"Edit {ProjectStructureCanvasCatalog.ResolveNodeLabel(node).ToLowerInvariant()}",
+            Description = "Update the name and description. Open the relevant settings when you need to change them.",
             Icon = "draw",
             MenuLabel = "Edit",
             MenuSize = baseAction.MenuSize,

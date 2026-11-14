@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-13T23:17:14.406274+00:00",
+  "generated_utc": "2026-11-14T15:53:08.942025+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15826,
+  "allowance_count": 15824,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -62662,6 +62662,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.RichDefinitions.cs",
       "category": "absolute-path-field",
+      "source_fingerprint": "5f1cb8c33d63dede94cb4084143881a38049a7ecf36128c00ab6acdcddee95ea",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.RichDefinitions.cs",
+      "category": "absolute-path-field",
       "source_fingerprint": "8fa4ecfe0d2b4c342a3081dce691c49520836327083848f6a2ae72da906ae1ee",
       "count": 1
     },
@@ -62669,6 +62675,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.RichDefinitions.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a1e9dcf76f7d06ed01a1a333156026c8c9d3e08d1de88558495885560f9fde8f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.RichDefinitions.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "b7c5d9363eb8feeaae1956a45b511def3f44c21ee09754aab6992dbea857e32a",
       "count": 1
     },
     {
@@ -62975,24 +62987,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.cs",
       "category": "windows-executable",
       "source_fingerprint": "e3cdc0d748c0a1bca8ce93a60aab78e5b81f91c8da5f983f6897f344cea2a291",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.cs",
-      "category": "windows-path",
-      "source_fingerprint": "78a60c664008494e02e0bfc8757f787d6f68df605a15b3a481620f20506f6c46",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.cs",
-      "category": "windows-path",
-      "source_fingerprint": "9e94e6b1b2844858c37383b276ac170da8d9a3befe4b4df98e792cb6ee21de1e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/ProjectStructure/ProjectStructureCanvasCatalog.cs",
-      "category": "windows-path",
-      "source_fingerprint": "a5a6af87a29f0c26211fe7ce6a6c4a019c796ad55073ed28472fbe62165596a9",
       "count": 1
     },
     {
@@ -78716,12 +78710,6 @@
       "count": 1
     },
     {
-      "path": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
-      "category": "external-tool",
-      "source_fingerprint": "df417f28940217787279e730a2cee1ac42f45272450e0ed7a63d5f76a05e811e",
-      "count": 1
-    },
-    {
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/_Imports.razor",
       "category": "external-tool",
       "source_fingerprint": "2ceb00401c1e16e089a2a4f90793e04682869ce00888bbdd70c3ecd3669c9fca",
@@ -78892,12 +78880,6 @@
     {
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
       "category": "case-policy",
-      "source_fingerprint": "011373e61826411845ed9cc98ebd01448cda19016193755de4030d5053338204",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
-      "category": "case-policy",
       "source_fingerprint": "3abc9b8655656d8cbb6a8489dfe3672c8f3a592476cf6eadea000b028925bcff",
       "count": 1
     },
@@ -78917,6 +78899,12 @@
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
       "category": "case-policy",
       "source_fingerprint": "93c8e4dff968461b3b17b2d2494bc9f93f2c7296bc287c0c783ccdb70c20e6d3",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
+      "category": "case-policy",
+      "source_fingerprint": "c6cd91f75e195e4941a2715285e675543173403282ecf02c0759b06c6f05206d",
       "count": 1
     },
     {

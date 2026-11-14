@@ -31,8 +31,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
             await OpenContentToolboxAsync(fixture, projectId, "add-file-" + subtype);
             var form = fixture.Page.GetByTestId("project-structure-text-asset-create-content");
             await form.GetByTestId("project-structure-text-asset-title").FillAsync("WB4 " + subtype);
+            await form.GetByTestId("content-text-next").ClickAsync();
             await form.GetByTestId("project-structure-text-asset-file-name").FillAsync(fileName);
-            await form.GetByTestId("project-structure-text-asset-notes").FillAsync("Supplemental notes never replace file bytes.");
             if (subtype == "json") {
                 var before = await TreeAsync(fixture, projectId);
                 await form.GetByTestId("project-structure-text-asset-content").FillAsync("{ invalid JSON");
@@ -41,6 +41,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
                 Assert.Equal(before.Nodes.Count, (await TreeAsync(fixture, projectId)).Nodes.Count);
             }
             await form.GetByTestId("project-structure-text-asset-content").FillAsync(content);
+            await form.GetByTestId("content-text-next").ClickAsync();
+            await form.GetByTestId("project-structure-text-asset-notes").FillAsync("Supplemental notes never replace file bytes.");
             await form.GetByTestId("project-structure-text-asset-submit").FocusAsync();
             await fixture.Page.Keyboard.PressAsync("Enter");
             await Assertions.Expect(form).Not.ToBeVisibleAsync();
@@ -58,9 +60,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         }
         await OpenContentToolboxAsync(fixture, projectId, "add-file-text");
         var upload = fixture.Page.GetByTestId("project-structure-text-asset-create-content");
+        await upload.GetByTestId("project-structure-text-asset-title").FillAsync("WB4 uploaded bytes");
+        await upload.GetByTestId("content-text-next").ClickAsync();
         await upload.GetByTestId("project-structure-text-asset-source-upload").ClickAsync();
         var uploaded = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("Native upload\r\nŽluťoučký\r\n")).ToArray();
-        await upload.GetByTestId("project-structure-text-asset-title").FillAsync("WB4 uploaded bytes");
         await upload.GetByTestId("project-structure-text-asset-upload-input").SetInputFilesAsync(new FilePayload {
             Name = "upload.txt", MimeType = "text/plain", Buffer = uploaded
         });

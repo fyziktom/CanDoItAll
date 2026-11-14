@@ -17,6 +17,47 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructurePageTaskAssigneeCreationTests
 {
     [Fact]
+    public async Task Task_create_with_repository_completes_its_typed_link_without_relaxing_generic_attachment_policy() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var workbenchService = services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>(), TaskCreateEntryPoint.CreateActionInvoked);
+        var admission = Assert.IsType<ProjectWriteAdmission>(
+            await services.GetRequiredService<ProjectWriteAdmissionService>().CaptureAsync(projectId));
+        var repository = await workbenchService.CreateObjectAsync(projectId,
+            new ProjectObjectCreateRequest(ProjectObjectType.Repository, "Workshop reference workspace", string.Empty,
+                string.Empty, $"project:{projectId}", 120, 160) { ExpectedProjectAdmission = admission });
+        var dialogHost = harness.Context.Render<DialogHost>();
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, projectId));
+        var canvas = WaitForCanvasWorkbench(page);
+        var root = Assert.Single(canvas.Instance.Surface.Nodes, node => node.Id.StartsWith("project:", StringComparison.Ordinal));
+        var opening = InvokeTaskCreateAsync(page, canvas, TaskCreateEntryPoint.CreateActionInvoked, root);
+        try {
+            dialogHost.WaitForElement("[data-testid='project-structure-task-create-title']");
+            await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='project-structure-task-create-title']")
+                .InputAsync(new() { Value = "Prepare workshop" }));
+            await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='project-structure-task-create-repository']")
+                .ChangeAsync(new() { Value = repository.Id }));
+            await dialogHost.InvokeAsync(() => dialogHost.Find("[data-testid='project-structure-task-create-submit']")
+                .ClickAsync(new()));
+            await opening.WaitAsync(TimeSpan.FromSeconds(20));
+            Assert.Empty(dialogHost.FindAll("[data-testid='project-structure-task-create-dialog']"));
+
+            var surface = await workbenchService.GetStructureAsync(projectId);
+            var task = Assert.Single(surface.Nodes, node => node.Title == "Prepare workshop");
+            Assert.Equal(repository.Id, $"custom:{task.NodeReferences?.WorkItemRepositoryResourceId:N}");
+            Assert.Single(surface.Links, link => link.SourceId == task.Id && link.TargetId == repository.Id &&
+                link.Kind == ProjectObjectLinkKind.Uses);
+            var rejected = await Assert.ThrowsAsync<ProjectStructureAgentException>(() => workbenchService.LinkObjectsAsync(
+                projectId, task.Id, repository.Id, ProjectObjectLinkKind.Uses, expectedProjectAdmission: admission));
+            Assert.Equal(ProjectStructureCanonicalTaskMutationPolicy.ErrorCode, rejected.ErrorCode);
+        } finally {
+            await dialogHost.InvokeAsync(() => services.GetRequiredService<DialogService>().Close());
+            await opening.WaitAsync(TimeSpan.FromSeconds(20));
+        }
+    }
+
+    [Fact]
     public async Task Locked_multi_assignment_edit_attaches_workflow_without_replacing_direct_assignments()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
