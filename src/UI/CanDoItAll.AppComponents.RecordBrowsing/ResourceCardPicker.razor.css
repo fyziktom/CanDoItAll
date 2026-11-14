@@ -83,7 +83,7 @@
 
 .resource-card-picker__select:disabled {
     cursor: not-allowed;
-    opacity: 0.66;
+    color: var(--tone-text-muted);
 }
 
 .resource-card-picker__favorite {
@@ -120,7 +120,10 @@
 
 .resource-card-picker__favorite:disabled {
     cursor: not-allowed;
-    opacity: 0.62;
+}
+
+.resource-card-picker__favorite:disabled:not(.resource-card-picker__favorite--active) {
+    color: var(--tone-text-muted);
 }
 
 .resource-card-picker__identity {

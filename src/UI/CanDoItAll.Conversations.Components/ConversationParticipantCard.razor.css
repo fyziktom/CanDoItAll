@@ -26,7 +26,7 @@
 }
 
 .agent-selection-card--busy {
-    opacity: 0.82;
+    color: var(--tone-text-muted);
 }
 
 .agent-selection-card--compact {
@@ -152,7 +152,10 @@
 
 .agent-selection-card__favorite:disabled {
     cursor: not-allowed;
-    opacity: 0.62;
+}
+
+.agent-selection-card__favorite:disabled:not(.agent-selection-card__favorite--active) {
+    color: var(--tone-text-muted);
 }
 
 .agent-selection-card__identity {

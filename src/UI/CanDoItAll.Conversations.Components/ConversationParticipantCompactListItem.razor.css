@@ -25,7 +25,7 @@
 }
 
 .agent-compact-list-item--busy {
-    opacity: 0.82;
+    color: var(--tone-text-muted);
 }
 
 .agent-compact-list-item__select {

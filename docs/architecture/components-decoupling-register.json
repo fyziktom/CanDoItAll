@@ -6767,7 +6767,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
       "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
-      "sha256_lf": "14006e18f9e78b67cad48befa088641fa5e8d004b836e6a18da5570396c3ec2d",
+      "sha256_lf": "9a86ec04e8ee10b5f3c57e3bfd3d3896df8c6f1e8122340afaccef07f2fd4e0a",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -16677,7 +16677,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AdjunctSpecimen.razor",
       "path": "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/AdjunctSpecimen.razor",
-      "sha256_lf": "c4363de5c28f06f45e81dd82383ff1ddb561e8076f1e1e707541a0b070703d91",
+      "sha256_lf": "919ea7f1cc6e65629ff2bcec657a545328f7d7050ade2d6f2f72462a840d891b",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.AgentFramework.UiSandbox.Components.AdjunctSpecimen",
@@ -26332,7 +26332,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentImageAttachmentPicker.razor.css",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentImageAttachmentPicker.razor.css",
-      "sha256_lf": "8e04745b665dfa2c7892a05be2e6c86d26fd34ac540eb51ff534362254eb2a75",
+      "sha256_lf": "cb65dcf41e3fd4aee656c803595066b48e47e09ce572fca9fb1a839a41db1319",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -27790,7 +27790,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor.css",
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/PagedRecordBrowser.razor.css",
-      "sha256_lf": "4e2555a467e6a11560279c7df7f64c1c3f86fc02fab836c4e0e2ab9408cd867b",
+      "sha256_lf": "9ceeaf710d189fa0e47c1882b7a5575e7eb5082c95c5f9d8b98e9f91017828fa",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -27858,7 +27858,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/ResourceCardPicker.razor.css",
       "path": "src/UI/CanDoItAll.AppComponents.RecordBrowsing/ResourceCardPicker.razor.css",
-      "sha256_lf": "bbbaa2a7a0657c405229501b6fc57365336e957160d824e6db8768d9e558d165",
+      "sha256_lf": "bce8e0c75a52c94fbabd27386ab4ff6602f5d4ff1fcffca41237005c704d2ad9",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -29095,7 +29095,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationParticipantCard.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationParticipantCard.razor.css",
-      "sha256_lf": "01fe22b6b04cae59662fc3900a7dc072f3c42b5799403e8d2c2829a189fbcf28",
+      "sha256_lf": "5e54db0188f1311da392f63ceceb6a0aa71023dadc0e803f164564c6e316ecc7",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -29179,7 +29179,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationParticipantCompactListItem.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationParticipantCompactListItem.razor.css",
-      "sha256_lf": "7244d6f78fb84047cf0c22cb1d86b3f0a94a5390c02b867849572fa73cb2670c",
+      "sha256_lf": "6e82eaab767cf30cffc586656f4bbf2d51cb86cd41998ff398832a3d2b652c2a",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -34744,7 +34744,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Execution.UI/Processes/ProcessAssignmentDialog.razor.css",
-      "sha256_lf": "1554b9fc0f29c652e2f8f95c76bb9e1816bf832eec22a8e00596c86833ee861a",
+      "sha256_lf": "cbd5720360471f7474a7ad6a5ac587946e9bf1e82eca744e152b61476c145150",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35078,7 +35078,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ProjectManagerActivityDialog.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Reporting/ProjectManagerActivityDialog.razor.css",
-      "sha256_lf": "307853d3b01710677b370a9a3e385cf2ddd4e826648068c209c01ab6c1999190",
+      "sha256_lf": "2c8b3e9f034ed917a00bc7ff61d57073e762315edd7fb4ffbf134b8ea199f3f6",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35189,7 +35189,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureCanvasHealthWindow.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureCanvasHealthWindow.razor.css",
-      "sha256_lf": "ef1115f039bc423a57f2d7c4d9ccd7f7dbe5dc320ac4af22f24812e68d55a09d",
+      "sha256_lf": "a9c5b8b5a6713a20fa3029c4c1d71b71b3d925c8b6d4277bff2f6467a786b9c8",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35252,7 +35252,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureObjectIndexWindow.razor.css",
-      "sha256_lf": "0f872d070ec34c8ff78ae1502896558750723a8167369f547b5f6214c42d6e2e",
+      "sha256_lf": "72a7423d6718f5f7233ffa53f62793c6af881512af4855bedeb20f3c23fa939a",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35295,7 +35295,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureSelectionPanel.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureSelectionPanel.razor.css",
-      "sha256_lf": "a9abc08e3421ba7f8585fc94b8c4ebf8d61a2dff4dbfb58ec6ab93fb29e8941f",
+      "sha256_lf": "7fd215ce8337f98ab6b764fa778f1a63963b42d66b6d55c33c6a4b32eeec6e0b",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35337,7 +35337,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureSignalsWindow.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Insights.UI/Support/ProjectStructureSignalsWindow.razor.css",
-      "sha256_lf": "7b874d4c24394149bed14d35f8496055a14aa7ca831145bcdc7a01e7a34c7eef",
+      "sha256_lf": "52470137ee1da4e879b2dbb112f39ff75462a94f5923a4cb51518fa98beb42f5",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -36539,7 +36539,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceTransferDialog.razor",
       "path": "src/UI/CanDoItAll.Workspace.DataSources.UI/DataSourceTransferDialog.razor",
-      "sha256_lf": "05e55fa52be694dabaf593704fd9caacf61b5dd4ba290acb0bf7cbcace012579",
+      "sha256_lf": "d6d076bccf1a70655722102a3679366529b209b6ec7ca6c52ea499ee5a6d5318",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.DataSources.UI.DataSourceTransferDialog",

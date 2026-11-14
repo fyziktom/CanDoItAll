@@ -5,6 +5,8 @@
 @using CanDoItAll.AgentFramework.UI.Avatars
 @using CanDoItAll.AgentFramework.UI.Chat
 @using CanDoItAll.AgentFramework.UI.Runtime
+@using CanDoItAll.Conversations.Components
+@using CanDoItAll.Conversations.Components.Presentation
 @using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Agents runtime and conversation sandbox</PageTitle>
@@ -17,6 +19,8 @@
         <Button Text="Open log" Click="@(() => showLog = true)" data-testid="adjunct-open-log" />
         <Button Text="Close choices" Click="@(() => showClose = true)" data-testid="adjunct-open-close" />
         <Button Text="Second instance" Click="@(() => showSecond = !showSecond)" data-testid="adjunct-second" />
+        <CheckboxOption TValue="bool" @bind-Value="participantDisabled" Text="Participant busy / disabled" data-testid="adjunct-participant-disabled" />
+        <CheckboxOption TValue="bool" @bind-Value="attachmentDisabled" Text="Disable attachment" data-testid="adjunct-attachment-disabled" />
     </Cluster>
     <output data-testid="adjunct-intent" aria-live="polite">@intent</output>
     <SurfaceCard>
@@ -24,11 +28,19 @@
             <AgentActivitySurface State="@(new(new(Guid.Parse("ac100000-0000-4000-8000-000000000033")), scenario.ToString(), AdjunctSandboxFixture.Tone(scenario), "Projected activity remains separate from the saved run.", scenario == AdjunctScenario.Partial))" />
             <Cluster Gap="LayoutGap.Small">
                 <AgentChatActionsSurface State="actions" Intent="@(value => intent = $"Sample {value.Action} / {value.Origin.RunId}")" />
-                <AgentImageAttachmentPicker Generation="1" Selected="ReadAttachmentAsync" />
+                <AgentImageAttachmentPicker Generation="1" Disabled="attachmentDisabled" Selected="ReadAttachmentAsync" />
                 <AvatarPickerSurface Value="@avatar" ValueChanged="@(value => avatar = value)" EntityName="Owned sample" Operations="avatarOperations"
                                      Notice="@(value => intent = $"{value.Kind}: {value.Detail}")" />
             </Cluster>
         </AgentConversationContextSurface>
+        <Grid ColumnsLg="2" Gap="LayoutGap.Medium">
+            <ConversationParticipantCard Participant="Participant" ShellTestId="adjunct-participant-card" SelectTestId="adjunct-participant-select"
+                                         Selected="@(_ => intent = "Sample participant selected")"
+                                         FavoriteToggled="@(_ => intent = "Sample favorite toggled")" />
+            <ConversationParticipantCompactListItem Item="CompactParticipant"
+                                                    Selected="@(_ => intent = "Sample compact participant selected")"
+                                                    ActionRequested="@(_ => intent = "Sample history requested")" />
+        </Grid>
     </SurfaceCard>
     <AgentRuntimeDetailsSurface State="AdjunctSandboxFixture.Runtime(scenario)" />
     @if (showSecond) {
@@ -58,6 +70,18 @@
     private bool showLog;
     private bool showClose;
     private bool showSecond;
+    private bool participantDisabled;
+    private bool attachmentDisabled;
+    private static readonly ConversationPresentationKey ParticipantKey = new("adjunct-participant");
+    private static readonly ConversationPresentationKey HistoryActionKey = new("adjunct-history");
+    private ConversationParticipantPresentation Participant => new(ParticipantKey, "Review colleague",
+        subtitle: "Document reviewer", summary: "Reviews the original document and explains the result.",
+        avatarFallbackText: "RC", badges: [new(participantDisabled ? "Preparing" : "Ready", PresentationTone.Info)],
+        metadata: [new("Local fixture")], favorite: new(true, participantDisabled, "Mark favorite", "Remove favorite", "adjunct-participant-favorite"),
+        isSelected: true, isBusy: participantDisabled, isDisabled: participantDisabled);
+    private ConversationParticipantCompactItemPresentation CompactParticipant => new(Participant,
+        [new(HistoryActionKey, "Open history", "history", "adjunct-participant-history", participantDisabled)],
+        "adjunct-participant-compact", "adjunct-participant-compact-select");
     private readonly Guid secondRun = new("ac100000-0000-4000-8000-000000000034");
     private AgentConversationContextState context = new(new(Guid.NewGuid(), new(Guid.NewGuid()), Guid.NewGuid(), null, null),
         "Owned source A", true, false, "Following: source A / files", "Next turn: source B / document");

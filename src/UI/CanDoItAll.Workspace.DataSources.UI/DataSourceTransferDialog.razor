@@ -33,7 +33,7 @@
                             <p class="font-semibold">Target database schema needs attention</p>
                             <p>@targetSchemaHealth.Summary</p>
                             @if (HasSchemaDetails(targetSchemaHealth)) {
-                                <p class="text-xs opacity-80">@DescribeSchemaDetails(targetSchemaHealth)</p>
+                                <p class="text-xs">@DescribeSchemaDetails(targetSchemaHealth)</p>
                             }
                         </Stack>
 
@@ -64,7 +64,7 @@
                             <p class="font-semibold">Source database schema needs attention</p>
                             <p>@sourceSchemaHealth.Summary</p>
                             @if (HasSchemaDetails(sourceSchemaHealth)) {
-                                <p class="text-xs opacity-80">@DescribeSchemaDetails(sourceSchemaHealth)</p>
+                                <p class="text-xs">@DescribeSchemaDetails(sourceSchemaHealth)</p>
                             }
                         </Stack>
 

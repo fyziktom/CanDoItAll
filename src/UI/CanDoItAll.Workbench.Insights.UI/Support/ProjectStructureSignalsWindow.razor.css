@@ -45,7 +45,7 @@
 
 .project-structure-signals-window__section-copy p {
     margin: 0;
-    color: color-mix(in srgb, var(--tone-text-muted) 86%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.78rem;
     line-height: 1.4;
 }

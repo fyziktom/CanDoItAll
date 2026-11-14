@@ -141,7 +141,7 @@
 
 .paged-record-browser__select:disabled {
     cursor: not-allowed;
-    opacity: 0.66;
+    color: var(--tone-text-muted);
 }
 
 .paged-record-browser__content {

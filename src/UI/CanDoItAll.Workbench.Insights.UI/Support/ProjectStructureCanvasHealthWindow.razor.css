@@ -27,7 +27,7 @@
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__metric span {
     font-size: 0.76rem;
-    color: color-mix(in srgb, var(--tone-text-strong) 64%, transparent);
+    color: var(--tone-text-muted);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__metric strong {
@@ -40,7 +40,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--tone-text-strong) 58%, transparent);
+    color: var(--tone-text-muted);
 }
 
 .workbench-insights-health ::deep .project-structure-validation-overlay__spotlight ul {
@@ -48,7 +48,7 @@
     padding-left: 1rem;
     display: grid;
     gap: 0.25rem;
-    color: color-mix(in srgb, var(--tone-text-strong) 72%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.82rem;
 }
 

@@ -129,7 +129,7 @@
 
 .workbench-insights-selection ::deep .project-structure-quick-signal span,
 .workbench-insights-selection ::deep .project-structure-advanced-details__summary-copy small {
-    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -184,7 +184,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-action-band > span {
-    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -274,7 +274,7 @@
 }
 
 .workbench-insights-selection ::deep .project-structure-fact-row span {
-    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -292,7 +292,7 @@
     border: 1px solid var(--tone-border);
     border-radius: 0.95rem;
     background: color-mix(in srgb, var(--tone-surface-soft) 92%, transparent);
-    color: color-mix(in srgb, var(--tone-text-strong) 82%, transparent);
+    color: var(--tone-text);
     font-size: 0.78rem;
     line-height: 1.42;
 }
@@ -332,7 +332,7 @@
     border: 1px dashed var(--tone-border);
     border-radius: 1rem;
     background: linear-gradient(180deg, color-mix(in srgb, var(--tone-surface-soft) 96%, transparent), color-mix(in srgb, var(--tone-surface-soft) 94%, transparent));
-    color: color-mix(in srgb, var(--tone-text) 92%, transparent);
+    color: var(--tone-text);
     font-size: 0.88rem;
     line-height: 1.5;
 }

@@ -3384,7 +3384,7 @@
       cursor: not-allowed;
     }
     &:disabled {
-      opacity: 50%;
+      color: var(--tone-text-muted);
     }
   }
   .app-shell-db-flyout__recent-button + .app-shell-db-flyout__recent-button {
@@ -3922,7 +3922,7 @@
       cursor: wait;
     }
     &:disabled {
-      opacity: 50%;
+      color: var(--tone-text-muted);
     }
   }
   .app-tab-search {

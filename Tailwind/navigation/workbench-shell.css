@@ -488,7 +488,7 @@
   }
 
   .app-shell-db-flyout__recent-button {
-    @apply flex min-h-10 w-full items-center justify-between gap-2 bg-chrome-50 px-3 text-left text-sm font-medium text-chrome-700 transition hover:bg-chrome-50 hover:text-chrome-950 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex min-h-10 w-full items-center justify-between gap-2 bg-chrome-50 px-3 text-left text-sm font-medium text-chrome-700 transition hover:bg-chrome-50 hover:text-chrome-950 disabled:cursor-not-allowed disabled:text-(--tone-text-muted);
   }
 
   .app-shell-db-flyout__recent-button + .app-shell-db-flyout__recent-button {

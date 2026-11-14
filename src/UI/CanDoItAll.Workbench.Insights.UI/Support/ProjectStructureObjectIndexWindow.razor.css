@@ -56,7 +56,7 @@
     border: 1px dashed var(--tone-border);
     border-radius: 0.8rem;
     background: color-mix(in srgb, var(--tone-surface-soft) 86%, transparent);
-    color: color-mix(in srgb, var(--tone-text-muted) 90%, transparent);
+    color: var(--tone-text-muted);
     font-size: 0.86rem;
     font-weight: 650;
     text-align: center;
@@ -99,13 +99,13 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--tone-text-muted) 88%, transparent);
+    color: var(--tone-text-muted);
 }
 
 .project-structure-outline-context-menu__title {
     font-size: 0.88rem;
     font-weight: 700;
-    color: color-mix(in srgb, var(--tone-text-strong) 94%, transparent);
+    color: var(--tone-text-strong);
 }
 
 .project-structure-outline-context-menu__actions {
@@ -123,7 +123,7 @@
     border: 0;
     border-radius: 0.7rem;
     background: transparent;
-    color: color-mix(in srgb, var(--tone-text-strong) 88%, transparent);
+    color: var(--tone-text);
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;

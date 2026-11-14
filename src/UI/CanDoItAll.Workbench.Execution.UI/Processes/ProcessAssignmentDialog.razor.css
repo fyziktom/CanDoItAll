@@ -941,7 +941,7 @@
 
 button:disabled {
     cursor: not-allowed;
-    opacity: 0.55;
+    color: var(--tone-text-muted);
 }
 
 @media (max-width: 1280px) {
