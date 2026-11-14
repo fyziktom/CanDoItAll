@@ -126,6 +126,7 @@ public sealed class ProcessRendererTests {
         var second = b.FindComponents<CanvasFloatingWindow>().Select(c => c.Instance.WindowId).ToArray();
         Assert.NotEmpty(first);
         Assert.Empty(first.Intersect(second));
+        Assert.All(a.FindComponent<CanvasWorkbench>().Instance.Surface.Nodes, node => Assert.Empty(node.ToolbarActions));
         await a.InvokeAsync(a.Dispose);
         Assert.NotEmpty(b.FindComponents<CanvasFloatingWindow>());
     }

@@ -130,6 +130,7 @@
             foreach (var node in surface.Nodes) {
                 node.IsReadOnly = true;
                 node.ContextActions.Clear();
+                node.ToolbarActions.Clear();
             }
             return surface;
         }

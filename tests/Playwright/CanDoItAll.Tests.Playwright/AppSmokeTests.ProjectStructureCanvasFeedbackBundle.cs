@@ -190,16 +190,21 @@ public sealed partial class AppSmokeTests
         await EnsureCanvasSelectionAsync(page, SelectorForNodeId(copyRootId));
         await EnsureFloatingWindowExpandedAsync(page, "project-structure-selection-window");
         var copyRootState = await ReadWorkbenchNodeStateAsync(page, copyRootId);
-        Assert.Contains("copy-id", copyRootState.AnnotationActionIds);
-        Assert.Contains("copy-subtree-ids", copyRootState.AnnotationActionIds);
-        await CaptureLocatorAsync(
-            page.GetByTestId("project-structure-selection-window"),
-            Path.Combine(artifactsDir, "01-selection-copy-actions.png"));
+        Assert.DoesNotContain("copy-id", copyRootState.AnnotationActionIds);
+        Assert.DoesNotContain("copy-subtree-ids", copyRootState.AnnotationActionIds);
+        Assert.Contains("copy-id", copyRootState.ToolbarActionIds);
+        Assert.Contains("copy-subtree-ids", copyRootState.ToolbarActionIds);
 
-        await ClickSelectionWindowActionAsync(page, "Copy id");
+        await PressCanvasShortcutAsync(page, "Control+I");
         await WaitForCanvasClipboardTextAsync(page, copyRootId);
 
-        await ClickSelectionWindowActionAsync(page, "Copy tree ids");
+        await PressCanvasShortcutAsync(page, "Control+M");
+        var nodeToolbar = page.GetByRole(AriaRole.Toolbar, new() { Name = "Selected node actions", Exact = true });
+        await nodeToolbar.WaitForAsync();
+        await CaptureLocatorAsync(
+            nodeToolbar,
+            Path.Combine(artifactsDir, "01-selection-copy-actions.png"));
+        await nodeToolbar.GetByRole(AriaRole.Button, new() { Name = "Copy tree ids", Exact = true }).ClickAsync();
         await WaitForCanvasClipboardTextAsync(
             page,
             $"{BuildClipboardTreeEntry("router", "Network hub", copyRootId)}\n  {BuildClipboardTreeEntry("wifi", "Office WiFi", copyChildId)}\n    {BuildClipboardTreeEntry("task", "Survey AP layout", copyGrandchildId)}");
@@ -785,7 +790,8 @@ public sealed partial class AppSmokeTests
                     x: typeof node.x === 'number' ? node.x : 0,
                     y: typeof node.y === 'number' ? node.y : 0,
                     isInlineTextNode: !!node.isInlineTextNode,
-                    annotationActionIds: Array.isArray(node.annotations) ? node.annotations.map(annotation => annotation.actionId || '') : []
+                    annotationActionIds: Array.isArray(node.annotations) ? node.annotations.map(annotation => annotation.actionId || '') : [],
+                    toolbarActionIds: Array.isArray(node.toolbarActions) ? node.toolbarActions.map(action => action.actionId || '') : []
                 };
             }",
             nodeId);
@@ -924,6 +930,8 @@ public sealed partial class AppSmokeTests
         public bool IsInlineTextNode { get; set; }
 
         public string[] AnnotationActionIds { get; set; } = [];
+
+        public string[] ToolbarActionIds { get; set; } = [];
     }
 
     private sealed class CanvasNodeRenderedBoundsSnapshot

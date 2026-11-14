@@ -2022,7 +2022,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         {
             CanvasAuthoringMode.Dependency => "Dependency tool: drag normally to move nodes, or click a second node to say the selected node depends on it.",
             CanvasAuthoringMode.Delete => "Delete tool: hover a node or dependency arrow to highlight it, then click to delete. Connected branches may ask for confirmation.",
-            _ => "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions."
+            _ => "Click to select, Ctrl+M for node actions, Ctrl+I to copy the node id, Ctrl+Shift+click to multi-select, Alt-drag to marquee, and right-click for grouped actions."
         };
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()

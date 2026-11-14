@@ -1916,6 +1916,36 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
     }
 
     [Fact]
+    public async Task Node_toolbar_copy_commands_preserve_identifier_information_and_tree_payloads() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>(), "Node toolbar clipboard");
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var parent = await workbench.CreateObjectAsync(projectId,
+            new ProjectObjectCreateRequest(ProjectObjectType.Note, "Copy parent", string.Empty, "Parent notes",
+                $"project:{projectId}", 360, 180));
+        var child = await workbench.CreateObjectAsync(projectId,
+            new ProjectObjectCreateRequest(ProjectObjectType.Note, "Copy child", string.Empty, "Child notes",
+                parent.Id, 620, 180));
+        await SaveSelectedNodeStateAsync(workbench, projectId, parent.Id);
+        var rendered = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvas = WaitForCanvasWorkbench(rendered);
+        var node = canvas.Instance.Surface.Nodes.Single(candidate => candidate.Id == parent.Id);
+        var parentInfo = $"note_Copy-parent:{parent.Id[(parent.Id.IndexOf(':') + 1)..]}";
+        var childInfo = $"note_Copy-child:{child.Id[(child.Id.IndexOf(':') + 1)..]}";
+
+        foreach (var action in node.ToolbarActions.Where(action => action.ActionId != "delete")) {
+            await rendered.InvokeAsync(() => canvas.Instance.OnContextAction(parent.Id, action.ActionId, 0, 0));
+        }
+
+        var copied = harness.Context.JSInterop.Invocations["navigator.clipboard.writeText"]
+            .Select(invocation => Assert.IsType<string>(Assert.Single(invocation.Arguments))).ToArray();
+        Assert.Equal([parent.Id, parentInfo, $"{parentInfo}{Environment.NewLine}  {childInfo}"], copied);
+        var persisted = await workbench.GetStructureAsync(projectId);
+        Assert.Equal(parent.Id, persisted.Nodes.Single(candidate => candidate.Id == child.Id).ParentId);
+    }
+
+    [Fact]
     public async Task Clipboard_copy_and_paste_duplicates_normalized_forest_under_selected_destination_and_remains_reusable()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

@@ -14839,7 +14839,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "13305ed29e1c838f81c5dbe0a8c514f8b5ae662d724df75d4256b1dc36fafbbd",
+      "sha256_lf": "d1b7fb1bc8e8555fc33e1638b2bfcfea0b67112c6a85136459b5d328ffbab271",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -27581,7 +27581,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowTemplatePreviewDialog.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowTemplatePreviewDialog.razor",
-      "sha256_lf": "d77b93507bbca3e0ade924fdb552755fc69491e6d98b98e8f58f0baf4005ee68",
+      "sha256_lf": "a0d21e19ce15c52348133905233da80d44872020282ba153e4d31194960d9bbf",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI.WorkflowTemplatePreviewDialog",

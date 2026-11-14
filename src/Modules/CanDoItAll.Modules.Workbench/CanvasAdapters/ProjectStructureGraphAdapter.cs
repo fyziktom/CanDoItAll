@@ -148,6 +148,12 @@ public sealed class ProjectStructureGraphAdapter
         var isInlineTextNode = node.ObjectType == ProjectObjectType.Note && string.IsNullOrWhiteSpace(node.Subtitle);
         var progress = ResolveProgress(node);
         var leadPresentation = ProjectStructureNodeDescriptor.BuildLeadPresentation(node);
+        var contextActions = actionCatalog.BuildNodeContextActions(
+            node,
+            resolveRuntimeCapabilities?.Invoke(node),
+            canOpenInFileExplorer?.Invoke(node) == true,
+            canOpenInNewTab?.Invoke(node) == true,
+            CountSelectedContextTargets(node.Id, selectedNodeIds, selectedContextTargetCount)).ToList();
 
         return new CanvasWorkbenchNode
         {
@@ -201,13 +207,13 @@ public sealed class ProjectStructureGraphAdapter
             Y = node.Y,
             Chips = BuildHeaderChips(node),
             FooterChips = BuildFooterChips(node),
-            Annotations = ProjectStructureNodeAnnotationBuilder.Build(node).ToList(),
-            ContextActions = actionCatalog.BuildNodeContextActions(
-                node,
-                resolveRuntimeCapabilities?.Invoke(node),
-                canOpenInFileExplorer?.Invoke(node) == true,
-                canOpenInNewTab?.Invoke(node) == true,
-                CountSelectedContextTargets(node.Id, selectedNodeIds, selectedContextTargetCount)).ToList()
+            Annotations = ProjectStructureValidationOverlay.BuildNodeAnnotations(node).ToList(),
+            ContextActions = contextActions,
+            ToolbarActions = contextActions.Where(action => action.ActionId is
+                ProjectStructureActionCatalogAdapter.CopyIdentifierActionId or
+                ProjectStructureActionCatalogAdapter.CopyInformationActionId or
+                ProjectStructureActionCatalogAdapter.CopySubtreeIdentifiersActionId or
+                ProjectStructureActionCatalogAdapter.DeleteActionId).ToList()
         };
     }
 
