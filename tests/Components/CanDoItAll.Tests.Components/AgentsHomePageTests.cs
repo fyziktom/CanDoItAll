@@ -35,10 +35,11 @@ public sealed class AgentsHomePageTests
         var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo($"/agents?tab=simple-chats&simpleChatView=conversations&conversationId={original.ConversationId:D}");
         var cut = harness.Context.Render<AgentsHomePage>();
-        await cut.WaitForElement("[data-testid='llm-chat-prompt']", TimeSpan.FromSeconds(10)).InputAsync("Unsent parent tab draft");
+        cut.WaitForElement("[data-testid='llm-chat-prompt']", TimeSpan.FromSeconds(10));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chat-prompt']").InputAsync("Unsent parent tab draft"));
         var owner = cut.FindComponent<LlmChatConversationWorkspace>().Instance;
 
-        await FindTab(cut, "Providers").ClickAsync();
+        await cut.InvokeAsync(() => FindTab(cut, "Providers").ClickAsync());
 
         cut.WaitForAssertion(() => {
             Assert.Same(owner, cut.FindComponent<LlmChatConversationWorkspace>().Instance);
