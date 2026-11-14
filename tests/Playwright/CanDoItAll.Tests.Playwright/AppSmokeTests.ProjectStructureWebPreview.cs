@@ -95,8 +95,11 @@ public sealed partial class AppSmokeTests
         const string projectRootSelector = ".cw-node[data-node-id^='project:']";
         await OpenCanvasCreateComposerAsync(page, projectRootSelector, "Link", "add-link");
         await page.WaitForSelectorAsync("text=Address");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync(title);
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync(url);
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync(notes);
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         await WaitForSceneNodeTitleAsync(page, title, selectedOnly: true, timeoutMs: 15_000);

@@ -16,162 +16,252 @@
                             ApplyLocal="ApplyComparison" ResourceOptions="ResourceOptions" IsSaving="submissionState.IsBusy"
                             CanAccept="submissionState.CanAcceptComparison" Changed="ComparisonChanged" />
     <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" inert="@(submissionState.IsBusy || comparison?.BlocksInput == true ? string.Empty : null)">
-    @if (ResourceWarnings.Count > 0)
-    {
-        <Alert AlertStyle="AlertStyle.Warning"
-               data-testid="project-structure-task-create-assignee-warning">
-            @string.Join(" ", ResourceWarnings)
-        </Alert>
-    }
+        @if (ResourceWarnings.Count > 0)
+        {
+            <Alert AlertStyle="AlertStyle.Warning"
+                   data-testid="project-structure-task-create-assignee-warning">
+                @string.Join(" ", ResourceWarnings)
+            </Alert>
+        }
 
-    @if (IsEditMode &&
-        !CanEditDirectAssignee &&
-        ResourceWarnings.Count == 0)
-    {
-        <Alert AlertStyle="AlertStyle.Warning"
-               data-testid="project-structure-task-edit-assignee-readonly">
-            This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved, and workflow or process definitions can be attached when available.
-        </Alert>
-    }
+        @if (IsEditMode &&
+            !CanEditDirectAssignee &&
+            ResourceWarnings.Count == 0)
+        {
+            <Alert AlertStyle="AlertStyle.Warning"
+                   data-testid="project-structure-task-edit-assignee-readonly">
+                This task has a direct-assignment set that cannot be safely changed as one assignee. Person and agent changes are disabled here so every assignment remains intact. Other task fields can still be saved, and workflow or process definitions can be attached when available.
+            </Alert>
+        }
 
-    <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
-          Gap="LayoutGap.Medium"
-          Class="project-structure-task-create-dialog__grid">
-        <FormField Text="Task title"
-                   Class="project-structure-task-create-dialog__wide-field">
-            <TextInput Value="@title"
-                     ValueChanged="HandleTitleChangedAsync"
-                     Placeholder="Describe the task"
-                     Immediate="true"
-                     data-testid="project-structure-task-create-title" />
-        </FormField>
+        @if (!IsEditMode) {
+            <Steps Value="@((int)activeStep)" ValueChanged="ChangeStep" NavigationDisabled="@(submissionState.IsBusy || comparison?.BlocksInput == true)"
+                   data-testid="project-structure-task-steps">
+                <StepsItem Text="Basics" />
+                <StepsItem Text="Planning (optional)" />
+                <StepsItem Text="Assignment (optional)" />
+            </Steps>
+            <TextBlock TextStyle="TextStyle.Note" Value="Start with a name and notes. Planning and assignment are optional; create the task whenever it is ready." />
+        }
 
-        <FormField Text="Status lane">
-            <TextInput Value="@subtitle"
-                     ValueChanged="HandleSubtitleChangedAsync"
-                     Placeholder="Sprint, phase, or owner"
-                     Immediate="true"
-                     data-testid="project-structure-task-create-subtitle" />
-        </FormField>
+        <section class="project-structure-task-create-dialog__section"
+                 hidden="@(!IsEditMode && activeStep != TaskEditorStep.Basics)"
+                 data-testid="project-structure-task-basics-section">
+            <Grid ColumnTemplate="repeat(2,minmax(0,1fr))"
+                  Gap="LayoutGap.Medium"
+                  Class="project-structure-task-create-dialog__grid">
+                <FormField Text="Task title"
+                           Class="project-structure-task-create-dialog__wide-field">
+                    <TextInput Value="@title"
+                             ValueChanged="HandleTitleChangedAsync"
+                             Placeholder="Describe the task"
+                             Immediate="true"
+                             autofocus="true"
+                             data-testid="project-structure-task-create-title" />
+                </FormField>
 
-        <FormField Text="Due (UTC)">
-            <input type="text" placeholder="yyyy-MM-ddTHH:mm"
-                   class="form-input ui-input ui-input--outlined"
-                   value="@dueText"
-                   aria-label="Task due date in UTC"
-                   data-testid="project-structure-task-create-due"
-                   @oninput="HandleDueChanged" @onchange="HandleDueChanged" />
-        </FormField>
+                <FormField Text="Context">
+                    <TextInput Value="@subtitle"
+                             ValueChanged="HandleSubtitleChangedAsync"
+                             Placeholder="Phase, topic, or owner"
+                             Immediate="true"
+                             data-testid="project-structure-task-create-subtitle" />
+                </FormField>
 
-        <FormField Text="Repository">
-            <SelectInput TValue="string"
-                      Value="@repositoryNodeId"
-                      ValueChanged="HandleRepositoryChangedAsync"
-                      data-testid="project-structure-task-create-repository">
-    <option value="">Optional repository</option>
-    @foreach (var option in RepositoryOptions) {
-        <option value="@option.Value">@option.Label</option>
-    }
-</SelectInput>
-        </FormField>
+                <FormField Text="Notes"
+                           Class="project-structure-task-create-dialog__wide-field">
+                    <TextAreaInput Value="@notes"
+                              ValueChanged="HandleNotesChangedAsync"
+                              Placeholder="Definition of done or context"
+                              Rows="4"
+                              Immediate="true"
+                              data-testid="project-structure-task-create-notes" />
+                </FormField>
+            </Grid>
+        </section>
 
-        <FormField Text="Notes"
-                   Class="project-structure-task-create-dialog__wide-field">
-            <TextAreaInput Value="@notes"
-                      ValueChanged="HandleNotesChangedAsync"
-                      Placeholder="Definition of done or context"
-                      Rows="4"
-                      Immediate="true"
-                      data-testid="project-structure-task-create-notes" />
-        </FormField>
-    </Grid>
+        <details class="project-structure-task-create-dialog__section"
+                 open="@(!IsEditMode || planningExpanded)"
+                 hidden="@(!IsEditMode && activeStep != TaskEditorStep.Planning)"
+                 data-testid="project-structure-task-planning-section">
+            <summary hidden="@(!IsEditMode)" @onclick="TogglePlanning" @onclick:preventDefault="true">@PlanningSummary</summary>
+            <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                <TextBlock TextStyle="TextStyle.Note" Value="Add a due date or estimates when useful. These details can be changed later." />
+                <FormField Text="Due (UTC)">
+                    <input type="text" placeholder="yyyy-MM-ddTHH:mm"
+                           class="form-input ui-input ui-input--outlined"
+                           value="@dueText"
+                           aria-label="Task due date in UTC"
+                           data-testid="project-structure-task-create-due"
+                           @oninput="HandleDueChanged" @onchange="HandleDueChanged" />
+                </FormField>
 
-    <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
-                                        Value="@estimate"
-                                        ValueChanged="HandleEstimateChangedAsync"
-                                        InputChanged="EstimateInputChanged" InitialInput="initialEstimateInput"
-                                        DefaultCurrencyCode="@DefaultCurrencyCode"
-                                        ExpectedCostReadOnly="@(!ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(execution.State))"
-                                        DataTestId="project-structure-task-create-estimate" />
+                <ProjectStructureTaskEstimateEditor @ref="estimateEditor"
+                                                    Value="@estimate"
+                                                    ValueChanged="HandleEstimateChangedAsync"
+                                                    InputChanged="EstimateInputChanged" InitialInput="initialEstimateInput"
+                                                    DefaultCurrencyCode="@DefaultCurrencyCode"
+                                                    ExpectedCostReadOnly="@(!ProjectTaskExecutionStatePolicy.AllowsAuthoritativeRepricing(execution.State))"
+                                                    DataTestId="project-structure-task-create-estimate" />
 
-    @if (IsEditMode)
-    {
-        <ProjectStructureTaskExecutionEditor @ref="executionEditor"
-                                             Value="@execution"
-                                             ValueChanged="HandleExecutionChangedAsync"
-                                             DataTestId="project-structure-task-edit-execution" />
-    }
+                <details class="project-structure-task-create-dialog__section"
+                         open="@executionExpanded" data-testid="project-structure-task-execution-section">
+                    <summary @onclick="ToggleExecution" @onclick:preventDefault="true">@(IsEditMode ? "Repository and execution (optional)" : "Repository (optional)")</summary>
+                    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch">
+                        @if (IsEditMode) {
+                            <TextBlock TextStyle="TextStyle.Body2" Value="@($"Repository: {RepositoryLabel}")"
+                                       data-testid="project-structure-task-repository-current" />
+                            <TextBlock TextStyle="TextStyle.Note" Value="The repository link is set when the task is created." />
+                        } else {
+                            <FormField Text="Repository">
+                                <SelectInput TValue="string"
+                                             Value="@repositoryNodeId"
+                                             ValueChanged="HandleRepositoryChangedAsync"
+                                             data-testid="project-structure-task-create-repository">
+                                    <option value="">Optional repository</option>
+                                    @foreach (var option in RepositoryOptions) {
+                                        <option value="@option.Value">@option.Label</option>
+                                    }
+                                </SelectInput>
+                            </FormField>
+                        }
+                        @if (IsEditMode)
+                        {
+                            <ProjectStructureTaskExecutionEditor @ref="executionEditor"
+                                                                 Value="@execution"
+                                                                 ValueChanged="HandleExecutionChangedAsync"
+                                                                 DataTestId="project-structure-task-edit-execution" />
+                        }
 
-    <Stack GapScale="LayoutGap.Small"
-           AlignItems="AlignItems.Stretch">
-        <Cluster Gap="LayoutGap.Small"
-                 AlignItems="AlignItems.Center"
-                 JustifyContent="JustifyContent.SpaceBetween"
-                 Wrap="FlexWrap.Wrap">
-            <Stack GapScale="LayoutGap.XSmall">
-                <TextBlock TextStyle="TextStyle.Subtitle2"
-                           Value="@(IsEditMode ? "Optional task resource" : "Optional person or agent")" />
-                <TextBlock TextStyle="TextStyle.Note"
-                           Value="@(IsEditMode
-                               ? "Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee."
-                               : "The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created.")" />
+                    </Stack>
+                </details>
             </Stack>
-            @if (CanClearSelectedResource)
-            {
-                <Button Text="Clear selection"
-                        Icon="close"
-                        Size="ButtonSize.Small"
-                        Variant="Variant.Text"
-                        Tone="ButtonTone.Default"
-                        data-testid="project-structure-task-create-assignee-clear"
-                        Click="ClearResourceAsync" />
-            }
-        </Cluster>
+        </details>
 
-        <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
-                                            SelectedResource="@selectedResource"
-                                            SelectionChanged="SelectResourceAsync"
-                                            AllowedKinds="@SelectableResourceKinds"
-                                            SearchPlaceholder="@(IsEditMode
-                                                ? "Search people, agents, workflows, and processes"
-                                                : "Search CRM people and synchronized agents")"
-                                            EmptyEyebrow="@(IsEditMode ? "No resources" : "No assignees")"
-                                            EmptyTitle="@(IsEditMode
-                                                ? "No task resources match the current filters"
-                                                : "No people or agents match the current filters")"
-                                            EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
-                                            OptionTestIdPrefix="project-structure-task-create-assignee"
-                                            DataTestId="project-structure-task-create-assignee-picker" />
+        <details class="project-structure-task-create-dialog__section"
+                 open="@(!IsEditMode || assignmentExpanded)"
+                 hidden="@(!IsEditMode && activeStep != TaskEditorStep.Assignment)"
+                 data-testid="project-structure-task-assignment-section">
+            <summary hidden="@(!IsEditMode)" @onclick="ToggleAssignment" @onclick:preventDefault="true">@AssignmentSummary</summary>
 
-        <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
-                                                   ProjectId="@ProjectId"
-                                                   Context="@QuoteContext"
-                                                   SelectedResource="@selectedResource"
-                                                   Estimate="@estimate"
-                                                   EstimateChanged="HandleEstimateChangedAsync"
-                                                   InputRevision="estimateInputRevision" InputIsValid="estimateInputValid"
-                                                   ExecutionState="@execution.State"
-                                                   QuoteResolver="@QuoteResolver"
-                                                   DataTestId="project-structure-task-create-resource-cost" />
-    </Stack>
+            <Stack GapScale="LayoutGap.Small"
+                   AlignItems="AlignItems.Stretch">
+                <Cluster Gap="LayoutGap.Small"
+                         AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.SpaceBetween"
+                         Wrap="FlexWrap.Wrap">
+                    <Stack GapScale="LayoutGap.XSmall">
+                        <TextBlock TextStyle="TextStyle.Subtitle2"
+                                   Value="@(IsEditMode ? "Optional task resource" : "Optional person or agent")" />
+                        <TextBlock TextStyle="TextStyle.Note"
+                                   Value="@(IsEditMode
+                                       ? "Choose a person or agent as the direct assignee, or attach a workflow or process definition. Definition resources are additive and do not replace the assignee."
+                                       : "The selected CRM person or synchronized AI agent is assigned directly to this task. No child node is created.")" />
+                    </Stack>
+                    @if (CanClearSelectedResource)
+                    {
+                        <Button Text="Clear selection"
+                                Icon="close"
+                                Size="ButtonSize.Small"
+                                Variant="Variant.Text"
+                                Tone="ButtonTone.Default"
+                                data-testid="project-structure-task-create-assignee-clear"
+                                Click="ClearResourceAsync" />
+                    }
+                </Cluster>
 
-    @if (!string.IsNullOrWhiteSpace(validationError))
-    {
-        <Alert AlertStyle="AlertStyle.Danger"
-               data-testid="project-structure-task-create-validation-error">
-            @validationError
-        </Alert>
-    }
+                <ProjectStructureTaskResourcePicker Options="@ResourceOptions"
+                                                    SelectedResource="@selectedResource"
+                                                    SelectionChanged="SelectResourceAsync"
+                                                    AllowedKinds="@SelectableResourceKinds"
+                                                    SearchPlaceholder="@(IsEditMode
+                                                        ? "Search people, agents, workflows, and processes"
+                                                        : "Search CRM people and synchronized agents")"
+                                                    EmptyEyebrow="@(IsEditMode ? "No resources" : "No assignees")"
+                                                    EmptyTitle="@(IsEditMode
+                                                        ? "No task resources match the current filters"
+                                                        : "No people or agents match the current filters")"
+                                                    EmptyDescription="Change the resource-type filters, clear the search, or save without selecting a resource."
+                                                    OptionTestIdPrefix="project-structure-task-create-assignee"
+                                                    DataTestId="project-structure-task-create-assignee-picker" />
+
+                <ProjectStructureTaskResourceCostEstimator @ref="costEstimator"
+                                                           ProjectId="@ProjectId"
+                                                           Context="@QuoteContext"
+                                                           SelectedResource="@selectedResource"
+                                                           Estimate="@estimate"
+                                                           EstimateChanged="HandleEstimateChangedAsync"
+                                                           InputRevision="estimateInputRevision" InputIsValid="estimateInputValid"
+                                                           ExecutionState="@execution.State"
+                                                           QuoteResolver="@QuoteResolver"
+                                                           DataTestId="project-structure-task-create-resource-cost" />
+            </Stack>
+
+        </details>
+
+        @if (!IsEditMode) {
+            <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+                <Button Text="Back" Icon="arrow_back" Variant="Variant.Text" Tone="ButtonTone.Default"
+                        Disabled="@(activeStep == TaskEditorStep.Basics)"
+                        data-testid="project-structure-task-step-back" Click="PreviousStep" />
+                @if (activeStep != TaskEditorStep.Assignment) {
+                    <Button Text="@(activeStep == TaskEditorStep.Basics ? "Next: planning" : "Next: assignment")"
+                            Icon="arrow_forward" Variant="Variant.Outlined" Tone="ButtonTone.Default"
+                            data-testid="project-structure-task-step-next" Click="NextStep" />
+                }
+            </Cluster>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(validationError))
+        {
+            <Alert AlertStyle="AlertStyle.Danger"
+                   data-testid="project-structure-task-create-validation-error">
+                @validationError
+            </Alert>
+        }
 
     </Stack>
 
     <PlanningTaskFormActions Result="@submissionState.Result" IsBusy="@submissionState.IsBusy" IsEditMode="@IsEditMode"
-                             SubmitBlocked="@(comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false })"
+                             SubmitBlocked="@(comparison?.BlocksInput == true || ComparisonOwner is { IsActive: false } || (!IsEditMode && string.IsNullOrWhiteSpace(title)))"
                              TestIdPrefix="project-structure-task-create" Submitted="SubmitAsync" Cancelled="Cancelled"
                              Readback="@(Readback is null ? default : EventCallback.Factory.Create(this, ReadbackAsync))" />
 </Stack>
 
 @code {
+    private enum TaskEditorStep { Basics, Planning, Assignment }
+    private TaskEditorStep activeStep;
+    private bool planningExpanded;
+    private bool executionExpanded;
+    private bool assignmentExpanded;
+
+    private string PlanningSummary => !string.IsNullOrWhiteSpace(dueText) || estimate.ExpectedEffortHours.HasValue || estimate.ExpectedCostAmount.HasValue
+        ? "Planning · schedule or estimate set" : "Planning (optional)";
+    private string AssignmentSummary => selectedResource is { } resource
+        ? $"Assignment · {resource.Kind}" : !CanEditDirectAssignee ? "Assignment · existing assignments retained" : "Assignment (optional)";
+    private string RepositoryLabel => string.IsNullOrWhiteSpace(repositoryNodeId) ? "Not linked"
+        : RepositoryOptions.FirstOrDefault(option => string.Equals(option.Value, repositoryNodeId, StringComparison.Ordinal))?.Label
+            ?? "Linked repository unavailable";
+
+    private void ChangeStep(int value) {
+        if (Enum.IsDefined(typeof(TaskEditorStep), value)) {
+            ShowStep((TaskEditorStep)value);
+        }
+    }
+
+    private void ShowStep(TaskEditorStep step) {
+        activeStep = step;
+        if (step == TaskEditorStep.Planning) {
+            planningExpanded = true;
+        }
+    }
+
+    private void PreviousStep() => ShowStep(activeStep == TaskEditorStep.Assignment ? TaskEditorStep.Planning : TaskEditorStep.Basics);
+    private void NextStep() => ShowStep(activeStep == TaskEditorStep.Basics ? TaskEditorStep.Planning : TaskEditorStep.Assignment);
+    private void TogglePlanning() => planningExpanded = !planningExpanded;
+    private void ToggleExecution() => executionExpanded = !executionExpanded;
+    private void ToggleAssignment() => assignmentExpanded = !assignmentExpanded;
+
     private readonly TaskEditorSubmissionState submissionState = new();
     private PlanningTaskLeaveGuard? leaveGuard;
     private PlanningTaskEditorInput? initialInput;
@@ -270,7 +360,7 @@
         "workItemKind",
         "assigneeRef",
         ProjectTaskInputKeys.DueUtc,
-        "repositoryRef",
+        ProjectTaskInputKeys.RepositoryRef,
         ProjectTaskEstimateInputKeys.ExpectedEffortValue,
         ProjectTaskEstimateInputKeys.ExpectedEffortUnit,
         ProjectTaskEstimateInputKeys.ExpectedCostAmount,
@@ -365,7 +455,7 @@
         var inputValues = CreateRequest.InputValues ?? [];
         estimate = ResolveEstimate(inputValues);
         repositoryNodeId = inputValues
-            .LastOrDefault(value => string.Equals(value.Key, "repositoryRef", StringComparison.OrdinalIgnoreCase))
+            .LastOrDefault(value => string.Equals(value.Key, ProjectTaskInputKeys.RepositoryRef, StringComparison.OrdinalIgnoreCase))
             ?.Value;
         var dueValue = inputValues
             .LastOrDefault(value => string.Equals(value.Key, ProjectTaskInputKeys.DueUtc, StringComparison.OrdinalIgnoreCase))
@@ -417,6 +507,7 @@
         if (!TryParseUtc(text, out var parsedDue))
         {
             validationError = "Enter a valid UTC due date and time.";
+            ShowStep(TaskEditorStep.Planning);
             return;
         }
 
@@ -547,6 +638,7 @@
         }
         if (!string.IsNullOrWhiteSpace(dueText) && !TryParseUtc(dueText, out _)) {
             validationError = "Enter a valid UTC due date and time.";
+            ShowStep(TaskEditorStep.Planning);
             return;
         }
         dueUtc = string.IsNullOrWhiteSpace(dueText) ? null : DateTimeOffset.Parse(dueText,
@@ -555,24 +647,28 @@
         if (normalizedTitle.Length == 0)
         {
             validationError = "Task title is required.";
+            ShowStep(TaskEditorStep.Basics);
             return;
         }
 
         if (normalizedTitle.Length > 200)
         {
             validationError = "Task title cannot exceed 200 characters.";
+            ShowStep(TaskEditorStep.Basics);
             return;
         }
 
         if (estimateEditor is null)
         {
             validationError = "Task estimate details are not ready.";
+            ShowStep(TaskEditorStep.Planning);
             return;
         }
 
         if (!estimateEditor.TryGetValue(out estimate, out var estimateError))
         {
             validationError = estimateError;
+            ShowStep(TaskEditorStep.Planning);
             return;
         }
 
@@ -585,6 +681,8 @@
                 validationError = string.IsNullOrWhiteSpace(executionError)
                     ? "The task execution state is not ready."
                     : executionError;
+                ShowStep(TaskEditorStep.Planning);
+                executionExpanded = true;
                 return;
             }
         }
@@ -603,7 +701,7 @@
             Value = "task"
         });
         inputValues.Add(new CanvasWorkbenchInputValue { Key = ProjectTaskInputKeys.DueUtc, Value = dueUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty });
-        AddInputValue(inputValues, "repositoryRef", repositoryNodeId);
+        AddInputValue(inputValues, ProjectTaskInputKeys.RepositoryRef, repositoryNodeId);
         AddEstimateInputValues(inputValues, estimate);
 
         var result = new ProjectStructureTaskDialogResult(

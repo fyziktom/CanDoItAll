@@ -30,6 +30,7 @@ internal sealed record ProjectStructureCreateLeafDefinition(
 
 internal static partial class ProjectStructureCanvasCatalog
 {
+    internal const string GroupActionId = "add-group";
     internal const string GenerateImageAssetActionId = "generate-image-asset";
     internal const string WorkTaskActionId = ProjectStructureTaskActionIds.Create;
     internal const string ImageProviderProfileFieldKey = "imageProviderProfileId";
@@ -40,9 +41,9 @@ internal static partial class ProjectStructureCanvasCatalog
 
     private static readonly IReadOnlyList<CanvasWorkbenchInputField> DeliveryTargetRootFields =
     [
-        Field("outputRoot", "Output root", "text", @"C:\repositories\CanDoItAll\output\App"),
-        Field("targetRoot", "Target root", "text", @"C:\repositories\CanDoItAll\output\App"),
-        Field("repositoryRoot", "Repository root", "text", @"C:\repositories\CanDoItAll")
+        FileLocationField("outputRoot", "Output folder", "Folder for files produced by this work"),
+        FileLocationField("targetRoot", "Delivery folder", "Folder where finished files are delivered"),
+        FileLocationField("repositoryRoot", "Repository folder", "Source repository, if this work uses one")
     ];
 
     private sealed record CreateGroupDefinition(
@@ -55,7 +56,7 @@ internal static partial class ProjectStructureCanvasCatalog
     private static readonly IReadOnlyDictionary<string, CreateGroupDefinition> CreateGroups =
         new Dictionary<string, CreateGroupDefinition>(StringComparer.OrdinalIgnoreCase)
         {
-            ["capture"] = new("capture", "Capture", "Fast notes and decisions that keep the mindmap moving.", "neutral", "note"),
+            ["capture"] = new("capture", "Capture", "Fast notes, groups, and decisions that keep the mindmap moving.", "neutral", "note"),
             ["planning"] = new("planning", "Planning", "Phases and milestones that shape delivery.", "primary", "plan"),
             ["blocks"] = new("blocks", "Blocks", "Typed project blocks for common planning and management areas.", "accent", "block"),
             ["meetings"] = new("meetings", "Meetings", "Meetings, recordings, and transcript flows stay explicit on the canvas.", "sky", "meeting"),
@@ -73,6 +74,7 @@ internal static partial class ProjectStructureCanvasCatalog
         List<ProjectStructureCreateLeafDefinition> definitions =
         [
             new("add-note", ProjectObjectType.Note, string.Empty, "capture", "Note", "Capture a lightweight note and keep the mindmap moving.", "note", "neutral", "New note", "Headline", "Name the note", "Context", "Optional context tag", "Text", "Write the note"),
+            new(GroupActionId, ProjectObjectType.ProjectBlock, string.Empty, "blocks", "Group", "Organize related notes and work without choosing a specialized block. Start with a name and add details later.", "folder", "primary", "New group", "Group name", "Meetings, ideas, suppliers...", "Context", "Optional owner or topic", "Description", "What belongs in this group"),
             new("add-decision", ProjectObjectType.Decision, string.Empty, "capture", "Decision", "Record a decision and its first rationale while you are still in the canvas.", "choice", "accent", "New decision", "Decision", "Name the decision", "Status", "Approved, draft, blocked...", "Rationale", "Why this decision exists"),
             new("add-phase", ProjectObjectType.Phase, string.Empty, "planning", "Phase", "Spin out a new phase branch from any point in the graph.", "phase", "primary", "New phase", "Phase", "Discovery", "Goal", "What this phase should achieve", "Focus", "Scope for this phase"),
             new("add-milestone", ProjectObjectType.Milestone, string.Empty, "planning", "Milestone", "Add a milestone node and capture the delivery target immediately.", "date", "warn", "New milestone", "Milestone", "Name the milestone", "Target", "Date or target window", "Outcome", "Describe the milestone outcome"),
@@ -86,7 +88,7 @@ internal static partial class ProjectStructureCanvasCatalog
             new("add-block-financial", ProjectObjectType.ProjectBlock, "financial", "blocks", "Financial block", "Track budget, commercial scope, and financial planning.", "money", "mint", "Financial block", "Block name", "Financial block", "Budget / owner", "Budget lane or owner", "Description", "Financial scope or constraints"),
             new("add-block-marketing", ProjectObjectType.ProjectBlock, "marketing", "blocks", "Marketing block", "Track positioning, launch support, and go-to-market work.", "market", "danger", "Marketing block", "Block name", "Marketing block", "Channel", "Audience or channel", "Description", "Marketing focus and deliverables"),
             new("add-block-operations", ProjectObjectType.ProjectBlock, "operations", "blocks", "Operations block", "Track operations, maintenance, and internal support work.", "ops", "primary", "Operations block", "Block name", "Operations block", "Owner", "Ops owner or team", "Description", "Operational scope and expectations"),
-            new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Track release readiness, rollout, and delivery coordination.", "ship", "warn", "Delivery block", "Block name", "Delivery block", "Release", "Target release or stream", "Description", "Delivery dependencies and outcome", false, string.Empty, "Drop a file here or choose one.", true, "Create", DeliveryTargetRootFields),
+            new("add-block-delivery", ProjectObjectType.ProjectBlock, "delivery", "blocks", "Delivery block", "Coordinate an outcome, handover, or delivery. File locations are optional and only needed when this work produces files.", "ship", "warn", "Delivery block", "Block name", "Client handover", "Outcome", "What will be delivered, and to whom", "Description", "Delivery scope, dependencies, and outcome", false, string.Empty, "Drop a file here or choose one.", true, "Create", DeliveryTargetRootFields),
             new("add-block-risk", ProjectObjectType.ProjectBlock, "risk", "blocks", "Risk block", "Track known risks, mitigations, and contingency work.", "risk", "danger", "Risk block", "Block name", "Risk block", "Severity", "High, medium, low...", "Description", "Risk details and mitigation"),
             new("add-block-compliance", ProjectObjectType.ProjectBlock, "compliance", "blocks", "Compliance block", "Track compliance, policy, audit, and governance requirements.", "audit", "danger", "Compliance block", "Block name", "Compliance block", "Framework", "ISO, SOC, policy...", "Description", "Compliance scope and evidence"),
             new("add-block-support", ProjectObjectType.ProjectBlock, "support", "blocks", "Support block", "Track enablement, support readiness, and handover work.", "support", "sky", "Support block", "Block name", "Support block", "Owner", "Support owner or queue", "Description", "Support coverage and handover notes"),
@@ -197,6 +199,7 @@ internal static partial class ProjectStructureCanvasCatalog
 
     public static IReadOnlyList<ProjectStructureMutationTypeOption> BuildNoteConversionOptions()
         => ResolveLeafDefinitions(
+                GroupActionId,
                 "add-decision",
                 "add-work-task",
                 "add-work-issue",
@@ -274,7 +277,8 @@ internal static partial class ProjectStructureCanvasCatalog
             linkKinds,
             [
                 "Use objectType WorkItem with objectSubtype task for work task nodes. Do not invent node enum names such as WorkTask or TaskNode.",
-                "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks. For delivery targets, set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder.",
+                "Use ProjectBlock with an empty objectSubtype for a general-purpose Group, such as Meetings, Ideas, or Suppliers. A name is enough; no file paths or execution settings are required.",
+                "Use ProjectBlock plus a lowercase objectSubtype such as feature, implementation, testing, delivery, backlog, task-flow, risk, server, or wifi for typed blocks. File locations are optional; when delivering files, set metadata.projectBlock.outputRoot or metadata.projectBlock.targetRoot to the destination folder.",
                 "Use Repository with objectSubtype folder and metadata.repository.localPath for local folder nodes; set metadata.repository.relativePath only when the node should point inside that folder.",
                 "Use File plus a file subtype such as pdf, excel, docx, markdown, mermaid, screenshot, log, archive, or audio for generated or uploaded files; set metadata.file.externalPath when the file already exists on a local drive.",
                 "Use Link for web links and Repository remote for source-control repositories. GitHub and GitLab URLs are recognized from link.url or repository.repositoryUrl, including SSH-style git@host:owner/repo.git addresses.",
@@ -291,21 +295,21 @@ internal static partial class ProjectStructureCanvasCatalog
     private static IReadOnlyList<string> BuildTopLevelMenuEntries(ProjectObjectType? sourceType) => sourceType switch
     {
         ProjectObjectType.PromptFlow or ProjectObjectType.PromptSession or ProjectObjectType.PromptStep =>
-        ["add-note", "group:prompts", "group:work", "add-decision", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:prompts", "group:work", "add-decision", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         ProjectObjectType.Repository or ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset or ProjectObjectType.Link or ProjectObjectType.Connector or ProjectObjectType.SecretReference =>
-        ["add-note", "group:runtime", "group:assets", "group:infrastructure", "add-decision", "group:work", "group:assurance", "group:prompts", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:runtime", "group:assets", "group:infrastructure", "add-decision", "group:work", "group:assurance", "group:prompts", "add-milestone", "add-phase"],
         ProjectObjectType.ValidationRun or ProjectObjectType.TestPlan or ProjectObjectType.TestEvidence =>
-        ["add-note", "group:assurance", "group:work", "add-decision", "group:assets", "group:blocks", "group:prompts", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:assurance", "group:work", "add-decision", "group:assets", "group:blocks", "group:prompts", "add-milestone", "add-phase"],
         ProjectObjectType.Meeting or ProjectObjectType.Recording or ProjectObjectType.Transcript =>
-        ["add-note", "group:meetings", "group:people", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:meetings", "group:people", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         ProjectObjectType.Participant =>
-        ["add-note", "group:people", "group:meetings", "group:work", "group:assets", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:people", "group:meetings", "group:work", "group:assets", "group:blocks", "add-milestone", "add-phase"],
         ProjectObjectType.WorkItem =>
-        ["add-note", "group:work", "group:people", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:work", "group:people", "group:runtime", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         ProjectObjectType.Script or ProjectObjectType.Environment or ProjectObjectType.Infrastructure =>
-        ["add-note", "group:runtime", "group:infrastructure", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
+        ["add-note", GroupActionId, "group:runtime", "group:infrastructure", "group:work", "group:assets", "group:assurance", "group:blocks", "add-milestone", "add-phase"],
         _ =>
-        ["add-note", "add-decision", "add-milestone", "add-phase", "group:blocks", "group:meetings", "group:people", "group:work", "group:prompts", "group:runtime", "group:assets", "group:infrastructure", "group:assurance"]
+        ["add-note", GroupActionId, "add-decision", "add-milestone", "add-phase", "group:blocks", "group:meetings", "group:people", "group:work", "group:prompts", "group:runtime", "group:assets", "group:infrastructure", "group:assurance"]
     };
 
     private static IReadOnlyList<string> ResolveInspectorGroupOrder(ProjectObjectType? sourceType) => sourceType switch
@@ -331,7 +335,7 @@ internal static partial class ProjectStructureCanvasCatalog
     private static IReadOnlyList<ProjectStructureCreateLeafDefinition> ResolveGroupLeafDefinitions(string groupKey, ProjectObjectType? sourceType)
         => groupKey switch
         {
-            "capture" => CreateLeafDefinitions.Where(item => item.GroupKey == "capture").ToList(),
+            "capture" => CreateLeafDefinitions.Where(item => item.GroupKey == "capture" || item.ActionId == GroupActionId).ToList(),
             "planning" => CreateLeafDefinitions.Where(item => item.GroupKey == "planning").ToList(),
             "meetings" => ResolveMeetingLeafDefinitions(),
             "people" => ResolveParticipantLeafDefinitions(),
@@ -369,6 +373,7 @@ internal static partial class ProjectStructureCanvasCatalog
         var order =
             new[]
             {
+                GroupActionId,
                 "add-block-feature",
                 "add-block-architecture",
                 "add-block-implementation",

@@ -1771,7 +1771,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         CancellationToken cancellationToken = default,
         Action<ProjectStructureNode>? onNodeCommitted = null,
         Func<bool>? canPublish = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        ProjectStructurePendingLinkWriter? writePendingLink = null) {
         await using var access = ObserveActionAccess();
         await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
         async ValueTask AuthorizeCreateAsync(CancellationToken token) {
@@ -1810,13 +1811,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(
-                mutationProjectId,
-                created.Id,
-                pendingLink.TargetNodeId,
-                pendingLink.LinkKind,
-                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
-                authorizeCommit: AuthorizeCreateAsync);
+            if (writePendingLink is not null) {
+                await writePendingLink(created, pendingLink, createRequest, cancellationToken, AuthorizeCreateAsync);
+            } else {
+                await ProjectWorkbenchService.LinkObjectsAsync(
+                    mutationProjectId,
+                    created.Id,
+                    pendingLink.TargetNodeId,
+                    pendingLink.LinkKind,
+                    cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
+                    authorizeCommit: AuthorizeCreateAsync);
+            }
         }
 
         if (placementPlan.FollowUpMoves.Count > 0)

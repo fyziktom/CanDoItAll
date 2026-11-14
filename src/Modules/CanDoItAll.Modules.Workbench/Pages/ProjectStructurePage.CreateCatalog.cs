@@ -79,6 +79,9 @@ public partial class ProjectStructurePage
         return new CanvasWorkbenchInputField
         {
             Key = field.Key,
+            SectionKey = field.SectionKey,
+            SectionTitle = field.SectionTitle,
+            SectionDescription = field.SectionDescription,
             Label = field.Label,
             Placeholder = field.Placeholder,
             InputMode = field.InputMode,

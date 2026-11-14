@@ -20,6 +20,13 @@ internal sealed class ProjectStructureNodeCreatedWithFollowUpFailureException(
 
 public partial class ProjectStructurePage
 {
+    private delegate Task ProjectStructurePendingLinkWriter(
+        ProjectStructureNode created,
+        ProjectStructurePendingLink link,
+        ProjectObjectCreateRequest request,
+        CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask> authorizeCommit);
+
     private Guid structureContextId = Guid.NewGuid();
     private ProjectStructureActionContext? structureContext;
     private string? structureLoadError;
@@ -481,9 +488,24 @@ public partial class ProjectStructurePage
         try {
             return await CreateObjectAsync(action, definition, createRequest, configureRequest,
                 cancellationToken: CancellationToken.None, onNodeCommitted: node => committed = node,
-                authorizeCommit: authorizeCommit);
+                authorizeCommit: authorizeCommit, writePendingLink: WriteTaskCreationLinkAsync);
         } catch (Exception failure) when (committed is not null) {
             throw new ProjectStructureNodeCreatedWithFollowUpFailureException(committed, failure);
+        }
+
+        Task WriteTaskCreationLinkAsync(ProjectStructureNode created, ProjectStructurePendingLink link,
+            ProjectObjectCreateRequest request, CancellationToken token, Func<CancellationToken, ValueTask> authorize) {
+            if (ProjectStructureCanonicalTaskMutationPolicy.IsTask(created.ObjectType, created.ObjectSubtype) &&
+                link.LinkKind == ProjectObjectLinkKind.Uses &&
+                created.NodeReferences?.WorkItemRepositoryResourceId is { } repositoryId &&
+                string.Equals(link.TargetNodeId, $"custom:{repositoryId:N}", StringComparison.Ordinal)) {
+                return ProjectWorkbenchService.LinkCanonicalTaskResourceAsync(action.Surface.ProjectId, created.Id,
+                    link.TargetNodeId, link.LinkKind, token, request.ExpectedProjectAdmission,
+                    request.ProcessMutationAdmission, authorizeCommit: authorize);
+            }
+            return ProjectWorkbenchService.LinkObjectsAsync(action.Surface.ProjectId, created.Id,
+                link.TargetNodeId, link.LinkKind, token, request.ExpectedProjectAdmission,
+                request.ProcessMutationAdmission, authorizeCommit: authorize);
         }
     }
 }

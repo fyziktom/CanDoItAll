@@ -12,6 +12,113 @@ namespace CanDoItAll.Tests.WorkbenchPlanning;
 public sealed class TaskEditorDraftTests {
     private static readonly DateTimeOffset Start = new DateTimeOffset(2026, 10, 5, 8, 0, 0, TimeSpan.Zero).AddTicks(1234567);
 
+    [Fact]
+    public async Task Canvas_Task_can_be_created_from_Basics_without_visiting_optional_steps() {
+        await using var context = CreateContext();
+        ProjectStructureTaskDialogResult? saved = null;
+        var cut = context.Render<PlanningStructureTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid())
+            .Add(component => component.CreateRequest, Request([]) with { Title = string.Empty })
+            .Add(component => component.Submitted, draft => {
+                saved = draft;
+                return Task.FromResult(PlanningTaskSaveResult.Accepted);
+            }));
+        Assert.False(cut.Find("[data-testid='project-structure-task-basics-section']").HasAttribute("hidden"));
+        Assert.True(cut.Find("[data-testid='project-structure-task-planning-section']").HasAttribute("hidden"));
+        Assert.True(cut.Find("[data-testid='project-structure-task-assignment-section']").HasAttribute("hidden"));
+        Assert.Single(cut.FindAll("select[data-testid='project-structure-task-create-repository']"));
+        Assert.True(cut.Find("[data-testid='project-structure-task-create-submit']").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-title']").InputAsync(new() { Value = "Prepare meeting notes" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-notes']").InputAsync(new() { Value = "Record the decisions and next actions." }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new()));
+
+        Assert.NotNull(saved);
+        Assert.Equal("Prepare meeting notes", saved.CreateRequest.Title);
+        Assert.Equal("Record the decisions and next actions.", saved.CreateRequest.Notes);
+        Assert.Null(saved.Assignee);
+        Assert.DoesNotContain(saved.CreateRequest.InputValues!, value => value.Key == "repositoryRef");
+    }
+
+    [Fact]
+    public async Task Switching_canvas_Task_steps_keeps_raw_input_and_reveals_invalid_Planning_on_submit() {
+        await using var context = CreateContext();
+        var calls = 0;
+        var cut = context.Render<PlanningStructureTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid()).Add(component => component.CreateRequest, Request([]))
+            .Add(component => component.Submitted, _ => {
+                calls++;
+                return Task.FromResult(PlanningTaskSaveResult.Accepted);
+            }));
+        var baseline = cut.Instance.ReadCloseRequest();
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-step-next']").ClickAsync(new()));
+        Assert.Equal(baseline.Input, cut.Instance.ReadCloseRequest().Input);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-estimate-cost']").InputAsync(new() { Value = "2e" }));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-step-next']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-steps'] button").ClickAsync(new()));
+        Assert.Equal("2e", Assert.IsType<PlanningTaskEditorInput.Structure>(cut.Instance.ReadCloseRequest().Input).Estimate!.Cost);
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new()));
+
+        Assert.Equal(0, calls);
+        Assert.False(cut.Find("[data-testid='project-structure-task-planning-section']").HasAttribute("hidden"));
+        Assert.Equal("2e", cut.Find("[data-testid='project-structure-task-create-estimate-cost']").GetAttribute("value"));
+        Assert.NotEmpty(cut.Find("[data-testid='project-structure-task-create-validation-error']").TextContent);
+    }
+
+    [Fact]
+    public async Task Editing_canvas_Task_details_preserves_collapsed_planning_repository_and_execution() {
+        await using var context = CreateContext();
+        ProjectStructureTaskDialogResult? saved = null;
+        var originalExecution = new ProjectTaskExecutionSnapshot(ProjectTaskExecutionState.Started, Start, null);
+        var request = Request([
+            new() { Key = "repositoryRef", Value = "repository:original" },
+            new() { Key = ProjectTaskInputKeys.DueUtc, Value = Start.ToString("O") },
+            new() { Key = ProjectTaskEstimateInputKeys.ExpectedEffortValue, Value = "1.25" },
+            new() { Key = ProjectTaskEstimateInputKeys.ExpectedEffortUnit, Value = "ManDays" }
+        ]);
+        var cut = context.Render<PlanningStructureTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid()).Add(component => component.CreateRequest, request)
+            .Add(component => component.IsEditMode, true).Add(component => component.InitialExecution, originalExecution)
+            .Add(component => component.RepositoryOptions, [new() { Value = "repository:original", Label = "Workshop references" }])
+            .Add(component => component.Submitted, draft => {
+                saved = draft;
+                return Task.FromResult(PlanningTaskSaveResult.Accepted);
+            }));
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-task-step-next']"));
+        Assert.False(cut.Find("[data-testid='project-structure-task-planning-section']").HasAttribute("open"));
+        Assert.False(cut.Find("[data-testid='project-structure-task-assignment-section']").HasAttribute("open"));
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-task-create-repository']"));
+        Assert.Equal("Repository: Workshop references", cut.Find("[data-testid='project-structure-task-repository-current']").TextContent);
+        Assert.Contains("The repository link is set when the task is created.", cut.Markup);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-title']").InputAsync(new() { Value = "Renamed task" }));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new()));
+
+        Assert.NotNull(saved);
+        Assert.Equal("Renamed task", saved.CreateRequest.Title);
+        Assert.Equal(originalExecution, saved.Execution);
+        Assert.Equal(10m, saved.Estimate!.ExpectedEffortHours);
+        Assert.Equal(ProjectWorkItemEffortUnit.ManDays, saved.Estimate.ExpectedEffortUnit);
+        Assert.Contains(saved.CreateRequest.InputValues!, value => value.Key == "repositoryRef" && value.Value == "repository:original");
+        Assert.Equal(Start, DateTimeOffset.Parse(Assert.Single(saved.CreateRequest.InputValues!, value => value.Key == ProjectTaskInputKeys.DueUtc).Value!));
+    }
+
+    [Theory]
+    [InlineData(null, "Not linked")]
+    [InlineData("repository:unavailable", "Linked repository unavailable")]
+    public void Editing_Task_reports_an_unlinked_or_unavailable_repository_without_an_editable_selector(string? repository, string label) {
+        using var context = CreateContext();
+        var cut = context.Render<PlanningStructureTaskEditor>(parameters => parameters
+            .Add(component => component.ProjectId, Guid.NewGuid())
+            .Add(component => component.CreateRequest, Request(repository is null ? [] : [new() { Key = ProjectTaskInputKeys.RepositoryRef, Value = repository }]))
+            .Add(component => component.IsEditMode, true));
+
+        Assert.Equal($"Repository: {label}", cut.Find("[data-testid='project-structure-task-repository-current']").TextContent);
+        Assert.Empty(cut.FindAll("[data-testid='project-structure-task-create-repository']"));
+        Assert.Equal(repository, Assert.IsType<PlanningTaskEditorInput.Structure>(cut.Instance.ReadCloseRequest().Input).Repository);
+    }
+
     [Theory]
     [InlineData("start", "2026-11-")]
     [InlineData("duration", "2e")]
@@ -157,6 +264,7 @@ public sealed class TaskEditorDraftTests {
         await cut.Find("[data-testid='project-structure-task-create-submit']").ClickAsync(new MouseEventArgs());
         Assert.Equal(0, calls);
         var suffix = field == "due" ? "due" : $"estimate-{field}";
+        Assert.False(cut.Find("[data-testid='project-structure-task-planning-section']").HasAttribute("hidden"));
         Assert.Equal(value, cut.Find($"[data-testid='project-structure-task-create-{suffix}']").GetAttribute("value"));
     }
 
