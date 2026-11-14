@@ -3,57 +3,71 @@
 @inject ILogger<ContentTextForm> Logger
 
 @if (draft is { } form) {
-    <Stack GapScale="LayoutGap.Large" AlignItems="AlignItems.Stretch" data-testid="project-structure-text-asset-create-content">
-        <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined">
-            Create a new stored file from text, or attach an existing file. Both paths use the configured project storage and the same FileTools authorization flow.
-        </Alert>
-        <FormField Text="Content source">
-            <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                <Button Text="Create new" Icon="note_add" Disabled="form.Locked"
-                        Tone="@(form.Source == ContentTextSource.CreateNew ? ButtonTone.Info : ButtonTone.Default)"
-                        Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.CreateNew)"
-                        data-testid="project-structure-text-asset-source-create" Click="@(() => Change(form, () => form.Source = ContentTextSource.CreateNew))" />
-                <Button Text="Upload existing" Icon="upload_file" Disabled="form.Locked"
-                        Tone="@(form.Source == ContentTextSource.UploadExisting ? ButtonTone.Info : ButtonTone.Default)"
-                        Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.UploadExisting)"
-                        data-testid="project-structure-text-asset-source-upload" Click="@(() => Change(form, () => form.Source = ContentTextSource.UploadExisting))" />
-            </Cluster>
-        </FormField>
-        <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
-            <FormField Text="@form.Definition.TitleLabel">
-                <TextInput Value="@form.Title" Disabled="form.Locked" Placeholder="@form.Definition.TitlePlaceholder" Immediate="true"
-                         ValueChanged="@(value => Change(form, () => form.Title = value ?? string.Empty))" data-testid="project-structure-text-asset-title" />
+    <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="project-structure-text-asset-create-content">
+        <Steps Value="@((int)step)" ValueChanged="ChangeStep" NavigationDisabled="form.Locked"
+               data-testid="content-text-steps">
+            <StepsItem Text="Details" />
+            <StepsItem Text="Content" />
+            <StepsItem Text="Notes (optional)" />
+        </Steps>
+        <Stack GapScale="LayoutGap.Medium" hidden="@(step != TextStep.Details)"
+               Style="@(step != TextStep.Details ? "display:none" : null)" data-testid="content-text-details-step">
+            <TextBlock TextStyle="TextStyle.Note" Value="Name the file so you can find it on the canvas. Add context if it helps." />
+            <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
+                <FormField Text="@form.Definition.TitleLabel">
+                    <TextInput Value="@form.Title" disabled="@form.Locked" Placeholder="@form.Definition.TitlePlaceholder" Immediate="true"
+                             ValueChanged="@(value => Change(form, () => form.Title = value ?? string.Empty))" autofocus="true" data-testid="project-structure-text-asset-title" />
+                </FormField>
+                <FormField Text="@form.Definition.SubtitleLabel">
+                    <TextInput Value="@form.Subtitle" disabled="@form.Locked" Placeholder="@form.Definition.SubtitlePlaceholder" Immediate="true"
+                             ValueChanged="@(value => Change(form, () => form.Subtitle = value ?? string.Empty))" data-testid="project-structure-text-asset-subtitle" />
+                </FormField>
+            </Grid>
+        </Stack>
+        <Stack GapScale="LayoutGap.Medium" hidden="@(step != TextStep.Content)"
+               Style="@(step != TextStep.Content ? "display:none" : null)" data-testid="content-text-content-step">
+            <FormField Text="Content source">
+                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
+                    <Button Text="Create new" Icon="note_add" Disabled="form.Locked"
+                            Tone="@(form.Source == ContentTextSource.CreateNew ? ButtonTone.Info : ButtonTone.Default)"
+                            Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.CreateNew)"
+                            data-testid="project-structure-text-asset-source-create" Click="@(() => Change(form, () => form.Source = ContentTextSource.CreateNew))" />
+                    <Button Text="Upload existing" Icon="upload_file" Disabled="form.Locked"
+                            Tone="@(form.Source == ContentTextSource.UploadExisting ? ButtonTone.Info : ButtonTone.Default)"
+                            Variant="Variant.Outlined" aria-pressed="@(form.Source == ContentTextSource.UploadExisting)"
+                            data-testid="project-structure-text-asset-source-upload" Click="@(() => Change(form, () => form.Source = ContentTextSource.UploadExisting))" />
+                </Cluster>
             </FormField>
-            <FormField Text="@form.Definition.SubtitleLabel">
-                <TextInput Value="@form.Subtitle" Disabled="form.Locked" Placeholder="@form.Definition.SubtitlePlaceholder" Immediate="true"
-                         ValueChanged="@(value => Change(form, () => form.Subtitle = value ?? string.Empty))" data-testid="project-structure-text-asset-subtitle" />
-            </FormField>
-        </Grid>
-        @if (form.Source == ContentTextSource.CreateNew) {
-            <FormField Text="File name">
-                <TextInput Value="@form.FileName" Disabled="form.Locked" Placeholder="@form.Definition.FileNamePlaceholder" Immediate="true"
-                         ValueChanged="@(value => Change(form, () => form.FileName = value ?? string.Empty))" data-testid="project-structure-text-asset-file-name" />
-            </FormField>
-            <FormField Text="File content">
-                <TextAreaInput Value="@form.Content" Disabled="form.Locked" Placeholder="@form.Definition.ContentPlaceholder" Rows="10" Immediate="true"
-                          ValueChanged="@(value => Change(form, () => form.Content = value ?? string.Empty))" data-testid="project-structure-text-asset-content" />
-            </FormField>
-        } else {
-            <FileUpload PrimaryText="@form.Definition.FilePrompt" Disabled="form.Locked"
-                        SecondaryText="The selected file remains subject to the project asset size and storage policies."
-                        ButtonText="Choose file" Accept="@form.Definition.AcceptedFileTypes" Compact="true"
-                        Change="@(args => ChangeUpload(form, args.File))" RootTestHookId="project-structure-text-asset-upload"
-                        InputTestHookId="project-structure-text-asset-upload-input" />
-            @if (form.Upload is { } upload) {
-                <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="project-structure-text-asset-upload-selection">
-                    Selected @upload.Name (@FormatFileSize(upload.Size)).
-                </Alert>
+            @if (form.Source == ContentTextSource.CreateNew) {
+                <FormField Text="File name">
+                    <TextInput Value="@form.FileName" disabled="@form.Locked" Placeholder="@form.Definition.FileNamePlaceholder" Immediate="true"
+                             ValueChanged="@(value => Change(form, () => form.FileName = value ?? string.Empty))" data-testid="project-structure-text-asset-file-name" />
+                </FormField>
+                <FormField Text="File content">
+                    <TextAreaInput Value="@form.Content" Disabled="form.Locked" Placeholder="@form.Definition.ContentPlaceholder" Rows="10" Immediate="true"
+                              ValueChanged="@(value => Change(form, () => form.Content = value ?? string.Empty))" data-testid="project-structure-text-asset-content" />
+                </FormField>
+            } else {
+                <FileUpload PrimaryText="@form.Definition.FilePrompt" Disabled="form.Locked"
+                            SecondaryText="Choose the file you want to attach to this part of the project."
+                            ButtonText="Choose file" Accept="@form.Definition.AcceptedFileTypes" Compact="true"
+                            Change="@(args => ChangeUpload(form, args.File))" RootTestHookId="project-structure-text-asset-upload"
+                            InputTestHookId="project-structure-text-asset-upload-input" />
+                @if (form.Upload is { } upload) {
+                    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="project-structure-text-asset-upload-selection">
+                        Selected @upload.Name (@FormatFileSize(upload.Size)).
+                    </Alert>
+                }
             }
-        }
-        <FormField Text="@form.Definition.NotesLabel">
-            <TextAreaInput Value="@form.Notes" Disabled="form.Locked" Placeholder="@form.Definition.NotesPlaceholder" Rows="3" Immediate="true"
-                      ValueChanged="@(value => Change(form, () => form.Notes = value ?? string.Empty))" data-testid="project-structure-text-asset-notes" />
-        </FormField>
+        </Stack>
+        <Stack GapScale="LayoutGap.Medium" hidden="@(step != TextStep.Notes)"
+               Style="@(step != TextStep.Notes ? "display:none" : null)" data-testid="content-text-notes-step">
+            <TextBlock TextStyle="TextStyle.Note" Value="Optional. Add context for other people, or finish without notes." />
+            <FormField Text="@form.Definition.NotesLabel">
+                <TextAreaInput Value="@form.Notes" Disabled="form.Locked" Placeholder="@form.Definition.NotesPlaceholder" Rows="3" Immediate="true"
+                          ValueChanged="@(value => Change(form, () => form.Notes = value ?? string.Empty))" data-testid="project-structure-text-asset-notes" />
+            </FormField>
+        </Stack>
         @if (!string.IsNullOrWhiteSpace(form.Error)) {
             <Alert AlertStyle="AlertStyle.Danger" data-testid="project-structure-text-asset-validation-error">@form.Error</Alert>
         }
@@ -66,6 +80,12 @@
             </Alert>
         }
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+            <Button Text="Back" Variant="Variant.Text" Tone="ButtonTone.Default" Disabled="@(form.Locked || step == TextStep.Details)"
+                    data-testid="content-text-back" Click="@(() => ChangeStep((int)step - 1))" />
+            @if (step != TextStep.Notes) {
+                <Button Text="Next" Variant="Variant.Outlined" Tone="ButtonTone.Default" Disabled="form.Locked"
+                        data-testid="content-text-next" Click="@(() => ChangeStep((int)step + 1))" />
+            }
             <Button Text="Cancel" Variant="Variant.Outlined" Tone="ButtonTone.Default" Disabled="@(form.IsDispatching || form.Retired)"
                     data-testid="project-structure-text-asset-cancel" Click="@(() => CancelAsync(form))" />
             <Button Text="@form.Definition.SubmitLabel" Icon="@(form.Source == ContentTextSource.CreateNew ? "note_add" : "upload_file")"
@@ -76,6 +96,8 @@
 }
 
 @code {
+    private enum TextStep { Details, Content, Notes }
+    private TextStep step;
     private ContentTextDraftSession? draft;
     private bool disposed;
 
@@ -96,12 +118,20 @@
         }
         var previous = draft;
         draft = new(OpeningId, Definition, InitialDraft, CancellationToken);
+        step = TextStep.Details;
         if (previous is not null) {
             await previous.RetireAsync();
         }
     }
 
     private bool IsCurrent(ContentTextDraftSession form) => !disposed && !form.Retired && ReferenceEquals(form, draft);
+
+    private void ChangeStep(int value) {
+        if (draft is not { Locked: false } form || !IsCurrent(form) || !Enum.IsDefined(typeof(TextStep), value)) {
+            return;
+        }
+        step = (TextStep)value;
+    }
 
     private void Change(ContentTextDraftSession form, Action change) {
         if (!IsCurrent(form) || form.Locked) {
@@ -131,6 +161,7 @@
             _ => submission.Subtitle.Length > 240 ? "The folder or context cannot exceed 240 characters." : string.Empty
         };
         if (form.Error.Length > 0) {
+            step = TextStep.Details;
             return;
         }
         var submit = Submit;
@@ -155,6 +186,9 @@
             if (IsCurrent(form)) {
                 form.Outcome = outcome;
                 form.Error = outcome.Kind == ContentTextOutcomeKind.Rejected ? outcome.Message : string.Empty;
+                if (outcome.Kind == ContentTextOutcomeKind.Rejected) {
+                    step = TextStep.Content;
+                }
                 if (outcome.IsAccepted) {
                     await completed.InvokeAsync(outcome);
                 }
@@ -171,6 +205,7 @@
                     form.Outcome = new(ContentTextOutcomeKind.Unconfirmed, "The file write is unconfirmed. Observe the original target before another create.");
                 } else {
                     form.Error = exception is InvalidDataException ? exception.Message : "The selected file could not be read.";
+                    step = TextStep.Content;
                 }
             }
         } finally {

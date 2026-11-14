@@ -36,13 +36,15 @@ public sealed partial class AppSmokeTests
         var composer = page.Locator(".cw-canvas-composer");
         await composer.WaitForAsync();
 
-        var participantKindSelect = composer.Locator("select").First;
+        var participantKindSelect = composer.GetByLabel("Kind");
         Assert.Equal(
             "freelancer",
             await participantKindSelect.InputValueAsync());
 
         await composer.Locator("input[placeholder='Contract designer']").FillAsync("Autoselected Freelancer");
+        await CanvasComposerUi.ShowFieldAsync(composer, composer.Locator("input[placeholder='Specialist']"));
         await composer.Locator("input[placeholder='Specialist']").FillAsync("Canvas QA");
+        await CanvasComposerUi.ShowFieldAsync(composer, composer.Locator("textarea[placeholder='Availability or engagement notes']"));
         await composer.Locator("textarea[placeholder='Availability or engagement notes']").FillAsync("Subtype-specific participant create should not require a redundant kind selection.");
 
         var addParticipantButton = page.GetByRole(AriaRole.Button, new() { Name = "Add participant", Exact = true });
@@ -122,8 +124,8 @@ public sealed partial class AppSmokeTests
         var composer = page.Locator(".cw-canvas-composer");
         await composer.WaitForAsync();
 
-        var channelOptionCount = await ReadSelectableOptionCountAsync(composer.Locator("select").Nth(0));
-        var repeatOptionCount = await ReadSelectableOptionCountAsync(composer.Locator("select").Nth(1));
+        var channelOptionCount = await ReadSelectableOptionCountAsync(composer.GetByLabel("Channel"));
+        var repeatOptionCount = await ReadSelectableOptionCountAsync(composer.GetByLabel("Repeat", new() { Exact = true }));
         Assert.True(
             channelOptionCount >= 5,
             $"Expected the online meeting channel select to expose the shared channel options, but only found {channelOptionCount} selectable options.");
@@ -146,8 +148,8 @@ public sealed partial class AppSmokeTests
         await page.GetByTestId("project-structure-toolbox-add-work-send").ClickAsync();
         await composer.WaitForAsync();
 
-        var sendKindOptionCount = await ReadSelectableOptionCountAsync(composer.Locator("select").Nth(1));
-        var deliveryChannelOptionCount = await ReadSelectableOptionCountAsync(composer.Locator("select").Nth(2));
+        var sendKindOptionCount = await ReadSelectableOptionCountAsync(composer.GetByLabel("Intent"));
+        var deliveryChannelOptionCount = await ReadSelectableOptionCountAsync(composer.GetByLabel("Channel"));
         Assert.True(
             sendKindOptionCount >= 6,
             $"Expected the send-intent select to expose the shared send kinds, but only found {sendKindOptionCount} selectable options.");

@@ -31,6 +31,46 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed partial class ProjectStructurePageSimpleMutationTests
 {
     [Fact]
+    public async Task Hydrated_create_and_edit_actions_preserve_their_field_sections_and_required_flags() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projects = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
+        var projectId = await CreateProjectAsync(projects, "Node editor field sections");
+        var delivery = await workbench.CreateObjectAsync(projectId, new(ProjectObjectType.ProjectBlock,
+            "Meetings", "", "Planning notes", $"project:{projectId}", ObjectSubtype: "delivery"));
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(page => page.ProjectId, projectId));
+        var canvas = WaitForCanvasWorkbench(cut);
+        foreach (var actionId in new[] { "add-block-delivery", "add-meeting-online" }) {
+            Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(actionId, out var definition));
+            var action = FindCreateAction(canvas.Instance.Surface.Chrome.QuickCreateActions, actionId);
+            AssertFieldSections(definition, action);
+        }
+
+        await cut.InvokeAsync(() => canvas.Instance.OnContextAction(delivery.Id, "edit", 0, 0));
+
+        var invocation = Assert.Single(harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.openCreateComposer"]);
+        var editAction = Assert.IsType<CanvasWorkbenchAction>(invocation.Arguments[1]);
+        var request = Assert.IsType<CanvasWorkbenchCreateActionRequest>(invocation.Arguments[2]);
+        Assert.Equal("edit", request.PlacementKind);
+        Assert.Equal("Meetings", request.Title);
+        Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition("add-block-delivery", out var deliveryDefinition));
+        AssertFieldSections(deliveryDefinition, editAction);
+
+        static void AssertFieldSections(ProjectStructureCreateLeafDefinition definition, CanvasWorkbenchAction action) {
+            Assert.NotEmpty(action.InputFields);
+            foreach (var field in definition.InputFields!) {
+                var hydrated = Assert.Single(action.InputFields, item => item.Key == field.Key);
+                Assert.False(string.IsNullOrWhiteSpace(hydrated.SectionKey));
+                Assert.Equal(field.SectionKey, hydrated.SectionKey);
+                Assert.Equal(field.SectionTitle, hydrated.SectionTitle);
+                Assert.Equal(field.SectionDescription, hydrated.SectionDescription);
+                Assert.Equal(field.IsRequired, hydrated.IsRequired);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Agents_toggle_tracks_the_visible_conversation_catalog_after_external_close()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -805,17 +845,10 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
             recordingId,
             "Kickoff transcript",
             "Discovery sync transcript",
-            string.Empty,
-            [
-                new CanvasWorkbenchInputValue { Key = "recordingRef", Value = recordingId },
-                new CanvasWorkbenchInputValue
-                {
-                    Key = "transcriptText",
-                    Value = "Alice: We need the toolbox redesign validated in the browser.\n" +
-                        "Bob: Export progress workbook and Gantt evidence from the same summary source.\n" +
-                        "Chris: Keep provider confirmation explicit before any transcript action."
-                }
-            ]);
+            "Alice: We need the toolbox redesign validated in the browser.\n" +
+                "Bob: Export progress workbook and Gantt evidence from the same summary source.\n" +
+                "Chris: Keep provider confirmation explicit before any transcript action.",
+            [new CanvasWorkbenchInputValue { Key = "recordingRef", Value = recordingId }]);
 
         var featureId = await InvokeCreateActionAsync(
             cut,

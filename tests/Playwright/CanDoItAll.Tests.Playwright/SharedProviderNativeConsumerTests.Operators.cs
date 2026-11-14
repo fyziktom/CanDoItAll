@@ -177,8 +177,10 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await composer.WaitForAsync();
         await composer.Locator(".cw-canvas-composer__input").Nth(0).FillAsync(name);
         if (meeting) {
+            await CanvasComposerUi.ShowFieldAsync(composer, composer.Locator("input[type='datetime-local']").First);
             await composer.Locator("input[type='datetime-local']").First.FillAsync(DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-ddTHH:mm"));
-            await composer.Locator("select").First.SelectOptionAsync("msTeams");
+            await CanvasComposerUi.ShowFieldAsync(composer, composer.GetByLabel("Channel"));
+            await composer.GetByLabel("Channel").SelectOptionAsync("msTeams");
         }
         await composer.GetByRole(AriaRole.Button, new() { Name = meeting ? "Schedule meeting" : "Add participant", Exact = true }).ClickAsync();
         await Assertions.Expect(composer).Not.ToBeVisibleAsync();

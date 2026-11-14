@@ -147,6 +147,7 @@ public sealed partial class AppSmokeTests
         var canvasHost = page.Locator(".cw-canvas-host");
         await canvasHost.ScrollIntoViewIfNeededAsync();
         await OpenCanvasCreateComposerAsync(page, ".cw-node[data-node-id^='project:']", "PDF", "add-file-pdf");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__dropzone"));
         await page.Locator(".cw-canvas-composer__dropzone").WaitForAsync();
         await page.Locator(".cw-canvas-composer__file-input").SetInputFilesAsync(
         [
@@ -159,8 +160,11 @@ public sealed partial class AppSmokeTests
         ]);
 
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-structure-file.pdf') === true");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Architecture validation PDF");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("docs/validation");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Smoke test evidence for the typed PDF upload flow.");
         await page.WaitForFunctionAsync(
             @"() => {
@@ -538,8 +542,11 @@ public sealed partial class AppSmokeTests
 
         await OpenCanvasCreateComposerAsync(page, projectRootSelector, "Link", "add-link");
         await page.WaitForSelectorAsync("text=Address");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("API reference");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("https://example.test/api");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Reference for downstream build steps");
         var createLinkButton = page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']");
         await createLinkButton.ClickAsync();
@@ -557,6 +564,7 @@ public sealed partial class AppSmokeTests
         await WaitForSceneNodeTitleAsync(page, "API reference", selectedOnly: true);
 
         await OpenCanvasCreateComposerViaRuntimeAsync(page, projectRootSelector, "Image", "add-image-asset");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__dropzone"));
         await page.Locator(".cw-canvas-composer__dropzone").WaitForAsync();
         await page.Locator(".cw-canvas-composer__file-input").SetInputFilesAsync(
         [
@@ -574,8 +582,11 @@ public sealed partial class AppSmokeTests
             }
         ]);
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-picker-image.svg') === true");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Picker uploaded image");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Chooser flow media check");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the file input upload path");
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         var pickerPreview = await OpenCanvasImagePreviewAsync(
@@ -591,6 +602,7 @@ public sealed partial class AppSmokeTests
         await pickerPreview.WaitForAsync(new() { State = WaitForSelectorState.Detached });
 
         await OpenCanvasCreateComposerViaRuntimeAsync(page, projectRootSelector, "Image", "add-image-asset");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__file-trigger"));
         await page.Locator(".cw-canvas-composer__file-trigger").WaitForAsync();
         var imageUploadReady = await page.EvaluateAsync<bool>(
             @"() => {
@@ -616,8 +628,11 @@ public sealed partial class AppSmokeTests
         Assert.True(imageUploadReady, "Expected the image composer to accept the file-drop dispatch.");
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-composer__upload-summary')?.textContent?.includes('playwright-drop-image.png') === true");
 
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(0));
         await page.Locator(".cw-canvas-composer__input").Nth(0).FillAsync("Playwright dropped image");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__input").Nth(1));
         await page.Locator(".cw-canvas-composer__input").Nth(1).FillAsync("Regression media check");
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), page.Locator(".cw-canvas-composer__textarea"));
         await page.Locator(".cw-canvas-composer__textarea").FillAsync("Created through the drag and drop upload path");
         await page.Locator(".cw-canvas-composer__actions .cw-button[data-tone='accent']").ClickAsync();
         var droppedPreview = await OpenCanvasImagePreviewAsync(
@@ -1855,7 +1870,7 @@ public sealed partial class AppSmokeTests
             Assert.True(openedViaRuntimeApi, $"Expected a runtime fallback to open the create composer for '{actionId ?? label}'.");
         }
 
-        await composerReadyLocator.WaitForAsync();
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), composerReadyLocator);
     }
 
     private static async Task OpenCanvasCreateComposerViaRuntimeAsync(IPage page, string selector, string label, string actionId)
@@ -1929,7 +1944,7 @@ public sealed partial class AppSmokeTests
             });
 
         Assert.True(openedViaRuntimeApi, $"Expected a runtime fallback to open the create composer for '{actionId}'.");
-        await composerReadyLocator.WaitForAsync();
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), composerReadyLocator);
     }
 
     private static async Task<ILocator> OpenInlineNoteEditorAsync(IPage page)

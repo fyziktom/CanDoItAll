@@ -208,7 +208,8 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await page.GetByTestId("workflow-toolbox-node-" + kind).ClickAsync();
         var composer = page.Locator(".cw-canvas-composer__scroll");
         await composer.Locator("input").First.FillAsync(name);
-        await composer.Locator("select").Nth(1).SelectOptionAsync(nameof(WorkflowValueShapeKind.Text));
+        await CanvasComposerUi.ShowFieldAsync(page.Locator(".cw-canvas-composer"), composer.GetByLabel("Result shape"));
+        await composer.GetByLabel("Result shape").SelectOptionAsync(nameof(WorkflowValueShapeKind.Text));
         await page.GetByRole(AriaRole.Button, new() { Name = "Add node", Exact = true }).ClickAsync();
         await page.GetByTestId("workflow-canvas-select-node").Filter(new() { HasTextString = name }).WaitForAsync();
     }

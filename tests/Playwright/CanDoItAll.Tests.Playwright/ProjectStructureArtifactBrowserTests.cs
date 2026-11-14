@@ -32,9 +32,11 @@ public sealed partial class AppSmokeTests
         Assert.Equal(1, await dialog.CountAsync());
         Assert.Equal(0, await page.Locator(".cw-canvas-composer:visible").CountAsync());
         await page.GetByTestId("project-structure-text-asset-title").FillAsync("Architecture notes");
+        await page.GetByTestId("content-text-next").ClickAsync();
         await page.GetByTestId("project-structure-text-asset-file-name").FillAsync("architecture-notes.markdown");
         await page.GetByTestId("project-structure-text-asset-content").FillAsync(
             "# Architecture\n\nTyped storage boundary.");
+        await page.GetByTestId("content-text-next").ClickAsync();
         await page.GetByTestId("project-structure-text-asset-notes").FillAsync(
             "Describes the architecture decision.");
         await page.GetByTestId("project-structure-text-asset-submit").ClickAsync();

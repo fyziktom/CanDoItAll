@@ -8,6 +8,21 @@ namespace CanDoItAll.Tests.Unit.Projects;
 public sealed class ProjectNodeKindRegistryTests
 {
     [Fact]
+    public void Generic_group_can_receive_notes_and_replace_a_specialized_block_without_becoming_a_file_folder() {
+        var descriptor = ProjectNodeKindRegistry.ResolveDescriptor(ProjectObjectType.ProjectBlock, string.Empty);
+        Assert.Equal("Group", descriptor.Label);
+        Assert.Equal(ProjectNodeKindFamily.ProjectBlock, descriptor.Family);
+        Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.Note, string.Empty,
+            ProjectObjectType.ProjectBlock, string.Empty));
+        Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.ProjectBlock, "delivery",
+            ProjectObjectType.ProjectBlock, string.Empty));
+        Assert.True(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.ProjectBlock, string.Empty,
+            ProjectObjectType.ProjectBlock, "delivery"));
+        Assert.False(ProjectNodeKindRegistry.CanReclassify(ProjectObjectType.ProjectBlock, string.Empty,
+            ProjectObjectType.Repository, "folder"));
+    }
+
+    [Fact]
     public void ResolveDescriptor_returns_canonical_label_and_visual_profile_for_known_kind()
     {
         var descriptor = ProjectNodeKindRegistry.ResolveDescriptor(ProjectObjectType.ProjectBlock, "router");

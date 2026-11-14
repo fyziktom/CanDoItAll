@@ -14285,7 +14285,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "92a35666cd793a7b6c6de55cfbf6781a6b666e1bb7cb49d758663f73e782b532",
+      "sha256_lf": "c951c856a6d9cec83430a93fd48c5b0df7a30353fc519dbf97bd30067f8efaa5",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14300,7 +14300,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "ConcurrentEditing.Workbench.Tasks",
       "evidence": "ConcurrentEditing.Workbench.Tasks",
-      "rationale": "Original content/create/image actions retain exact native content, graph, media and provider receipts while checking current Structure access at physical commit and before private result publication. Native121 and seven actual two-engine checks; no shared renderer/layout/CSS/reference change. Secret edit and remaining native file/operator authority stay separately open.",
+      "rationale": "Original content/create/image actions retain exact native content, graph, media and provider receipts while checking current Structure access at physical commit and before private result publication. Native121 and seven actual two-engine checks; no shared renderer/layout/CSS/reference change. Secret edit and remaining native file/operator authority stay separately open. Reviewed repository follow-up from typed Task creation only: committed repository identity selects the canonical relationship owner; generic attachment policy, project admission and commit authorization remain intact. See docs/architecture/project-structure-node-editing.md.",
       "concurrent_editing_review": ".artifacts/concurrent-editing/proof/r2-workbench/content-manifest.md"
     },
     {
@@ -14348,7 +14348,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.CreateCatalog.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.CreateCatalog.cs",
-      "sha256_lf": "8d6dee10c8823db24ded4b5e7df08252e6510dce1a9f9a68ba2c77e909b07310",
+      "sha256_lf": "83afb1a5148b249fdc1091d896c2728628bf08256822d39ee8c6425b74db7eda",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14363,7 +14363,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed catalog hydration adapter: forwards semantic section metadata without changing field identity, defaults, admission or native mutation ownership. UX review: docs/architecture/project-structure-node-editing.md."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
@@ -14430,7 +14430,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeEditing.cs",
-      "sha256_lf": "6ed757604ce3bc295d4911fbb759cf51e66d1ce55909eb20225ab2058bea263a",
+      "sha256_lf": "2ee2906b35173420560ebd636924741eda2b70ab17b598a37a4cda9c065388f0",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ProjectStructureInspectorAction, CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeEditModel",
@@ -14445,7 +14445,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
       "evidence": "CanDoItAll.Modules.Workbench",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "Reviewed name-first editor activation and user-facing edit labels. Native route, permissions, current authority, draft payload and dialog-result ownership remain unchanged. UX review: docs/architecture/project-structure-node-editing.md."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.NodeMutations.cs",
@@ -14839,7 +14839,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "d1b7fb1bc8e8555fc33e1638b2bfcfea0b67112c6a85136459b5d328ffbab271",
+      "sha256_lf": "cc1f33c7580494bad1b63250a8afe00293514c5928dbdcd1d72997500f10d8eb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14876,7 +14876,7 @@
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "ConcurrentEditing.Workbench.Tasks",
       "evidence": "ConcurrentEditing.Workbench.NativeOperators",
-      "rationale": "Existing native PartyEditor is projected through a neutral optional selection supplement inside the existing floating selection window, fixing measured hidden overflow. Host still owns session/effects. No CSS/BaseLib/reference change. View-state persistence remains owned by this host; disposal awaits handled outer operations instead of their raw persistence tasks, preserving access checks and reported outcomes across navigation.",
+      "rationale": "Existing native PartyEditor is projected through a neutral optional selection supplement inside the existing floating selection window, fixing measured hidden overflow. Host still owns session/effects. No CSS/BaseLib/reference change. View-state persistence remains owned by this host; disposal awaits handled outer operations instead of their raw persistence tasks, preserving access checks and reported outcomes across navigation. Reviewed repository follow-up from typed Task creation only: committed repository identity selects the canonical relationship owner; generic attachment policy, project admission and commit authorization remain intact. See docs/architecture/project-structure-node-editing.md.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ProjectStructurePage",
@@ -34653,7 +34653,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
-      "sha256_lf": "208c36bee796d323bdb71c564daa20b357ecaf3e622ad9454a538f4e02500c8c",
+      "sha256_lf": "f6eaaefc83130c5ad0d1802ec983b724b523f383ad12e25e586a5072516250c0",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.ContentTextForm",
@@ -34669,7 +34669,7 @@
       "assets": "CanDoItAll.Workbench.Content.UI",
       "scenario": "CanDoItAll.Workbench.Content.UI",
       "evidence": "CanDoItAll.Workbench.Content.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects.",
+      "rationale": "Reviewed creation steps composed from shared Steps labels with retained controls and upload instance. Opening identity, cancellation, submission and outcome ownership remain explicit; native host owns file effects. UX review: docs/architecture/project-structure-node-editing.md.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "ContentTextForm",
@@ -35734,7 +35734,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
-      "sha256_lf": "db4f9f119ba3924cc1f10353a6fb0a6b25e632009a9c59c4ec436ae81714a19c",
+      "sha256_lf": "ea9743018b9f18fc886e1f9953dde62fff775afa3b468daa5bc472c7f1993b22",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Planning.UI.PlanningStructureTaskEditor",
@@ -35758,7 +35758,7 @@
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "ConcurrentEditing.Workbench.Tasks",
       "evidence": "ConcurrentEditing.Workbench.Tasks",
-      "rationale": "Reviewed retained raw controls, typed local comparison/leave state and exact submission acknowledgement. Native current authority and all writes remain outside the renderer; actual Chromium/Firefox proof at1920x1080.",
+      "rationale": "Reviewed creation steps and edit disclosures with retained planning and assignment children, raw draft and comparison state. Native current authority and writes remain outside the renderer. UX review: docs/architecture/project-structure-node-editing.md.",
       "excluded_non_rendering_type_uses": [
         {
           "type": "PlanningStructureTaskEditor",
@@ -35772,7 +35772,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor.css",
-      "sha256_lf": "65e668df72a37b9f8be9f86c02bbee13e67f14f56c46b7f5ad6c62d05293ce72",
+      "sha256_lf": "09e3abd52e106fc6a9d65d3fdde79e83b442c22240cafb93ac1f5a5239dce82d",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -35787,7 +35787,7 @@
       "assets": "CanDoItAll.Workbench.Planning.UI",
       "scenario": "CanDoItAll.Workbench.Planning.UI",
       "evidence": "CanDoItAll.Workbench.Planning.UI",
-      "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
+      "rationale": "Reviewed presentation-only hidden-section and disclosure styles for the retained task editor; no data or lifecycle ownership added. UX review: docs/architecture/project-structure-node-editing.md."
     },
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningTaskComparison.razor",
