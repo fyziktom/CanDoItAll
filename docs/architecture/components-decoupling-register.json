@@ -6767,7 +6767,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
       "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
-      "sha256_lf": "9a86ec04e8ee10b5f3c57e3bfd3d3896df8c6f1e8122340afaccef07f2fd4e0a",
+      "sha256_lf": "309a6fab1955539fe471a6160b5aa03c560c5ca65403085e1067088105e64cdb",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -33502,7 +33502,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectPortfolioCards.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectPortfolioCards.razor",
-      "sha256_lf": "514753645dce40893b0412cad206b6ccb7862fa9a9dbd79db4e089f7efbaf43d",
+      "sha256_lf": "d313c1f8123b1e7f7221589306fb483cd6fec8209fee21b534a7fc5000d05fb4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.UI.ProjectPortfolioCards",
@@ -33517,7 +33517,7 @@
       "assets": "CanDoItAll.Projects.UI",
       "scenario": "CanDoItAll.Projects.UI",
       "evidence": "CanDoItAll.Projects.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "Reviewed family presentation seam. The shared Card encloses each project with a semantic border, solid surface, padding and a contained action row in both themes. Host-owned data and action callbacks are unchanged; evaluated closure remains within the family contract."
     },
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",

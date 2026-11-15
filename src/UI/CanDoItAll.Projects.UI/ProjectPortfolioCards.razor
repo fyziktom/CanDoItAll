@@ -20,8 +20,10 @@
               Columns2Xl="3">
             @foreach (ProjectSummary project in Projects)
             {
-                <article class="@ProjectsPresentation.GetProjectCardCss(project.Status)"
-                         data-testid="project-card">
+                <Card Class="flex h-full flex-col gap-4 border-[var(--tone-border)] bg-[var(--tone-surface-soft)] shadow-none"
+                      role="article"
+                      aria-label="@project.Name"
+                      data-testid="project-card">
                     <Cluster AlignItems="AlignItems.Start"
                              Wrap="FlexWrap.NoWrap"
                              Gap="LayoutGap.Medium">
@@ -76,8 +78,7 @@
                         </div>
                     </Cluster>
 
-                    <Cluster Gap="LayoutGap.XSmall"
-                             Class="mt-4">
+                    <Cluster Gap="LayoutGap.XSmall">
                         <StatusBadge Tone="neutral" Text="@($"{project.PhaseCount} phases")" />
                         <StatusBadge Tone="neutral" Text="@($"{project.ParentCount} parents")" />
                         <StatusBadge Tone="info" Text="@($"{project.ChildCount} subprojects")" />
@@ -85,7 +86,7 @@
                     </Cluster>
 
                     <CardActions Secondary="true"
-                                 Class="mt-4 border-[var(--tone-border)]">
+                                 Class="mt-auto border-[var(--tone-border)]">
                         <Cluster>
                             <Button Class="ui-button--quick"
                                     Icon="visibility"
@@ -149,7 +150,7 @@
                                     Click="@(() => OpenCalendar.InvokeAsync(project.Id))" />
                         </Cluster>
                     </CardActions>
-                </article>
+                </Card>
             }
         </Grid>
     }
