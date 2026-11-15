@@ -40,6 +40,7 @@
                              Tone="success" />
             </Stats>
             <Actions>
+                <PageHeaderActionButton Icon="refresh" Label="Refresh" Click="View.RefreshAsync" data-testid="collaboration-refresh" />
                 <PageHeaderActionButton Icon="calendar_month"
                                         Label="Open scheduler"
                                         TooltipText="Open scheduler planning."
@@ -57,24 +58,26 @@
 
     <ChildContent>
         <Stack GapScale="LayoutGap.Large">
-            <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh" Tone="ButtonTone.Default" Click="View.RefreshAsync" data-testid="collaboration-refresh" />
-                @if (View.ReadState is CollaborationReadState.Loading or CollaborationReadState.Refreshing) {
-                    <p role="status" data-testid="collaboration-loading">Loading collaboration workspace…</p>
-                }
-                @if (View.ReadError is not null) {
-                    <p role="alert" data-testid="collaboration-read-error">@View.ReadError</p>
-                }
-                @if (target?.Message is not null) {
-                    <p role="status" data-testid="collaboration-target-message">@target.Message</p>
-                }
-                @if (View.IsReplyRetained) {
-                    <p role="status" data-testid="collaboration-reply-retained">This thread is outside the current list. Your reply stays attached here. Select another thread to leave it, or clear the reply and refresh.</p>
-                }
-                @if (create.Message is not null) {
-                    <p role="status" data-testid="collaboration-create-message" data-saved-thread-id="@create.SavedThreadId">@create.Message</p>
-                }
-            </Cluster>
+            @if (View.ReadState is CollaborationReadState.Loading or CollaborationReadState.Refreshing ||
+                 View.ReadError is not null || target?.Message is not null || View.IsReplyRetained || create.Message is not null) {
+                <Cluster Gap="LayoutGap.Small">
+                    @if (View.ReadState is CollaborationReadState.Loading or CollaborationReadState.Refreshing) {
+                        <p role="status" data-testid="collaboration-loading">Loading collaboration workspace…</p>
+                    }
+                    @if (View.ReadError is not null) {
+                        <p role="alert" data-testid="collaboration-read-error">@View.ReadError</p>
+                    }
+                    @if (target?.Message is not null) {
+                        <p role="status" data-testid="collaboration-target-message">@target.Message</p>
+                    }
+                    @if (View.IsReplyRetained) {
+                        <p role="status" data-testid="collaboration-reply-retained">This thread is outside the current list. Your reply stays attached here. Select another thread to leave it, or clear the reply and refresh.</p>
+                    }
+                    @if (create.Message is not null) {
+                        <p role="status" data-testid="collaboration-create-message" data-saved-thread-id="@create.SavedThreadId">@create.Message</p>
+                    }
+                </Cluster>
+            }
             <Tabs SelectedIndex="@SelectedIndex"
                   SelectedIndexChanged="HandleSelectedViewChangedAsync"
                   Density="TabsDensity.Compact"
@@ -110,7 +113,26 @@
                                             Click="@(() => View.SetUnreadOnlyAsync(false))"
                                             data-testid="collaboration-filter-all" />
                                 }
-                                @if (SelectedIndex == 0) {
+                            </FilterBar>
+                        </Filters>
+                    </ListPanelHeader>
+                </ListHeader>
+
+                <ListContent>
+                    <section hidden="@(View.Section != CollaborationSection.Inbox)">
+                        <SurfaceCard Soft="true">
+                            <details data-testid="collaboration-create-disclosure">
+                                <summary class="cursor-pointer font-semibold text-chrome-950" data-testid="collaboration-create-toggle">
+                                    New collaboration item
+                                    @if (create.OutcomeUnknown) {
+                                        <StatusBadge Tone="warning" Text="Review required" />
+                                    } else if (create.IsSaving) {
+                                        <StatusBadge Tone="info" Text="Saving" />
+                                    } else if (create.Context.IsModified()) {
+                                        <StatusBadge Tone="neutral" Text="Unsaved draft" />
+                                    }
+                                </summary>
+                                <Cluster Gap="LayoutGap.Small" Class="mt-3">
                                     <Button Text="Notification"
                                             Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
@@ -119,71 +141,62 @@
                                             Tone="ButtonTone.Default"
                                             Size="ButtonSize.Small"
                                             Disabled="@create.IsLocked" Click="@(() => SetThreadKind(create, CollaborationInboxItemKind.Escalation))" />
-                                }
-                            </FilterBar>
-                        </Filters>
-                    </ListPanelHeader>
-                </ListHeader>
-
-                <ListContent>
-                    <section hidden="@(View.Section != CollaborationSection.Inbox)">
-                        <EditForm EditContext="create.Context" @key="create" OnSubmit="@(() => View.CreateAsync(create))" data-testid="collaboration-create-form">
-                            <fieldset disabled="@create.IsLocked">
-                            <SurfaceCard Soft="true">
-                                <DataAnnotationsValidator />
-                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Quick create</TextBlock>
-                                <h3 class="mt-1 text-lg font-semibold text-chrome-950">New collaboration item</h3>
-                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-                                    <div>
-                                        <FormField Text="Subject">
-                                            <TextInput @bind-Value="newThreadEditor.Subject" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.Subject), value => newThreadEditor.Subject = value))" class="form-input ui-input ui-input--outlined" data-testid="collaboration-thread-subject" />
-                                        </FormField>
-                                        <ValidationMessage For="@(() => newThreadEditor.Subject)" />
-                                    </div>
-                                    <div>
-                                        <FormField Text="Item kind">
-                                            <SelectInput @bind-Value="newThreadEditor.ItemKind" data-testid="collaboration-thread-kind">
-                                                @foreach (var kind in Enum.GetValues<CollaborationInboxItemKind>()) {
-                                                    <option value="@kind">@kind</option>
-                                                }
-                                            </SelectInput>
-                                        </FormField>
-                                    </div>
-                                </Grid>
-                                <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
-                                    <FormField Text="Context kind">
-                                        <SelectInput @bind-Value="newThreadEditor.ContextKind" data-testid="collaboration-thread-context-kind">
-                                            @foreach (var kind in Enum.GetValues<CollaborationContextKind>()) {
-                                                <option value="@kind">@kind</option>
-                                            }
-                                        </SelectInput>
-                                    </FormField>
-                                    <div>
-                                        <FormField Text="Context label">
-                                            <TextInput @bind-Value="newThreadEditor.ContextLabel" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.ContextLabel), value => newThreadEditor.ContextLabel = value))" class="form-input ui-input ui-input--outlined" data-testid="collaboration-thread-context-label" />
-                                        </FormField>
-                                        <ValidationMessage For="@(() => newThreadEditor.ContextLabel)" />
-                                    </div>
-                                </Grid>
-                                <div class="mt-4">
-                                    <FormField Text="Context route">
-                                        <TextInput @bind-Value="newThreadEditor.ContextRoute" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.ContextRoute), value => newThreadEditor.ContextRoute = value))" class="form-input ui-input ui-input--outlined" placeholder="/processes" data-testid="collaboration-thread-context-route" />
-                                    </FormField>
-                                    <ValidationMessage For="@(() => newThreadEditor.ContextRoute)" />
-                                </div>
-                                <div class="mt-4">
-                                    <FormField Text="First message">
-                                        <TextAreaInput @bind-Value="newThreadEditor.MessageBody" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.MessageBody), value => newThreadEditor.MessageBody = value))" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[6rem]" data-testid="collaboration-thread-message" />
-                                    </FormField>
-                                    <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
-                                </div>
-                                <Cluster Gap="LayoutGap.Small" Class="mt-4">
-                                    <Button Text="Create collaboration item" Type="submit" data-testid="collaboration-thread-create" />
-                                    <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => View.PrepareThread(create, newThreadEditor.ItemKind))" />
                                 </Cluster>
-                            </SurfaceCard>
-                            </fieldset>
-                        </EditForm>
+                                <EditForm EditContext="create.Context" @key="create" OnSubmit="@(() => View.CreateAsync(create))" data-testid="collaboration-create-form">
+                                    <fieldset disabled="@create.IsLocked">
+                                        <DataAnnotationsValidator />
+                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                                            <div>
+                                                <FormField Text="Subject">
+                                                    <TextInput @bind-Value="newThreadEditor.Subject" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.Subject), value => newThreadEditor.Subject = value))" class="form-input ui-input ui-input--outlined" data-testid="collaboration-thread-subject" />
+                                                </FormField>
+                                                <ValidationMessage For="@(() => newThreadEditor.Subject)" />
+                                            </div>
+                                            <div>
+                                                <FormField Text="Item kind">
+                                                    <SelectInput @bind-Value="newThreadEditor.ItemKind" data-testid="collaboration-thread-kind">
+                                                        @foreach (var kind in Enum.GetValues<CollaborationInboxItemKind>()) {
+                                                            <option value="@kind">@kind</option>
+                                                        }
+                                                    </SelectInput>
+                                                </FormField>
+                                            </div>
+                                        </Grid>
+                                        <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
+                                            <FormField Text="Context kind">
+                                                <SelectInput @bind-Value="newThreadEditor.ContextKind" data-testid="collaboration-thread-context-kind">
+                                                    @foreach (var kind in Enum.GetValues<CollaborationContextKind>()) {
+                                                        <option value="@kind">@kind</option>
+                                                    }
+                                                </SelectInput>
+                                            </FormField>
+                                            <div>
+                                                <FormField Text="Context label">
+                                                    <TextInput @bind-Value="newThreadEditor.ContextLabel" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.ContextLabel), value => newThreadEditor.ContextLabel = value))" class="form-input ui-input ui-input--outlined" data-testid="collaboration-thread-context-label" />
+                                                </FormField>
+                                                <ValidationMessage For="@(() => newThreadEditor.ContextLabel)" />
+                                            </div>
+                                        </Grid>
+                                        <div class="mt-4">
+                                            <FormField Text="Context route">
+                                                <TextInput @bind-Value="newThreadEditor.ContextRoute" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.ContextRoute), value => newThreadEditor.ContextRoute = value))" class="form-input ui-input ui-input--outlined" placeholder="/processes" data-testid="collaboration-thread-context-route" />
+                                            </FormField>
+                                            <ValidationMessage For="@(() => newThreadEditor.ContextRoute)" />
+                                        </div>
+                                        <div class="mt-4">
+                                            <FormField Text="First message">
+                                                <TextAreaInput @bind-Value="newThreadEditor.MessageBody" @oninput="@(args => CaptureThreadInput(create, args, nameof(newThreadEditor.MessageBody), value => newThreadEditor.MessageBody = value))" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[6rem]" data-testid="collaboration-thread-message" />
+                                            </FormField>
+                                            <ValidationMessage For="@(() => newThreadEditor.MessageBody)" />
+                                        </div>
+                                        <Cluster Gap="LayoutGap.Small" Class="mt-4">
+                                            <Button Text="Create collaboration item" Type="submit" data-testid="collaboration-thread-create" />
+                                            <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="@(() => View.PrepareThread(create, newThreadEditor.ItemKind))" />
+                                        </Cluster>
+                                    </fieldset>
+                                </EditForm>
+                            </details>
+                        </SurfaceCard>
                         @if (create.OutcomeUnknown) {
                             <Button Text="Start a new draft after reviewing Threads" Click="@(() => View.PrepareThread(create, create.Model.ItemKind))" />
                         }

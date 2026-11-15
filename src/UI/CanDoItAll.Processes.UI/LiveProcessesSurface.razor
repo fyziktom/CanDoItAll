@@ -7,12 +7,9 @@
               Class="live-processes-page"
               data-testid="live-processes-page">
     <Header>
-        <Toolbar Class="live-processes-command-strip"
-                 data-testid="live-processes-command-strip">
-            <ToolbarRow Class="live-processes-command-strip__row">
-                <CompactStatStrip Class="min-w-0">
-                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap">Processes</TextBlock>
-                    <h1 class="live-processes-title">@Session.PageTitleText</h1>
+        <PageHeader Eyebrow="Processes" Title="@Session.PageTitleText" Compact="true">
+            <Stats>
+                <CompactStatStrip data-testid="live-processes-summary">
                     <CompactStat Tone="info"
                                  Text="@FormatCount(Session.Shell?.LiveRuns.ActiveRunCount ?? 0, "active", "active")"
                                  TooltipText="Process runs currently active in the live projection." />
@@ -31,9 +28,23 @@
                                      TooltipText="Hidden runs stay hidden in this browser on every live process page until they need attention again. Use the eye button to show them."
                                      data-testid="live-processes-hidden-count" />
                     }
+                    @if (Session.Shell is not null) {
+                        <CompactStat Label="definitions"
+                                     Value="@Session.DefinitionCountText"
+                                     TooltipText="@Session.Shell.DefinitionCatalog.Summary"
+                                     Tone="info" />
+                        <CompactStat Label="last event"
+                                     Value="@Session.LastEventText"
+                                     TooltipText="Most recent live-run event observed by the projection." />
+                        <CompactStat Label="backlog"
+                                     Value="@Session.Shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="@Session.Shell.Refresh.Summary"
+                                     Tone="@Session.ProjectionTone" />
+                    }
                 </CompactStatStrip>
-
-                <ToolbarActions Class="live-processes-command-strip__actions">
+            </Stats>
+            <Actions>
+                <ToolbarActions data-testid="live-processes-command-strip">
                     @if (Session.HiddenRelatedRunCount > 0) {
                         <PageHeaderActionButton Icon="visibility"
                                                 Label="@($"Show {Session.HiddenRelatedRunCount} hidden")"
@@ -56,8 +67,8 @@
                                             Click="Session.OpenDefinitionsAsync"
                                             data-testid="live-processes-open-definitions" />
                 </ToolbarActions>
-            </ToolbarRow>
-        </Toolbar>
+            </Actions>
+        </PageHeader>
     </Header>
 
     <ChildContent>
@@ -115,35 +126,6 @@
                               Title="Loading process projection"
                               Description="Collecting the current live run projection through the process application boundary." />
             } else if (Session.Shell is not null) {
-                <div class="live-processes-summary"
-                     data-testid="live-processes-summary">
-                    <CompactStatStrip>
-                        <CompactStat Label="definitions"
-                                     Value="@Session.DefinitionCountText"
-                                     TooltipText="@Session.Shell.DefinitionCatalog.Summary"
-                                     Tone="info" />
-                        <CompactStat Label="active"
-                                     Value="@Session.Shell.LiveRuns.ActiveRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Active process runs in this scope."
-                                     Tone="success" />
-                        <CompactStat Label="attention"
-                                     Value="@Session.Shell.LiveRuns.AttentionRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Runs that need operator attention."
-                                     Tone="warning" />
-                        <CompactStat Label="failed"
-                                     Value="@Session.Shell.LiveRuns.FailedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Failed runs in this scope."
-                                     Tone="danger" />
-                        <CompactStat Label="last event"
-                                     Value="@Session.LastEventText"
-                                     TooltipText="Most recent live-run event observed by the projection." />
-                        <CompactStat Label="backlog"
-                                     Value="@Session.Shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="@Session.Shell.Refresh.Summary"
-                                     Tone="@Session.ProjectionTone" />
-                    </CompactStatStrip>
-                </div>
-
                 <div class="live-processes-tabs-frame"
                      data-testid="live-processes-tabs-frame">
                     <Tabs SelectedIndex="@Session.SelectedTabIndex"

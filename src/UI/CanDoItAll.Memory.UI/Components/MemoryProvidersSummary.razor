@@ -4,34 +4,22 @@
          Wrap="FlexWrap.Wrap"
          Class="memory-ui-summary"
          data-testid="memory-ui-summary">
-    <SummaryTile Label="Providers"
+    <CompactStat Label="Providers"
                  Value="@Format(Snapshot?.ProviderCount)"
                  HelperText="Registered generic memory provider profiles."
-                 Tone="info"
-                 Badge="true"
-                 Compact="true"
-                 ShowHelperTextAsTooltip="true" />
-    <SummaryTile Label="Enabled"
+                 Tone="info" />
+    <CompactStat Label="Enabled"
                  Value="@Format(Snapshot?.EnabledProviderCount)"
                  HelperText="Provider profiles enabled for selection."
-                 Tone="success"
-                 Badge="true"
-                 Compact="true"
-                 ShowHelperTextAsTooltip="true" />
-    <SummaryTile Label="Healthy"
+                 Tone="success" />
+    <CompactStat Label="Healthy"
                  Value="@Format(Snapshot?.HealthyProviderCount)"
                  HelperText="Provider profiles reporting healthy status."
-                 Tone="@(Snapshot?.HealthyProviderCount > 0 ? "success" : "secondary")"
-                 Badge="true"
-                 Compact="true"
-                 ShowHelperTextAsTooltip="true" />
-    <SummaryTile Label="Provider UI"
+                 Tone="@(Snapshot?.HealthyProviderCount > 0 ? "success" : "neutral")" />
+    <CompactStat Label="Provider UI"
                  Value="@Format(Snapshot?.UiSurfaceCount)"
                  HelperText="Optional provider-specific UI surfaces declared by provider manifests."
-                 Tone="secondary"
-                 Badge="true"
-                 Compact="true"
-                 ShowHelperTextAsTooltip="true" />
+                 Tone="neutral" />
 </Cluster>
 
 @code {

@@ -2,41 +2,10 @@
     min-height: 0;
 }
 
-.live-processes-command-strip {
-    width: 100%;
-}
-
-.live-processes-command-strip__row {
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.live-processes-command-strip__actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.live-processes-title {
-    color: var(--tone-text-strong);
-    font-size: 1rem;
-    font-weight: 750;
-    line-height: 1.25;
-    margin: 0;
-    white-space: nowrap;
-}
-
 .live-processes-dashboard {
     align-items: stretch;
     min-height: 0;
     width: 100%;
-}
-
-.live-processes-summary {
-    border: 1px solid var(--tone-border-soft);
-    border-radius: 0.5rem;
-    background: color-mix(in srgb, var(--tone-surface) 88%, transparent);
-    padding: 0.75rem;
 }
 
 .live-processes-alert {

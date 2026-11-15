@@ -3,19 +3,16 @@
 @inject AppToolbarState ToolbarState
 
 @if (Kind == AppToolbarOutletKind.Stats && ToolbarState.StatsContent is not null && ToolbarState.StatsVisible) {
-    <div class="app-stats-row">
+    <div class="app-toolbar__stats" aria-label="Page statistics">
         <CompactStatStrip>@ToolbarState.StatsContent</CompactStatStrip>
-        <button type="button" class="app-stats-row__close" aria-label="Hide stats" title="Hide stats"
-                @onclick="@(() => ToolbarState.SetStatsVisibleAsync(false))">
-            <Icon Name="close" />
-        </button>
     </div>
 } else if (Kind == AppToolbarOutletKind.Help && ToolbarState.HelpContent is not null) {
-    <HelpCard Visible="@ToolbarState.HelpVisible"
-              VisibleChanged="@(value => ToolbarState.SetHelpVisibleAsync(value))"
-              Heading="@ToolbarState.HelpHeading" Icon="help" Class="help-card">
+    <Dialog IsOpen="@ToolbarState.HelpVisible"
+            OnClose="@(() => ToolbarState.SetHelpVisibleAsync(false))"
+            Title="@ToolbarState.HelpHeading" Size="ModalSize.Compact" DenseChrome="true"
+            TestId="page-help-dialog">
         @ToolbarState.HelpContent
-    </HelpCard>
+    </Dialog>
 }
 
 @code {

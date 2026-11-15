@@ -26,12 +26,23 @@ pagers. Application proof targets large desktop viewports only.
 Feature renderers retain their `PageHeader` declarations and their existing dependency
 boundaries. The shell supplies BaseLib's optional `IPageHeaderOutlet` cascade only to the
 routed body. A header publishes its presentation, actions and statistics to
-`AppToolbarState`; the toolbar, help and statistics outlets render independently of the
-body. Standalone sandboxes and renderers still render their own headers.
+`AppToolbarState`; supporting statistics share the toolbar's title/action row. Help opens
+in a compact dialog from the toolbar instead of reserving a permanent introduction row.
+Standalone sandboxes and renderers still render their own headers.
 
 Every registration is tied to its component owner. Disposal of a previous page cannot
-clear a newer page's actions, help or statistics. Visibility preferences retain the
-toolbar cookie contract across prerender and the interactive circuit.
+clear a newer page's actions, help or statistics. Statistics visibility retains the
+toolbar cookie contract across prerender and the interactive circuit. Help is transient:
+it starts closed, stays open across updates by its current owner, and closes when the
+page owner changes. Old help-visibility cookies do not reopen a modal on refresh.
+
+Secondary refresh and recovery actions belong in existing page or collection headings.
+The portfolio keeps pending saves, unresolved operations and read failures visible, but
+does not reserve a recovery section when there is nothing to resolve. Collaboration's
+new-item form starts in a native disclosure; closing it preserves the mounted editor,
+draft and validation state. Pending outcomes remain visible outside the disclosure.
+Assignments shows the selected project once beside its metadata and actions. Primary
+task surfaces retain their existing controls, readable type and scroll ownership.
 
 Shared controls use the new `ButtonTone`, `TabsDensity`, `TextInput`, `NumberInput`,
 `SelectInput` and `TextAreaInput` contracts. Native draft-aware controls retain their

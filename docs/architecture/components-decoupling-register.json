@@ -6436,7 +6436,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
       "path": "src/App/CanDoItAll.Web/Components/Layout/MainLayout.razor",
-      "sha256_lf": "775460fa51035ce058a849b2dc08d1e6bf0978b2f7bd8c11c3170708e2176d0c",
+      "sha256_lf": "c2a1be9c98ad56f1d3dd44986231db9f98fc159cfefd384336a5a63a6bb0d196",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Web.Components.Layout.MainLayout",
@@ -6767,7 +6767,7 @@
     {
       "identity": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
       "path": "src/App/CanDoItAll.Web/wwwroot/css/output.css",
-      "sha256_lf": "309a6fab1955539fe471a6160b5aa03c560c5ca65403085e1067088105e64cdb",
+      "sha256_lf": "775677f05ed93459cb92fb8792995ca50d4b6eb35b4891fdf475e55932927c7e",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -12988,7 +12988,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Projects/Pages/ProjectsPage.razor",
-      "sha256_lf": "8bd7c64bfbaf47595066a6a9e742a1ad13a25b4251edfc4fb145541e5f68a836",
+      "sha256_lf": "9a8ae26dad97a694c4fc39f934db972aa440f9251fe47b1020ddc66524b6e30c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.ProjectsPage",
@@ -27939,7 +27939,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/AppToolbarState.cs",
       "path": "src/UI/CanDoItAll.AppComponents/AppToolbarState.cs",
-      "sha256_lf": "8ed16a867402703f23a5af7d5400f6863532a6ea36b87f763845acde88fd7b5b",
+      "sha256_lf": "64c6848881a8acbd39a5ce389019e21408a89c9886485a5673e1fe036b54a12b",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppToolbarState",
@@ -28029,7 +28029,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppToolbar.razor",
-      "sha256_lf": "ac0bfbf9355f506e7729835fea2084a6786964c850bb292cc73b7fca8cff6d71",
+      "sha256_lf": "c1fb2e76dd21bccc77d94e2dabff66efe63b02c6bf8525f0203429f7f2ed90d7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppToolbar",
@@ -28092,7 +28092,7 @@
     {
       "identity": "src/UI/CanDoItAll.AppComponents/Components/AppToolbarOutlet.razor",
       "path": "src/UI/CanDoItAll.AppComponents/Components/AppToolbarOutlet.razor",
-      "sha256_lf": "a15e89def147c2d368199907327f6889a1d8cea52236296a56bfb7455f0cee89",
+      "sha256_lf": "0922e118a0eee8263972decedd1c9b6ab88859285672710d37d40523821923c4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AppComponents.AppToolbarOutlet",
@@ -28488,7 +28488,7 @@
     {
       "identity": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Collaboration.UI/CollaborationWorkspaceSurface.razor",
-      "sha256_lf": "19e676b9e6479c7888d9015de2d2dab530681ef1fd6361c33cc55a14f0d22bbc",
+      "sha256_lf": "ec28957100bcac381e1f13898d0fd26a52f2b9da6910535f7ac61dd3d17cd331",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Collaboration.UI.CollaborationWorkspaceSurface",
@@ -29874,7 +29874,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Assignments/AssignmentsProjectContextBar.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Assignments/AssignmentsProjectContextBar.razor",
-      "sha256_lf": "b3e7fc64389d09379595ab5c360ffb2854e88905bcbbbf43c4140848ac4177b7",
+      "sha256_lf": "3313bd8c0680f21f32bb593b92f667a78aba2ce2c82509be269d5c4606b23430",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Assignments.AssignmentsProjectContextBar",
@@ -31927,7 +31927,7 @@
     {
       "identity": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderDetailPanel.razor",
       "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProviderDetailPanel.razor",
-      "sha256_lf": "435ecb41b1bc124be01131a5f48e854aa86b8e28cf5498d930486d4e42a9b6c7",
+      "sha256_lf": "05799bb2f5ba3890c056b496a5156e19418f05fab268daa945ed3248cb9bf8eb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Memory.Components.MemoryProviderDetailPanel",
@@ -32268,7 +32268,7 @@
     {
       "identity": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProvidersSummary.razor",
       "path": "src/UI/CanDoItAll.Memory.UI/Components/MemoryProvidersSummary.razor",
-      "sha256_lf": "0bf1eab6e8ec90b37a069276ff407521b1addba28db683223ebcb8ec81bacd4d",
+      "sha256_lf": "36dfae7d7e53af769c1c21bec5d84276ea922e26bd45f740872e1a1005e3b644",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Memory.Components.MemoryProvidersSummary",
@@ -32310,7 +32310,7 @@
     {
       "identity": "src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Memory.UI/MemoryWorkspaceSurface.razor",
-      "sha256_lf": "2a9e9e8ef2a598dae852b673539e16bbb8370401cd85df77ca2c19843183f7d9",
+      "sha256_lf": "dd3453cf681db67df7ee59657fd055118ecec95e103029ad685f2dfa115b9e09",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Memory.UI.MemoryWorkspaceSurface",
@@ -32631,7 +32631,7 @@
     {
       "identity": "src/UI/CanDoItAll.Plugins.UI/PluginsWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Plugins.UI/PluginsWorkspaceSurface.razor",
-      "sha256_lf": "496a2f03df1cc516ca3f83a6a090c4d48af7ccfea6d1591d43a8d658245992b8",
+      "sha256_lf": "fd29089f5b123ffce87e2464bf85d0e0a98df6bfde43397274d226924fc303aa",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Plugins.UI.PluginsWorkspaceSurface",
@@ -32678,7 +32678,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor",
-      "sha256_lf": "bca907b3eab981966403bdefc987b6e308ee57e3b4c0568e4c4f47db38ac0a2d",
+      "sha256_lf": "c0706e60e6f2c3eb42b4736bc48e5024fb4861914dd7c43527ce9ae78d58cdd0",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.LiveProcessesSurface",
@@ -32701,7 +32701,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor.css",
       "path": "src/UI/CanDoItAll.Processes.UI/LiveProcessesSurface.razor.css",
-      "sha256_lf": "8db7e424b172ec09a5a2104722cd660a37f0d1c9a9dfdff3b68f06d3d3272415",
+      "sha256_lf": "e5446033619c264384ac6642f207b0888a925fa4ec561f2c13c5c7eb09531dfa",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -32976,7 +32976,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor",
-      "sha256_lf": "aadc4e9767d375865a8b8c242b034d6d7d39ea039022c67c5d3fec9ff9a9bfc6",
+      "sha256_lf": "0f8446ded8e5a13dbee359021a8b4c65fc8f7ccde33db6464ccf9df972663e3b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.ProcessWorkspaceSurface",
@@ -32999,7 +32999,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor.css",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessWorkspaceSurface.razor.css",
-      "sha256_lf": "b9059a8a46f183927a1e356a5386fef501af078b3f94eeb41a75eb63bf9836e4",
+      "sha256_lf": "821634ca2b2643d9688159879dc687b8ccf7a426cf6ca8eb88bc0b8e1e57a262",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -33287,7 +33287,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectLifecyclePendingSurface.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectLifecyclePendingSurface.razor",
-      "sha256_lf": "6102590014dcaf0e0a8bccae17925a95dd68352fece077c6f823b242bbe91b26",
+      "sha256_lf": "fa2078877eaa7a767ee5b7dd8378955bbc0a4b7736371478daa297d9ca6d5ee9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Projects.Pages.Components.ProjectLifecyclePendingSurface",
@@ -33522,7 +33522,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
       "path": "src/UI/CanDoItAll.Projects.UI/ProjectsBoard.razor",
-      "sha256_lf": "ab837166c802c93e889561e3c88420af2ae4d3a607b7604df38f36cad52fdd13",
+      "sha256_lf": "71c2895d38608042706fe3424cd0a5900449bc0c1b94a4fe6793e9a283d0b8ca",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.UI.ProjectsBoard",
@@ -35583,7 +35583,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/Calendar/PlanningCalendarSurface.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/Calendar/PlanningCalendarSurface.razor",
-      "sha256_lf": "654a3787f6e5ff02bc126fc6faca17c382ea9d5493a46f0921a058ac4f503dd9",
+      "sha256_lf": "b178fa79a2da41d8ccc902559303651a4e40319168d2baf84c690d54de10dffa",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Planning.UI.PlanningCalendarSurface",
@@ -37026,7 +37026,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceDefaultsSurface.razor",
-      "sha256_lf": "a740283220c65e4ac98e40545110ded5d6215081c62faac3aabaf66a54029890",
+      "sha256_lf": "1023eb7bbe5219a5beddeef8d2ebcc39e637a05e3435237014b8cdd860a3e80c",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceDefaultsSurface",
@@ -37146,7 +37146,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSettingsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSettingsSurface.razor",
-      "sha256_lf": "b67ce1bb6208e80ada6764ef417b5665fb97d21c6743725604c5f41b59e277b2",
+      "sha256_lf": "a75294ea26d6220272440f1ad8bb18b799a40c634b5e0405d94841891f3ae6cc",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceSettingsSurface",

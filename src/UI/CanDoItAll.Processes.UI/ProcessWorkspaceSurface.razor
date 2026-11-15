@@ -5,11 +5,9 @@
               data-interactive="@interactive.ToString().ToLowerInvariant()"
               data-testid="processes-page-scaffold">
     <Header>
-        <Toolbar Class="processes-command-strip"
-                 data-testid="processes-command-strip">
-            <ToolbarRow Class="processes-command-strip__row">
-                <CompactStatStrip Class="min-w-0">
-                    <TextBlock TextStyle="TextStyle.EyebrowCaption" Class="whitespace-nowrap">@Session.ScopeEyebrow</TextBlock>
+        <PageHeader Eyebrow="@Session.ScopeEyebrow" Title="@Session.HeaderTitle" Compact="true">
+            <Stats>
+                <CompactStatStrip data-testid="processes-command-strip">
                     <CompactStat Tone="info"
                                  Text="@($"{Session.DefinitionTotalText} definition(s)")"
                                  TooltipText="@Session.DefinitionTooltip" />
@@ -23,35 +21,34 @@
                                  Text="@Session.ProjectionStatusText"
                                  TooltipText="@Session.ProjectionTooltip" />
                 </CompactStatStrip>
-
-                <ToolbarActions Class="processes-command-strip__actions">
-                    @if (Session.Shell is null) {
-                        <PageHeaderActionButton Icon="refresh"
-                                                Label="Refresh"
-                                                TooltipText="Refresh process shell projections."
-                                                Disabled="@Session.IsBusy"
-                                                IsBusy="@Session.IsBusy"
-                                                Click="Session.RefreshAsync"
-                                                data-testid="processes-refresh" />
-                        <PageHeaderActionButton Icon="smart_toy"
-                                                Label="Agent context"
-                                                TooltipText="@Session.AgentContextTooltip"
-                                                Disabled="@Session.AgentContextDisabled"
-                                                Click="Session.OpenAgentContext"
-                                                data-testid="processes-agent-context" />
-                    } else {
-                        @foreach (var command in Session.Shell.Commands) {
-                            <PageHeaderActionButton Icon="@command.Icon"
-                                                    Label="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Launch another run" : command.Text)"
-                                                    TooltipText="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Start a separate process launch and keep the accepted run." : command.DisabledReason ?? command.Text)"
-                                                    Disabled="@(!command.IsEnabled || Session.IsBusy && command.Kind is (ProcessWorkspaceCommandKind.LaunchRun or ProcessWorkspaceCommandKind.FeedDefaults))"
-                                                    Click="@(() => Session.ExecuteCommandAsync(command))"
-                                                    data-testid="@BuildCommandTestId(command.Kind)" />
-                        }
+            </Stats>
+            <Actions>
+                @if (Session.Shell is null) {
+                    <PageHeaderActionButton Icon="refresh"
+                                            Label="Refresh"
+                                            TooltipText="Refresh process shell projections."
+                                            Disabled="@Session.IsBusy"
+                                            IsBusy="@Session.IsBusy"
+                                            Click="Session.RefreshAsync"
+                                            data-testid="processes-refresh" />
+                    <PageHeaderActionButton Icon="smart_toy"
+                                            Label="Agent context"
+                                            TooltipText="@Session.AgentContextTooltip"
+                                            Disabled="@Session.AgentContextDisabled"
+                                            Click="Session.OpenAgentContext"
+                                            data-testid="processes-agent-context" />
+                } else {
+                    @foreach (var command in Session.Shell.Commands) {
+                        <PageHeaderActionButton Icon="@command.Icon"
+                                                Label="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Launch another run" : command.Text)"
+                                                TooltipText="@(command.Kind == ProcessWorkspaceCommandKind.LaunchRun && Session.CanStartAnotherLaunch ? "Start a separate process launch and keep the accepted run." : command.DisabledReason ?? command.Text)"
+                                                Disabled="@(!command.IsEnabled || Session.IsBusy && command.Kind is (ProcessWorkspaceCommandKind.LaunchRun or ProcessWorkspaceCommandKind.FeedDefaults))"
+                                                Click="@(() => Session.ExecuteCommandAsync(command))"
+                                                data-testid="@BuildCommandTestId(command.Kind)" />
                     }
-                </ToolbarActions>
-            </ToolbarRow>
-        </Toolbar>
+                }
+            </Actions>
+        </PageHeader>
     </Header>
 
     <ChildContent>

@@ -6,21 +6,6 @@
     overflow: hidden;
 }
 
-.processes-command-strip {
-    width: 100%;
-}
-
-.processes-command-strip__row {
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.processes-command-strip__actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
 .processes-workspace-identity {
     width: 100%;
 }

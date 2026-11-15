@@ -619,7 +619,7 @@
   }
 
   .app-page-body {
-    @apply min-h-0 flex-1 overflow-y-auto my-4 xl:my-5 2xl:my-6;
+    @apply min-h-0 flex-1 overflow-y-auto my-3;
   }
 
   .app-shell-body-surface--standard {

@@ -9,6 +9,14 @@
                 <CompactStat Label="enabled" Value="@Defaults.Providers.Count(item => item.IsEnabled).ToString()" Tone="success" />
                 <CompactStat Label="secrets" Value="@Secrets.Secrets.Count.ToString()" />
             </Stats>
+            <Actions>
+                @if (Section == WorkspaceSection.Workspace) {
+                    <PageHeaderActionButton Icon="refresh" Label="Refresh references"
+                                            TooltipText="Refresh provider references while keeping your current workspace draft."
+                                            Click="Defaults.RefreshAsync" Disabled="Defaults.IsLoading"
+                                            IsBusy="Defaults.IsLoading" data-testid="defaults-refresh" />
+                }
+            </Actions>
         </PageHeader>
     </Header>
     <Lead>

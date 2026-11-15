@@ -17,16 +17,19 @@ public sealed class AppToolbarState(IJSRuntime js) : IPageHeaderOutlet {
     public RenderFragment? HelpContent { get; private set; }
     public RenderFragment? ActionsContent { get; private set; }
     public RenderFragment? StatsContent { get; private set; }
-    public bool HelpVisible { get; private set; } = true;
+    public bool HelpVisible { get; private set; }
     public bool StatsVisible { get; private set; } = true;
     public event Action? Changed;
 
     public void InitializeFromCookies(string? helpVisibleCookie, string? statsVisibleCookie) {
-        HelpVisible = helpVisibleCookie is null || string.Equals(helpVisibleCookie, "true", StringComparison.Ordinal);
+        HelpVisible = false;
         StatsVisible = statsVisibleCookie is null || string.Equals(statsVisibleCookie, "true", StringComparison.Ordinal);
     }
 
     public void Register(object owner, PageHeaderPresentation presentation) {
+        if (!ReferenceEquals(helpOwner, owner)) {
+            HelpVisible = false;
+        }
         helpOwner = owner;
         actionsOwner = owner;
         statsOwner = owner;
@@ -42,6 +45,7 @@ public sealed class AppToolbarState(IJSRuntime js) : IPageHeaderOutlet {
     public void Clear(object owner) {
         var changed = false;
         if (ReferenceEquals(helpOwner, owner)) {
+            HelpVisible = false;
             helpOwner = null;
             HelpHeading = null;
             HelpContent = null;
@@ -81,6 +85,9 @@ public sealed class AppToolbarState(IJSRuntime js) : IPageHeaderOutlet {
     }
 
     public void SetHelp(object owner, string? heading, RenderFragment? content) {
+        if (!ReferenceEquals(helpOwner, owner)) {
+            HelpVisible = false;
+        }
         helpOwner = owner;
         HelpHeading = heading;
         HelpContent = content;
@@ -99,10 +106,10 @@ public sealed class AppToolbarState(IJSRuntime js) : IPageHeaderOutlet {
         Changed?.Invoke();
     }
 
-    public async Task SetHelpVisibleAsync(bool visible) {
-        await js.InvokeVoidAsync("CanDoItAll.browserState.saveCookie", HelpVisibleCookieName, visible ? "true" : "false");
+    public Task SetHelpVisibleAsync(bool visible) {
         HelpVisible = visible;
         Changed?.Invoke();
+        return Task.CompletedTask;
     }
 
     public async Task SetStatsVisibleAsync(bool visible) {

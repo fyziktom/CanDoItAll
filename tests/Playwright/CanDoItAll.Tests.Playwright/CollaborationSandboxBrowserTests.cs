@@ -94,6 +94,7 @@ public sealed class CollaborationSandboxBrowserTests {
                 await CollaborationBrowserTests.ReadyAsync(page);
             }
             await SelectScenarioAsync(page, "InvalidDraft");
+            await page.GetByTestId("collaboration-create-toggle").ClickAsync();
             await page.GetByTestId("collaboration-thread-create").ClickAsync();
             await Assertions.Expect(page.Locator("[data-testid=collaboration-create-form] .validation-message").First).ToBeVisibleAsync();
             await SelectScenarioAsync(page, "AdmittedSave");

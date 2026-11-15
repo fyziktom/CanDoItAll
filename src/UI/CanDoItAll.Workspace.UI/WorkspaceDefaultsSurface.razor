@@ -2,7 +2,6 @@
 @implements IDisposable
 @using CanDoItAll.SharedKernel
 <Stack GapScale="LayoutGap.Medium">
-    <Button Text="Refresh references" Tone="ButtonTone.Default" Click="State.RefreshAsync" Disabled="State.IsLoading" data-testid="defaults-refresh" />
     @if (State.Error is { } error) {
         <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
     }

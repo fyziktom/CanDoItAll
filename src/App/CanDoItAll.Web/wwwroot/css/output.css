@@ -660,11 +660,11 @@
   .flex-1 {
     flex: 1;
   }
-  .flex-\[1_1_32rem\] {
-    flex: 1 1 32rem;
+  .flex-\[1_1_26rem\] {
+    flex: 1 1 26rem;
   }
-  .flex-\[1_1_34rem\] {
-    flex: 1 1 34rem;
+  .flex-\[1_1_28rem\] {
+    flex: 1 1 28rem;
   }
   .flex-shrink-0 {
     flex-shrink: 0;
@@ -1020,9 +1020,6 @@
   .pr-1 {
     padding-right: calc(var(--spacing) * 1);
   }
-  .pr-20 {
-    padding-right: calc(var(--spacing) * 20);
-  }
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
   }
@@ -1360,11 +1357,6 @@
   .max-\[80rem\]\:flex-wrap {
     @media (width < 80rem) {
       flex-wrap: wrap;
-    }
-  }
-  .sm\:pr-24 {
-    @media (width >= 40rem) {
-      padding-right: calc(var(--spacing) * 24);
     }
   }
   .md\:col-span-2 {
@@ -3682,16 +3674,10 @@
     padding-inline: calc(var(--spacing) * 0);
   }
   .app-page-body {
-    margin-block: calc(var(--spacing) * 4);
+    margin-block: calc(var(--spacing) * 3);
     min-height: calc(var(--spacing) * 0);
     flex: 1;
     overflow-y: auto;
-    @media (width >= 80rem) {
-      margin-block: calc(var(--spacing) * 5);
-    }
-    @media (width >= 96rem) {
-      margin-block: calc(var(--spacing) * 6);
-    }
   }
   .app-shell-body-surface--standard {
     overflow: hidden;
@@ -4043,7 +4029,7 @@
     border-color: var(--color-chrome-300);
     background-color: var(--color-chrome-50);
     padding-inline: calc(var(--spacing) * 4);
-    padding-block: calc(var(--spacing) * 3);
+    padding-block: calc(var(--spacing) * 2);
     @media (width >= 96rem) {
       padding-inline: calc(var(--spacing) * 6);
     }
@@ -4069,41 +4055,9 @@
     align-items: center;
     gap: calc(var(--spacing) * 2);
   }
-  .app-stats-row {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: calc(var(--spacing) * 3);
-    border-bottom-style: var(--tw-border-style);
-    border-bottom-width: 1px;
-    border-color: var(--color-chrome-300);
-    padding-inline: calc(var(--spacing) * 4);
-    padding-block: calc(var(--spacing) * 3);
-  }
-  .app-stats-row__close {
-    display: inline-flex;
-    height: calc(var(--spacing) * 7);
-    width: calc(var(--spacing) * 7);
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: calc(infinity * 1px);
-    border-style: var(--tw-border-style);
-    border-width: 0px;
-  }
-}
-.app-stats-row__close:hover {
-  background: var(--color-chrome-200);
-}
-.help-card {
-  margin-block: calc(var(--spacing) * 4);
-  flex-shrink: 0;
-  @media (width >= 80rem) {
-    margin-block: calc(var(--spacing) * 5);
-  }
-  @media (width >= 96rem) {
-    margin-block: calc(var(--spacing) * 6);
+  .app-toolbar__stats {
+    min-width: calc(var(--spacing) * 0);
+    flex: 1;
   }
 }
 @layer components {

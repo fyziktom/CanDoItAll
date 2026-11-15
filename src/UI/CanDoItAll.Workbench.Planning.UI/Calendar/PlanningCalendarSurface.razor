@@ -26,6 +26,12 @@
                     <CompactStat Label="statuses" Value="@accepted.StatusCount.ToString()" />
                 }
             </Stats>
+            <Actions>
+                @if (accepted.State is not (PlanningReadState.Loading or PlanningReadState.Unavailable)) {
+                    <Button Text="@(accepted.State is PlanningReadState.Failed or PlanningReadState.Stale ? "Retry calendar" : "Refresh calendar")"
+                            Icon="refresh" Click="@(() => retryCallback.InvokeAsync(new(accepted.Origin)))" />
+                }
+            </Actions>
         </PageHeader>
     </Header>
     <ChildContent>
@@ -50,8 +56,6 @@
                 @if (exportError is { } failure && failure.Origin == accepted.Origin) {
                     <Alert AlertStyle="AlertStyle.Warning" data-testid="planning-calendar-export-error">@failure.Message</Alert>
                 }
-                <Button Text="@(accepted.State is PlanningReadState.Failed or PlanningReadState.Stale ? "Retry calendar" : "Refresh calendar")"
-                        Icon="refresh" Click="@(() => retryCallback.InvokeAsync(new(accepted.Origin)))" />
                 @if (accepted.Calendar is not null) {
                     @if (accepted.State == PlanningReadState.Stale) {
                         <Alert AlertStyle="AlertStyle.Warning">This is the last accepted schedule. Refresh before changing the view or opening an artifact.</Alert>

@@ -5,6 +5,9 @@
         <PageHeader Eyebrow="Memory"
                     Title="Provider management"
                     Description="Generic provider profiles, capability manifests, health, and safe provider selection.">
+            <Stats>
+                <MemoryProvidersSummary Snapshot="@Controller.Snapshot" />
+            </Stats>
             <Actions>
                 <Button Icon="refresh"
                         Tone="ButtonTone.Default"
@@ -19,10 +22,6 @@
             </Actions>
         </PageHeader>
     </Header>
-
-    <Lead>
-        <MemoryProvidersSummary Snapshot="@Controller.Snapshot" />
-    </Lead>
 
     <ChildContent>
         <div class="memory-ui-root">

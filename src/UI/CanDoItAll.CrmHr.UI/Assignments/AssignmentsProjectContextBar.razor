@@ -8,65 +8,55 @@
            AlignItems="AlignItems.Center"
            JustifyContent="JustifyContent.SpaceBetween"
            Wrap="FlexWrap.Wrap">
-        <div class="min-w-[20rem] flex-[1_1_34rem]">
-            <FormField Text="Project">
-                <SurfaceCard Soft="true">
-                    <Split Breakpoint="LayoutBreakpoint.None"
-                           Gap="LayoutGap.Medium"
-                           AlignItems="AlignItems.Center"
-                           JustifyContent="JustifyContent.SpaceBetween"
-                           Wrap="FlexWrap.Wrap">
-                        <Stack GapScale="LayoutGap.Tiny"
-                               Class="min-w-0">
-                            <TextBlock TextStyle="TextStyle.Subtitle2"
-                                       Value="@SelectedProjectLabel" />
-                            <SmallText Text="@SelectedProjectDescription" />
-                        </Stack>
-                        <Cluster Gap="LayoutGap.XSmall"
-                                 Wrap="FlexWrap.NoWrap">
-                            @if (SelectedProjectId.HasValue)
-                            {
-                                <Button Text="Clear"
-                                        Tone="ButtonTone.Default"
-                                        Size="ButtonSize.Small"
-                                        Click="ClearProjectAsync"
-                                        data-testid="crmhr-assignment-project-clear" />
-                            }
-                            <Button Text="@(SelectedProjectId.HasValue ? "Change project" : "Choose project")"
-                                    Icon="search"
-                                    Tone="ButtonTone.Default"
-                                    Size="ButtonSize.Small"
-                                    Click="OpenProjectPicker"
-                                    data-testid="crmhr-assignment-project" />
-                        </Cluster>
-                    </Split>
-                </SurfaceCard>
-            </FormField>
-        </div>
+        <Stack GapScale="LayoutGap.Tiny"
+               Class="min-w-[20rem] flex-[1_1_26rem]">
+            <TextBlock TextStyle="TextStyle.EyebrowCaption"
+                       Value="@(SelectedProject is null ? "Project" : "Active project")" />
+            <TextBlock TextStyle="TextStyle.Subtitle2"
+                       Value="@SelectedProjectLabel" />
+            @if (SelectedProject is null)
+            {
+                <SmallText Text="@SelectedProjectDescription" />
+            }
+        </Stack>
 
         @if (SelectedProject is { } project)
         {
-            <Stack GapScale="LayoutGap.Tiny"
-                   Class="min-w-[20rem] flex-[1_1_32rem]">
-                <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Active project" />
-                <p class="truncate text-base font-semibold text-chrome-950">@project.Name</p>
-                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
-                    <StatusBadge Tone="info" Text="@project.Status.ToString()" />
-                    @if (!string.IsNullOrWhiteSpace(project.CurrentPhase))
-                    {
-                        <StatusBadge Tone="base" Text="@project.CurrentPhase" />
-                    }
-                    <StatusBadge Tone="base" Text="@($"{AssignmentCount} relationships")" />
-                    <StatusBadge Tone="base" Text="@($"{AllocationCount} allocations")" />
-                    <StatusBadge Tone="base" Text="@StaffingRequestLabel" />
-                </Cluster>
-            </Stack>
+            <Cluster Gap="LayoutGap.XSmall"
+                     Wrap="FlexWrap.Wrap"
+                     Class="min-w-[20rem] flex-[1_1_28rem]">
+                <StatusBadge Tone="info" Text="@project.Status.ToString()" />
+                @if (!string.IsNullOrWhiteSpace(project.CurrentPhase))
+                {
+                    <StatusBadge Tone="base" Text="@project.CurrentPhase" />
+                }
+                <StatusBadge Tone="base" Text="@($"{AssignmentCount} relationships")" />
+                <StatusBadge Tone="base" Text="@($"{AllocationCount} allocations")" />
+                <StatusBadge Tone="base" Text="@StaffingRequestLabel" />
+            </Cluster>
         }
         else
         {
             <SmallText Text="Choose a project to load its resource schedule and assignment workflows."
-                       Class="min-w-[20rem] flex-[1_1_32rem]" />
+                       Class="min-w-[20rem] flex-[1_1_28rem]" />
         }
+
+        <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.NoWrap">
+            @if (SelectedProjectId.HasValue)
+            {
+                <Button Text="Clear"
+                        Tone="ButtonTone.Default"
+                        Size="ButtonSize.Small"
+                        Click="ClearProjectAsync"
+                        data-testid="crmhr-assignment-project-clear" />
+            }
+            <Button Text="@(SelectedProjectId.HasValue ? "Change project" : "Choose project")"
+                    Icon="search"
+                    Tone="ButtonTone.Default"
+                    Size="ButtonSize.Small"
+                    Click="OpenProjectPicker"
+                    data-testid="crmhr-assignment-project" />
+        </Cluster>
 
         @if (SelectedProjectId.HasValue)
         {
@@ -145,13 +135,9 @@
     private string SelectedProjectLabel => SelectedProject?.Name
         ?? (SelectedProjectId.HasValue ? "Selected project" : "No project selected");
 
-    private string SelectedProjectDescription => SelectedProject is null
-        ? SelectedProjectId.HasValue
-            ? "The selected project record is unavailable."
-            : "Choose from the server-paged project catalog."
-        : string.IsNullOrWhiteSpace(SelectedProject.CurrentPhase)
-            ? SelectedProject.Status.ToString()
-            : $"{SelectedProject.Status} / {SelectedProject.CurrentPhase}";
+    private string SelectedProjectDescription => SelectedProjectId.HasValue
+        ? "The selected project record is unavailable."
+        : "Choose from the server-paged project catalog.";
 
     private void OpenProjectPicker()
     {

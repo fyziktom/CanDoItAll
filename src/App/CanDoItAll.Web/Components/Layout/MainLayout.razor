@@ -99,7 +99,6 @@
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
         <AppToolbar PageText="@ActiveNavigation.Title" ContextText="@ActiveProjectContextText" />
-        <AppToolbarOutlet Kind="AppToolbarOutletKind.Stats" />
         <div class="app-page-content @(ShellMode == AppShellMode.FocusWorkbench ? "app-page-content--focus" : null)">
             <AppToolbarOutlet Kind="AppToolbarOutletKind.Help" />
             @if (databaseDialogStartupMode && databaseDialogOpen)
