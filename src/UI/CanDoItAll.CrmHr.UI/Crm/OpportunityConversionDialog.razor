@@ -50,7 +50,7 @@
                                  Description="Choose an existing project with a paged query or create a new delivery record.">
                         <ChildContent>
                             <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" Class="w-full">
-                                <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
+                                <label class="flex items-center gap-3 text-sm font-medium text-chrome-700">
                                     <InputCheckbox @bind-Value="draft.LinkExistingProject" @bind-Value:after="InputChanged.InvokeAsync"
                                                    data-testid="crmhr-opportunity-conversion-link-existing" />
                                     <span>Link an existing project</span>
@@ -73,14 +73,14 @@
                                                 @if (draft.ExistingProjectId.HasValue)
                                                 {
                                                     <Button Text="Clear"
-                                                            ButtonStyle="ButtonStyle.Light"
+                                                            Tone="ButtonTone.Default"
                                                             Size="ButtonSize.Small"
                                                             Click="ClearExistingProject"
                                                             data-testid="crmhr-opportunity-conversion-project-clear" />
                                                 }
                                                 <Button Text="Select project"
                                                         Icon="folder_open"
-                                                        ButtonStyle="ButtonStyle.Light"
+                                                        Tone="ButtonTone.Default"
                                                         Size="ButtonSize.Small"
                                                         Click="OpenProjectPicker"
                                                         data-testid="crmhr-opportunity-conversion-project" />
@@ -91,28 +91,32 @@
                                 else
                                 {
                                     <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
-                                        <label class="cda-field-label">Project name</label>
-                                        <NativeValueInput TValue="string" @bind-Value="draft.ProjectName" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
-                                                   class="cda-input w-full"
-                                                   data-testid="crmhr-opportunity-conversion-name" />
+                                        <FormField Text="Project name">
+                                            <NativeValueInput aria-label="Project name" TValue="string" @bind-Value="draft.ProjectName" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                       class="form-input ui-input ui-input--outlined w-full"
+                                                       data-testid="crmhr-opportunity-conversion-name" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
-                                        <label class="cda-field-label">Description</label>
-                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="draft.ProjectDescription" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
-                                                       class="cda-input cda-input--textarea w-full min-h-[7rem]"
-                                                       data-testid="crmhr-opportunity-conversion-description" />
+                                        <FormField Text="Description">
+                                            <NativeValueInput aria-label="Description" TValue="string" Multiline="true" @bind-Value="draft.ProjectDescription" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                           class="form-input ui-input ui-input--outlined ui-input--textarea w-full min-h-[7rem]"
+                                                           data-testid="crmhr-opportunity-conversion-description" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
-                                        <label class="cda-field-label">Objective</label>
-                                        <NativeValueInput TValue="string" Multiline="true" @bind-Value="draft.ProjectObjective" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
-                                                       class="cda-input cda-input--textarea w-full min-h-[7rem]"
-                                                       data-testid="crmhr-opportunity-conversion-objective" />
+                                        <FormField Text="Objective">
+                                            <NativeValueInput aria-label="Objective" TValue="string" Multiline="true" @bind-Value="draft.ProjectObjective" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                           class="form-input ui-input ui-input--outlined ui-input--textarea w-full min-h-[7rem]"
+                                                           data-testid="crmhr-opportunity-conversion-objective" />
+                                        </FormField>
                                     </Stack>
                                     <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Stretch">
-                                        <label class="cda-field-label">Current phase</label>
-                                        <NativeValueInput TValue="string" @bind-Value="draft.CurrentPhase" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
-                                                   class="cda-input w-full"
-                                                   data-testid="crmhr-opportunity-conversion-phase" />
+                                        <FormField Text="Current phase">
+                                            <NativeValueInput aria-label="Current phase" TValue="string" @bind-Value="draft.CurrentPhase" @bind-Value:after="InputChanged.InvokeAsync" PendingChanged="@(_ => SetTextAsync())"
+                                                       class="form-input ui-input ui-input--outlined w-full"
+                                                       data-testid="crmhr-opportunity-conversion-phase" />
+                                        </FormField>
                                     </Stack>
                                 }
                             </Stack>
@@ -154,12 +158,12 @@
                 <SmallText Text="The opportunity remains in CRM history after project handoff." />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Cancel"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Disabled="IsBusy"
                             Click="HandleCloseAsync"
                             data-testid="crmhr-opportunity-conversion-cancel" />
                     <Button Text="Save conversion"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="@(IsBusy || SaveDisabled || isProjectPickerOpen)"
                             IsBusy="IsBusy"
                             Click="HandleSaveAsync"

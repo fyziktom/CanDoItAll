@@ -5,7 +5,7 @@
     <Stack data-testid="project-pending-list">
         <FormSection Title="Pending project saves" Description="Check a retained save explicitly. Opening this list never submits or retries a write.">
             <Actions>
-                <Button Text="Refresh pending saves" ButtonStyle="ButtonStyle.Light" Disabled="@Loading" Click="Refresh" data-testid="project-pending-refresh" />
+                <Button Text="Refresh pending saves" Tone="ButtonTone.Default" Disabled="@Loading" Click="Refresh" data-testid="project-pending-refresh" />
             </Actions>
             <ChildContent>
                 <Stack GapScale="LayoutGap.Small">
@@ -18,12 +18,12 @@
                     @foreach (var item in Items) {
                         <Cluster Wrap="FlexWrap.Wrap" @key="item.Operation">
                             <TextBlock Value="@($"{item.Stage} · {item.Operation.Id:D}")" />
-                            <Button Text="Review save" ButtonStyle="ButtonStyle.Light" Disabled="@Loading"
+                            <Button Text="Review save" Tone="ButtonTone.Default" Disabled="@Loading"
                                     Click="@(() => Open.InvokeAsync(item.Operation))" data-testid="project-pending-open" />
                         </Cluster>
                     }
                     @if (HasMore) {
-                        <Button Text="Show more retained saves" ButtonStyle="ButtonStyle.Light" Click="ShowMore" />
+                        <Button Text="Show more retained saves" Tone="ButtonTone.Default" Click="ShowMore" />
                     }
                 </Stack>
             </ChildContent>

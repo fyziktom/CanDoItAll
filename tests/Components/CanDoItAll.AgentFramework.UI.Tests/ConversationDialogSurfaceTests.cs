@@ -43,7 +43,7 @@ public sealed class ConversationDialogSurfaceTests {
         var original = new List<ConversationDialogIntent>();
         var current = new List<ConversationDialogIntent>();
         var cut = context.Render<LlmChatConversationDialogSurface>(p => p.Add(c => c.Presentation, state).Add(c => c.Intent, original.Add));
-        var title = cut.FindComponents<TextBox>().Last().Instance.ValueChanged;
+        var title = cut.FindComponents<TextInput>().Last().Instance.ValueChanged;
         var close = cut.FindComponent<Dialog>().Instance.OnClose;
         var selection = cut.FindComponents<ConversationParticipantCard>().FirstOrDefault()?.Instance.Selected;
         cut.Render(p => p.Add(c => c.Presentation, state with { Origin = state.Origin with { Generation = 3 }, Title = "Current title" })
@@ -92,7 +92,7 @@ public sealed class ConversationDialogSurfaceTests {
         cut.Render(p => p.Add(c => c.Presentation, state with { Title = "Busy", IsMutating = true, IsLoading = true, HasMoreDefinitions = true }));
         Assert.True(cut.Find("[data-testid='llm-chat-start-title']").HasAttribute("disabled"));
         Assert.True(cut.Find("[data-testid='llm-chat-start-definitions-load-more']").HasAttribute("disabled"));
-        await cut.InvokeAsync(() => cut.FindComponents<TextBox>().Last().Instance.ValueChanged.InvokeAsync("Queued title"));
+        await cut.InvokeAsync(() => cut.FindComponents<TextInput>().Last().Instance.ValueChanged.InvokeAsync("Queued title"));
         Assert.Equal(new(state.Origin, ConversationDialogAction.TitleChanged, "Queued title"), Assert.Single(intents));
         await cut.InvokeAsync(() => cut.FindComponent<Dialog>().Instance.OnClose.InvokeAsync());
         Assert.Single(intents);

@@ -4,9 +4,9 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem;
-    border: 1px solid rgba(226, 232, 240, 0.9);
+    border: 1px solid var(--tone-border-soft);
     border-radius: 0.5rem;
-    background: rgba(248, 250, 252, 0.82);
+    background: color-mix(in srgb, var(--tone-surface-soft) 82%, transparent);
 }
 
 .scheduler-history-root ::deep .scheduler-list-toolbar h2 {
@@ -20,7 +20,7 @@
 }
 
 .scheduler-history-root ::deep .scheduler-list-toolbar__result {
-    color: #64748b;
+    color: var(--tone-text-muted);
     font-size: 0.75rem;
     font-weight: 800;
     white-space: nowrap;

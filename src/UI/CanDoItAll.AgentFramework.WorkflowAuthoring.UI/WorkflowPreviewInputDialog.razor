@@ -24,7 +24,7 @@
                             {
                                 <label class="workflow-canvas-field">
                                     <span>Project</span>
-                                    <select class="cda-input"
+                                    <select class="form-input ui-input ui-input--outlined"
                                             value="@State.ProjectId"
                                             @onchange="HandlePreviewProjectChanged"
                                             data-testid="@($"{TestIdPrefix}-project-select")">
@@ -39,14 +39,14 @@
 
                             <label class="workflow-canvas-field">
                                 <span>Project id</span>
-                                <input class="cda-input"
+                                <input class="form-input ui-input ui-input--outlined"
                                        @bind="State.ProjectId" @bind:after="NotifyChangedAsync"
                                        data-testid="@($"{TestIdPrefix}-project-id")" />
                             </label>
 
                             <label class="workflow-canvas-field">
                                 <span>Parent node id</span>
-                                <input class="cda-input"
+                                <input class="form-input ui-input ui-input--outlined"
                                        @bind="State.ParentNodeId" @bind:after="NotifyChangedAsync"
                                        data-testid="@($"{TestIdPrefix}-node-id")" />
                             </label>
@@ -76,7 +76,7 @@
                     <section class="workflow-canvas-dialog-section">
                         <label class="workflow-canvas-field">
                             <span>Input JSON</span>
-                            <textarea class="cda-input cda-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
+                            <textarea class="form-input ui-input ui-input--outlined ui-input--textarea workflow-canvas-textarea workflow-canvas-json-textarea"
                                       @bind="State.InputJson" @bind:after="NotifyChangedAsync"
                                       data-testid="@($"{TestIdPrefix}-input-json")"></textarea>
                         </label>
@@ -92,7 +92,7 @@
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Cancel"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Click="Closed"
                         data-testid="@($"{TestIdPrefix}-input-cancel")" />
                 <Button Text="Run preview"

@@ -3,14 +3,14 @@
 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
     <Button Text="Choose avatar"
             Icon="face"
-            ButtonStyle="ButtonStyle.Light"
+            Tone="ButtonTone.Default"
             Size="ButtonSize.Small"
             Click="OpenAsync"
             Disabled="@(Disabled || Busy)"
             data-testid="@($"{TestIdPrefix}-open")" />
     <Button Text="Use default"
             Icon="restart_alt"
-            ButtonStyle="ButtonStyle.Light"
+            Tone="ButtonTone.Default"
             Size="ButtonSize.Small"
             Disabled="@(Disabled || Busy || string.IsNullOrWhiteSpace(Value))"
             Click="ClearAsync"
@@ -41,7 +41,7 @@
                         <Stack GapScale="LayoutGap.XSmall">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current avatar" />
                             <strong>@SelectionText</strong>
-                            <small class="text-sm text-slate-600">Avatar changes are saved with the definition.</small>
+                            <small class="text-sm text-chrome-600">Avatar changes are saved with the definition.</small>
                         </Stack>
                     </Stack>
                 </SurfaceCard>
@@ -49,20 +49,20 @@
                 <SurfaceCard Soft="true">
                     <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
                         <div>
-                            <label class="cda-field-label" for="@UploadInputId">Custom image</label>
+                            <label class="cda-form-field__label" for="@UploadInputId">Custom image</label>
                             <InputFile id="@UploadInputId"
-                                       class="cda-input"
+                                       class="form-input ui-input ui-input--outlined"
                                        accept="image/png,image/jpeg,image/webp,image/gif"
                                        OnChange="LoadCustomAvatarAsync"
                                        disabled="@(Disabled || Busy)"
                                        data-testid="@($"{TestIdPrefix}-upload")" />
                             @if (!string.IsNullOrWhiteSpace(customAvatarFileName)) {
-                                <p class="mt-2 break-all text-sm text-slate-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>
+                                <p class="mt-2 break-all text-sm text-chrome-600" data-testid="@($"{TestIdPrefix}-upload-file")">@customAvatarFileName</p>
                             }
                         </div>
                         <Stack GapScale="LayoutGap.XSmall" AlignItems="AlignItems.Start">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Custom avatar" />
-                            <p class="text-sm leading-6 text-slate-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
+                            <p class="text-sm leading-6 text-chrome-600">PNG, JPEG, WebP, or GIF. Max 128 KB.</p>
                             @if (isUploadBusy) {
                                 <StatusBadge Tone="info" Text="Loading" />
                             } else if (IsCustomAvatar) {
@@ -79,7 +79,7 @@
                             <TextBlock TextStyle="TextStyle.Body2"
                                        Value="@($"Uses the image provider '{generationSource.ProviderName}' and model '{generationSource.Model}'.")" />
                             <FormField Text="Creative direction">
-                                <TextArea Value="@generationPrompt"
+                                <TextAreaInput Value="@generationPrompt"
                                           ValueChanged="@(value => generationPrompt = value ?? string.Empty)"
                                           Size="TextAreaSize.Compact"
                                           Immediate="true"
@@ -90,7 +90,7 @@
                             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                                 <Button Text="Create avatar with AI"
                                         Icon="auto_awesome"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         IsBusy="@isGenerationBusy"
                                         Disabled="@(Disabled || Busy || string.IsNullOrWhiteSpace(generationPrompt))"
@@ -111,34 +111,61 @@
                     </Stack>
                 </SurfaceCard>
 
-                <Grid Gap="LayoutGap.Medium"
-                      ColumnTemplate="repeat(4,minmax(0,1fr))"
-                      data-testid="@($"{TestIdPrefix}-options")">
-                    @foreach (var option in AgentAvatarImageCatalog.BundledAvatarUrls.Select((url, index) => new { Url = url, Number = index + 1 })) {
-                        <button type="button"
-                                class="@ResolveOptionClass(option.Url)"
-                                disabled="@(Disabled || Busy)"
-                                @onclick="@(() => SelectAsync(option.Url))"
-                                data-testid="@($"{TestIdPrefix}-option-{option.Number}")">
-                            <Avatar Alt="@($"Avatar {option.Number}")"
-                                    ImageUrl="@option.Url"
-                                    FallbackText="@option.Number.ToString()"
-                                    UseDefaultImageWhenMissing="false"
-                                    Size="AvatarSize.Large"
-                                    Shape="AvatarShape.Rounded" />
-                            <span>Avatar @option.Number</span>
-                            @if (IsSelected(option.Url)) {
-                                <StatusBadge Tone="success" Text="Selected" />
-                            }
-                        </button>
-                    }
-                </Grid>
+                <FormSection Title="People" Description="Human avatars are the default for your colleagues.">
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnTemplate="repeat(4,minmax(0,1fr))"
+                          data-testid="@($"{TestIdPrefix}-options")">
+                        @foreach (var option in AgentAvatarImageCatalog.BundledAvatarUrls.Select((url, index) => new { Url = url, Number = index + 1 })) {
+                            <button type="button"
+                                    class="@ResolveOptionClass(option.Url)"
+                                    disabled="@(Disabled || Busy)"
+                                    aria-pressed="@(IsSelected(option.Url) ? "true" : "false")"
+                                    @onclick="@(() => SelectAsync(option.Url))"
+                                    data-testid="@($"{TestIdPrefix}-option-{option.Number}")">
+                                <Avatar Alt="@($"Avatar {option.Number}")"
+                                        ImageUrl="@option.Url"
+                                        FallbackText="@option.Number.ToString()"
+                                        UseDefaultImageWhenMissing="false"
+                                        Size="AvatarSize.Large"
+                                        Shape="AvatarShape.Rounded" />
+                                <span>Avatar @option.Number</span>
+                                @if (IsSelected(option.Url)) {
+                                    <StatusBadge Tone="success" Text="Selected" />
+                                }
+                            </button>
+                        }
+                    </Grid>
+                </FormSection>
+                <FormSection Title="Robots (optional)" Description="Choose a robot avatar when it suits this colleague.">
+                    <Grid Gap="LayoutGap.Medium"
+                          ColumnTemplate="repeat(4,minmax(0,1fr))"
+                          data-testid="@($"{TestIdPrefix}-robot-options")">
+                        @foreach (var option in AgentAvatarImageCatalog.BundledRobotAvatarUrls.Select((url, index) => new { Url = url, Number = index + 1 })) {
+                            <button type="button"
+                                    class="@ResolveOptionClass(option.Url)"
+                                    disabled="@(Disabled || Busy)"
+                                    aria-pressed="@(IsSelected(option.Url) ? "true" : "false")"
+                                    @onclick="@(() => SelectAsync(option.Url))"
+                                    data-testid="@($"{TestIdPrefix}-robot-option-{option.Number}")">
+                                <Avatar Alt="@($"Robot avatar {option.Number}")"
+                                        ImageUrl="@option.Url"
+                                        UseDefaultImageWhenMissing="false"
+                                        Size="AvatarSize.Large"
+                                        Shape="AvatarShape.Rounded" />
+                                <span>Robot @option.Number</span>
+                                @if (IsSelected(option.Url)) {
+                                    <StatusBadge Tone="success" Text="Selected" />
+                                }
+                            </button>
+                        }
+                    </Grid>
+                </FormSection>
             </Stack>
         </ChildContent>
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="CloseAsync"
                         data-testid="@($"{TestIdPrefix}-close")" />
@@ -208,12 +235,14 @@
     private bool IsCustomAvatar => Value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
 
     private string SelectionText => string.IsNullOrWhiteSpace(Value)
-        ? "Default generated avatar"
-        : AgentAvatarImageCatalog.IsBundledAvatarUrl(Value)
-            ? "Bundled avatar selected"
-            : IsCustomAvatar
-                ? "Custom avatar loaded"
-                : "Custom avatar selected";
+        ? "Default human avatar"
+        : AgentAvatarImageCatalog.BundledRobotAvatarUrls.Contains(Value.Trim(), StringComparer.OrdinalIgnoreCase)
+            ? "Robot avatar selected"
+            : AgentAvatarImageCatalog.IsBundledAvatarUrl(Value)
+                ? "Human avatar selected"
+                : IsCustomAvatar
+                    ? "Custom avatar loaded"
+                    : "Custom avatar selected";
 
 
     private async Task OpenAsync() {

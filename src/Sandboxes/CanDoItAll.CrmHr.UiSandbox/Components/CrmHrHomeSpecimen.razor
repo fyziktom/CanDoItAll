@@ -11,7 +11,7 @@
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
             <label for="crmhr-sandbox-scenario">Scenario</label>
             <select id="crmhr-sandbox-scenario"
-                    class="cda-input"
+                    class="form-input ui-input ui-input--outlined"
                     value="@CrmHrHomeSandboxContext.Token(context.Scenario)"
                     @onchange="ChangeScenario"
                     data-testid="crmhr-sandbox-scenario">
@@ -20,7 +20,7 @@
                     <option value="@CrmHrHomeSandboxContext.Token(scenario)">@scenario</option>
                 }
             </select>
-            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <Button Text="@LayoutLabel" Tone="ButtonTone.Default" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
         </Cluster>
         <output aria-live="polite" data-testid="crmhr-sandbox-intent">@fixture.IntentLog</output>
     </Stack>
@@ -29,7 +29,7 @@
 <main class="@FrameClass" data-testid="crmhr-sandbox-frame" data-scenario="@CrmHrHomeSandboxContext.Token(context.Scenario)">
     <CrmHrHomeSurface Presentation="@fixture.Presentation" Intent="HandleIntent">
         <SecondaryNavigation>
-            <p class="text-sm text-slate-500" data-testid="crmhr-sandbox-navigation-slot">Secondary navigation is host-owned chrome; the production page renders the CRM / HR tabs here.</p>
+            <p class="text-sm text-chrome-500" data-testid="crmhr-sandbox-navigation-slot">Secondary navigation is host-owned chrome; the production page renders the CRM / HR tabs here.</p>
         </SecondaryNavigation>
     </CrmHrHomeSurface>
 </main>

@@ -9,21 +9,21 @@
             <details open style="position:fixed;top:1rem;right:1rem;z-index:60;background:white;border:1px solid #cbd5e1;border-radius:1rem;padding:1rem;max-width:24rem;max-height:70vh;overflow:auto" data-testid="storage-scenario-controls">
                 <summary>Scenario controls</summary>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <select class="cda-input" @bind="scenario" aria-label="Scenario" data-testid="storage-scenario">
+                    <select class="form-input ui-input ui-input--outlined" @bind="scenario" aria-label="Scenario" data-testid="storage-scenario">
                         @foreach (var item in Enum.GetValues<CatalogScenario>()) {
                             <option value="@item">@item</option>
                         }
                     </select>
                     <Button Text="Reset scenario" Click="ResetAsync" data-testid="storage-scenario-reset" />
-                    <select class="cda-input" @bind="stage" aria-label="Controlled stage" data-testid="storage-scenario-stage">
+                    <select class="form-input ui-input ui-input--outlined" @bind="stage" aria-label="Controlled stage" data-testid="storage-scenario-stage">
                         @foreach (var item in Enum.GetValues<CatalogScenarioStage>()) {
                             <option value="@item">@item</option>
                         }
                     </select>
-                    <Button Text="Hold stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].Hold())" data-testid="storage-stage-hold" />
-                    <Button Text="Release stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].Release())" data-testid="storage-stage-release" />
-                    <Button Text="Fail next stage" ButtonStyle="ButtonStyle.Light" Click="@(() => store.Gates[stage].FailNext = true)" data-testid="storage-stage-fail" />
-                    <Button Text="Release retired stores" ButtonStyle="ButtonStyle.Light" Click="ReleaseRetired" data-testid="storage-retired-release" />
+                    <Button Text="Hold stage" Tone="ButtonTone.Default" Click="@(() => store.Gates[stage].Hold())" data-testid="storage-stage-hold" />
+                    <Button Text="Release stage" Tone="ButtonTone.Default" Click="@(() => store.Gates[stage].Release())" data-testid="storage-stage-release" />
+                    <Button Text="Fail next stage" Tone="ButtonTone.Default" Click="@(() => store.Gates[stage].FailNext = true)" data-testid="storage-stage-fail" />
+                    <Button Text="Release retired stores" Tone="ButtonTone.Default" Click="ReleaseRetired" data-testid="storage-retired-release" />
                 </Cluster>
                 <p role="status">@message</p>
                 <p data-testid="storage-scenario-counts">Catalog writes: @store.CatalogWrites; driver tests: @store.DriverCalls; routing writes: @store.RoutingWrites; Activity: @store.ActivityCalls; retained stores: @retired.Count.</p>

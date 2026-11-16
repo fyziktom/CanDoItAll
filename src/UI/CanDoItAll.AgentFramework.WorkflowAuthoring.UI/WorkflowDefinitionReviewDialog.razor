@@ -16,12 +16,12 @@
             }
             <MergeFieldView TValue="string" Label="Name" Field="Review.Name" Format="Identity" Changed="Changed" TestId="workflow-definition-review-name">
                 <ResultEditor Context="value">
-                    <TextBox Value="@value" ValueChanged="SetNameAsync" data-testid="workflow-definition-review-result-name" />
+                    <TextInput Value="@value" ValueChanged="SetNameAsync" data-testid="workflow-definition-review-result-name" />
                 </ResultEditor>
             </MergeFieldView>
             <MergeFieldView TValue="string" Label="Description" Field="Review.Description" Format="Identity" Changed="Changed" TestId="workflow-definition-review-description">
                 <ResultEditor Context="value">
-                    <TextArea Value="@value" ValueChanged="SetDescriptionAsync" Rows="6" data-testid="workflow-definition-review-result-description" />
+                    <TextAreaInput Value="@value" ValueChanged="SetDescriptionAsync" Rows="6" data-testid="workflow-definition-review-result-description" />
                 </ResultEditor>
             </MergeFieldView>
             <MergeFieldView TValue="WorkflowLifecycleStatus" Label="Lifecycle status" Field="Review.Status"
@@ -33,16 +33,16 @@
             <SmallText Text="The graph choice includes all nodes, routes, ports and stored settings, including values not shown in this summary. Graph topology is reviewed as one document." />
             @if (Previous is { } previous) {
                 <FormSection Title="Previous comparison retained for copying">
-                    <FormField Text="Previous name result"><TextBox Value="@(previous.Name.IsResolved ? previous.Name.Result : previous.Name.Local)" ReadOnly="true" /></FormField>
-                    <FormField Text="Previous description result"><TextArea Value="@(previous.Description.IsResolved ? previous.Description.Result : previous.Description.Local)" ReadOnly="true" Rows="4" /></FormField>
+                    <FormField Text="Previous name result"><TextInput Value="@(previous.Name.IsResolved ? previous.Name.Result : previous.Name.Local)" ReadOnly="true" /></FormField>
+                    <FormField Text="Previous description result"><TextAreaInput Value="@(previous.Description.IsResolved ? previous.Description.Result : previous.Description.Local)" ReadOnly="true" Rows="4" /></FormField>
                 </FormSection>
             }
         </Stack>
     </ChildContent>
     <Footer>
         <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-            <Button Text="Check again" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="Busy" data-testid="workflow-definition-review-refresh" />
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="workflow-definition-review-cancel" />
+            <Button Text="Check again" Tone="ButtonTone.Default" Click="Refresh" Disabled="Busy" data-testid="workflow-definition-review-refresh" />
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="Cancel" data-testid="workflow-definition-review-cancel" />
             <Button Text="Apply to draft" Click="Apply" Disabled="@(!CanApply || Busy)" data-testid="workflow-definition-review-apply" />
         </Cluster>
     </Footer>

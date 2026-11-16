@@ -8,21 +8,21 @@
             <Stack Class="provider-pricing-main" GapScale="LayoutGap.Medium">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <Cluster Gap="LayoutGap.Small">
-                        <label class="cda-inline-option">
-                            <InputCheckbox @bind-Value="Model.IsPrivateProvider"
+                        <label class="ui-checkbox-option">
+                            <InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="Model.IsPrivateProvider"
                                            disabled="@PrivateProviderLocked"
                                            data-testid="provider-private-input" />
                             Private provider
                         </label>
                         <StatusBadge Tone="info" Text="@($"{CatalogModels.Count} model(s), {ConfiguredModelCount} priced")" />
                     </Cluster>
-                    <p class="cda-body-muted">Prices are USD per one million tokens. Image-generation profiles use text input rates, separate image input rates, and image output rates.</p>
+                    <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">Prices are USD per one million tokens. Image-generation profiles use text input rates, separate image input rates, and image output rates.</TextBlock>
                 </div>
 
-                <div class="provider-pricing-table overflow-x-auto rounded-md border border-slate-200" data-testid="provider-pricing-table">
+                <div class="provider-pricing-table overflow-x-auto rounded-md border border-chrome-200" data-testid="provider-pricing-table">
                     <table class="min-w-full border-collapse text-sm">
                         <thead>
-                            <tr class="border-b border-slate-200 text-left text-slate-600">
+                            <tr class="border-b border-chrome-200 text-left text-chrome-600">
                                 <th class="px-3 py-2 font-semibold">Model</th>
                                 <th class="px-3 py-2 font-semibold">Input</th>
                                 <th class="px-3 py-2 font-semibold">Cached input</th>
@@ -41,81 +41,81 @@
                         <tbody>
                             @for (var index = 0; index < Model.ModelPrices.Count; index++) {
                                 var price = Model.ModelPrices[index];
-                                <tr @key="price" class="border-b border-slate-100 last:border-b-0"
+                                <tr @key="price" class="border-b border-chrome-100 last:border-b-0"
                                     data-testid="@($"provider-pricing-row-{index}")">
                                     <td class="min-w-[14rem] px-3 py-2 align-top">
-                                        <TextBox Immediate="true" Value="@DisplayModel(price.Model)"
+                                        <TextInput Immediate="true" Value="@DisplayModel(price.Model)"
                                                    ValueChanged="@(value => Rename(price, value))"
-                                                   class="cda-input"
+                                                   class="form-input ui-input ui-input--outlined"
                                                    data-testid="@($"provider-pricing-model-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.InputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-input-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.CachedInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-cached-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.CacheWritePerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-cache-write-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.OutputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-output-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.ImageInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-image-input-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.CachedImageInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-cached-image-input-{index}")" />
                                     </td>
                                     <td class="min-w-[12rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.LongContextThresholdTokens"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-long-threshold-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.LongContextInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-long-input-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.LongContextCachedInputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-long-cached-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.LongContextCacheWritePerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-long-cache-write-{index}")" />
                                     </td>
                                     <td class="min-w-[10rem] px-3 py-2 align-top">
                                         <ProviderPriceInput @bind-Value="price.LongContextOutputPerMillionTokensUsd"
-                                                     class="cda-input"
+                                                     class="form-input ui-input ui-input--outlined"
                                                      data-testid="@($"provider-pricing-long-output-{index}")" />
                                     </td>
                                     <td class="px-3 py-2 align-top">
                                         <Button Text="Remove"
-                                                ButtonStyle="ButtonStyle.Light"
+                                                Tone="ButtonTone.Default"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => RemovePriceRow(price))" />
                                     </td>
                                 </tr>
                             }
                             @foreach (var modelName in UnpricedModels) {
-                                <tr class="border-b border-slate-100" data-testid="provider-pricing-unpriced-model">
+                                <tr class="border-b border-chrome-100" data-testid="provider-pricing-unpriced-model">
                                     <td class="px-3 py-2">@DisplayModel(modelName)</td>
-                                    <td colspan="12" class="px-3 py-2 cda-body-muted">Price not published or configured</td>
+                                    <td colspan="12" class="px-3 py-2 cda-text-block cda-text-block--muted leading-5">Price not published or configured</td>
                                 </tr>
                             }
                         </tbody>
@@ -123,26 +123,26 @@
                 </div>
 
                 @if (Model.ModelPrices.Count == 0) {
-                    <p class="cda-body-muted" data-testid="provider-pricing-unavailable">No prices have been published or configured for these models. Usage remains unpriced.</p>
+                    <TextBlock TextStyle="TextStyle.Muted" Class="leading-5" data-testid="provider-pricing-unavailable">No prices have been published or configured for these models. Usage remains unpriced.</TextBlock>
                 }
 
                 @if (!SourceManaged) {
-                <p class="cda-body-muted">Loading replaces the model catalog and removes prices for models no longer offered. Ollama does not publish token prices; manual private-provider rates are operator estimates.</p>
+                <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">Loading replaces the model catalog and removes prices for models no longer offered. Ollama does not publish token prices; manual private-provider rates are operator estimates.</TextBlock>
 
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Load from provider"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Size="ButtonSize.Small"
                             Disabled="@(!OnRefreshPrices.HasDelegate)"
                             Click="RefreshPricesAsync"
                             data-testid="provider-pricing-refresh-button" />
                     <Button Text="Add model price"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="AddPriceRow"
                             data-testid="provider-pricing-add-button" />
                     <Button Text="Reset catalog prices"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="ResetDefaults"
                             data-testid="provider-pricing-reset-button" />
@@ -151,7 +151,7 @@
             </Stack>
 
             <aside class="provider-pricing-summary" data-testid="provider-pricing-summary">
-                <p class="cda-eyebrow">Pricing coverage</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Pricing coverage</TextBlock>
                 <dl>
                     <div>
                         <dt>Mode</dt>

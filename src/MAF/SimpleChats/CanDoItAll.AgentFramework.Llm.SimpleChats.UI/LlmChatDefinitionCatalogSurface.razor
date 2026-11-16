@@ -16,7 +16,7 @@
                      Class="min-w-0 flex-1 llm-chat-definition-catalog__header-main">
                 <Stack GapScale="LayoutGap.Tiny" Class="shrink-0 llm-chat-definition-catalog__heading">
                     <span class="cda-eyebrow">Reusable Simple Chats</span>
-                    <h2 class="text-xl font-semibold text-slate-900">Definitions</h2>
+                    <h2 class="text-xl font-semibold text-chrome-900">Definitions</h2>
                 </Stack>
 
                 @if (Presentation.CanRead) {
@@ -28,7 +28,7 @@
                                  AlignItems="AlignItems.Center"
                                  Class="min-w-0 w-full flex-1 max-[80rem]:flex-wrap llm-chat-definition-catalog__filters"
                                  data-testid="llm-chat-definition-filters">
-                            <TextBox Value="@searchText"
+                            <TextInput Value="@searchText"
                                      ValueChanged="ChangeSearchAsync"
                                      Placeholder="Search definitions"
                                      Immediate="true"
@@ -47,22 +47,23 @@
                                        AriaLabel="Filter Simple Chat definitions by tags"
                                        TestId="llm-chat-definition-tag-filter"
                                        InputTestId="llm-chat-definition-tag-filter-input" />
-                            <DropDown TValue="LlmChatDefinitionStatusFilter"
-                                      Data="@StatusOptions"
-                                      TextProperty="@nameof(LlmChatDefinitionStatusFilterOption.Label)"
-                                      ValueProperty="@nameof(LlmChatDefinitionStatusFilterOption.Value)"
+                            <SelectInput TValue="LlmChatDefinitionStatusFilter"
                                       Value="@statusFilter"
                                       ValueChanged="ChangeStatusFilterAsync"
                                       Disabled="@Presentation.IsBusy"
                                       Class="min-w-40 w-44 shrink-0 basis-44 llm-chat-definition-catalog__status-filter"
                                       aria-label="Filter Simple Chat definitions by status"
-                                      data-testid="llm-chat-definition-status-filter" />
+                                      data-testid="llm-chat-definition-status-filter">
+    @foreach (var option in StatusOptions) {
+        <option value="@option.Value">@option.Label</option>
+    }
+</SelectInput>
                             <TooltipTarget Text="Reset definition filters"
                                            Position="TooltipPosition.Bottom"
                                            Duration="@((TimeSpan?)null)"
                                            TestId="llm-chat-definition-reset-tooltip">
                                 <Button Icon="filter_alt_off"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="ResetFiltersAsync"
                                         Disabled="@(!HasActiveFilters || Presentation.IsBusy)"
@@ -77,7 +78,7 @@
             @if (Presentation.CanManage) {
                 <Button Text="New definition"
                         Icon="add"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Click="OpenCreateEditor"
                         data-testid="llm-chat-definition-create" />
             }

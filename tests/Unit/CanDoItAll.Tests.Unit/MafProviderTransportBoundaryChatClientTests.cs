@@ -392,16 +392,21 @@ public sealed class MafProviderTransportBoundaryChatClientTests
     public async Task Semantic_updates_reset_streaming_idle_watchdog()
     {
         var provider = CreateProvider();
+        var timeProvider = new StreamingTimeProvider();
+        var idleTimeout = TimeSpan.FromSeconds(2);
         var stream = new HeartbeatAsyncEnumerable(
             TimeSpan.FromMilliseconds(250),
             semanticProgress: true,
-            updateLimit: 9);
+            updateLimit: 9,
+            timeProvider: timeProvider);
         using var client = CreateBoundaryClient(
             new StreamingChatClient(stream),
             provider,
-            idleTimeout: TimeSpan.FromSeconds(2),
-            absoluteTimeout: TimeSpan.FromSeconds(8));
+            idleTimeout: idleTimeout,
+            absoluteTimeout: TimeSpan.FromSeconds(8),
+            timeProvider: timeProvider);
         var updates = new List<ChatResponseUpdate>();
+        var startedAt = timeProvider.GetTimestamp();
 
         await foreach (var update in client.GetStreamingResponseAsync(CreateMessages()))
         {
@@ -409,6 +414,7 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         }
 
         Assert.Equal(9, updates.Count);
+        Assert.True(timeProvider.GetElapsedTime(startedAt) > idleTimeout);
         Assert.False(stream.TransportCancellationWasRequested);
     }
 
@@ -545,7 +551,8 @@ public sealed class MafProviderTransportBoundaryChatClientTests
         IMafProviderStreamingDispatchGate? gate = null,
         TimeSpan? idleTimeout = null,
         TimeSpan? absoluteTimeout = null,
-        TimeSpan? cleanupTimeout = null)
+        TimeSpan? cleanupTimeout = null,
+        TimeProvider? timeProvider = null)
         => new(
             innerClient,
             provider,
@@ -553,7 +560,8 @@ public sealed class MafProviderTransportBoundaryChatClientTests
             gate ?? NoOpMafProviderStreamingDispatchGate.Instance,
             _ => idleTimeout ?? TimeSpan.FromSeconds(1),
             _ => absoluteTimeout ?? TimeSpan.FromSeconds(2),
-            _ => cleanupTimeout ?? TimeSpan.FromSeconds(1));
+            _ => cleanupTimeout ?? TimeSpan.FromSeconds(1),
+            timeProvider: timeProvider);
 
     private static IReadOnlyList<ChatMessage> CreateMessages()
         => [new ChatMessage(ChatRole.User, "test")];
@@ -747,7 +755,8 @@ public sealed class MafProviderTransportBoundaryChatClientTests
     private sealed class HeartbeatAsyncEnumerable(
         TimeSpan delay,
         bool semanticProgress,
-        int? updateLimit) :
+        int? updateLimit,
+        StreamingTimeProvider? timeProvider = null) :
         IAsyncEnumerable<ChatResponseUpdate>,
         IAsyncEnumerator<ChatResponseUpdate>
     {
@@ -775,7 +784,12 @@ public sealed class MafProviderTransportBoundaryChatClientTests
                 return false;
             }
 
-            await Task.Delay(delay, cancellationToken);
+            if (timeProvider is null) {
+                await Task.Delay(delay, cancellationToken);
+            } else {
+                cancellationToken.ThrowIfCancellationRequested();
+                timeProvider.Advance(delay);
+            }
             updateCount++;
             Current = semanticProgress
                 ? new ChatResponseUpdate(
@@ -790,6 +804,13 @@ public sealed class MafProviderTransportBoundaryChatClientTests
             cancellationRegistration.Dispose();
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class StreamingTimeProvider : TimeProvider {
+        private long timestamp;
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+        public override long GetTimestamp() => timestamp;
+        public void Advance(TimeSpan duration) => timestamp += duration.Ticks;
     }
 
     private sealed class NonCooperativeAsyncEnumerable :

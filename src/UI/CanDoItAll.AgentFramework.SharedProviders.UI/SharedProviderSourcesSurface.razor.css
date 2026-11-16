@@ -4,8 +4,8 @@
 }
 
 .shared-provider-status-note {
-    border-left: 0.2rem solid var(--cda-color-warning-500, #f59e0b);
-    color: var(--cda-color-text-muted, #64748b);
+    border-left: 0.2rem solid var(--tone-warning-soft-fg);
+    color: var(--tone-text-muted);
     font-size: 0.875rem;
     padding-left: 0.75rem;
 }
@@ -20,7 +20,7 @@
 
 .shared-provider-catalog-item {
     align-items: flex-start;
-    border: 1px solid var(--cda-color-border, #e2e8f0);
+    border: 1px solid var(--tone-border);
     border-radius: 0.6rem;
     cursor: pointer;
     display: grid;
@@ -36,7 +36,7 @@
 
 .shared-provider-catalog-item small,
 .shared-provider-catalog-item span > span {
-    color: var(--cda-color-text-muted, #64748b);
+    color: var(--tone-text-muted);
 }
 
 .shared-provider-catalog-item input {

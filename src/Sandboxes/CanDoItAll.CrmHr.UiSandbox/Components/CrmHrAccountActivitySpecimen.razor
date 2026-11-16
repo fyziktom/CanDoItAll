@@ -10,7 +10,7 @@
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
             <label for="crmhr-sandbox-scenario">Scenario</label>
             <select id="crmhr-sandbox-scenario"
-                    class="cda-input"
+                    class="form-input ui-input ui-input--outlined"
                     value="@CrmHrAccountActivitySandboxContext.Token(context.Scenario)"
                     @onchange="ChangeScenario"
                     data-testid="crmhr-sandbox-scenario">
@@ -19,7 +19,7 @@
                     <option value="@CrmHrAccountActivitySandboxContext.Token(scenario)">@scenario</option>
                 }
             </select>
-            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
+            <Button Text="@LayoutLabel" Tone="ButtonTone.Default" Click="CycleLayout" data-testid="crmhr-sandbox-layout" />
             <a href="/crm-hr" data-testid="crmhr-sandbox-home-link">Home sandbox</a>
         </Cluster>
         <output aria-live="polite" data-testid="crmhr-sandbox-intent">@fixture.IntentLog</output>

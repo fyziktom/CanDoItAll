@@ -1,6 +1,6 @@
 .project-multi-picker__row {
-    background: rgb(255 255 255);
-    border: 1px solid rgb(226 232 240);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border);
     border-radius: 0.75rem;
     min-width: 0;
     padding: 0.55rem 0.7rem;

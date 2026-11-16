@@ -8,6 +8,32 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 
 public sealed class AvatarPickerAdversarialTests {
     [Fact]
+    public async Task People_remain_primary_and_robot_choice_is_explicit_and_clearable() {
+        using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddSingleton<IAvatarGenerationGateway>(new Gateway());
+        var selected = string.Empty;
+        var cut = context.Render<AvatarPicker>(parameters => parameters
+            .Add(component => component.ValueChanged, value => selected = value));
+
+        await cut.Find("[data-testid='avatar-picker-open']").ClickAsync();
+
+        Assert.Equal(8, cut.FindAll("[data-testid^='avatar-picker-option-']").Count);
+        Assert.Equal(8, cut.FindAll("[data-testid^='avatar-picker-robot-option-']").Count);
+        Assert.True(cut.Markup.IndexOf("People", StringComparison.Ordinal) < cut.Markup.IndexOf("Robots (optional)", StringComparison.Ordinal));
+        Assert.EndsWith(".jpg", cut.Find("img").GetAttribute("src"));
+
+        await cut.Find("[data-testid='avatar-picker-robot-option-1']").ClickAsync();
+
+        Assert.Equal(CanDoItAll.AgentFramework.Models.AgentAvatarImageCatalog.BundledRobotAvatarUrls[0], selected);
+        Assert.True(CanDoItAll.AgentFramework.Models.AgentAvatarImageCatalog.IsBundledAvatarUrl(selected));
+        cut.Render(parameters => parameters.Add(component => component.Value, selected));
+        await cut.Find("[data-testid='avatar-picker-clear']").ClickAsync();
+        Assert.Equal(string.Empty, selected);
+    }
+
+    [Fact]
     public async Task Default_source_failure_is_public_and_the_picker_can_retry() {
         using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;

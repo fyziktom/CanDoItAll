@@ -14,8 +14,8 @@
                      Summary="This sends transcript content to the selected external or local provider. It saves analysis text; it does not create tasks."
                      Close="@(() => actions.Close())" DataTestId="content-transcript-confirmation" DialogClass="project-structure-summary-dialog">
     <Actions>
-        <Button Text="Send request" ButtonStyle="ButtonStyle.Info" Disabled="@(!ready || state.SelectedProviderId is null)" Click="@(() => actions.Submit())" />
-        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
+        <Button Text="Send request" Tone="ButtonTone.Info" Disabled="@(!ready || state.SelectedProviderId is null)" Click="@(() => actions.Submit())" />
+        <Button Text="Cancel" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => actions.Close())" />
     </Actions>
     <Body>
         <Stack GapScale="LayoutGap.Medium">
@@ -26,9 +26,14 @@
                 <TextBlock Value="The original request is in progress…" />
             }
             <FormField Text="Provider profile">
-                <DropDown TValue="Guid?" Data="@state.Providers" TextProperty="Name" ValueProperty="Id" Value="@state.SelectedProviderId"
-                          Disabled="@(!ready)" Placeholder="Select a provider"
-                          Change="@(value => actions.SelectProvider(value is Guid id ? id : null))" />
+                <SelectInput TValue="Guid?" Value="@state.SelectedProviderId"
+                          Disabled="@(!ready)"
+                          ValueChanged="@(value => actions.SelectProvider(value is Guid id ? id : null))">
+    <option value="">Select a provider</option>
+    @foreach (var option in state.Providers) {
+        <option value="@option.Id">@option.Name</option>
+    }
+</SelectInput>
             </FormField>
             @if (state.Phase == ContentConfirmationPhase.Ready && state.Providers.Count == 0) {
                 <Alert AlertStyle="AlertStyle.Warning">No provider is available for this action.</Alert>

@@ -9,23 +9,23 @@
 
     <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
         <FormField Text="Title">
-            <TextBox Immediate="true" Value="@Editor.Title"
+            <TextInput Immediate="true" Value="@Editor.Title"
                      ValueChanged="@(value => Editor.Title = value)"
                      data-testid="memory-ui-ingestion-title" />
         </FormField>
         <FormField Text="Category">
-            <TextBox Immediate="true" Value="@Editor.SourceCategory"
+            <TextInput Immediate="true" Value="@Editor.SourceCategory"
                      ValueChanged="@(value => Editor.SourceCategory = value)"
                      data-testid="memory-ui-ingestion-category" />
         </FormField>
         <FormField Text="Tags">
-            <TextBox Immediate="true" Value="@Editor.Tags"
+            <TextInput Immediate="true" Value="@Editor.Tags"
                      ValueChanged="@(value => Editor.Tags = value)"
                      data-testid="memory-ui-ingestion-tags" />
         </FormField>
     </Grid>
     <FormField Text="Content">
-        <TextArea Immediate="true" Value="@Editor.ContentText"
+        <TextAreaInput Immediate="true" Value="@Editor.ContentText"
                   ValueChanged="@(value => Editor.ContentText = value)"
                   Rows="7"
                   data-testid="memory-ui-ingestion-content" />
@@ -34,7 +34,7 @@
     {
         <Button Text="Enqueue ingestion"
                 Icon="upload_file"
-                ButtonStyle="ButtonStyle.Primary"
+                Tone="ButtonTone.Primary"
                 Size="ButtonSize.Small"
                 Click="OnEnqueue"
                 Disabled="@IsBusy"

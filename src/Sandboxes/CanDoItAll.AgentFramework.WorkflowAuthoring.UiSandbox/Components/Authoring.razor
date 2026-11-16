@@ -10,7 +10,7 @@
         <SurfaceCard>
             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                 <FormField Text="Scenario">
-                    <select class="cda-input" value="@mode" @onchange="ChangeScenario" data-testid="scenario-mode">
+                    <select class="form-input ui-input ui-input--outlined" value="@mode" @onchange="ChangeScenario" data-testid="scenario-mode">
                         @foreach (var value in Enum.GetValues<WorkflowScenarioMode>()) {
                             <option value="@value">@value</option>
                         }

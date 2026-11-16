@@ -20,7 +20,7 @@
             <Button Text="Files" Click="() => session.OpenRunFilesAsync(session.CurrentShell.Runtime.Runs[0].RunId.Value)" />
         </ToolbarActions>
         <ToolbarFields Class="process-scenario-fields">
-            <select class="cda-input" aria-label="Conversation scenario" value="@chat.Scenario" @onchange="ChangeChatScenario">
+            <select class="form-input ui-input ui-input--outlined" aria-label="Conversation scenario" value="@chat.Scenario" @onchange="ChangeChatScenario">
                 @foreach (var scenario in Enum.GetValues<ProcessChatScenario>()) {
                     <option value="@scenario">@scenario</option>
                 }

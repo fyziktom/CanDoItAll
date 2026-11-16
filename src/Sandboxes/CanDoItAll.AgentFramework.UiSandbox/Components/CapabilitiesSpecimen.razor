@@ -11,7 +11,7 @@
         <p>Real capability components. Actions change sample state and the intent log.</p>
         <Grid ColumnTemplate="auto minmax(14rem,30rem) auto" Gap="LayoutGap.Small" AlignItems="AlignItems.Center">
             <label for="capabilities-scenario" class="cda-field-label">Scenario</label>
-            <select id="capabilities-scenario" class="cda-input" value="@ScenarioToken"
+            <select id="capabilities-scenario" class="form-input ui-input ui-input--outlined" value="@ScenarioToken"
                     @onchange="ChangeScenario" data-testid="sandbox-capabilities-scenario">
                 @foreach (var definition in CapabilitiesSandboxContext.Scenarios) {
                     <option value="@definition.Token">@definition.Label</option>

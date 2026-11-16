@@ -14,8 +14,12 @@
         <Button Text="Accepted run" Click="OpenAccepted" />
     </Stack>
     <TextBlock TextStyle="TextStyle.Note" Value="@receipt" data-testid="execution-process-receipt" />
-    <DropDown TValue="ExecutionScenario" Data="@(Enum.GetValues<ExecutionScenario>())" @bind-Value="scenario"
-        aria-label="Process scenario" Style="width:15rem" />
+    <SelectInput TValue="ExecutionScenario" @bind-Value="scenario"
+        aria-label="Process scenario" Style="width:15rem">
+    @foreach (var option in (Enum.GetValues<ExecutionScenario>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
     <TextBlock TextStyle="TextStyle.Note" Value="@ExecutionScenarioDescriptions.Describe(scenario)" />
     <div class="execution-scenario-canvas">
         @if (link is { } currentLink) {

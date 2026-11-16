@@ -9,9 +9,9 @@
                JustifyContent="JustifyContent.SpaceBetween"
                Wrap="FlexWrap.Wrap">
             <div class="min-w-0">
-                <p class="cda-eyebrow">Project relationships</p>
-                <h2 class="mt-1 text-lg font-semibold text-slate-950">Recorded assignments</h2>
-                <p class="mt-1 text-sm text-slate-600">
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Project relationships</TextBlock>
+                <h2 class="mt-1 text-lg font-semibold text-chrome-950">Recorded assignments</h2>
+                <p class="mt-1 text-sm text-chrome-600">
                     @if (string.IsNullOrWhiteSpace(ProjectName)) {
                         <text>Choose a project to manage its commercial and staffing relationships.</text>
                     } else {
@@ -24,9 +24,9 @@
                            Position="TooltipPosition.Bottom"
                            TestId="crmhr-assignment-create-tooltip">
                 <Button Icon="add"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Size="ButtonSize.Small"
-                        Class="cda-button--quick"
+                        Class="ui-button--quick"
                         Disabled="@(!CanCreate || isPreparingCreate)"
                         IsBusy="@isPreparingCreate"
                         aria-label="Create project assignment"
@@ -43,22 +43,22 @@
             <CompactFilterBar ResultText="@($"{TotalCount} matching assignment(s)")">
                 <input value="@SearchText"
                        @oninput="HandleSearchInputAsync"
-                       class="cda-input cda-input--toolbar h-10 min-w-[18rem] flex-1"
+                       class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[18rem] flex-1"
                        style="width: auto; flex: 1 1 24rem;"
                        placeholder="Search party, role, node, or notes"
                        data-testid="crmhr-assignment-search" />
-                <InputSelect TValue="ProjectPartyAssignmentRole?"
+                <SelectInput TValue="ProjectPartyAssignmentRole?"
                              Value="@RoleFilter"
                              ValueChanged="HandleRoleFilterChangedAsync"
                              ValueExpression="@(() => RoleFilter)"
-                             class="cda-input cda-input--toolbar h-10 min-w-[13rem]"
+                             class="form-input ui-input ui-input--outlined ui-input--density-compact h-10 min-w-[13rem]"
                              style="width: 13rem; flex: 0 1 13rem;"
                              data-testid="crmhr-assignment-role-filter">
                     <option value="">All roles</option>
                     @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
                         <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </CompactFilterBar>
 
             <Stack GapScale="LayoutGap.Medium"
@@ -110,17 +110,17 @@
             <Grid Gap="LayoutGap.Medium"
                   ColumnsLg="2">
                 <FormField Text="Assignment role">
-                    <InputSelect @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
-                                 class="cda-input"
+                    <SelectInput @bind-Value="Draft.Role" @bind-Value:after="@(() => ScopeChangedAsync(AssignmentField.Role))"
+                                 class="form-input ui-input ui-input--outlined"
                                  data-testid="crmhr-assignment-role">
                         @foreach (var role in Enum.GetValues<ProjectPartyAssignmentRole>()) {
                             <option value="@role">@ProjectPartyAssignmentPresentation.ResolveRoleLabel(role)</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Node key">
                     <NativeValueInput TValue="string" @bind-Value="Draft.NodeKey" PendingChanged="@(_ => TextAsync(AssignmentField.Node))"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-assignment-node-key" />
                 </FormField>
             </Grid>
@@ -139,17 +139,17 @@
                   ColumnsLg="3">
                 <FormField Text="Allocation %">
                     <NativeValueInput DisplayName="allocation percentage" TValue="decimal?" @bind-Value="Draft.AllocationPercent" PendingChanged="@(value => ReportAsync(AssignmentField.Allocation, value))"
-                                 class="cda-input"
+                                 class="form-input ui-input ui-input--outlined"
                                  data-testid="crmhr-assignment-allocation" />
                 </FormField>
                 <FormField Text="Starts on">
                     <NativeValueInput DisplayName="start date" TValue="DateOnly?" @bind-Value="Draft.StartsOn" PendingChanged="@(value => ReportAsync(AssignmentField.Start, value))"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-assignment-starts-on" />
                 </FormField>
                 <FormField Text="Ends on">
                     <NativeValueInput DisplayName="end date" TValue="DateOnly?" @bind-Value="Draft.EndsOn" PendingChanged="@(value => ReportAsync(AssignmentField.End, value))"
-                               class="cda-input"
+                               class="form-input ui-input ui-input--outlined"
                                data-testid="crmhr-assignment-ends-on" />
                 </FormField>
             </Grid>
@@ -158,10 +158,10 @@
                   ColumnsLg="2">
                 <FormField Text="Notes">
                     <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(AssignmentField.Notes))"
-                                   class="cda-input cda-input--textarea min-h-24"
+                                   class="form-input ui-input ui-input--outlined ui-input--textarea min-h-24"
                                    data-testid="crmhr-assignment-notes" />
                 </FormField>
-                <label class="inline-flex items-center gap-2 self-start text-sm text-slate-700">
+                <label class="inline-flex items-center gap-2 self-start text-sm text-chrome-700">
                     <InputCheckbox @bind-Value="Draft.IsPrimary" @bind-Value:after="PrimaryChangedAsync"
                                    data-testid="crmhr-assignment-primary" />
                     <span>Mark as primary</span>
@@ -171,7 +171,7 @@
     @if (Draft.IsPrimary) {
                 <Stack GapScale="LayoutGap.Small">
                     <SmallText Text="@(Draft.PrimaryOriginal is { } basis ? $"Reviewed primary scope: {basis.PrimaryIds.Length} current primary assignment(s)." : "Review the current primary for this role and node before saving.")" />
-                    <Button Text="Review current primary" ButtonStyle="ButtonStyle.Light" Disabled="@(isSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
+                    <Button Text="Review current primary" Tone="ButtonTone.Default" Disabled="@(isSaving || WritesDisabled)" Click="@(async () => { await ReviewPrimary(); })" />
                 </Stack>
             }
             </EditForm>
@@ -182,13 +182,13 @@
                AlignItems="AlignItems.Center"
                JustifyContent="JustifyContent.SpaceBetween"
                Wrap="FlexWrap.Wrap">
-            <Button ButtonStyle="ButtonStyle.Light"
+            <Button Tone="ButtonTone.Default"
                     Text="Reset"
                     Disabled="@(isSaving || WritesDisabled)"
                     data-testid="crmhr-assignment-reset-button"
                     Click="ResetEditorAsync" />
             <Cluster Gap="LayoutGap.Small">
-                <Button ButtonStyle="ButtonStyle.Light"
+                <Button Tone="ButtonTone.Default"
                         Text="Cancel"
                         Disabled="@(isSaving || WritesDisabled)"
                         Click="CloseCreateDialogAsync" />

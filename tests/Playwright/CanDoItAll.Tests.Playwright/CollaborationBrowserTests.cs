@@ -38,6 +38,8 @@ public sealed class CollaborationBrowserTests(PlaywrightAppFixture fixture) {
         await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
         await ReadyAsync(page);
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifacts, "production-initial.png") });
+        await Assertions.Expect(page.GetByTestId("collaboration-create-form")).ToBeHiddenAsync();
+        await page.GetByTestId("collaboration-create-toggle").ClickAsync();
         await page.GetByTestId("collaboration-thread-create").ClickAsync();
         await Assertions.Expect(page.Locator("[data-testid=collaboration-create-form] .validation-message").First).ToBeVisibleAsync();
 
@@ -45,7 +47,14 @@ public sealed class CollaborationBrowserTests(PlaywrightAppFixture fixture) {
         await page.GetByTestId("collaboration-thread-subject").FillAsync(subject);
         await page.GetByTestId("collaboration-thread-context-label").FillAsync("Scheduler follow-up");
         await page.GetByTestId("collaboration-thread-context-route").FillAsync("/scheduler");
-        await page.GetByTestId("collaboration-thread-message").FillAsync("First message with <script>escaped content</script>.");
+        const string firstMessage = "First message with <script>escaped content</script>.";
+        await page.GetByTestId("collaboration-thread-message").FillAsync(firstMessage);
+        await page.GetByTestId("collaboration-create-toggle").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("collaboration-create-form")).ToBeHiddenAsync();
+        await Assertions.Expect(page.GetByTestId("collaboration-create-toggle")).ToContainTextAsync("Unsaved draft");
+        await page.GetByTestId("collaboration-create-toggle").ClickAsync();
+        await Assertions.Expect(page.GetByTestId("collaboration-thread-subject")).ToHaveValueAsync(subject);
+        await Assertions.Expect(page.GetByTestId("collaboration-thread-message")).ToHaveValueAsync(firstMessage);
         await page.GetByTestId("collaboration-thread-create").ClickAsync();
         await Assertions.Expect(page.GetByTestId("collaboration-thread-title")).ToHaveTextAsync(subject);
         await Assertions.Expect(page.GetByTestId("shell-nav-badge-collaboration")).ToBeVisibleAsync();

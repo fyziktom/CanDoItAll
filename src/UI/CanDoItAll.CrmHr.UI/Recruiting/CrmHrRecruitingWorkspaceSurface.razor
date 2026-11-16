@@ -49,7 +49,7 @@
                                      Count="Server-paged">
                         <Actions>
                             <Button Text="New application"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="View.CreateNewApplicationAsync"
                                     data-testid="crmhr-recruiting-new-button" />
@@ -104,11 +104,11 @@
                                    JustifyContent="JustifyContent.SpaceBetween"
                                    Wrap="FlexWrap.Wrap">
                                 <div class="min-w-0">
-                                    <p class="cda-eyebrow">Candidate summary</p>
-                                    <h2 class="mt-1 text-lg font-semibold text-slate-950">@recruitmentWorkspace.CandidateDisplayName</h2>
+                                    <TextBlock TextStyle="TextStyle.EyebrowCaption">Candidate summary</TextBlock>
+                                    <h2 class="mt-1 text-lg font-semibold text-chrome-950">@recruitmentWorkspace.CandidateDisplayName</h2>
                                     @if (!string.IsNullOrWhiteSpace(recruitmentWorkspace.CandidateSummary))
                                     {
-                                        <p class="mt-3 text-sm leading-6 text-slate-600">@recruitmentWorkspace.CandidateSummary</p>
+                                        <p class="mt-3 text-sm leading-6 text-chrome-600">@recruitmentWorkspace.CandidateSummary</p>
                                     }
                                 </div>
                                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
@@ -145,16 +145,16 @@
                     else
                     {
                         <SurfaceCard Soft="true">
-                            <p class="cda-eyebrow">Recruiting workspace ready</p>
-                            <h2 class="mt-1 text-lg font-semibold text-slate-950">Create or choose a candidate pipeline</h2>
-                            <p class="mt-3 text-sm leading-6 text-slate-600">Candidate setup, interviews, lifecycle tasks, and workforce conversion all stay on this route once the first application is saved.</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Recruiting workspace ready</TextBlock>
+                            <h2 class="mt-1 text-lg font-semibold text-chrome-950">Create or choose a candidate pipeline</h2>
+                            <p class="mt-3 text-sm leading-6 text-chrome-600">Candidate setup, interviews, lifecycle tasks, and workforce conversion all stay on this route once the first application is saved.</p>
                         </SurfaceCard>
                     }
 
                         <Tabs SelectedIndex="@View.SelectedRecruitingTabIndex"
                               SelectedIndexChanged="View.HandleRecruitingTabChangedAsync"
                               RenderMode="TabRenderMode.Client"
-                              Variant="TabsVariant.WorkspaceSecondary"
+                              Density="TabsDensity.Compact"
                               BorderMode="TabsBorderMode.Soft"
                               OverflowMode="TabsOverflowMode.Wrap"
                               AriaLabel="Recruitment record sections"
@@ -226,11 +226,11 @@
                                 @if (View.SelectedPartyId.HasValue)
                                 {
                                     <Button Text="Open workforce"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Click="View.OpenWorkforceAsync" />
                                 }
                                 <Button Text="Close"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="View.CloseRecruitmentDialogAsync"
                                         data-testid="crmhr-recruiting-record-close" />
                             </Cluster>

@@ -7,61 +7,61 @@
         <Alert AlertStyle="AlertStyle.Info"><TextBlock Value="Execution has begun in the saved Task. Preserve its current historical cost; pure effort remains editable." /></Alert>
     }
     <MergeFieldView Label="Task title" Field="Review.Title" Format="Text" Changed="Changed" TestId="planning-task-field-title">
-        <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(value => Set(Review.Title, value ?? string.Empty))" data-testid="planning-task-result-title" /></ResultEditor>
+        <ResultEditor Context="value"><TextInput Value="@value" Immediate="true" ValueChanged="@(value => Set(Review.Title, value ?? string.Empty))" data-testid="planning-task-result-title" /></ResultEditor>
     </MergeFieldView>
     @if (Review.Subtitle is { } subtitle) {
         <MergeFieldView Label="Status lane" Field="subtitle" Format="Text" Changed="Changed">
-            <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(value => Set(subtitle, value ?? string.Empty))" /></ResultEditor>
+            <ResultEditor Context="value"><TextInput Value="@value" Immediate="true" ValueChanged="@(value => Set(subtitle, value ?? string.Empty))" /></ResultEditor>
         </MergeFieldView>
     }
     @if (Review.Notes is { } notes) {
         <MergeFieldView Label="Notes" Field="notes" Format="Text" Changed="Changed" TestId="planning-task-field-notes">
-            <ResultEditor Context="value"><TextArea Value="@value" Rows="5" Immediate="true" ValueChanged="@(value => Set(notes, value ?? string.Empty))" data-testid="planning-task-result-notes" /></ResultEditor>
+            <ResultEditor Context="value"><TextAreaInput Value="@value" Rows="5" Immediate="true" ValueChanged="@(value => Set(notes, value ?? string.Empty))" data-testid="planning-task-result-notes" /></ResultEditor>
         </MergeFieldView>
     }
     @if (Review.Due is { } due) {
         <MergeFieldView Label="Due (UTC)" Field="due" Format="Text" Changed="Changed">
-            <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(value => Set(due, value ?? string.Empty))" /></ResultEditor>
+            <ResultEditor Context="value"><TextInput Value="@value" Immediate="true" ValueChanged="@(value => Set(due, value ?? string.Empty))" /></ResultEditor>
         </MergeFieldView>
     }
     @if (Review.Delivery is { } delivery) {
         <MergeFieldView Label="Delivery interval (UTC)" Field="delivery" Format="@(value => $"Start: {value.Start}\nEnd: {value.End}\nHours: {value.Duration}")" Changed="Changed" TestId="planning-task-field-delivery">
             <ResultEditor Context="value">
                 <Grid Columns="3">
-                    <FormField Text="Start (UTC)"><TextBox Value="@value.Start" Immediate="true" ValueChanged="@(text => Set(delivery, value with { Start = text ?? string.Empty }))" /></FormField>
-                    <FormField Text="End (UTC)"><TextBox Value="@value.End" Immediate="true" ValueChanged="@(text => Set(delivery, value with { End = text ?? string.Empty }))" /></FormField>
-                    <FormField Text="Delivery hours"><TextBox Value="@value.Duration" Immediate="true" ValueChanged="@(text => Set(delivery, value with { Duration = text ?? string.Empty }))" /></FormField>
+                    <FormField Text="Start (UTC)"><TextInput Value="@value.Start" Immediate="true" ValueChanged="@(text => Set(delivery, value with { Start = text ?? string.Empty }))" /></FormField>
+                    <FormField Text="End (UTC)"><TextInput Value="@value.End" Immediate="true" ValueChanged="@(text => Set(delivery, value with { End = text ?? string.Empty }))" /></FormField>
+                    <FormField Text="Delivery hours"><TextInput Value="@value.Duration" Immediate="true" ValueChanged="@(text => Set(delivery, value with { Duration = text ?? string.Empty }))" /></FormField>
                 </Grid>
             </ResultEditor>
         </MergeFieldView>
     }
     @if (Review.Progress is { } progress) {
         <MergeFieldView Label="Progress (%)" Field="progress" Format="Text" Changed="Changed">
-            <ResultEditor Context="value"><TextBox Value="@value" Immediate="true" ValueChanged="@(value => Set(progress, value ?? string.Empty))" /></ResultEditor>
+            <ResultEditor Context="value"><TextInput Value="@value" Immediate="true" ValueChanged="@(value => Set(progress, value ?? string.Empty))" /></ResultEditor>
         </MergeFieldView>
     }
     <MergeFieldView Label="Pure effort" Field="Review.Effort" Format="@(value => $"{value.Amount} {value.Unit}")" Changed="Changed" TestId="planning-task-field-effort">
         <ResultEditor Context="value">
             <Grid Columns="2">
-                <FormField Text="Amount"><TextBox Value="@value.Amount" Immediate="true" ValueChanged="@(text => Set(Review.Effort, value with { Amount = text ?? string.Empty }))" /></FormField>
-                <FormField Text="Unit"><select class="cda-input" value="@value.Unit" @onchange="@(args => Set(Review.Effort, value with { Unit = args.Value?.ToString() ?? string.Empty }))"><option value="Hours">Hours</option><option value="ManDays">Man-days</option></select></FormField>
+                <FormField Text="Amount"><TextInput Value="@value.Amount" Immediate="true" ValueChanged="@(text => Set(Review.Effort, value with { Amount = text ?? string.Empty }))" /></FormField>
+                <FormField Text="Unit"><select class="form-input ui-input ui-input--outlined" value="@value.Unit" @onchange="@(args => Set(Review.Effort, value with { Unit = args.Value?.ToString() ?? string.Empty }))"><option value="Hours">Hours</option><option value="ManDays">Man-days</option></select></FormField>
             </Grid>
         </ResultEditor>
     </MergeFieldView>
     <MergeFieldView Label="Expected cost" Field="Review.Money" Format="@(value => string.IsNullOrEmpty(value.Amount) ? $"Not set ({value.Currency})" : $"{value.Amount} {value.Currency}")" Changed="Changed" TestId="planning-task-field-money">
         <ResultEditor Context="value">
             <Grid Columns="2">
-                <FormField Text="Amount"><TextBox Value="@value.Amount" Immediate="true" ValueChanged="@(text => Set(Review.Money, value with { Amount = text ?? string.Empty }))" /></FormField>
-                <FormField Text="Currency"><TextBox Value="@value.Currency" Immediate="true" ValueChanged="@(text => Set(Review.Money, value with { Currency = text ?? string.Empty }))" /></FormField>
+                <FormField Text="Amount"><TextInput Value="@value.Amount" Immediate="true" ValueChanged="@(text => Set(Review.Money, value with { Amount = text ?? string.Empty }))" /></FormField>
+                <FormField Text="Currency"><TextInput Value="@value.Currency" Immediate="true" ValueChanged="@(text => Set(Review.Money, value with { Currency = text ?? string.Empty }))" /></FormField>
             </Grid>
         </ResultEditor>
     </MergeFieldView>
     <MergeFieldView Label="Execution and actual dates (UTC)" Field="Review.Execution" Format="@(value => $"{value.State}\nStart: {value.Started}\nEnd: {value.Ended}")" Changed="Changed" TestId="planning-task-field-execution">
         <ResultEditor Context="value">
             <Grid Columns="3">
-                <FormField Text="State"><select class="cda-input" value="@value.State" @onchange="@(args => SetExecutionState(value, args))">@foreach (var state in Enum.GetValues<ProjectTaskExecutionState>()) { <option value="@state">@state</option> }</select></FormField>
-                <FormField Text="Start (UTC)"><TextBox Value="@value.Started" Immediate="true" ValueChanged="@(text => Set(Review.Execution, value with { Started = text ?? string.Empty }))" /></FormField>
-                <FormField Text="End (UTC)"><TextBox Value="@value.Ended" Immediate="true" ValueChanged="@(text => Set(Review.Execution, value with { Ended = text ?? string.Empty }))" /></FormField>
+                <FormField Text="State"><select class="form-input ui-input ui-input--outlined" value="@value.State" @onchange="@(args => SetExecutionState(value, args))">@foreach (var state in Enum.GetValues<ProjectTaskExecutionState>()) { <option value="@state">@state</option> }</select></FormField>
+                <FormField Text="Start (UTC)"><TextInput Value="@value.Started" Immediate="true" ValueChanged="@(text => Set(Review.Execution, value with { Started = text ?? string.Empty }))" /></FormField>
+                <FormField Text="End (UTC)"><TextInput Value="@value.Ended" Immediate="true" ValueChanged="@(text => Set(Review.Execution, value with { Ended = text ?? string.Empty }))" /></FormField>
             </Grid>
         </ResultEditor>
     </MergeFieldView>
@@ -70,7 +70,7 @@
             @if (Review.Current.CanChangeDirectAssignee) {
                 <ProjectStructureTaskResourcePicker Options="ResourceOptions" SelectedResource="value" AllowedKinds="DirectKinds"
                     SelectionChanged="@(selection => Set(Review.Assignee, selection))" DataTestId="planning-task-result-assignee" />
-                <Button Text="No direct assignee" ButtonStyle="ButtonStyle.Light" Click="@(() => Set<ProjectStructureTaskResourceSelection?>(Review.Assignee, null))" />
+                <Button Text="No direct assignee" Tone="ButtonTone.Default" Click="@(() => Set<ProjectStructureTaskResourceSelection?>(Review.Assignee, null))" />
             } else {
                 <TextBlock Value="The complete saved assignment set is protected. Choose current to preserve every assignment." />
             }

@@ -11,7 +11,7 @@
         <TextBlock Value="Discard the unsaved title and close this dialog?" />
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Keep editing" Click="@(() => SendAsync(ConversationDialogAction.KeepEditing))" />
-            <Button Text="Discard title and close" ButtonStyle="ButtonStyle.Danger" Click="@(() => SendAsync(ConversationDialogAction.Discard))" data-testid="llm-chat-metadata-discard" />
+            <Button Text="Discard title and close" Tone="ButtonTone.Danger" Click="@(() => SendAsync(ConversationDialogAction.Discard))" data-testid="llm-chat-metadata-discard" />
         </Cluster>
     }
     @if (Presentation.Origin.Kind is ConversationDialogKind.Rename or ConversationDialogKind.Archive) {

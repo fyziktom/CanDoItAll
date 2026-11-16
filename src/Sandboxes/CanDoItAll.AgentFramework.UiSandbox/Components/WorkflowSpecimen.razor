@@ -3,7 +3,7 @@
 <header class="catalog-sandbox__controls">
     <h1 class="cda-title-xl">Workflows sandbox</h1>
     <label for="workflow-scenario">Scenario</label>
-    <select id="workflow-scenario" class="cda-input" value="@fixture.Scenario" @onchange="ChangeScenario">
+    <select id="workflow-scenario" class="form-input ui-input ui-input--outlined" value="@fixture.Scenario" @onchange="ChangeScenario">
         @foreach (var scenario in Enum.GetValues<WorkflowScenario>()) {
             <option value="@scenario">@scenario</option>
         }

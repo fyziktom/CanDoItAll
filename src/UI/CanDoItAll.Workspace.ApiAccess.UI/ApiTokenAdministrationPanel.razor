@@ -4,27 +4,27 @@
     <Stack GapScale="LayoutGap.Medium">
         <Grid ColumnsMd="2" Gap="LayoutGap.Medium">
             <FormField Text="Subject">
-                <TextBox @bind-Value="Controller.Draft.Subject" Immediate="true" id="api-token-subject" aria-label="Token subject" data-testid="api-token-subject" />
+                <TextInput @bind-Value="Controller.Draft.Subject" Immediate="true" id="api-token-subject" aria-label="Token subject" data-testid="api-token-subject" />
             </FormField>
             <FormField Text="Display name">
-                <TextBox @bind-Value="Controller.Draft.DisplayName" Immediate="true" id="api-token-name" aria-label="Token display name" data-testid="api-token-name" />
+                <TextInput @bind-Value="Controller.Draft.DisplayName" Immediate="true" id="api-token-name" aria-label="Token display name" data-testid="api-token-name" />
             </FormField>
             <FormField Text="Lifetime minutes">
-                <TextBox @bind-Value="Controller.Draft.LifetimeText" Immediate="true" id="api-token-lifetime" inputmode="numeric" aria-label="Token lifetime minutes" />
+                <TextInput @bind-Value="Controller.Draft.LifetimeText" Immediate="true" id="api-token-lifetime" inputmode="numeric" aria-label="Token lifetime minutes" />
                 <ValidationMessage For="() => Controller.Draft.LifetimeText" />
-                <p class="cda-body-muted mt-1">Maximum: @Controller.Configuration.MaxTokenLifetimeMinutes minutes</p>
+                <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 mt-1">Maximum: @Controller.Configuration.MaxTokenLifetimeMinutes minutes</TextBlock>
             </FormField>
             <FormField Text="Scopes">
                 <Cluster Wrap="FlexWrap.NoWrap" Gap="LayoutGap.Tiny">
-                    <TextBox @bind-Value="Controller.Draft.ScopeText" Immediate="true" id="api-token-scopes" aria-label="Token scopes" Class="min-w-0 flex-1" data-testid="api-token-scopes" />
-                    <Button Icon="checklist" title="Select API scopes" aria-label="Select API scopes" ButtonStyle="ButtonStyle.Light" Click="OpenScopes" data-testid="api-scopes-open" />
+                    <TextInput @bind-Value="Controller.Draft.ScopeText" Immediate="true" id="api-token-scopes" aria-label="Token scopes" Class="min-w-0 flex-1" data-testid="api-token-scopes" />
+                    <Button Icon="checklist" title="Select API scopes" aria-label="Select API scopes" Tone="ButtonTone.Default" Click="OpenScopes" data-testid="api-scopes-open" />
                 </Cluster>
-                <p class="cda-body-muted mt-1">Choose scopes or separate them with spaces or commas.</p>
+                <TextBlock TextStyle="TextStyle.Muted" Class="leading-5 mt-1">Choose scopes or separate them with spaces or commas.</TextBlock>
             </FormField>
         </Grid>
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Create token" Icon="key" Type="submit" Disabled="@(!Controller.CanIssue)" IsBusy="Controller.IsBusy" data-testid="api-token-create" />
-            <Button Text="Manage tokens" Icon="vpn_key" ButtonStyle="ButtonStyle.Light" Click="OpenTokensAsync" data-testid="api-tokens-open" />
+            <Button Text="Manage tokens" Icon="vpn_key" Tone="ButtonTone.Default" Click="OpenTokensAsync" data-testid="api-tokens-open" />
         </Cluster>
         @if (Controller.Error is { } error) {
             <Alert AlertStyle="AlertStyle.Danger" data-testid="api-token-error">@error</Alert>
@@ -34,7 +34,7 @@
                 @ApiOutcomeText.Describe(outcome)
                 @if (outcome.Identity is { } id && outcome.State == ApiWriteState.Unknown) {
                     <p>Candidate identity: @id. Registration is not confirmed.</p>
-                    <Button Text="Observe exact identity" ButtonStyle="ButtonStyle.Light" Click="Controller.ObserveAsync" />
+                    <Button Text="Observe exact identity" Tone="ButtonTone.Default" Click="Controller.ObserveAsync" />
                 }
             </Alert>
         }
@@ -48,10 +48,10 @@
         <Stack GapScale="LayoutGap.Small">
             <p>Token created@(Controller.Issued is { } issued ? $" for {issued.DisplayName}. Expires: {issued.ExpiresAtUtc.LocalDateTime:g}" : ".")</p>
             <p>Copy it now. Only this view can reveal it; the token list contains metadata only.</p>
-            <textarea readonly class="cda-input cda-input--textarea w-full" rows="3" aria-label="New API bearer token" data-testid="api-issued-token">@bearer</textarea>
+            <textarea readonly class="form-input ui-input ui-input--outlined ui-input--textarea w-full" rows="3" aria-label="New API bearer token" data-testid="api-issued-token">@bearer</textarea>
             <Cluster Gap="LayoutGap.Small">
                 <CopyButton Value="@bearer" Text="Copy token" data-testid="api-token-copy" />
-                <Button Text="Dismiss token" ButtonStyle="ButtonStyle.Light" Click="Controller.Dismiss" data-testid="api-token-dismiss" />
+                <Button Text="Dismiss token" Tone="ButtonTone.Default" Click="Controller.Dismiss" data-testid="api-token-dismiss" />
             </Cluster>
         </Stack>
     </Alert>

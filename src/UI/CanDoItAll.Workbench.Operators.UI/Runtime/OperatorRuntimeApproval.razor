@@ -16,11 +16,11 @@
            GapScale="LayoutGap.Small">
         <Button Disabled="answered" Text="Cancel"
                 Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 Click="@(() => DecideAsync(false, decide))"
                 data-testid="project-structure-runtime-launch-approval-cancel" />
         <Button Disabled="answered" Text="Approve this launch"
-                ButtonStyle="ButtonStyle.Warning"
+                Tone="ButtonTone.Warning"
                 Click="@(() => DecideAsync(true, decide))"
                 data-testid="project-structure-runtime-launch-approval-confirm" />
     </Stack>

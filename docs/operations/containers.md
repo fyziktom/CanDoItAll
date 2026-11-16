@@ -33,12 +33,12 @@ sibling repository has its own `.dockerignore`. The `COPY --exclude` option requ
 Dockerfile frontend 1.19 or later; the `docker/dockerfile:1` syntax directive selects the
 current stable frontend.
 
-The pinned Ubuntu runtime image installs its required packages from the Kernel.org
-[Ubuntu archive mirror](https://mirrors.kernel.org/) over HTTPS, including the security
-suite. This avoids a shared dependency on the Canonical archive DNS used by both the
-container build and Linux CI setup. Ubuntu's signing keys, certificate verification and
-package-signature verification remain enabled. An index or package download failure
-fails the build; it never produces an image with missing runtime dependencies.
+The pinned Ubuntu runtime image installs its required packages from the official
+`https://archive.ubuntu.com/ubuntu/` and `https://security.ubuntu.com/ubuntu/` sources.
+It uses the same explicit HTTPS sources as Linux CI, without a fixed third-party mirror
+dependency. Ubuntu's signing keys, certificate verification and package-signature
+verification remain enabled. An index or package download failure fails the build;
+it never produces an image with missing runtime dependencies.
 
 PostgreSQL reads `POSTGRES_PASSWORD_FILE` only while initializing an empty `db-data`
 volume. Replacing `.secrets/db-password` does **not** rotate the role password in an

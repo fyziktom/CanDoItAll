@@ -7,7 +7,7 @@
     <Alert AlertStyle="@(Pending.Count > 0 ? AlertStyle.Warning : AlertStyle.Info)" Variant="Variant.Outlined" data-testid="project-cleanup-summary">
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
             <TextBlock Value="@Summary" />
-            <Button Text="Review cleanup" ButtonStyle="ButtonStyle.Light" Click="Open" data-testid="project-cleanup-open" />
+            <Button Text="Review cleanup" Tone="ButtonTone.Default" Click="Open" data-testid="project-cleanup-open" />
         </Cluster>
     </Alert>
 }
@@ -18,13 +18,13 @@
         <ChildContent>
             <Stack GapScale="LayoutGap.Medium">
                 <Cluster Gap="LayoutGap.Small">
-                    <Button Text="@($"Needs attention ({Pending.Count})")" ButtonStyle="ButtonStyle.Light"
+                    <Button Text="@($"Needs attention ({Pending.Count})")" Tone="ButtonTone.Default"
                             Click="@(() => ChangeView(ProjectCleanupView.Pending))" data-testid="project-cleanup-pending-tab" />
-                    <Button Text="@($"Retained media ({Completed.Count})")" ButtonStyle="ButtonStyle.Light"
+                    <Button Text="@($"Retained media ({Completed.Count})")" Tone="ButtonTone.Default"
                             Click="@(() => ChangeView(ProjectCleanupView.RetainedMedia))" data-testid="project-cleanup-completed-tab" />
                 </Cluster>
                 @if (review.View == ProjectCleanupView.RetainedMedia && review.Target is not null) {
-                    <Button Text="Back to completed operations" ButtonStyle="ButtonStyle.Light"
+                    <Button Text="Back to completed operations" Tone="ButtonTone.Default"
                             Click="@(() => ReviewChanged.InvokeAsync(review with { Target = null, MediaPage = 0 }))" data-testid="project-cleanup-back" />
                     @if (SelectedNotice is { } selected) {
                         <TextBlock Value="@OperationLabel(selected.Target, selected.Operation)" Class="break-words" />
@@ -55,7 +55,7 @@
                                 @if (!cleanup.CanRetryNow && cleanup.RetryAvailableAtUtc.HasValue) {
                                     <TextBlock Value="@($"The active claim can be taken over after {cleanup.RetryAvailableAtUtc.Value:u}; retry refreshes its state.")" />
                                 }
-                                <Button Text="Retry cleanup" ButtonStyle="ButtonStyle.Warning"
+                                <Button Text="Retry cleanup" Tone="ButtonTone.Warning"
                                         Disabled="@(cleanup.RetryBlocked || BusyTargets.Contains(cleanup.Target))" Click="@(() => RetryCleanupAsync(cleanup.Target))"
                                         data-testid="project-deletion-retry" />
                             </Stack>
@@ -64,7 +64,7 @@
                         @foreach (var notice in Completed.Skip(CurrentPage * PageSize).Take(PageSize)) {
                             <Stack @key="notice.Target" GapScale="LayoutGap.Small" data-testid="project-cleanup-completed-item">
                                 <TextBlock Value="@OperationLabel(notice.Target, notice.Operation)" Class="break-words" />
-                                <Button Text="@($"Inspect {notice.Warnings.Count} retained objects")" ButtonStyle="ButtonStyle.Light"
+                                <Button Text="@($"Inspect {notice.Warnings.Count} retained objects")" Tone="ButtonTone.Default"
                                         Click="@(() => ReviewChanged.InvokeAsync(review with { Target = notice.Target, MediaPage = 0 }))"
                                         data-testid="project-cleanup-inspect" />
                             </Stack>

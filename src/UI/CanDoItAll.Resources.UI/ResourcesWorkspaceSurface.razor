@@ -17,7 +17,7 @@
                 <PageHeaderActionButton Icon="add"
                                         Label="New resource"
                                         TooltipText="Create a new typed resource."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="CreateNewAsync" />
             </Actions>
         </PageHeader>
@@ -25,7 +25,7 @@
 
     <ChildContent>
         <Tabs @bind-SelectedIndex="resourcesTabIndex" @bind-SelectedIndex:after="NotifyTabAsync"
-              Variant="TabsVariant.WorkspacePrimary"
+              Density="TabsDensity.Normal"
               BorderMode="TabsBorderMode.Soft"
               PanelOverflowMode="TabsPanelOverflowMode.Hidden"
               FillHeight="true"
@@ -43,26 +43,26 @@
                                  Count="@($"{FilteredResources.Count} item(s)")">
                     <Filters>
                         <FilterBar ResultText="@($"{FilteredResources.Count} matching resource(s)")">
-                            <input @bind="resourceSearch" @bind:event="oninput" class="cda-input min-w-[14rem] flex-1" placeholder="Search resources" />
-                            <InputSelect @bind-Value="projectFilter" class="cda-input">
+                            <input @bind="resourceSearch" @bind:event="oninput" class="form-input ui-input ui-input--outlined min-w-[14rem] flex-1" placeholder="Search resources" />
+                            <SelectInput @bind-Value="projectFilter">
                                 <option value="">All projects</option>
                                 @foreach (var project in projects.OrderBy(item => item.Name)) {
                                     <option value="@project.Id.ToString()">@project.Name</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="connectorFilter" class="cda-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="connectorFilter">
                                 <option value="">All connectors</option>
                                 @foreach (var manifest in resourceManifests) {
                                     <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                 }
-                            </InputSelect>
-                            <InputSelect @bind-Value="validationFilter" class="cda-input">
+                            </SelectInput>
+                            <SelectInput @bind-Value="validationFilter">
                                 <option value="">All validation states</option>
                                 @foreach (var status in Enum.GetValues<ResourceValidationStatus>()) {
                                     <option value="@status.ToString()">@status</option>
                                 }
-                            </InputSelect>
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="ResetFilters" />
+                            </SelectInput>
+                            <Button Text="Reset" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="ResetFilters" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -100,9 +100,9 @@
                 <Stack GapScale="LayoutGap.Medium">
                     <Split Gap="LayoutGap.Medium">
                         <Stack GapScale="LayoutGap.Tiny">
-                            <p class="cda-eyebrow">Resource editor</p>
-                            <h2 class="cda-title-xl">@EditorTitle</h2>
-                            <p class="cda-body-muted">Keep ownership, connector location, and validation state together in one predictable detail pane.</p>
+                            <TextBlock TextStyle="TextStyle.EyebrowCaption">Resource editor</TextBlock>
+                            <h2 class="cda-text-block cda-text-block--h4">@EditorTitle</h2>
+                            <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">Keep ownership, connector location, and validation state together in one predictable detail pane.</TextBlock>
                         </Stack>
                         <Cluster Gap="LayoutGap.Small">
                             <StatusBadge Tone="@ResolveTone(editor.ValidationStatus)" Text="@editor.ValidationStatus.ToString()" />
@@ -145,7 +145,7 @@
                 }
                 <ResourceMutationHistory Workspace="Registry" />
                 @if (Registry.Draft.Expected is ResourceMetadataExpectation.Existing) {
-                    <Button Text="Reload stored metadata" ButtonStyle="ButtonStyle.Light" Disabled="@Registry.IsBusy" Click="Registry.ReloadAsync" />
+                    <Button Text="Reload stored metadata" Tone="ButtonTone.Default" Disabled="@Registry.IsBusy" Click="Registry.ReloadAsync" />
                 }
                 @if (IsGovernedStorageObject) {
                     <Stack Class="min-h-full" GapScale="LayoutGap.XLarge">
@@ -156,12 +156,12 @@
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                                 <SurfaceCard Soft="true">
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Resource" />
-                                    <h3 class="mt-1 text-base font-semibold text-slate-950">@editor.Name</h3>
+                                    <h3 class="mt-1 text-base font-semibold text-chrome-950">@editor.Name</h3>
                                     <TextBlock TextStyle="TextStyle.Caption" Value="@(SelectedProjectName ?? "Unknown project")" />
                                 </SurfaceCard>
                                 <SurfaceCard Soft="true">
                                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Stable identifier" />
-                                    <p class="mt-1 break-all text-sm text-slate-700">@editor.LocationOrIdentifier</p>
+                                    <p class="mt-1 break-all text-sm text-chrome-700">@editor.LocationOrIdentifier</p>
                                 </SurfaceCard>
                             </Grid>
                             <Cluster Gap="LayoutGap.Small">
@@ -174,12 +174,12 @@
                             <SecondaryActions>
                                 <Button Text="Browse sources"
                                         Icon="folder_open"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Click="OpenBrowseTab" />
                             </SecondaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" Tone="ButtonTone.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>
@@ -196,7 +196,7 @@
                         </Alert>
                         <StickyActionFooter StatusLabel="Stored Resource metadata">
                             <DangerActions>
-                                <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                <Button Text="Delete" Disabled="@(!Registry.CanDelete)" Tone="ButtonTone.Danger" Click="DeleteAsync" />
                             </DangerActions>
                         </StickyActionFooter>
                     </Stack>
@@ -207,9 +207,8 @@
                     <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
                         <FormSection Title="Identity and ownership" Description="Link the resource to the correct project and choose the connector plugin before editing manifest fields.">
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Project</label>
-                                    <InputSelect @bind-Value:get="editor.ProjectId" @bind-Value:set="Registry.ChangeProjectAsync" class="cda-input" data-testid="resource-project-select">
+                                <FormField Text="Project">
+                                    <SelectInput @bind-Value:get="editor.ProjectId" @bind-Value:set="Registry.ChangeProjectAsync" data-testid="resource-project-select">
                                         <option value="">Select a project</option>
                                         @if (editor.ProjectId.HasValue && !projects.Any(p => p.Id == editor.ProjectId)) {
                                             <option value="@editor.ProjectId">Unavailable project (@editor.ProjectId)</option>
@@ -217,29 +216,26 @@
                                         @foreach (var project in projects) {
                                             <option value="@project.Id">@project.Name</option>
                                         }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Connector plugin</label>
-                                    <InputSelect @bind-Value:get="editor.ConnectorPluginKey" @bind-Value:set="Registry.ChangeConnectorAsync" class="cda-input" data-testid="resource-plugin-select">
+                                    </SelectInput>
+                                </FormField>
+                                <FormField Text="Connector plugin">
+                                    <SelectInput @bind-Value:get="editor.ConnectorPluginKey" @bind-Value:set="Registry.ChangeConnectorAsync" data-testid="resource-plugin-select">
                                         @if (SelectedResourceManifest is null) {
                                             <option value="@editor.ConnectorPluginKey">Unavailable connector (@editor.ConnectorPluginKey)</option>
                                         }
                                         @foreach (var manifest in EditableResourceManifests) {
                                             <option value="@manifest.PluginKey">@manifest.DisplayName</option>
                                         }
-                                    </InputSelect>
-                                </div>
+                                    </SelectInput>
+                                </FormField>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Name</label>
-                                    <TextBox @bind-Value="editor.Name" @bind-Value:after="() => Edited(ResourceEditorField.Name)" Immediate="true" Class="cda-input" Style="width:100%" data-testid="resource-name-input" />
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Linked secret</label>
-                                    <InputSelect @bind-Value="editor.LinkedSecretId" @bind-Value:after="() => Edited(ResourceEditorField.Secret)" class="cda-input">
+                                <FormField Text="Name">
+                                    <TextInput @bind-Value="editor.Name" @bind-Value:after="() => Edited(ResourceEditorField.Name)" Immediate="true" Class="form-input ui-input ui-input--outlined" Style="width:100%" data-testid="resource-name-input" />
+                                </FormField>
+                                <FormField Text="Linked secret">
+                                    <SelectInput @bind-Value="editor.LinkedSecretId" @bind-Value:after="() => Edited(ResourceEditorField.Secret)" class="form-input ui-input ui-input--outlined">
                                         <option value="">None</option>
                                         @if (editor.LinkedSecretId.HasValue && !secrets.Any(p => p.Id == editor.LinkedSecretId)) {
                                             <option value="@editor.LinkedSecretId">Unavailable secret (@editor.LinkedSecretId)</option>
@@ -247,14 +243,13 @@
                                         @foreach (var secret in secrets) {
                                             <option value="@secret.Id">@secret.Name</option>
                                         }
-                                    </InputSelect>
-                                </div>
+                                    </SelectInput>
+                                </FormField>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Owner</label>
-                                    <InputSelect @bind-Value="editor.OwnerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Owner)" class="cda-input" data-testid="resource-owner-select">
+                                <FormField Text="Owner">
+                                    <SelectInput @bind-Value="editor.OwnerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Owner)" class="form-input ui-input ui-input--outlined" data-testid="resource-owner-select">
                                         <option value="">None</option>
                                         @if (editor.OwnerPartyId.HasValue && !responsiblePartyOptions.Any(p => p.Id == editor.OwnerPartyId)) {
                                             <option value="@editor.OwnerPartyId">Unavailable party (@editor.OwnerPartyId)</option>
@@ -262,11 +257,10 @@
                                         @foreach (var option in responsiblePartyOptions) {
                                             <option value="@option.Id">@option.Name</option>
                                         }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Maintainer</label>
-                                    <InputSelect @bind-Value="editor.MaintainerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Maintainer)" class="cda-input" data-testid="resource-maintainer-select">
+                                    </SelectInput>
+                                </FormField>
+                                <FormField Text="Maintainer">
+                                    <SelectInput @bind-Value="editor.MaintainerPartyId" @bind-Value:after="() => Edited(ResourceEditorField.Maintainer)" class="form-input ui-input ui-input--outlined" data-testid="resource-maintainer-select">
                                         <option value="">None</option>
                                         @if (editor.MaintainerPartyId.HasValue && !responsiblePartyOptions.Any(p => p.Id == editor.MaintainerPartyId)) {
                                             <option value="@editor.MaintainerPartyId">Unavailable party (@editor.MaintainerPartyId)</option>
@@ -274,15 +268,15 @@
                                         @foreach (var option in responsiblePartyOptions) {
                                             <option value="@option.Id">@option.Name</option>
                                         }
-                                    </InputSelect>
-                                </div>
+                                    </SelectInput>
+                                </FormField>
                             </Grid>
                         </FormSection>
 
                         <FormSection Title="Location and connector details" Description="The manifest schema drives which connector fields appear for the selected resource plugin.">
                             <TextBlock TextStyle="TextStyle.Caption" Value="Explicit connector or schema changes retain matching fields and discard fields outside the selected schema." />
                             @if (SelectedResourceManifest is null) {
-                                <TextArea Value="@editor.ConfigJson" ReadOnly="true" Rows="4" Style="width:100%" aria-label="Retained configuration for the unavailable connector" />
+                                <TextAreaInput Value="@editor.ConfigJson" ReadOnly="true" Rows="4" Style="width:100%" aria-label="Retained configuration for the unavailable connector" />
                             }
                             <Stack GapScale="LayoutGap.Medium">
                                 @foreach (var field in SelectedResourceFields) {
@@ -291,58 +285,55 @@
                                                                 Draft="Registry.Draft.Configuration"
                                                                 StateChanged="ConfigurationChanged"
                                                                 Secrets="secrets"
-                                                                InputClass="cda-input"
+                                                                InputClass="form-input ui-input ui-input--outlined"
                                                                 TestId="@ResolveResourceFieldTestId(field, SelectedResourceFields)" />
                                 }
                             </Stack>
 
                             <div class="cda-panel-card--soft">
-                                <p class="cda-eyebrow cda-eyebrow--tight">Stored identifier preview</p>
+                                <TextBlock TextStyle="TextStyle.EyebrowCaption">Stored identifier preview</TextBlock>
                                 <p class="cda-text-block cda-text-block--body2 mt-2 break-all">@PreviewLocation</p>
                             </div>
                         </FormSection>
 
                         <FormSection Title="Metadata and capabilities" Description="Keep validation, sensitivity, and handling flags explicit on every resource record.">
-                            <div>
-                                <label class="cda-field-label">Description</label>
-                                <TextArea @bind-Value="editor.Description" @bind-Value:after="() => Edited(ResourceEditorField.Description)" Immediate="true" Class="cda-input" Style="width:100%" Rows="4" />
-                            </div>
+                            <FormField Text="Description">
+                                <TextAreaInput @bind-Value="editor.Description" @bind-Value:after="() => Edited(ResourceEditorField.Description)" Immediate="true" Class="form-input ui-input ui-input--outlined" Style="width:100%" Rows="4" />
+                            </FormField>
 
                             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
-                                <div>
-                                    <label class="cda-field-label">Validation</label>
-                                    <InputSelect @bind-Value="editor.ValidationStatus" @bind-Value:after="() => Edited(ResourceEditorField.Validation)" class="cda-input">
+                                <FormField Text="Validation">
+                                    <SelectInput @bind-Value="editor.ValidationStatus" @bind-Value:after="() => Edited(ResourceEditorField.Validation)" class="form-input ui-input ui-input--outlined">
                                         @foreach (var status in Enum.GetValues<ResourceValidationStatus>()) {
                                             <option value="@status">@status</option>
                                         }
-                                    </InputSelect>
-                                </div>
-                                <div>
-                                    <label class="cda-field-label">Sensitivity</label>
-                                    <InputSelect @bind-Value="editor.Sensitivity" @bind-Value:after="() => Edited(ResourceEditorField.Sensitivity)" class="cda-input">
+                                    </SelectInput>
+                                </FormField>
+                                <FormField Text="Sensitivity">
+                                    <SelectInput @bind-Value="editor.Sensitivity" @bind-Value:after="() => Edited(ResourceEditorField.Sensitivity)" class="form-input ui-input ui-input--outlined">
                                         @foreach (var sensitivity in Enum.GetValues<ResourceSensitivity>()) {
                                             <option value="@sensitivity">@sensitivity</option>
                                         }
-                                    </InputSelect>
-                                </div>
+                                    </SelectInput>
+                                </FormField>
                             </Grid>
 
                             <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsPreview" @bind-Value:after="() => Edited(ResourceEditorField.Preview)" /> Preview capable</label>
-                                <label class="cda-inline-option"><InputCheckbox @bind-Value="editor.SupportsIndexing" @bind-Value:after="() => Edited(ResourceEditorField.Indexing)" /> Indexing capable</label>
+                                <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="editor.SupportsPreview" @bind-Value:after="() => Edited(ResourceEditorField.Preview)" /> Preview capable</label>
+                                <label class="ui-checkbox-option"><InputCheckbox class="form-checkbox ui-checkbox ui-checkbox--outlined" @bind-Value="editor.SupportsIndexing" @bind-Value:after="() => Edited(ResourceEditorField.Indexing)" /> Indexing capable</label>
                             </Grid>
                         </FormSection>
 
                         <StickyActionFooter StatusLabel="Resource save state">
                             <SecondaryActions>
-                                <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="CreateNewAsync" />
+                                <Button Text="Reset" Tone="ButtonTone.Default" Click="CreateNewAsync" />
                             </SecondaryActions>
                             <PrimaryActions>
                                 <Button Text="Save resource" Type="submit" Disabled="@(!Registry.CanSave)" data-testid="resource-save-button" />
                             </PrimaryActions>
                             <DangerActions>
                                 @if (editor.Id.HasValue) {
-                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" ButtonStyle="ButtonStyle.Danger" Click="DeleteAsync" />
+                                    <Button Text="Delete" Disabled="@(!Registry.CanDelete)" Tone="ButtonTone.Danger" Click="DeleteAsync" />
                                 }
                             </DangerActions>
                         </StickyActionFooter>

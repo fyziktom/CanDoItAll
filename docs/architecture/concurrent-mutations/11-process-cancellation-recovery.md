@@ -245,6 +245,11 @@ legacy recovery turn with one bounded page and its own scope/deadline; no seed-c
 cache can outlive its durable owner. Positive pacing and awaited shutdown prevent spinning
 or disposal beneath an active owner. Logs contain typed status/address/count/failure type.
 
+A timed-out slice with a known claimed root uses the normal yield delay before the next
+turn. That root remains deferred by its durable database lease, allowing other eligible
+roots to progress. Timeouts before a claim is known, invalid evidence and global failures
+retain the failure delay. Slice deadlines, lease ownership and retained evidence are unchanged.
+
 The [64-case qualification](../../../codex/bundles/concurrent-mutations/validation/2026-10-22-recovery-worker.md)
 includes four actual OS termination/restart cases in both snapshot modes. The second
 process reuses original accounting actions and receipts without duplicate charges, even

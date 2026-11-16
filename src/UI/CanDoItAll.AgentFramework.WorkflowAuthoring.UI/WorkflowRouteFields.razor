@@ -6,7 +6,7 @@
     <Grid Gap="LayoutGap.Small" ColumnsLg="2">
         <label class="workflow-canvas-field">
             <span>Route mode</span>
-            <select class="cda-input"
+            <select class="form-input ui-input ui-input--outlined"
                     value="@State.Kind"
                     @onchange="KindChanged"
                     data-testid="@(TestIdPrefix + "-kind")">
@@ -18,7 +18,7 @@
         </label>
         <label class="workflow-canvas-field">
             <span>Route label</span>
-            <input class="cda-input"
+            <input class="form-input ui-input ui-input--outlined"
                    @bind="State.Label"
                    data-testid="@(TestIdPrefix + "-label")" />
         </label>
@@ -29,7 +29,7 @@
         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
             <label class="workflow-canvas-field">
                 <span>JSON path</span>
-                <input class="cda-input"
+                <input class="form-input ui-input ui-input--outlined"
                        @bind="State.JsonPath"
                        placeholder="$.status"
                        data-testid="@(TestIdPrefix + "-json-path")" />
@@ -38,7 +38,7 @@
             {
                 <label class="workflow-canvas-field">
                     <span>Operator</span>
-                    <select class="cda-input"
+                    <select class="form-input ui-input ui-input--outlined"
                             @bind="State.Operator"
                             data-testid="@(TestIdPrefix + "-operator")">
                         @foreach (var routeOperator in Enum.GetValues<WorkflowRouteOperator>())
@@ -56,7 +56,7 @@
         <Grid Gap="LayoutGap.Small" ColumnsLg="2">
             <label class="workflow-canvas-field">
                 <span>Value kind</span>
-                <select class="cda-input"
+                <select class="form-input ui-input ui-input--outlined"
                         @bind="State.ValueKind"
                         data-testid="@(TestIdPrefix + "-value-kind")">
                     @foreach (var valueKind in Enum.GetValues<WorkflowRouteValueKind>())
@@ -67,7 +67,7 @@
             </label>
             <label class="workflow-canvas-field">
                 <span>Expected value</span>
-                <input class="cda-input"
+                <input class="form-input ui-input ui-input--outlined"
                        @bind="State.ExpectedValue"
                        data-testid="@(TestIdPrefix + "-expected-value")" />
             </label>
@@ -78,7 +78,7 @@
     {
         <label class="workflow-canvas-field">
             <span>Fan-out target index</span>
-            <input class="cda-input"
+            <input class="form-input ui-input ui-input--outlined"
                    inputmode="numeric"
                    @bind="State.FanOutIndexText"
                    data-testid="@(TestIdPrefix + "-fanout-index")" />

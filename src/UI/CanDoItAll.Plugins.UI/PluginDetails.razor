@@ -4,7 +4,7 @@
 @using CanDoItAll.Modules.Plugins
 
 <Tabs SelectedIndex="@SelectedIndex" SelectedIndexChanged="ChangeSection"
-      Variant="TabsVariant.WorkspaceSecondary" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Plugin detail sections">
+      Density="TabsDensity.Compact" OverflowMode="TabsOverflowMode.Wrap" AriaLabel="Plugin detail sections">
     <TabItems>
         <TabsItem Text="Main info" Icon="info" data-testid="plugins-tab-main" />
         <TabsItem Text="Executors" Icon="account_tree" BadgeText="@PluginsPageHelpers.ResolveExecutorBadge(Plugin)" data-testid="plugins-tab-executors" />

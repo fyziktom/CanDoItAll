@@ -339,7 +339,7 @@ else if (state.SelectedNode is not null)
                 @foreach (var action in selectedNode.Actions)
                 {
                     <Button Variant="Variant.Outlined"
-                            ButtonStyle="@ResolveActionButtonStyle(action.Tone)"
+                            Tone="@ResolveActionButtonTone(action.Tone)"
                             Class="project-structure-node-action"
                             Click="@(() => Send(new InsightsSelectionCommand.Inspector(action.ActionId)))">
                         <span class="project-structure-node-action__icon" aria-hidden="true">
@@ -368,7 +368,7 @@ else if (state.SelectedNode is not null)
             </div>
             <div class="cw-button-row">
                 <Button Text="Open standard blocks"
-                        ButtonStyle="ButtonStyle.Info"
+                        Tone="ButtonTone.Info"
                         Click="@(() => Send(new InsightsSelectionCommand.Open(InsightsNativeView.Toolbox)))" />
             </div>
         </div>
@@ -447,15 +447,15 @@ else if (state.SelectedNode is not null)
     protected override bool ShouldRender() => rendered is not { } previous || !previous.Equals(RenderIdentity);
     protected override void OnAfterRender(bool firstRender) => rendered = RenderIdentity;
 
-    private static ButtonStyle ResolveActionButtonStyle(string tone)
+    private static ButtonTone ResolveActionButtonTone(string tone)
     {
         return tone switch
         {
-            "danger" => ButtonStyle.Danger,
-            "warn" => ButtonStyle.Warning,
-            "mint" => ButtonStyle.Success,
-            "sky" => ButtonStyle.Info,
-            _ => ButtonStyle.Base
+            "danger" => ButtonTone.Danger,
+            "warn" => ButtonTone.Warning,
+            "mint" => ButtonTone.Success,
+            "sky" => ButtonTone.Info,
+            _ => ButtonTone.Default
         };
     }
 }

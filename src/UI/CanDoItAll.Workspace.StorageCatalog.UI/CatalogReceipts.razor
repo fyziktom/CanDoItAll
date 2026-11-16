@@ -19,10 +19,10 @@
                 }
                 <p>@receipt.Observation</p>
                 <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-                    <Button Text="Observe original target" ButtonStyle="ButtonStyle.Light" Disabled="receipt.ObservationLoading"
+                    <Button Text="Observe original target" Tone="ButtonTone.Default" Disabled="receipt.ObservationLoading"
                             Click="@(() => Session.ObserveAsync(receipt))" data-testid="storage-observe" />
                     @if (result.NeedsReview && !result.IsUnknown && !receipt.CorrectionAcknowledged) {
-                        <Button Text="Review partial routing for explicit correction" ButtonStyle="ButtonStyle.Warning"
+                        <Button Text="Review partial routing for explicit correction" Tone="ButtonTone.Warning"
                                 Click="@(() => Session.AcknowledgeCorrection(receipt))" data-testid="storage-review-partial" />
                     }
                 </Cluster>

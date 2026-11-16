@@ -3,7 +3,7 @@
 }
 
 .agent-catalog-panel__hero {
-    border-bottom: 1px solid rgb(226 232 240);
+    border-bottom: 1px solid var(--tone-border);
     padding-bottom: 0.85rem;
 }
 
@@ -57,8 +57,8 @@
 .agent-catalog-panel__team-panel {
     align-content: start;
     align-self: start;
-    background: rgb(248 250 252);
-    border: 1px solid rgb(226 232 240);
+    background: var(--tone-surface-soft);
+    border: 1px solid var(--tone-border);
     border-radius: 0.75rem;
     display: grid;
     gap: 0.9rem;
@@ -68,12 +68,12 @@
 }
 
 .agent-catalog-panel__team-actions {
-    border-bottom: 1px solid rgb(226 232 240);
+    border-bottom: 1px solid var(--tone-border);
     padding-bottom: 0.9rem;
 }
 
 .agent-catalog-panel__section-title {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.35;

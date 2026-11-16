@@ -3,49 +3,45 @@
 <section data-testid="agents-catalog-memory-access">
 <FormSection Title="CRM source access"
              Description="Allow assigned tools and configured memory providers to use permitted CRM data. Planning reads also require the CRM Planning Search or CRM Planning Summary capability; this setting does not enable memory providers or HR administration.">
-    <label class="cda-inline-option">
-        <CheckBox TValue="bool"
+    <CheckboxOption TValue="bool"
                   Value="@Value.AllowedSourceScopes.Contains(MemorySourceScope.Crm)"
                   ValueChanged="HandleCrmSourceReadChanged"
-                  data-testid="agents-catalog-crm-source-read" />
+                  data-testid="agents-catalog-crm-source-read">
         Allow CRM source reads
-    </label>
+    </CheckboxOption>
 </FormSection>
 <FormSection Title="Memory providers"
              Description="Bind stable aliases to external memory providers and choose when the agent may query them.">
     <Grid Gap="LayoutGap.Large" ColumnsMd="3">
-        <div>
-            <label class="cda-field-label">Invocation mode</label>
-            <InputSelect TValue="AgentMemoryInvocationMode"
+        <FormField Text="Invocation mode">
+            <SelectInput TValue="AgentMemoryInvocationMode"
                          Value="@Value.InvocationMode"
                          ValueChanged="state.HandleInvocationModeChanged"
                          ValueExpression="@(() => Value.InvocationMode)"
-                         class="cda-input"
+                         class="form-input ui-input ui-input--outlined"
                          data-testid="agents-catalog-memory-mode">
                 @foreach (var mode in Enum.GetValues<AgentMemoryInvocationMode>()) {
                     <option value="@mode">@AgentMemoryEditorState.DescribeMode(mode)</option>
                 }
-            </InputSelect>
-        </div>
+            </SelectInput>
+        </FormField>
 
         <SurfaceCard Soft="true" Class="md:col-span-2">
             <Stack GapScale="LayoutGap.Small">
-                <label class="cda-inline-option">
-                    <input type="checkbox"
-                           checked="@Value.RequireContextContributions"
-                           disabled="@(Value.InvocationMode == AgentMemoryInvocationMode.Disabled)"
-                           @onchange="eventArgs => Value.RequireContextContributions = AgentMemoryEditorState.ReadCheckbox(eventArgs.Value)"
-                           data-testid="agents-catalog-memory-required" />
+                <CheckboxOption TValue="bool"
+                                Value="@Value.RequireContextContributions"
+                                Disabled="@(Value.InvocationMode == AgentMemoryInvocationMode.Disabled)"
+                                ValueChanged="value => Value.RequireContextContributions = value"
+                                data-testid="agents-catalog-memory-required">
                     Fail the request when no configured memory provider returns context
-                </label>
-                <label class="cda-inline-option">
-                    <input type="checkbox"
-                           checked="@(Value.InvocationMode == AgentMemoryInvocationMode.Automatic && Value.CanUseMemoryTools)"
-                           disabled="@(Value.InvocationMode != AgentMemoryInvocationMode.Automatic)"
-                           @onchange="state.HandleMemoryToolsChanged"
-                           data-testid="agents-catalog-memory-tools" />
+                </CheckboxOption>
+                <CheckboxOption TValue="bool"
+                                Value="@(Value.InvocationMode == AgentMemoryInvocationMode.Automatic && Value.CanUseMemoryTools)"
+                                Disabled="@(Value.InvocationMode != AgentMemoryInvocationMode.Automatic)"
+                                ValueChanged="value => state.HandleMemoryToolsChanged(new ChangeEventArgs { Value = value })"
+                                data-testid="agents-catalog-memory-tools">
                     Expose memory tools to this agent
-                </label>
+                </CheckboxOption>
             </Stack>
         </SurfaceCard>
     </Grid>
@@ -60,43 +56,38 @@
 
     <div>
     <Grid Gap="LayoutGap.Medium" ColumnsMd="4">
-        <div>
-            <label class="cda-field-label">Alias</label>
+        <FormField Text="Alias">
             <input form="@EntryFormId" value="@state.NewAlias" @oninput="args => state.NewAlias = args.Value?.ToString() ?? string.Empty"
-                       class="cda-input"
+                       class="form-input ui-input ui-input--outlined"
                        placeholder="team-memory"
                        data-testid="agents-catalog-memory-new-alias" />
-        </div>
-        <div>
-            <label class="cda-field-label">Configured provider</label>
-            <InputSelect @bind-Value="state.NewProviderInstanceId"
-                         class="cda-input"
+        </FormField>
+        <FormField Text="Configured provider">
+            <SelectInput @bind-Value="state.NewProviderInstanceId"
                          disabled="@(!state.AvailableProviders.Any())"
                          data-testid="agents-catalog-memory-new-provider">
                 <option value="">Select an enabled provider</option>
                 @foreach (var provider in state.AvailableProviders) {
                     <option value="@provider.InstanceId.Value">@provider.DisplayName (@provider.InstanceId.Value)</option>
                 }
-            </InputSelect>
-        </div>
-        <div>
-            <label class="cda-field-label">Failure behavior</label>
-            <InputSelect @bind-Value="state.NewRequirement"
-                         class="cda-input"
+            </SelectInput>
+        </FormField>
+        <FormField Text="Failure behavior">
+            <SelectInput @bind-Value="state.NewRequirement"
                          data-testid="agents-catalog-memory-new-requirement">
                 @foreach (var requirement in Enum.GetValues<AgentMemoryProviderRequirement>()) {
                     <option value="@requirement">@requirement</option>
                 }
-            </InputSelect>
-        </div>
+            </SelectInput>
+        </FormField>
         <Stack GapScale="LayoutGap.Small" JustifyContent="JustifyContent.End">
-            <label class="cda-inline-option">
-                <input type="checkbox" @bind="state.IncludeInAutomaticContext" />
+            <CheckboxOption TValue="bool"
+                            @bind-Value="state.IncludeInAutomaticContext">
                 Include in automatic fan-out
-            </label>
+            </CheckboxOption>
             <Button Text="Add provider binding"
                     Icon="add"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Type="button" Click="state.AddBindingAsync"
                     Disabled="@(!state.CanAddBindings)"
                     data-testid="agents-catalog-memory-add-binding" />

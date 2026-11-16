@@ -26,12 +26,13 @@ public sealed class DefinitionEditorProviderOrderingTests {
         await ChangeAsync(cut, "llm-chat-definition-name", "Typed before metadata");
         await ClickAsync(cut, "llm-chat-definition-tab-runtime");
         Assert.True(cut.Find("[data-testid='llm-chat-definition-provider']").HasAttribute("disabled"));
-        await ChangeAsync(cut, "llm-chat-definition-system-prompt", "Keep my prompt");
+        await cut.InvokeAsync(() => cut.Find("[data-testid='llm-chat-definition-system-prompt']")
+            .InputAsync(new ChangeEventArgs { Value = "Keep my prompt" }));
         pending.SetResult(Success());
         cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid='llm-chat-definition-provider']").HasAttribute("disabled")));
-        await ChangeAsync(cut, "llm-chat-definition-provider", "1");
+        await ChangeAsync(cut, "llm-chat-definition-provider", SecondProvider.ToString("D"));
         AssertModels(cut, "ollama");
-        await ChangeAsync(cut, "llm-chat-definition-model", "2");
+        await SelectModelAsync(cut, "ollama-vision");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
         Assert.Equal(SecondProvider, gateway.CreatedMutation!.ProviderProfileId);
         Assert.Equal("ollama-vision", gateway.CreatedMutation.Model);
@@ -48,11 +49,11 @@ public sealed class DefinitionEditorProviderOrderingTests {
         var cut = context.Render<LlmChatDefinitionEditorSurface>(p => p.Add(x => x.Presentation, session.Presentation).Add(x => x.Intent, intent => intents.Add(intent)));
         await ChangeAsync(cut, "llm-chat-definition-name", "Unicode Žluťoučký");
         await ClickAsync(cut, "llm-chat-definition-tab-runtime");
-        foreach (var (index, model) in new[] { ("0", "openai"), ("1", "ollama"), ("0", "openai"), ("1", "ollama") }) {
-            await ChangeAsync(cut, "llm-chat-definition-provider", index);
+        foreach (var (provider, model) in new[] { (FirstProvider, "openai"), (SecondProvider, "ollama"), (FirstProvider, "openai"), (SecondProvider, "ollama") }) {
+            await ChangeAsync(cut, "llm-chat-definition-provider", provider.ToString("D"));
             AssertModels(cut, model);
         }
-        await ChangeAsync(cut, "llm-chat-definition-model", "1");
+        await SelectModelAsync(cut, "ollama-secondary");
         cut.Render(p => p.Add(x => x.Presentation, session.Presentation with { ProvidersLoading = false }));
         AssertModels(cut, "ollama");
         await ClickAsync(cut, "llm-chat-definition-editor-save");
@@ -75,7 +76,7 @@ public sealed class DefinitionEditorProviderOrderingTests {
         var cut = context.Render<LlmChatDefinitionEditorSurface>(p => p.Add(x => x.Presentation, limited).Add(x => x.Intent, intent => intents.Add(intent)));
         await ChangeAsync(cut, "llm-chat-definition-name", "Local edit");
         await ClickAsync(cut, "llm-chat-definition-tab-runtime");
-        await ChangeAsync(cut, "llm-chat-definition-provider", "1");
+        await ChangeAsync(cut, "llm-chat-definition-provider", SecondProvider.ToString("D"));
         Assert.Single(cut.FindAll("[data-testid='llm-chat-definition-model'] option"));
         cut.Render(p => p.Add(x => x.Presentation, complete));
         AssertModels(cut, "ollama");
@@ -127,6 +128,13 @@ public sealed class DefinitionEditorProviderOrderingTests {
 
     private static Task ChangeAsync<T>(IRenderedComponent<T> cut, string testId, string value) where T : IComponent
         => cut.InvokeAsync(() => cut.Find($"[data-testid='{testId}']").ChangeAsync(new ChangeEventArgs { Value = value }));
+
+    private static Task SelectModelAsync<T>(IRenderedComponent<T> cut, string label) where T : IComponent {
+        var value = cut.FindAll("[data-testid='llm-chat-definition-model'] option")
+            .Single(option => option.TextContent == label).GetAttribute("value");
+        Assert.NotNull(value);
+        return ChangeAsync(cut, "llm-chat-definition-model", value);
+    }
 
     private static Task ClickAsync<T>(IRenderedComponent<T> cut, string testId) where T : IComponent
         => cut.InvokeAsync(() => cut.Find($"[data-testid='{testId}']").ClickAsync());

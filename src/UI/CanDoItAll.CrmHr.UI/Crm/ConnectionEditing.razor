@@ -10,10 +10,10 @@
 @if (State.ValidationMessage is { } validation) {
     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@validation" /></Alert>
 }
-<Button Text="Review saved connections" ButtonStyle="ButtonStyle.Light" Disabled="@(State.Reading || State.IsSaving || State.PickerPending)"
+<Button Text="Review saved connections" Tone="ButtonTone.Default" Disabled="@(State.Reading || State.IsSaving || State.PickerPending)"
     Click="ReviewRequested" data-testid="crmhr-connections-review-open" />
 @if (State.CanUndo) {
-    <Button Text="Undo merge edits" ButtonStyle="ButtonStyle.Light" Click="UndoRequested" data-testid="crmhr-connections-undo" />
+    <Button Text="Undo merge edits" Tone="ButtonTone.Default" Click="UndoRequested" data-testid="crmhr-connections-undo" />
 }
 <Dialog IsOpen="@(State.Review is not null)" Title="Review connected records" Size="ModalSize.Full" DenseChrome="true"
     CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-connections-review-dialog">
@@ -30,7 +30,7 @@
                 @if (review.GroupError is { } error) {
                     <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-connections-review-error"><TextBlock Value="@error" /></Alert>
                 }
-                <Button Text="@(showAll ? "Show changed connections" : "Show all connections")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                <Button Text="@(showAll ? "Show changed connections" : "Show all connections")" Tone="ButtonTone.Default" Click="@(() => showAll = !showAll)" />
                 @if (review.WholeCollection is not null) {
                     <PartyMergeRows TItem="CrmAccountConnectionEditorModel" Title="Complete connection set" Rows="review.Rows"
                         WholeCollection="review.WholeCollection" Format="Format" ShowUnchanged="showAll" Changed="Changed" />
@@ -44,7 +44,7 @@
                                     <MergeFieldView TValue="CrmAccountConnectionRole" Label="Relationship role" Field="fields.Role" Format="@(value => value.ToString())" ShowUnchanged="showAll" Changed="Changed" />
                                     <MergeFieldView TValue="bool" Label="Primary" Field="fields.Primary" Format="@(value => value ? "Yes" : "No")" ShowUnchanged="showAll" Changed="Changed" />
                                     <MergeFieldView TValue="string" Label="Relationship notes" Field="fields.Notes" Format="@(value => value)" ShowUnchanged="showAll" Changed="Changed">
-                                        <ResultEditor Context="value"><TextArea Value="@value" Rows="4" Immediate="true" ValueChanged="@(text => SetNotesAsync(fields, text))" aria-label="Merged connection notes" /></ResultEditor>
+                                        <ResultEditor Context="value"><TextAreaInput Value="@value" Rows="4" Immediate="true" ValueChanged="@(text => SetNotesAsync(fields, text))" aria-label="Merged connection notes" /></ResultEditor>
                                     </MergeFieldView>
                                     @if (showAll || !fields.OriginalProjects.ToHashSet().SetEquals(fields.LocalProjects) || !fields.OriginalProjects.ToHashSet().SetEquals(fields.CurrentProjects)) {
                                         <Grid ColumnsLg="3" Gap="LayoutGap.Small">
@@ -62,7 +62,7 @@
                         </PanelCard>
                     }
                     @if (review.Rows.Count(row => showAll || row.Field.LocalChanged || row.Field.CurrentChanged) > displayCount) {
-                        <Button Text="Show more connections" ButtonStyle="ButtonStyle.Light" Click="@(() => displayCount += 50)" />
+                        <Button Text="Show more connections" Tone="ButtonTone.Default" Click="@(() => displayCount += 50)" />
                     }
                 }
             </Stack>
@@ -70,9 +70,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="State.Reading" Click="ReviewRequested" data-testid="crmhr-connections-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="State.Reading" Click="ReviewRequested" data-testid="crmhr-connections-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(!State.CanApply)" Click="ApplyRequested" data-testid="crmhr-connections-review-apply" />
             </Cluster>
         </Cluster>

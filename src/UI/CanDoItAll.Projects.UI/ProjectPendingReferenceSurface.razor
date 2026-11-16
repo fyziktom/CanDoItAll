@@ -4,7 +4,7 @@
 @if (IsOpen) {
     <Dialog IsOpen="true" Title="Retained save references" Eyebrow="Browser recovery data" Size="ModalSize.Wide"
             ShowCloseButton="false" OnClose="Close" TestId="project-reference-dialog">
-        <HeaderActions><Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="Close" Disabled="@Busy" /></HeaderActions>
+        <HeaderActions><Button Text="Close" Tone="ButtonTone.Default" Click="Close" Disabled="@Busy" /></HeaderActions>
         <ChildContent>
             <Stack GapScale="LayoutGap.Medium">
                 <TextBlock Value="This browser may retain saves from another dataset or caller. Only references are shown here; opening this view never submits a write." />
@@ -13,9 +13,9 @@
                     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@Message" /></Alert>
                 }
                 <Cluster>
-                    <Button Text="Refresh references" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="@Busy" />
+                    <Button Text="Refresh references" Tone="ButtonTone.Default" Click="Refresh" Disabled="@Busy" />
                     @if (HasMore) {
-                        <Button Text="Next references" ButtonStyle="ButtonStyle.Light" Click="Next" Disabled="@Busy" />
+                        <Button Text="Next references" Tone="ButtonTone.Default" Click="Next" Disabled="@Busy" />
                     }
                 </Cluster>
                 @foreach (var item in Items) {
@@ -26,10 +26,10 @@
                                 <TextBlock Value="@($"Dataset: {item.Operation.Namespace.Value:D}; epoch: {item.Operation.Epoch.Value}; original caller: {item.Operation.CallerBinding.Value}")" />
                                 <Cluster>
                                     <CopyButton Text="Copy original reference" Value="@item.Export()" />
-                                    <Button Text="Export original reference" ButtonStyle="ButtonStyle.Light"
+                                    <Button Text="Export original reference" Tone="ButtonTone.Default"
                                             Href="@($"data:application/json;charset=utf-8,{Uri.EscapeDataString(item.Export())}")"
                                             download="@($"project-save-{item.Operation.Id:D}.json")" data-testid="project-reference-export" />
-                                    <Button Text="Discard local recovery data" ButtonStyle="ButtonStyle.Light" Disabled="@Busy"
+                                    <Button Text="Discard local recovery data" Tone="ButtonTone.Default" Disabled="@Busy"
                                             Click="() => Select.InvokeAsync(item)" data-testid="project-reference-select" />
                                 </Cluster>
                             </ChildContent>
@@ -42,9 +42,9 @@
                             <TextBlock Value="@($"Discard reference {selected.Operation.Id:D}, browser revision {selected.Revision.Value}?")" />
                             <TextBlock Value="@Meaning(selected)" />
                             <TextBlock Value="Copy or export the original reference if you need it later. This removes this browser's frozen command and result, does not cancel server work, and does not authorize a replacement save." />
-                            <Button Text="I understand; discard this local recovery data" ButtonStyle="ButtonStyle.Danger" Disabled="@Busy"
+                            <Button Text="I understand; discard this local recovery data" Tone="ButtonTone.Danger" Disabled="@Busy"
                                     Click="() => Discard.InvokeAsync(selected)" data-testid="project-reference-confirm" />
-                            <Button Text="Keep recovery data" ButtonStyle="ButtonStyle.Light" Disabled="@Busy" Click="CancelSelection" />
+                            <Button Text="Keep recovery data" Tone="ButtonTone.Default" Disabled="@Busy" Click="CancelSelection" />
                         </Stack>
                     </Alert>
                 }

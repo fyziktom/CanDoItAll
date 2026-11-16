@@ -7,36 +7,36 @@
         <Stack GapScale="LayoutGap.Medium" Stretch="true">
             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                 <FormField Text="Workforce kind">
-                    <InputSelect @bind-Value="Model.WorkforceKind" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Kind, nameof(Model.WorkforceKind)))" class="cda-input" data-testid="crmhr-workforce-kind">
+                    <SelectInput @bind-Value="Model.WorkforceKind" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Kind, nameof(Model.WorkforceKind)))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-kind">
                         @foreach (var kind in WorkforceKinds) {
                             <option value="@kind">@kind</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Status">
-                    <InputSelect @bind-Value="Model.Status" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Status, nameof(Model.Status)))" class="cda-input" data-testid="crmhr-workforce-status">
+                    <SelectInput @bind-Value="Model.Status" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Status, nameof(Model.Status)))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-status">
                         @foreach (var status in CrmHrWorkforceWorkspacePresentation.WorkforceStatuses.Append(Model.Status).Distinct(StringComparer.Ordinal)) {
                             <option value="@status">@status</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Employee code">
-                    <NativeValueInput TValue="string" @bind-Value="Model.EmployeeCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.EmployeeCode))" class="cda-input" data-testid="crmhr-workforce-employee-code" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.EmployeeCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.EmployeeCode))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-employee-code" />
                 </FormField>
             </Grid>
             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                 <FormField Text="Job title">
-                    <NativeValueInput TValue="string" @bind-Value="Model.JobTitle" PendingChanged="@(_ => TextAsync(WorkforceProfileField.JobTitle))" class="cda-input" data-testid="crmhr-workforce-job-title" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.JobTitle" PendingChanged="@(_ => TextAsync(WorkforceProfileField.JobTitle))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-job-title" />
                 </FormField>
                 <FormField Text="Discipline">
-                    <NativeValueInput TValue="string" @bind-Value="Model.Discipline" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Discipline))" class="cda-input" data-testid="crmhr-workforce-discipline" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.Discipline" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Discipline))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-discipline" />
                 </FormField>
                 <FormField Text="Seniority">
-                    <InputSelect @bind-Value="Model.Seniority" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Seniority, nameof(Model.Seniority)))" class="cda-input" data-testid="crmhr-workforce-seniority">
+                    <SelectInput @bind-Value="Model.Seniority" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Seniority, nameof(Model.Seniority)))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-seniority">
                         @foreach (var seniority in CrmHrWorkforceWorkspacePresentation.SeniorityValues.Append(Model.Seniority).Distinct(StringComparer.Ordinal)) {
                             <option value="@seniority">@seniority</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
             </Grid>
             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
@@ -45,43 +45,43 @@
             </Grid>
             <Grid Gap="LayoutGap.Large" ColumnsMd="3">
                 <FormField Text="Start date">
-                    <NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Model.StartDate" class="cda-input" data-testid="crmhr-workforce-start-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.StartDate), pending))" />
+                    <NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Model.StartDate" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-start-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.StartDate), pending))" />
                 </FormField>
                 <FormField Text="End date">
-                    <NativeValueInput TValue="DateOnly?" DisplayName="End date" @bind-Value="Model.EndDate" class="cda-input" data-testid="crmhr-workforce-end-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.EndDate), pending))" />
+                    <NativeValueInput TValue="DateOnly?" DisplayName="End date" @bind-Value="Model.EndDate" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-end-date" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Dates, nameof(Model.EndDate), pending))" />
                 </FormField>
                 <FormField Text="Capacity hours / week">
-                    <NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Model.CapacityHoursPerWeek" class="cda-input" data-testid="crmhr-workforce-capacity" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Capacity, nameof(Model.CapacityHoursPerWeek), pending))" />
+                    <NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Model.CapacityHoursPerWeek" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-capacity" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Capacity, nameof(Model.CapacityHoursPerWeek), pending))" />
                 </FormField>
             </Grid>
             <Grid Gap="LayoutGap.Large" ColumnsMd="2">
                 <FormField Text="Location">
-                    <NativeValueInput TValue="string" @bind-Value="Model.Location" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Location))" class="cda-input" data-testid="crmhr-workforce-location" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.Location" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Location))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-location" />
                 </FormField>
                 <FormField Text="Time zone">
-                    <NativeValueInput TValue="string" @bind-Value="Model.TimeZone" PendingChanged="@(_ => TextAsync(WorkforceProfileField.TimeZone))" class="cda-input" data-testid="crmhr-workforce-time-zone" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.TimeZone" PendingChanged="@(_ => TextAsync(WorkforceProfileField.TimeZone))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-time-zone" />
                 </FormField>
             </Grid>
             <Grid Gap="LayoutGap.Large" ColumnsMd="4">
                 <FormField Text="Internal cost rate">
-                    <NativeValueInput TValue="decimal?" DisplayName="Internal cost rate" @bind-Value="Model.InternalCostRate" class="cda-input" data-testid="crmhr-workforce-internal-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.InternalCostRate), pending))" />
+                    <NativeValueInput TValue="decimal?" DisplayName="Internal cost rate" @bind-Value="Model.InternalCostRate" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-internal-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.InternalCostRate), pending))" />
                 </FormField>
                 <FormField Text="External billing rate">
-                    <NativeValueInput TValue="decimal?" DisplayName="External billing rate" @bind-Value="Model.ExternalBillingRate" class="cda-input" data-testid="crmhr-workforce-external-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.ExternalBillingRate), pending))" />
+                    <NativeValueInput TValue="decimal?" DisplayName="External billing rate" @bind-Value="Model.ExternalBillingRate" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-external-rate" PendingChanged="@(pending => ValueInputAsync(WorkforceProfileField.Rates, nameof(Model.ExternalBillingRate), pending))" />
                 </FormField>
                 <FormField Text="Rate unit">
-                    <InputSelect @bind-Value="Model.RateUnit" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Rates, nameof(Model.RateUnit)))" class="cda-input" data-testid="crmhr-workforce-rate-unit">
+                    <SelectInput @bind-Value="Model.RateUnit" @bind-Value:after="@(() => ParsedAsync(WorkforceProfileField.Rates, nameof(Model.RateUnit)))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-workforce-rate-unit">
                         @foreach (var unit in Enum.GetValues<ProjectResourceRateUnit>()) {
                             <option value="@unit">@unit</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Rate currency">
-                    <NativeValueInput TValue="string" @bind-Value="Model.RateCurrencyCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Rates))" class="cda-input" maxlength="3" data-testid="crmhr-workforce-rate-currency" />
+                    <NativeValueInput TValue="string" @bind-Value="Model.RateCurrencyCode" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Rates))" class="form-input ui-input ui-input--outlined" maxlength="3" data-testid="crmhr-workforce-rate-currency" />
                 </FormField>
             </Grid>
             <FormField Text="Notes">
-                <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Notes))" class="cda-input cda-input--textarea min-h-[9rem]" data-testid="crmhr-workforce-notes" />
+                <NativeValueInput TValue="string" Multiline="true" @bind-Value="Model.Notes" PendingChanged="@(_ => TextAsync(WorkforceProfileField.Notes))" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[9rem]" data-testid="crmhr-workforce-notes" />
             </FormField>
         </Stack>
     </FormSection>

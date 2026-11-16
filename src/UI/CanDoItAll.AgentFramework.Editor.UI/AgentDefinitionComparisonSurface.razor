@@ -12,7 +12,7 @@
     }
     <MergeFieldView TValue="string" ShowUnchanged="false" Label="Instructions" Field="Review.Instructions.Field" Format="@(value => value)" Changed="Changed">
         <ResultEditor Context="value">
-            <TextArea Value="@value" ValueChanged="SetInstructionsAsync" Rows="8" data-testid="agents-comparison-instructions" />
+            <TextAreaInput Value="@value" ValueChanged="SetInstructionsAsync" Rows="8" data-testid="agents-comparison-instructions" />
         </ResultEditor>
     </MergeFieldView>
     @foreach (var field in Review.Toggles) {

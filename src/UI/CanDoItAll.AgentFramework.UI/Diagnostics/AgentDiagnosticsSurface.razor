@@ -8,7 +8,7 @@
             <TextBlock TextStyle="TextStyle.Subtitle2" Value="Runtime diagnostics" />
             <TextBlock TextStyle="TextStyle.Body2" Value="Runtime counts, reviewed execution boundary and the latest twelve runs. Sections refresh independently." />
         </div>
-        <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Disabled="@Presentation.IsBusy"
+        <Button Text="Refresh" Tone="ButtonTone.Default" Size="ButtonSize.Small" Disabled="@Presentation.IsBusy"
                 data-testid="diagnostics-refresh" Click="@(() => OnIntent.InvokeAsync(new DiagnosticsIntent.Refresh()))" />
     </Split>
     @foreach (var lane in Enum.GetValues<DiagnosticsLane>()) {

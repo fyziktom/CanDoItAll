@@ -171,7 +171,13 @@ public sealed class WorkspaceHistoryAndShellTests {
         Assert.False(store.Calls.ContainsKey(WorkspaceOperation.SecretGet));
         Assert.False(store.Calls.ContainsKey(WorkspaceOperation.PolicyLoad));
         Assert.Contains("Not loaded", cut.Markup);
+        var defaultReads = store.Calls[WorkspaceOperation.DefaultsRead];
+        var providerReads = store.Calls[WorkspaceOperation.ProvidersRead];
+        await cut.Find("[data-testid=defaults-refresh]").ClickAsync();
+        Assert.Equal(defaultReads, store.Calls[WorkspaceOperation.DefaultsRead]);
+        Assert.Equal(providerReads + 1, store.Calls[WorkspaceOperation.ProvidersRead]);
         cut.Render(p => p.Add(x => x.Section, WorkspaceSection.Secrets));
+        Assert.Empty(cut.FindAll("[data-testid=defaults-refresh]"));
         await cut.Find(".cda-selection-list-item__button").ClickAsync();
         var draft = secrets.Draft;
         var secret = cut.FindComponent<SecretField>();

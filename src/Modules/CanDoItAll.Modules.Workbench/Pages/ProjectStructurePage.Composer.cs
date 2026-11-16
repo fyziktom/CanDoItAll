@@ -246,11 +246,14 @@ public partial class ProjectStructurePage {
         retiredAuthoringSessions.RemoveAll(sessions.Contains);
     }
 
-    private async Task RunNodeComparisonAsync(ProjectStructureNodeEditingSession session, Func<Task> action) {
+    private Task RunNodeComparisonAsync(ProjectStructureNodeEditingSession session, Func<Task> action)
+        => TrackAuthoringOperationAsync(RunNodeComparisonCoreAsync(session, action));
+
+    private async Task RunNodeComparisonCoreAsync(ProjectStructureNodeEditingSession session, Func<Task> action) {
         try {
             var operation = action();
             await InvokeAsync(StateHasChanged);
-            await TrackAuthoringOperationAsync(operation);
+            await operation;
         } catch (OperationCanceledException) when (deferredCompletionCts.IsCancellationRequested) {
         } catch (Exception failure) {
             Logger.LogWarning(failure, "Structure node comparison for opening {OpeningId} failed.", session.OpeningId);

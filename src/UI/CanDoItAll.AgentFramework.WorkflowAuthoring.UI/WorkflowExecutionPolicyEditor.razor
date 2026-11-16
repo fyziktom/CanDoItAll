@@ -1,7 +1,7 @@
 <Grid Gap="LayoutGap.Small" ColumnsLg="3">
     @foreach (var field in Fields) {
         <FormField Text="@field.Label">
-            <input class="cda-input" type="number" min="@field.Minimum" max="@field.Maximum"
+            <input class="form-input ui-input ui-input--outlined" type="number" min="@field.Minimum" max="@field.Maximum"
                 value="@RawInputs.GetValueOrDefault(field.Kind, field.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))"
                 @onchange="args => InputChanged.InvokeAsync(new(field.Kind, args.Value?.ToString() ?? string.Empty))"
                 aria-invalid="@InvalidInputs.Contains(field.Kind)" data-testid="@($"{TestIdPrefix}-{field.Suffix}")" />

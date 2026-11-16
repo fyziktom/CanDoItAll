@@ -15,18 +15,18 @@
     <Actions>
         @if (state.ManagedAttachmentCount > 0) {
             <Button Text="@(state.DeletesMultipleNodes ? "Delete nodes only" : "Delete node only")"
-                    ButtonStyle="ButtonStyle.Base" data-testid="content-delete-retain"
+                    Tone="ButtonTone.Default" data-testid="content-delete-retain"
                     Click="@(() => actions.Confirm(ContentStorageDisposition.RetainManagedFiles))" />
             <Button Text="@(state.DeletesMultipleNodes ? "Delete nodes and files"
                     : state.ManagedAttachmentCount > 1 ? "Delete node and files" : "Delete node and file")"
-                    ButtonStyle="ButtonStyle.Danger" data-testid="content-delete-files"
+                    Tone="ButtonTone.Danger" data-testid="content-delete-files"
                     Click="@(() => actions.Confirm(ContentStorageDisposition.DeleteOwnedManagedFiles))" />
         } else {
-            <Button Text="@(state.IsBulk ? "Delete selected" : "Delete")" ButtonStyle="ButtonStyle.Danger"
+            <Button Text="@(state.IsBulk ? "Delete selected" : "Delete")" Tone="ButtonTone.Danger"
                     data-testid="content-delete-files"
                     Click="@(() => actions.Confirm(ContentStorageDisposition.DeleteOwnedManagedFiles))" />
         }
-        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" data-testid="content-delete-cancel"
+        <Button Text="Cancel" Variant="Variant.Text" Tone="ButtonTone.Default" data-testid="content-delete-cancel"
                 Click="@(() => actions.Cancel())" />
     </Actions>
 </CanvasOverlayDialog>

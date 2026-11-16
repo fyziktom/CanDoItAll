@@ -7,8 +7,8 @@
         <Alert AlertStyle="AlertStyle.Warning">This editor is no longer active. Reopen it in the current workspace.</Alert>
     } else if (owner.IsLoading) {
         <SurfaceCard Soft="true" data-testid="agents-capability-details-loading">
-            <p class="cda-eyebrow">Loading capability</p>
-            <h3 class="cda-title-md">Preparing capability details</h3>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption">Loading capability</TextBlock>
+            <h3 class="cda-text-block cda-text-block--h5">Preparing capability details</h3>
         </SurfaceCard>
     } else if (owner.LoadFailed) {
         <Alert AlertStyle="AlertStyle.Danger" data-testid="agents-capability-details-load-failed">The requested capability could not be loaded.</Alert>
@@ -32,7 +32,7 @@
                 @if (owner.HasExternalChanges) {
                     <Alert AlertStyle="AlertStyle.Warning" data-testid="capability-changed-elsewhere">
                         The capability changed elsewhere. Your draft is retained.
-                        <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" Disabled="@(owner.Busy || owner.SaveUnknown)" Click="owner.CompareAsync" data-testid="capability-compare" />
+                        <Button Text="Compare changes" Tone="ButtonTone.Default" Disabled="@(owner.Busy || owner.SaveUnknown)" Click="owner.CompareAsync" data-testid="capability-compare" />
                     </Alert>
                 }
                 @if (owner.Comparison is { } review) {
@@ -50,13 +50,13 @@
                             <FormSection Title="Review" Description="Confirm the definition before creating it. Assignment remains explicit per agent.">
                                 <FactTable>
                                     <Stack GapScale="LayoutGap.Small">
-                                        <p class="cda-field-label">Type</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Type</TextBlock>
                                         <p>@owner.Draft.Model.Kind</p>
-                                        <p class="cda-field-label">Name</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Name</TextBlock>
                                         <p>@owner.Draft.Model.Name</p>
-                                        <p class="cda-field-label">Key</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Key</TextBlock>
                                         <p class="capability-authoring__mono">@owner.Draft.Model.Key</p>
-                                        <p class="cda-field-label">Configuration</p>
+                                        <TextBlock TextStyle="TextStyle.EyebrowCaption">Configuration</TextBlock>
                                         <p>@ConfigurationSummary(owner.Draft)</p>
                                         <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
                                             @foreach (var tag in owner.Draft.Model.Tags) {
@@ -69,7 +69,7 @@
                         </StepsItem>
                     </Steps>
                 } else {
-                    <Tabs SelectedIndex="tab" SelectedIndexChanged="value => SelectTab(owner, value)" Variant="TabsVariant.ModalCompact" BorderMode="TabsBorderMode.Soft" Tone="TabsTone.Info" OverflowMode="TabsOverflowMode.Scroll" PanelOverflowMode="TabsPanelOverflowMode.Auto" FillHeight="true" Class="capability-authoring__tabs" AriaLabel="Capability details sections">
+                    <Tabs SelectedIndex="tab" SelectedIndexChanged="value => SelectTab(owner, value)" Density="TabsDensity.Compact" BorderMode="TabsBorderMode.Soft" Tone="TabsTone.Info" OverflowMode="TabsOverflowMode.Scroll" PanelOverflowMode="TabsPanelOverflowMode.Auto" FillHeight="true" Class="capability-authoring__tabs" AriaLabel="Capability details sections">
                         <TabItems>
                             <TabsItem Text="Identity">
                                 <CapabilityIdentityFields Draft="owner.Draft" TestId="@TestId" TagSuggestions="TagSuggestions" />
@@ -86,11 +86,11 @@
                 <StickyActionFooter StatusLabel="Capability catalog">
                     <SecondaryActions>
                         @if (owner.Comparison is not null) {
-                            <Button Text="Back to editor" ButtonStyle="ButtonStyle.Light" Click="owner.CancelComparison" data-testid="capability-comparison-cancel" />
+                            <Button Text="Back to editor" Tone="ButtonTone.Default" Click="owner.CancelComparison" data-testid="capability-comparison-cancel" />
                         } else {
-                            <Button Text="Cancel" Icon="close" ButtonStyle="ButtonStyle.Light" Click="() => CancelAsync(owner)" />
+                            <Button Text="Cancel" Icon="close" Tone="ButtonTone.Default" Click="() => CancelAsync(owner)" />
                             @if (Mode == CapabilityAuthoringMode.Wizard) {
-                                <Button Text="Back" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Disabled="@(step == 0)" Click="() => SelectStep(owner, step - 1)" data-testid="agents-capability-setup-back" />
+                                <Button Text="Back" Icon="arrow_back" Tone="ButtonTone.Default" Disabled="@(step == 0)" Click="() => SelectStep(owner, step - 1)" data-testid="agents-capability-setup-back" />
                             }
                         }
                     </SecondaryActions>
@@ -99,7 +99,7 @@
                             <Button Text="Apply to draft" Disabled="@(!footerReview.CanApply || owner.Busy)" Click="() => ApplyComparison(owner)" data-testid="capability-comparison-apply" />
                         } else {
                             @if (owner.AcceptedId.HasValue) {
-                                <Button Text="Use saved capability" ButtonStyle="ButtonStyle.Light" Click="() => CompleteAsync(owner)" data-testid="capability-use-saved" />
+                                <Button Text="Use saved capability" Tone="ButtonTone.Default" Click="() => CompleteAsync(owner)" data-testid="capability-use-saved" />
                             }
                             @if (Mode == CapabilityAuthoringMode.Wizard && step < 2) {
                                 <Button Text="Next" Icon="arrow_forward" Disabled="@owner.Busy" Click="() => Next(owner)" data-testid="agents-capability-setup-next" />

@@ -12,9 +12,9 @@
                      Summary="Choose a provider and confirm generation. The placeholder and final image are stored under the original project node."
                      CanvasScoped="@CanvasScoped" Close="@(() => close.InvokeAsync())" DataTestId="content-image-dialog">
     <Actions>
-        <Button Text="Generate image" ButtonStyle="ButtonStyle.Info" Disabled="@(disabled || provider is null || string.IsNullOrWhiteSpace(draft.Prompt))"
+        <Button Text="Generate image" Tone="ButtonTone.Info" Disabled="@(disabled || provider is null || string.IsNullOrWhiteSpace(draft.Prompt))"
                 Click="@(() => SubmitAsync(opening, submit))" data-testid="content-image-submit" />
-        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => close.InvokeAsync())" />
+        <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => close.InvokeAsync())" />
     </Actions>
     <Body>
         <Stack GapScale="LayoutGap.Medium">
@@ -25,45 +25,67 @@
             }
             <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
                 <FormField Text="Image title">
-                    <TextBox Value="@draft.Title" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Title = value ?? string.Empty }))" data-testid="content-image-title" />
+                    <TextInput Value="@draft.Title" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Title = value ?? string.Empty }))" data-testid="content-image-title" />
                 </FormField>
                 <FormField Text="Usage">
-                    <TextBox Value="@draft.Usage" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Usage = value ?? string.Empty }))" data-testid="content-image-usage" />
+                    <TextInput Value="@draft.Usage" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(opening, () => draft = draft with { Usage = value ?? string.Empty }))" data-testid="content-image-usage" />
                 </FormField>
                 <FormField Text="Provider">
-                    <DropDown TValue="Guid?" Data="@state.Providers" Value="@draft.ProviderId" TextProperty="Name" ValueProperty="Id" Disabled="@disabled"
-                              data-testid="content-image-provider" Placeholder="Choose image provider" Change="@(value => Change(opening, () => draft = draft with { ProviderId = value is Guid id ? id : null, Model = string.Empty }))" />
+                    <SelectInput TValue="Guid?" Value="@draft.ProviderId" Disabled="@disabled"
+                              data-testid="content-image-provider" ValueChanged="@(value => Change(opening, () => draft = draft with { ProviderId = value is Guid id ? id : null, Model = string.Empty }))">
+    <option value="">Choose image provider</option>
+    @foreach (var option in state.Providers) {
+        <option value="@option.Id">@option.Name</option>
+    }
+</SelectInput>
                 </FormField>
                 <FormField Text="Model">
-                    <DropDown TValue="string" Data="@(provider?.Models ?? [])" Value="@draft.Model" TextProperty="Label" ValueProperty="Id" AllowClear="true" Disabled="@(disabled || provider is null)"
-                              data-testid="content-image-model" Placeholder="@(provider is null ? "Choose a provider first" : $"Default: {provider.DefaultModelLabel}")"
-                              Change="@(value => Change(opening, () => draft = draft with { Model = value?.ToString() ?? string.Empty }))" />
+                    <SelectInput TValue="string" Value="@draft.Model" Disabled="@(disabled || provider is null)"
+                              data-testid="content-image-model"
+                              ValueChanged="@(value => Change(opening, () => draft = draft with { Model = value?.ToString() ?? string.Empty }))">
+    <option value="">@(provider is null ? "Choose a provider first" : $"Default: {provider.DefaultModelLabel}")</option>
+    @foreach (var option in (provider?.Models ?? [])) {
+        <option value="@option.Id">@option.Label</option>
+    }
+</SelectInput>
                 </FormField>
             </Grid>
             @if (provider is { AllowsCustomModel: true }) {
                 <FormField Text="Optional model override">
-                    <TextBox Value="@draft.Model" Immediate="true" Disabled="@disabled" Placeholder="Use provider default"
+                    <TextInput Value="@draft.Model" Immediate="true" Disabled="@disabled" Placeholder="Use provider default"
                              ValueChanged="@(value => Change(opening, () => draft = draft with { Model = value ?? string.Empty }))" />
                 </FormField>
             } else if (provider is { Models.Count: 0 }) {
                 <Alert AlertStyle="AlertStyle.Warning">This shared provider has no available model catalog. Refresh its source before generating.</Alert>
             }
             <FormField Text="Prompt">
-                <TextArea Value="@draft.Prompt" Rows="6" Immediate="true" Disabled="@disabled" Placeholder="Describe the image to generate"
+                <TextAreaInput Value="@draft.Prompt" Rows="6" Immediate="true" Disabled="@disabled" Placeholder="Describe the image to generate"
                           ValueChanged="@(value => Change(opening, () => draft = draft with { Prompt = value ?? string.Empty }))" data-testid="content-image-prompt" />
             </FormField>
             <Grid ColumnTemplate="repeat(3,minmax(0,1fr))" Gap="LayoutGap.Medium">
                 <FormField Text="Size">
-                    <DropDown TValue="ContentImageSize" Data="@Sizes" TextProperty="Label" ValueProperty="Value" Value="@draft.Size" Disabled="@disabled"
-                              Change="@(value => Change(opening, () => draft = draft with { Size = (ContentImageSize)value! }))" />
+                    <SelectInput TValue="ContentImageSize" Value="@draft.Size" Disabled="@disabled"
+                              ValueChanged="@(value => Change(opening, () => draft = draft with { Size = (ContentImageSize)value! }))">
+    @foreach (var option in Sizes) {
+        <option value="@option.Value">@option.Label</option>
+    }
+</SelectInput>
                 </FormField>
                 <FormField Text="Quality">
-                    <DropDown TValue="ContentImageQuality" Data="@(Enum.GetValues<ContentImageQuality>())" Value="@draft.Quality" Disabled="@disabled"
-                              Change="@(value => Change(opening, () => draft = draft with { Quality = (ContentImageQuality)value! }))" />
+                    <SelectInput TValue="ContentImageQuality" Value="@draft.Quality" Disabled="@disabled"
+                              ValueChanged="@(value => Change(opening, () => draft = draft with { Quality = (ContentImageQuality)value! }))">
+    @foreach (var option in (Enum.GetValues<ContentImageQuality>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
                 </FormField>
                 <FormField Text="Format">
-                    <DropDown TValue="ContentImageFormat" Data="@(Enum.GetValues<ContentImageFormat>())" Value="@draft.Format" Disabled="@disabled"
-                              Change="@(value => Change(opening, () => draft = draft with { Format = (ContentImageFormat)value! }))" />
+                    <SelectInput TValue="ContentImageFormat" Value="@draft.Format" Disabled="@disabled"
+                              ValueChanged="@(value => Change(opening, () => draft = draft with { Format = (ContentImageFormat)value! }))">
+    @foreach (var option in (Enum.GetValues<ContentImageFormat>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
                 </FormField>
             </Grid>
             @if (!string.IsNullOrWhiteSpace(state.Message)) {

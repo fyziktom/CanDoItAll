@@ -4,7 +4,7 @@
 
 <Button Text="@(IconOnly ? string.Empty : Text)"
         Icon="@Icon"
-        ButtonStyle="@ButtonStyle"
+        Tone="@Tone"
         Variant="@Variant"
         Size="@Size"
         Disabled="@(Disabled || interaction is not null)"
@@ -38,7 +38,7 @@
     public bool Disabled { get; set; }
 
     [Parameter]
-    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Light;
+    public ButtonTone Tone { get; set; } = ButtonTone.Default;
 
     [Parameter]
     public Variant Variant { get; set; } = Variant.Outlined;

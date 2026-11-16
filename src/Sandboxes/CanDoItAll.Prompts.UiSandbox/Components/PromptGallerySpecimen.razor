@@ -11,7 +11,7 @@
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" AlignItems="AlignItems.Center">
             <label for="prompts-sandbox-scenario">Scenario</label>
             <select id="prompts-sandbox-scenario"
-                    class="cda-input"
+                    class="form-input ui-input ui-input--outlined"
                     value="@PromptGallerySandboxContext.Token(context.Scenario)"
                     @onchange="ChangeScenario"
                     data-testid="prompts-sandbox-scenario">
@@ -20,7 +20,7 @@
                     <option value="@PromptGallerySandboxContext.Token(scenario)">@scenario</option>
                 }
             </select>
-            <Button Text="@LayoutLabel" ButtonStyle="ButtonStyle.Light" Click="CycleLayout" data-testid="prompts-sandbox-layout" />
+            <Button Text="@LayoutLabel" Tone="ButtonTone.Default" Click="CycleLayout" data-testid="prompts-sandbox-layout" />
         </Cluster>
         <output aria-live="polite" data-testid="prompts-sandbox-intent">@fixture.IntentLog</output>
     </Stack>
@@ -42,7 +42,7 @@
                     <PageHeaderActionButton Icon="add"
                                             Label="New item"
                                             TooltipText="Create a reusable prompt or prompt part."
-                                            ButtonStyle="ButtonStyle.Primary"
+                                            Tone="ButtonTone.Primary"
                                             Click="@(() => fixture.OpenNewEditor())" />
                 </Actions>
             </PageHeader>
@@ -83,7 +83,7 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="@(() => fixture.CloseReview(false))" data-testid="prompt-merge-cancel" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="@(() => fixture.CloseReview(false))" data-testid="prompt-merge-cancel" />
             <Button Text="Apply to my draft" Disabled="@(fixture.Review?.CanApply != true)" Click="ApplyReview" data-testid="prompt-merge-apply" />
         </Cluster>
     </Footer>

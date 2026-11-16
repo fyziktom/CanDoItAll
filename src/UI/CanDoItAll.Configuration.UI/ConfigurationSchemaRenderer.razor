@@ -1,9 +1,10 @@
 @namespace CanDoItAll.Configuration.UI
+@using CanDoItAll.Components.BaseLib
 @using CanDoItAll.SharedKernel.Configuration
 @using Microsoft.AspNetCore.Components
 
 @if (Schema.Fields.Count == 0) {
-    <p class="cda-body-muted" data-testid="@($"{TestIdPrefix}-empty")">No configuration fields are defined.</p>
+    <TextBlock TextStyle="TextStyle.Muted" Class="leading-5" data-testid="@($"{TestIdPrefix}-empty")">No configuration fields are defined.</TextBlock>
 } else {
     <div class="grid grid-cols-1 gap-3 lg:grid-cols-2" data-testid="@TestIdPrefix">
         @foreach (var field in Schema.Fields) {

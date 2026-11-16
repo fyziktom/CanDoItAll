@@ -34,7 +34,7 @@
                     <TextBlock Value="@($"Includes {RelatedRecordCount} related saved records. Changes after this preview require another preview.")" />
                 }
                 <FormField Text="@(Presentation.IsAccepted ? "Local note" : "Merge note")">
-                    <TextArea Value="@mergeReason" ValueChanged="HandleNoteAsync" Immediate="true"
+                    <TextAreaInput Value="@mergeReason" ValueChanged="HandleNoteAsync" Immediate="true"
                               Rows="4" maxlength="4000" data-testid="crmhr-merge-reason" />
                 </FormField>
                 @if (Presentation.IsAccepted) {
@@ -49,12 +49,12 @@
             <Stack GapScale="LayoutGap.Medium">
                 <TextBlock Value="Merge removes the duplicate after its related records are consolidated." TextStyle="TextStyle.Note" />
                 <Cluster Gap="LayoutGap.Small">
-                    <Button Text="Close" ButtonStyle="ButtonStyle.Light" Disabled="@(Presentation.IsBusy || Presentation.IsUnknown)"
+                    <Button Text="Close" Tone="ButtonTone.Default" Disabled="@(Presentation.IsBusy || Presentation.IsUnknown)"
                             Click="HandleCloseAsync" data-testid="crmhr-merge-close" />
                     @if (!Presentation.IsAccepted) {
-                        <Button Text="Refresh preview" ButtonStyle="ButtonStyle.Light" Disabled="Presentation.IsBusy"
+                        <Button Text="Refresh preview" Tone="ButtonTone.Default" Disabled="Presentation.IsBusy"
                                 Click="Refresh" data-testid="crmhr-merge-refresh" />
-                        <Button Text="Merge duplicate" ButtonStyle="ButtonStyle.Warning" Disabled="@(!Presentation.CanConfirm)"
+                        <Button Text="Merge duplicate" Tone="ButtonTone.Warning" Disabled="@(!Presentation.CanConfirm)"
                                 Click="HandleConfirmAsync" data-testid="crmhr-merge-confirm" />
                     }
                 </Cluster>

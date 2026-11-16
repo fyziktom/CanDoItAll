@@ -3,14 +3,14 @@
 }
 
 .agent-team-details-dialog__title {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 1rem;
     font-weight: 700;
     margin: 0.25rem 0 0;
 }
 
 .agent-team-details-dialog__field {
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     display: grid;
     font-size: 0.82rem;
     font-weight: 700;

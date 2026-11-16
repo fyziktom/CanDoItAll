@@ -16,8 +16,8 @@
     </ChildContent>
     <Footer>
         <Cluster Wrap="FlexWrap.Wrap">
-            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="project-merge-cancel" />
-            <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Click="Refresh" Disabled="Busy" data-testid="project-merge-refresh" />
+            <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="Cancel" data-testid="project-merge-cancel" />
+            <Button Text="Refresh comparison" Tone="ButtonTone.Default" Click="Refresh" Disabled="Busy" data-testid="project-merge-refresh" />
             <Button Text="Apply to draft" Type="submit" form="@FormId" Disabled="@(!CanApply || Busy)" data-testid="project-merge-apply" />
         </Cluster>
     </Footer>

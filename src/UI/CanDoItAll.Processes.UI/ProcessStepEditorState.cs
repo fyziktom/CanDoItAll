@@ -395,13 +395,13 @@ public static ProcessDefinitionStepKind ParseStepKind(ChangeEventArgs args)
             _ => "neutral"
         };
 
-    public static ButtonStyle ResolveCommandButtonStyle(ProcessDefinitionStepCommandKind kind)
+    public static ButtonTone ResolveCommandButtonTone(ProcessDefinitionStepCommandKind kind)
         => kind switch {
-            ProcessDefinitionStepCommandKind.SaveStep => ButtonStyle.Success,
-            ProcessDefinitionStepCommandKind.AddBranchOutcome => ButtonStyle.Light,
-            ProcessDefinitionStepCommandKind.AddArtifactExpectation => ButtonStyle.Info,
-            ProcessDefinitionStepCommandKind.MapSubprocess => ButtonStyle.Light,
-            _ => ButtonStyle.Light
+            ProcessDefinitionStepCommandKind.SaveStep => ButtonTone.Success,
+            ProcessDefinitionStepCommandKind.AddBranchOutcome => ButtonTone.Default,
+            ProcessDefinitionStepCommandKind.AddArtifactExpectation => ButtonTone.Info,
+            ProcessDefinitionStepCommandKind.MapSubprocess => ButtonTone.Default,
+            _ => ButtonTone.Default
         };
 
     public static string BuildCommandTestId(ProcessDefinitionStepCommandKind kind)

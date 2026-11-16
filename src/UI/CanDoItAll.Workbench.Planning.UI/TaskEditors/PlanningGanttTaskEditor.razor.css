@@ -11,10 +11,10 @@
 }
 
 .project-structure-gantt-task-dialog__input {
-    background: white;
-    border: 1px solid rgb(203 213 225);
+    background: var(--tone-surface);
+    border: 1px solid var(--tone-border);
     border-radius: 0.5rem;
-    color: rgb(30 41 59);
+    color: var(--tone-text-strong);
     font: inherit;
     min-height: 2.5rem;
     padding: 0.5rem 0.75rem;
@@ -22,7 +22,7 @@
 }
 
 .project-structure-gantt-task-dialog__input:focus-visible {
-    border-color: rgb(14 165 233);
+    border-color: var(--tone-info-soft-border);
     box-shadow: 0 0 0 3px rgb(14 165 233 / 0.16);
     outline: none;
 }

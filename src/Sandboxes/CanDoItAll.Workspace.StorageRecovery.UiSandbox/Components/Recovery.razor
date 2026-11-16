@@ -7,11 +7,11 @@
     <TextBlock TextStyle="TextStyle.Body2" Value="Simulation using the production renderer. No backend, provider, upload or model is registered." />
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         <label>Scenario
-            <InputSelect TValue="RecoveryScenario" Value="scenario" ValueChanged="ChangeScenarioAsync" ValueExpression="@(() => scenario)" data-testid="recovery-scenario">
+            <SelectInput TValue="RecoveryScenario" Value="scenario" ValueChanged="ChangeScenarioAsync" ValueExpression="@(() => scenario)" data-testid="recovery-scenario">
                 @foreach (var value in Enum.GetValues<RecoveryScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
         </label>
         <Button Text="Open recovery" Click="OpenAsync" data-testid="recovery-open-primary" />
         <Button Text="Release delayed read" Click="Release" data-testid="recovery-release" />

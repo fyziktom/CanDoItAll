@@ -4,7 +4,11 @@
 <SurfaceCard data-testid="content-editor-specimen" data-name="@Name">
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         <TextBlock TextStyle="TextStyle.Subtitle1" Value="@Name" />
-        <DropDown TValue="string" Data="fixtures.Select(file => file.Name)" @bind-Value="selected" Style="width:11rem" />
+        <SelectInput TValue="string" @bind-Value="selected" Style="width:11rem">
+    @foreach (var option in fixtures.Select(file => file.Name)) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         <Button Text="Open file" Click="OpenAsync" />
         <Button Text="Remove authority" Click="RemoveAuthority" />
         <Button Text="Concurrent edit" Click="() => source?.ChangeRevision()" />

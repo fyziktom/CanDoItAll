@@ -36,7 +36,7 @@
                 @if (!string.IsNullOrWhiteSpace(rendered.HeaderFailure)) {
                     <Button Icon="refresh"
                             Size="ButtonSize.Small"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             title="@rendered.HeaderFailure"
                             aria-label="Retry header information"
                             Disabled="@rendered.HeaderLoading"
@@ -61,7 +61,7 @@
                 <PageHeaderActionButton Icon="groups"
                                         Label="Open CRM / HR agents"
                                         TooltipText="Open CRM-HR agent projections."
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Click="@(() => Intent.InvokeAsync(new AgentsShellIntent.Command(rendered.Origin, AgentsShellCommand.OpenCrmHrAgents)))"
                                         data-testid="agents-shell-open-crmhr" />
                 <PageHeaderActionButton Icon="flow"

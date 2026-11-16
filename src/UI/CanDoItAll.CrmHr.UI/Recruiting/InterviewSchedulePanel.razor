@@ -13,34 +13,34 @@
             <SurfaceCard>
                 <EditForm EditContext="context" OnValidSubmit="SubmitAsync" data-testid="crmhr-recruiting-interview-form">
                 <ValidationSummary />
-                <p class="cda-eyebrow">Schedule step</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">Interview details</h3>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Schedule step</TextBlock>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">Interview details</h3>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Interview type">
-                        <InputSelect @bind-Value="Draft.InterviewType" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Type))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="Draft.InterviewType" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Type))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-recruiting-interview-type">
                             @foreach (var interviewType in Enum.GetValues<RecruitmentInterviewType>()) {
                                 <option value="@interviewType">@interviewType</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                     <FormField Text="Outcome">
-                        <InputSelect @bind-Value="Draft.Outcome" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Outcome))"
-                                     class="cda-input"
+                        <SelectInput @bind-Value="Draft.Outcome" @bind-Value:after="@(() => ReportAsync(RecruitmentInterviewField.Outcome))"
+                                     class="form-input ui-input ui-input--outlined"
                                      data-testid="crmhr-recruiting-interview-outcome">
                             @foreach (var outcome in Enum.GetValues<RecruitmentInterviewOutcome>()) {
                                 <option value="@outcome">@outcome</option>
                             }
-                        </InputSelect>
+                        </SelectInput>
                     </FormField>
                 </Grid>
 
                 <Grid Gap="LayoutGap.Medium" ColumnsMd="2" Class="mt-4">
                     <FormField Text="Scheduled">
                         <NativeValueInput TValue="DateTime?" DateType="InputDateType.DateTimeLocal" DisplayName="Interview schedule" @bind-Value="Draft.ScheduledAtLocal"
-                            class="cda-input" data-testid="crmhr-recruiting-interview-scheduled" PendingChanged="@(pending => ReportAsync(RecruitmentInterviewField.Schedule, pending))" />
+                            class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-interview-scheduled" PendingChanged="@(pending => ReportAsync(RecruitmentInterviewField.Schedule, pending))" />
                     </FormField>
                     <PartyPicker Label="Interviewer"
                                  TestIdPrefix="crmhr-recruiting-interviewer"
@@ -53,7 +53,7 @@
                 <div class="mt-4">
                     <FormField Text="Recommendation">
                         <NativeValueInput TValue="string" @bind-Value="Draft.Recommendation" PendingChanged="@(_ => TextAsync(RecruitmentInterviewField.Recommendation))"
-                                   class="cda-input"
+                                   class="form-input ui-input ui-input--outlined"
                                    data-testid="crmhr-recruiting-interview-recommendation" />
                     </FormField>
                 </div>
@@ -61,7 +61,7 @@
                 <div class="mt-4">
                     <FormField Text="Feedback">
                         <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Feedback" PendingChanged="@(_ => TextAsync(RecruitmentInterviewField.Feedback))"
-                                       class="cda-input cda-input--textarea min-h-[8rem]"
+                                       class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[8rem]"
                                        data-testid="crmhr-recruiting-interview-feedback" />
                     </FormField>
                 </div>
@@ -71,7 +71,7 @@
                             Type="submit" Disabled="@SaveDisabled"
                             data-testid="crmhr-recruiting-interview-save-button" />
                     <Button Text="Reset"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Click="ResetInterview" Disabled="@WritesDisabled"
                             data-testid="crmhr-recruiting-interview-reset-button" />
                 </Cluster>
@@ -79,8 +79,8 @@
             </SurfaceCard>
 
             <SurfaceCard Soft="true">
-                <p class="cda-eyebrow">Interview log</p>
-                <h3 class="mt-1 text-lg font-semibold text-slate-950">@Interviews.Count interview(s)</h3>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Interview log</TextBlock>
+                <h3 class="mt-1 text-lg font-semibold text-chrome-950">@Interviews.Count interview(s)</h3>
 
                 @if (Interviews.Count == 0) {
                     <div class="mt-4">
@@ -97,20 +97,20 @@
                                        AlignItems="AlignItems.Start"
                                        JustifyContent="JustifyContent.SpaceBetween">
                                     <div class="min-w-0 space-y-1">
-                                        <p class="text-base font-semibold text-slate-950">@item.InterviewType</p>
-                                        <p class="text-sm text-slate-600">@BuildMeta(item)</p>
+                                        <p class="text-base font-semibold text-chrome-950">@item.InterviewType</p>
+                                        <p class="text-sm text-chrome-600">@BuildMeta(item)</p>
                                         @if (!string.IsNullOrWhiteSpace(item.Recommendation)) {
-                                            <p class="text-sm text-slate-700">Recommendation: @item.Recommendation</p>
+                                            <p class="text-sm text-chrome-700">Recommendation: @item.Recommendation</p>
                                         }
                                         @if (!string.IsNullOrWhiteSpace(item.Feedback)) {
-                                            <p class="text-sm leading-6 text-slate-600">@item.Feedback</p>
+                                            <p class="text-sm leading-6 text-chrome-600">@item.Feedback</p>
                                         }
                                     </div>
                                     <Cluster Gap="LayoutGap.Small">
                                         <StatusBadge Tone="@ResolveOutcomeTone(item.Outcome)"
                                                      Text="@item.Outcome.ToString()" />
                                         <Button Text="Delete"
-                                                ButtonStyle="ButtonStyle.Danger"
+                                                Tone="ButtonTone.Danger"
                                                 Size="ButtonSize.Small"
                                                 Click="@(() => DeleteInterview.InvokeAsync(item))" Disabled="@WritesDisabled"
                                                 data-testid="crmhr-recruiting-interview-delete-button" />

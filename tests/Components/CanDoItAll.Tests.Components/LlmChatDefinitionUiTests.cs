@@ -81,12 +81,12 @@ public sealed class LlmChatDefinitionUiTests
         cut.WaitForElement("[data-testid='llm-chat-definition-editor-save']");
         cut.Find("[data-testid='llm-chat-definition-name']").Change("Shared chat");
         cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
-        cut.Find("[data-testid='llm-chat-definition-provider']").Change("0");
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change(ProviderId.ToString("D"));
 
         cut.WaitForAssertion(() => Assert.Equal(["Provider default (Readable default)", "Readable secondary"],
             cut.FindAll("[data-testid='llm-chat-definition-model'] option").Select(option => option.TextContent)));
         Assert.Empty(cut.FindAll("[data-testid='llm-chat-definition-model-override']"));
-        cut.Find("[data-testid='llm-chat-definition-model']").Change("1");
+        SelectOption(cut, "llm-chat-definition-model", "Readable secondary");
         cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
         cut.WaitForAssertion(() => Assert.Equal("opaque-secondary", gateway.CreatedMutation?.Model));
     }
@@ -239,12 +239,12 @@ public sealed class LlmChatDefinitionUiTests
         Assert.NotNull(cut.FindComponent<ConversationProviderModelSelector>());
         Assert.Equal("0.2", cut.Find("[data-testid='llm-chat-definition-temperature']").GetAttribute("value"));
 
-        cut.Find("[data-testid='llm-chat-definition-system-prompt']").Change("updated system prompt");
-        cut.Find("[data-testid='llm-chat-definition-thinking-effort']").Change("1");
+        cut.Find("[data-testid='llm-chat-definition-system-prompt']").Input("updated system prompt");
+        SelectOption(cut, "llm-chat-definition-thinking-effort", "High");
         cut.Find("[data-testid='llm-chat-definition-timeout']").Input("90");
         cut.Find("[data-testid='llm-chat-definition-tab-output']").Click();
         cut.WaitForElement("[data-testid='llm-chat-definition-response-format']");
-        cut.Find("[data-testid='llm-chat-definition-response-format']").Change("2");
+        SelectOption(cut, "llm-chat-definition-response-format", "JSON schema");
         cut.WaitForElement("[data-testid='llm-chat-definition-schema-json']");
         cut.Find("[data-testid='llm-chat-definition-schema-name']").Change("answer");
         cut.Find("[data-testid='llm-chat-definition-schema-description']").Change("Structured answer");
@@ -393,7 +393,7 @@ public sealed class LlmChatDefinitionUiTests
 
         cut.Find("[data-testid='llm-chat-definition-tab-output']").Click();
         cut.WaitForElement("[data-testid='llm-chat-definition-response-format']");
-        cut.Find("[data-testid='llm-chat-definition-response-format']").Change("2");
+        SelectOption(cut, "llm-chat-definition-response-format", "JSON schema");
         cut.WaitForElement("[data-testid='llm-chat-definition-schema-json']");
         cut.Find("[data-testid='llm-chat-definition-schema-name']").Change("answer");
         cut.Find("[data-testid='llm-chat-definition-schema-json']").Input("not-json");
@@ -407,10 +407,10 @@ public sealed class LlmChatDefinitionUiTests
     }
 
     [Theory]
-    [InlineData("0", "gemma4-12b-256k")]
-    [InlineData("1", "gptoss20b64k")]
+    [InlineData("Provider default (gemma4-12b-256k)", "gemma4-12b-256k")]
+    [InlineData("gptoss20b64k", "gptoss20b64k")]
     public void New_ollama_definition_saves_the_selected_concrete_model(
-        string modelChoiceKey,
+        string modelLabel,
         string expectedModel)
     {
         var gateway = new StubDefinitionGateway(CreateEditor());
@@ -424,8 +424,8 @@ public sealed class LlmChatDefinitionUiTests
         cut.Find("[data-testid='llm-chat-definition-name']").Change("Ollama chat");
         cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
         cut.WaitForElement("[data-testid='llm-chat-definition-provider']");
-        cut.Find("[data-testid='llm-chat-definition-provider']").Change("0");
-        cut.Find("[data-testid='llm-chat-definition-model']").Change(modelChoiceKey);
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change(ProviderId.ToString("D"));
+        SelectOption(cut, "llm-chat-definition-model", modelLabel);
         cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(gateway.CreatedMutation));
@@ -435,6 +435,15 @@ public sealed class LlmChatDefinitionUiTests
             "Select or enter a model",
             cut.Markup,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void SelectOption(IRenderedComponent<LlmChatDefinitionEditorDialog> component, string testId, string label) {
+        string? value = null;
+        component.WaitForAssertion(() => {
+            var option = Assert.Single(component.FindAll($"[data-testid='{testId}'] option"), option => option.TextContent == label);
+            value = Assert.IsType<string>(option.GetAttribute("value"));
+        });
+        component.Find($"[data-testid='{testId}']").Change(value);
     }
 
     internal static BunitContext CreateContext(

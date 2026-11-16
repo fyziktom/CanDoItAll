@@ -5,10 +5,10 @@
 
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="history-policy-panel">
     <FormSection Title="Provider history policy" Description="Applies to history owned by this instance and database profile. Shared publishers and clients each apply their own policy.">
-        <Button Text="Load current policy" ButtonStyle="ButtonStyle.Light" Click="State.LoadAsync" Disabled="@State.IsBusy"
+        <Button Text="Load current policy" Tone="ButtonTone.Default" Click="State.LoadAsync" Disabled="@State.IsBusy"
                 IsBusy="@State.IsBusy" data-testid="history-policy-load" />
         @if (State.CanCompare) {
-            <Button Text="Compare saved policy" ButtonStyle="ButtonStyle.Light" Click="State.OpenComparison" data-testid="history-policy-compare" />
+            <Button Text="Compare saved policy" Tone="ButtonTone.Default" Click="State.OpenComparison" data-testid="history-policy-compare" />
         }
     </FormSection>
     @if (State.Error is not null) {
@@ -24,32 +24,36 @@
                 <FormSection Title="@($"Policy version {State.Snapshot.Version}")" Description="Light keeps request metadata. Detailed can retain bounded current-turn text and responses; it never copies assembled conversation history.">
                     <FormRow Split="true">
                         <FormField Text="Capture mode">
-                            <DropDown TValue="HistoryCaptureMode" Data="CaptureModes" @bind-Value="State.Draft.CaptureMode"
-                                      @bind-Value:after="State.DraftChanged" Disabled="@State.IsBusy" aria-label="Capture mode" data-testid="history-policy-mode" />
+                            <SelectInput TValue="HistoryCaptureMode" @bind-Value="State.Draft.CaptureMode"
+                                      @bind-Value:after="State.DraftChanged" Disabled="@State.IsBusy" aria-label="Capture mode" data-testid="history-policy-mode">
+    @foreach (var option in CaptureModes) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
                         </FormField>
                         <FormField Text="Maintenance batch size (1–1,000)">
                             <PolicyNumber @bind-Value="State.Draft.BatchSize" @bind-Value:after="State.DraftChanged" disabled="@State.IsBusy"
-                                         class="cda-input" aria-label="Maintenance batch size" data-testid="history-policy-batch" />
+                                         class="form-input ui-input ui-input--outlined" aria-label="Maintenance batch size" data-testid="history-policy-batch" />
                         </FormField>
                     </FormRow>
                     <FormRow Split="true">
                         <FormField Text="Metadata retention days (1–3,650)">
                             <PolicyNumber @bind-Value="State.Draft.MetadataRetentionDays" @bind-Value:after="State.DraftChanged" disabled="@State.IsBusy"
-                                         class="cda-input" aria-label="Metadata retention days" data-testid="history-policy-metadata-days" />
+                                         class="form-input ui-input ui-input--outlined" aria-label="Metadata retention days" data-testid="history-policy-metadata-days" />
                         </FormField>
                         <FormField Text="Detail retention days (no longer than metadata)">
                             <PolicyNumber @bind-Value="State.Draft.DetailRetentionDays" @bind-Value:after="State.DraftChanged" disabled="@State.IsBusy"
-                                         class="cda-input" aria-label="Detail retention days" data-testid="history-policy-detail-days" />
+                                         class="form-input ui-input ui-input--outlined" aria-label="Detail retention days" data-testid="history-policy-detail-days" />
                         </FormField>
                     </FormRow>
                     <FormRow Split="true">
                         <FormField Text="Maximum text bytes per segment (1–131,072)">
                             <PolicyNumber @bind-Value="State.Draft.MaximumTextBytes" @bind-Value:after="State.DraftChanged" disabled="@State.IsBusy"
-                                         class="cda-input" aria-label="Maximum text bytes" data-testid="history-policy-text-bytes" />
+                                         class="form-input ui-input ui-input--outlined" aria-label="Maximum text bytes" data-testid="history-policy-text-bytes" />
                         </FormField>
                         <FormField Text="Total retained detail quota (bytes)">
                             <PolicyNumber @bind-Value="State.Draft.DetailQuotaBytes" @bind-Value:after="State.DraftChanged" disabled="@State.IsBusy"
-                                         class="cda-input" aria-label="Detail quota bytes" data-testid="history-policy-quota" />
+                                         class="form-input ui-input ui-input--outlined" aria-label="Detail quota bytes" data-testid="history-policy-quota" />
                         </FormField>
                     </FormRow>
                 </FormSection>
@@ -60,7 +64,7 @@
                 <ValidationSummary />
                 <Cluster Gap="LayoutGap.Small">
                     <Button Text="Apply to future requests" Type="submit" Disabled="@(!State.CanApply)" data-testid="history-policy-apply" />
-                    <Button Text="Preview shorter retention for existing records" ButtonStyle="ButtonStyle.Light"
+                    <Button Text="Preview shorter retention for existing records" Tone="ButtonTone.Default"
                             Click="State.PreviewAsync" Disabled="@(!State.CanApply)" data-testid="history-policy-preview" />
                 </Cluster>
             </FormStack>
@@ -84,8 +88,8 @@
         </ChildContent>
         <Footer>
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="State.ClosePreview" Disabled="@State.IsBusy" />
-                <Button Text="Apply and shorten existing retention" ButtonStyle="ButtonStyle.Danger" Click="State.ConfirmShorterAsync"
+                <Button Text="Cancel" Tone="ButtonTone.Default" Click="State.ClosePreview" Disabled="@State.IsBusy" />
+                <Button Text="Apply and shorten existing retention" Tone="ButtonTone.Danger" Click="State.ConfirmShorterAsync"
                         Disabled="@(!State.CanApply || pending.Preview.ExceedsLimit)" data-testid="history-policy-confirm" />
             </Cluster>
         </Footer>
@@ -102,7 +106,7 @@
             </Stack>
         </ChildContent>
         <Footer>
-            <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="State.CloseComparison" />
+            <Button Text="Cancel" Tone="ButtonTone.Default" Click="State.CloseComparison" />
             <Button Text="Apply choices to draft" Disabled="@(!State.CanApplyComparison)" Click="State.ApplyComparison" data-testid="history-policy-review-apply" />
         </Footer>
     </Dialog>

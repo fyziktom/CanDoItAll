@@ -82,15 +82,18 @@ public sealed class ProjectStructureGraphAdapterTests
     }
 
     [Fact]
-    public void Nodes_expose_id_info_and_tree_annotations()
+    public void Node_toolbar_reuses_copy_and_delete_commands_without_removing_validation_annotations()
     {
         var adapter = new ProjectStructureGraphAdapter();
         var actionCatalog = new ProjectStructureActionCatalogAdapter();
         var surface = new ProjectStructureSurface(
             Guid.NewGuid(),
-            "Clipboard annotations",
+            "Node toolbar",
             [
-                CreateFileNode("custom:1234567890abcdef", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger)
+                CreateFileNode("custom:1234567890abcdef", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger) with {
+                    Status = "Blocked",
+                    Priority = 4
+                }
             ],
             [],
             null);
@@ -102,23 +105,32 @@ public sealed class ProjectStructureGraphAdapterTests
             actionCatalog);
 
         var node = Assert.Single(canvasSurface.Nodes);
-        Assert.Collection(
-            node.Annotations.Take(3),
-            annotation =>
-            {
-                Assert.Equal("copy-id", annotation.ActionId);
-                Assert.Equal("ID", annotation.Label);
-            },
-            annotation =>
-            {
-                Assert.Equal("copy-info", annotation.ActionId);
-                Assert.Equal("INF", annotation.Label);
-            },
-            annotation =>
-            {
-                Assert.Equal("copy-subtree-ids", annotation.ActionId);
-                Assert.Equal("Tree", annotation.Label);
-            });
+        Assert.Equal(["copy-id", "copy-info", "copy-subtree-ids", "delete"], node.ToolbarActions.Select(action => action.ActionId));
+        Assert.All(node.ToolbarActions, action => Assert.Same(
+            node.ContextActions.Single(candidate => candidate.ActionId == action.ActionId), action));
+        Assert.Equal(CanvasWorkbenchKeyboardCommand.CopyIdentifier,
+            Assert.Single(node.ToolbarActions, action => action.ActionId == "copy-id").KeyboardCommand);
+        Assert.All(node.ToolbarActions.Where(action => action.ActionId != "copy-id"),
+            action => Assert.Equal(CanvasWorkbenchKeyboardCommand.None, action.KeyboardCommand));
+        Assert.Equal(["Blocked", "P4"], node.Annotations.Select(annotation => annotation.Label));
+        Assert.Equal(["summary", "open"], node.Annotations.Select(annotation => annotation.ActionId));
+    }
+
+    [Fact]
+    public void Project_roles_keep_copy_commands_without_acquiring_toolbar_deletion() {
+        var nodes = Enum.GetValues<ProjectStructureProjectRole>()
+            .Where(role => role != ProjectStructureProjectRole.None)
+            .Select(role => CreateProjectNode($"project-{role}", role.ToString(), role))
+            .ToArray();
+        var surface = new ProjectStructureSurface(Guid.NewGuid(), "Protected project roles", nodes, [], null);
+        var canvas = new ProjectStructureGraphAdapter().BuildSurface(surface, new(), new(), new());
+
+        Assert.All(canvas.Nodes, node => {
+            Assert.Equal(["copy-id", "copy-info", "copy-subtree-ids"], node.ToolbarActions.Select(action => action.ActionId));
+            Assert.All(node.ToolbarActions, action => Assert.Same(
+                node.ContextActions.Single(candidate => candidate.ActionId == action.ActionId), action));
+            Assert.Equal(CanvasWorkbenchKeyboardCommand.CopyIdentifier, node.ToolbarActions[0].KeyboardCommand);
+        });
     }
 
     [Fact]
@@ -191,6 +203,10 @@ public sealed class ProjectStructureGraphAdapterTests
         Assert.Equal(
             "Delete selected",
             canvasChild.ContextActions.Single(action => action.ActionId == "delete").Label);
+        Assert.Same(canvasParent.ContextActions.Single(action => action.ActionId == "delete"),
+            canvasParent.ToolbarActions.Single(action => action.ActionId == "delete"));
+        Assert.Same(canvasChild.ContextActions.Single(action => action.ActionId == "delete"),
+            canvasChild.ToolbarActions.Single(action => action.ActionId == "delete"));
     }
 
     private static ProjectStructureNode CreateFileNode(string id, string subtype, string accentColor, string paletteKey)

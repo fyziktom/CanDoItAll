@@ -21,7 +21,7 @@
                     <TextBlock Value="An unfinished draft is still open. Keep editing or explicitly discard it to continue." />
                     <Cluster Gap="LayoutGap.Small">
                         <Button Text="Keep editing" Click="@(() => Emit(rendered, ConversationWorkspaceAction.KeepEditing))" />
-                        <Button Text="Discard draft and continue" ButtonStyle="ButtonStyle.Danger" Disabled="@Presentation.IsMutating"
+                        <Button Text="Discard draft and continue" Tone="ButtonTone.Danger" Disabled="@Presentation.IsMutating"
                                 Click="@(() => Emit(rendered, ConversationWorkspaceAction.DiscardDraft))" data-testid="llm-chat-draft-discard" />
                     </Cluster>
                 </Stack>
@@ -47,7 +47,7 @@
                         @if (Presentation.CanManage) {
                             <Button Text="New chat"
                                     Icon="add"
-                                    ButtonStyle="ButtonStyle.Primary"
+                                    Tone="ButtonTone.Primary"
                                     Click="@(() => Emit(rendered, ConversationWorkspaceAction.NewConversation))"
                                     Disabled="@Presentation.IsMutating"
                                     data-testid="llm-chat-new" />
@@ -77,7 +77,7 @@
                                     data-testid="@($"llm-chat-rename-{conversationId:D}")" />
                             <Button Icon="archive"
                                     Variant="Variant.Text"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Size="ButtonSize.Small"
                                     Click="@(() => Emit(rendered, ConversationWorkspaceAction.Archive, conversationId))"
                                     Disabled="@Presentation.IsMutating"
@@ -96,8 +96,8 @@
                     <ConversationHeader Presentation="@selected.Header">
                         <TitleContent>
                             <Stack GapScale="LayoutGap.Tiny">
-                                <h2 class="text-lg font-semibold text-slate-900" data-testid="llm-chat-selected-title">@selected.Title</h2>
-                                <p class="text-sm text-slate-600">@selected.DefinitionName</p>
+                                <h2 class="text-lg font-semibold text-chrome-900" data-testid="llm-chat-selected-title">@selected.Title</h2>
+                                <p class="text-sm text-chrome-600">@selected.DefinitionName</p>
                             </Stack>
                         </TitleContent>
                         <Actions>
@@ -148,7 +148,7 @@
                                 @if (Presentation.CanCancel) {
                                     <Button Text="Cancel response"
                                             Icon="stop_circle"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
                                             Click="@(() => Emit(rendered, ConversationWorkspaceAction.CancelResponse))"
@@ -167,7 +167,7 @@
                                 @if (Presentation.CanAbandon) {
                                     <Button Text="Abandon turn"
                                             Icon="delete_forever"
-                                            ButtonStyle="ButtonStyle.Danger"
+                                            Tone="ButtonTone.Danger"
                                             Variant="Variant.Outlined"
                                             Size="ButtonSize.Small"
                                             Click="@(() => Emit(rendered, ConversationWorkspaceAction.Abandon))"

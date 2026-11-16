@@ -8,6 +8,7 @@ public static class ProjectStructureTaskActionIds
 
 public static class ProjectTaskInputKeys {
     public const string DueUtc = "dueUtc";
+    public const string RepositoryRef = "repositoryRef";
 }
 
 /// <summary>

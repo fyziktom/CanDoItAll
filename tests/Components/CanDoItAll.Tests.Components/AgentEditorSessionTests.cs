@@ -80,7 +80,7 @@ public sealed class AgentEditorSessionTests {
         var editor = dialogHost.WaitForComponent<AgentDetailsDialog>();
         editor.WaitForElement("[data-testid='agents-catalog-name']");
         var oldContext = editor.FindComponent<EditForm>().Instance.EditContext;
-        editor.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
+        await editor.FindAll("button").Single(button => button.TextContent.Trim() == "Clear").ClickAsync();
         Assert.True(editor.Instance.CurrentTarget.IsNew);
         Assert.True(Assert.Single(catalog.Instance.OpenEditorTargets).IsNew);
         Assert.NotSame(oldContext, editor.FindComponent<EditForm>().Instance.EditContext);

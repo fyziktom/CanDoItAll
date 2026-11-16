@@ -12,7 +12,7 @@
             <TextBlock Value="@(IsBusy ? "Wait for the current operation to finish." : OutcomeUnknown ? "Review the unconfirmed save outcome before leaving this editor." : "This editor has unsaved input. Leaving discards the local draft.")" />
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Keep editing" Click="KeepEditing" />
-                <Button Text="Discard draft and continue" ButtonStyle="ButtonStyle.Danger" Disabled="@(IsBusy || OutcomeUnknown)" Click="Leave" />
+                <Button Text="Discard draft and continue" Tone="ButtonTone.Danger" Disabled="@(IsBusy || OutcomeUnknown)" Click="Leave" />
             </Cluster>
         </Stack>
     </Dialog>

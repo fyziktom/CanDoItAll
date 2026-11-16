@@ -9,6 +9,31 @@ namespace CanDoItAll.Tests.Components.AgentFramework;
 public sealed class ProviderModelSelectorTests
 {
     [Fact]
+    public void Reordered_choices_keep_identity_and_retired_choice_cannot_select_a_different_model() {
+        using var context = new BunitContext();
+        var provider = CreateProvider("gpt-5.4-mini", ["gpt-5.4-mini", "gpt-5.6-sol"]);
+        var selected = string.Empty;
+        var cut = context.Render<ProviderModelSelector>(parameters => parameters
+            .Add(component => component.Provider, provider)
+            .Add(component => component.ValueChanged, value => selected = value ?? string.Empty));
+        var originalChoice = cut.FindAll("option").Single(option => option.TextContent == "gpt-5.6-sol").GetAttribute("value");
+
+        cut.Render(parameters => parameters.Add(component => component.Provider,
+            provider with { SuggestedModels = ["gpt-5.4-mini", "gpt-5.4", "gpt-5.6-sol"] }));
+
+        Assert.Equal(originalChoice, cut.FindAll("option").Single(option => option.TextContent == "gpt-5.6-sol").GetAttribute("value"));
+        cut.Find("select").Change(originalChoice);
+        Assert.Equal("gpt-5.6-sol", selected);
+
+        cut.Render(parameters => parameters.Add(component => component.Provider,
+            provider with { SuggestedModels = ["gpt-5.4-mini", "gpt-5.4"] }));
+        selected = string.Empty;
+        cut.Find("select").Change(originalChoice);
+
+        Assert.Equal(string.Empty, selected);
+    }
+
+    [Fact]
     public async Task Shared_workflow_options_keep_source_names_saved_choices_and_route_identity() {
         using var context = new BunitContext();
         var provider = new WorkflowProviderOption(Guid.NewGuid(), "Shared workflow", ProviderKind.OpenAi,
@@ -25,12 +50,12 @@ public sealed class ProviderModelSelectorTests
             .Add(component => component.ValueChanged, value => selected = value));
         Assert.Equal(["Provider default (Custom default)", "Model 2", "Model dated"], cut.FindAll("option").Select(option => option.TextContent));
         Assert.Empty(cut.FindAll("input"));
-        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = "1" }));
+        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = cut.FindAll("option")[1].GetAttribute("value") }));
         Assert.Equal("route-next", selected);
         cut.Render(parameters => parameters.Add(component => component.Value, "removed-route"));
         Assert.Contains("Unavailable shared model", cut.Markup);
         Assert.DoesNotContain("removed-route", cut.Markup);
-        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = "0" }));
+        await cut.InvokeAsync(() => cut.Find("select").ChangeAsync(new ChangeEventArgs { Value = cut.FindAll("option")[0].GetAttribute("value") }));
         Assert.Equal(provider.DefaultModel, selected);
     }
 
@@ -84,9 +109,9 @@ public sealed class ProviderModelSelectorTests
         Assert.Equal(["Provider default (model-alpha)", "model-beta"],
             cut.FindAll("option").Select(option => option.TextContent));
         Assert.Empty(cut.FindAll("[data-testid='model-override']"));
-        cut.Find("[data-testid='model-choice']").Change("1");
+        cut.Find("[data-testid='model-choice']").Change(cut.FindAll("option")[1].GetAttribute("value"));
         Assert.Equal("route-beta", selected);
-        cut.Find("[data-testid='model-choice']").Change("0");
+        cut.Find("[data-testid='model-choice']").Change(cut.FindAll("option")[0].GetAttribute("value"));
         Assert.Equal(string.Empty, selected);
     }
 
@@ -131,10 +156,10 @@ public sealed class ProviderModelSelectorTests
 
         Assert.Equal(["Provider default (gpt-5-mini)", "gpt-5.4"], options);
 
-        cut.Find("[data-testid='model-choice']").Change("0");
+        cut.Find("[data-testid='model-choice']").Change(cut.FindAll("option")[0].GetAttribute("value"));
         Assert.Equal(string.Empty, selectedModel);
 
-        cut.Find("[data-testid='model-choice']").Change("1");
+        cut.Find("[data-testid='model-choice']").Change(cut.FindAll("option")[1].GetAttribute("value"));
         Assert.Equal("gpt-5.4", selectedModel);
     }
 
@@ -240,7 +265,7 @@ public sealed class ProviderModelSelectorTests
 
         Assert.Equal(["Provider default (llama3.1)", "llama3.2"], options);
 
-        cut.Find("[data-testid='model-choice']").Change("0");
+        cut.Find("[data-testid='model-choice']").Change(cut.FindAll("option")[0].GetAttribute("value"));
         Assert.Equal("llama3.1", selectedModel);
     }
 

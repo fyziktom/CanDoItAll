@@ -109,6 +109,10 @@ This is not fake separation: unit tests construct the concrete creation and stor
 
 The systemic correction is capability-based action visibility: do not advertise Edit for a system-managed projection unless it has a distinct authoring route.
 
+The selected-node toolbar reuses the existing context action instances for copying an identifier, node information, tree identifiers, and deletion. It opens from **Node actions (Ctrl+M)**; **Ctrl+I** invokes the declared copy-identifier command. Clipboard actions no longer occupy persistent `ID`, `INF`, and `Tree` annotations. Validation and priority annotations remain visible. The delete action follows the existing selected-node targeting, confirmation, and managed-file disposition rules; project roots and read-only projected folders do not acquire a delete command. **Ctrl+C**, **Ctrl+X**, and **Ctrl+V** retain the separate authoring forest buffer and its original-surface admission checks.
+
+Other canvas consumers advertise only their existing capabilities: workflow authoring offers its existing remove command, the workflow template preview clears all toolbar commands, and the process definition canvas does not advertise unsupported copy or delete commands.
+
 ### Remaining action and form backlog
 
 | Priority | Node area | Current mismatch | Recommended boundary/action |

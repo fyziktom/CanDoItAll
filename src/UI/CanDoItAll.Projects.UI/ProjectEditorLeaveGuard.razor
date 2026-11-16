@@ -17,7 +17,7 @@
     <Footer>
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Continue editing" Click="@(() => Complete(false))" data-testid="project-dirty-continue" />
-            <Button Text="Discard local draft and leave" ButtonStyle="ButtonStyle.Danger" Click="@(() => Complete(true))" data-testid="project-dirty-discard" />
+            <Button Text="Discard local draft and leave" Tone="ButtonTone.Danger" Click="@(() => Complete(true))" data-testid="project-dirty-discard" />
         </Cluster>
     </Footer>
 </Dialog>

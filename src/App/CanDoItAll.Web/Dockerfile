@@ -46,7 +46,8 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 RUN sed -i -E \
-        's#https?://(archive|security)\.ubuntu\.com/ubuntu/?#https://mirrors.edge.kernel.org/ubuntu/#g' \
+        -e 's#https?://([[:alnum:]-]+\.)?archive\.ubuntu\.com/ubuntu/?#https://archive.ubuntu.com/ubuntu/#g' \
+        -e 's#https?://security\.ubuntu\.com/ubuntu/?#https://security.ubuntu.com/ubuntu/#g' \
         /etc/apt/sources.list.d/ubuntu.sources \
     && apt-get update --error-on=any \
     && apt-get install --yes --no-install-recommends libgssapi-krb5-2 util-linux \

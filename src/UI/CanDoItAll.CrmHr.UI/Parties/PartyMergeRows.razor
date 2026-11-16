@@ -15,7 +15,7 @@
                 <FormField Text="Current saved rows">@SnapshotPreview(whole.Current)</FormField>
             </Grid>
             @if (Math.Max(whole.Original.Count, Math.Max(whole.Local.Count, whole.Current.Count)) > visibleRows) {
-                <Button Text="Show more snapshot rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+                <Button Text="Show more snapshot rows" Tone="ButtonTone.Default" Click="@(() => visibleRows += 50)" />
             }
         </FormSection>
     }
@@ -30,7 +30,7 @@
         </Stack>
     }
     @if (Rows.Count(row => ShowUnchanged || row.Field.LocalChanged || row.Field.CurrentChanged) > visibleRows) {
-        <Button Text="Show more rows" ButtonStyle="ButtonStyle.Light" Click="@(() => visibleRows += 50)" />
+        <Button Text="Show more rows" Tone="ButtonTone.Default" Click="@(() => visibleRows += 50)" />
     }
 </FormSection>
 }

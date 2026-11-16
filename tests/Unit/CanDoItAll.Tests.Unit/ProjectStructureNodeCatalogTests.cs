@@ -6,6 +6,47 @@ namespace CanDoItAll.Tests.Unit.Projects;
 public sealed class ProjectStructureNodeCatalogTests
 {
     [Fact]
+    public void Generic_group_is_discoverable_without_file_or_runtime_requirements() {
+        Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(
+            ProjectStructureCanvasCatalog.GroupActionId, out var definition));
+        Assert.Equal(ProjectObjectType.ProjectBlock, definition.ObjectType);
+        Assert.Empty(definition.ObjectSubtype);
+        Assert.Empty(definition.InputFields ?? []);
+        Assert.False(definition.RequiresFile);
+        Assert.True(definition.ShowDefaultTextFields);
+
+        foreach (var sourceType in Enum.GetValues<ProjectObjectType>()) {
+            Assert.Contains(ProjectStructureCanvasCatalog.BuildMenuCreateActions(sourceType),
+                action => action.ActionId == definition.ActionId);
+        }
+        foreach (var groupKey in new[] { "capture", "blocks" }) {
+            var group = Assert.Single(ProjectStructureCanvasCatalog.BuildInspectorCreateGroups(null),
+                item => item.Key == groupKey);
+            Assert.Contains(group.Actions, action => action.ActionId == definition.ActionId);
+        }
+        Assert.Contains(ProjectStructureCanvasCatalog.BuildCommonBlockTypeOptions(),
+            option => option.ActionId == definition.ActionId && option.ObjectSubtype.Length == 0);
+        Assert.Contains(ProjectStructureCanvasCatalog.BuildNoteConversionOptions(),
+            option => option.ActionId == definition.ActionId && option.ObjectSubtype.Length == 0);
+        Assert.Contains(ProjectStructureCanvasCatalog.BuildAgentNodeCatalog().Items,
+            item => item.ActionId == definition.ActionId && item.ObjectType == ProjectObjectType.ProjectBlock && item.ObjectSubtype.Length == 0);
+    }
+
+    [Fact]
+    public void Composer_sections_have_consistent_identity_and_never_duplicate_input_keys() {
+        foreach (var item in ProjectStructureCanvasCatalog.BuildAgentNodeCatalog().Items) {
+            Assert.True(ProjectStructureCanvasCatalog.TryResolveCreateDefinition(item.ActionId, out var definition));
+            var fields = ProjectStructureCanvasCatalog.BuildComposerAction(definition).InputFields;
+            Assert.Equal(fields.Count, fields.Select(field => field.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            foreach (var section in fields.GroupBy(field => field.SectionKey)) {
+                Assert.False(string.IsNullOrWhiteSpace(section.Key));
+                Assert.All(section, field => Assert.False(string.IsNullOrWhiteSpace(field.SectionTitle)));
+                Assert.Single(section.Select(field => (field.SectionTitle, field.SectionDescription)).Distinct());
+            }
+        }
+    }
+
+    [Fact]
     public void BuildAgentNodeCatalog_includes_work_task_node_and_all_object_types()
     {
         var catalog = ProjectStructureCanvasCatalog.BuildAgentNodeCatalog();

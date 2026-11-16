@@ -24,8 +24,8 @@
         </Grid>
         @if (!HasPendingInput) {
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Use my draft" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="UseLocal" />
-                <Button Text="Use current" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Click="UseCurrent" />
+                <Button Text="Use my draft" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="UseLocal" />
+                <Button Text="Use current" Tone="ButtonTone.Default" Size="ButtonSize.Small" Click="UseCurrent" />
             </Cluster>
             @if (ResultEditor is not null) {
                 <FormField Text="Result">@ResultEditor(Field.IsResolved ? Field.Result : Field.Local)</FormField>

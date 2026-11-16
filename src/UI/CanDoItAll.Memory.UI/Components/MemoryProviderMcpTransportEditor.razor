@@ -7,43 +7,43 @@
     </Alert>
     <Grid Gap="LayoutGap.Large" ColumnTemplate="repeat(auto-fit,minmax(16rem,1fr))">
         <FormField Text="MCP server key">
-            <TextBox Immediate="true" Value="@Transport.ServerKey"
+            <TextInput Immediate="true" Value="@Transport.ServerKey"
                      ValueChanged="@(value => Transport.ServerKey = value)"
                      data-testid="memory-ui-editor-mcp-server-key" />
         </FormField>
         <FormField Text="MCP display name">
-            <TextBox Immediate="true" Value="@Transport.DisplayName"
+            <TextInput Immediate="true" Value="@Transport.DisplayName"
                      ValueChanged="@(value => Transport.DisplayName = value)"
                      data-testid="memory-ui-editor-mcp-display-name" />
         </FormField>
         <FormField Text="MCP description">
-            <TextBox Immediate="true" Value="@Transport.Description"
+            <TextInput Immediate="true" Value="@Transport.Description"
                      ValueChanged="@(value => Transport.Description = value)"
                      data-testid="memory-ui-editor-mcp-description" />
         </FormField>
         <FormField Text="Remote endpoint">
-            <TextBox Immediate="true" Value="@Transport.RemoteEndpoint"
+            <TextInput Immediate="true" Value="@Transport.RemoteEndpoint"
                      ValueChanged="@(value => Transport.RemoteEndpoint = value)"
                      data-testid="memory-ui-editor-mcp-endpoint" />
         </FormField>
         <FormField Text="Authentication header">
-            <TextBox Immediate="true" Value="@Transport.AuthHeaderName"
+            <TextInput Immediate="true" Value="@Transport.AuthHeaderName"
                      ValueChanged="@(value => Transport.AuthHeaderName = value)"
                      data-testid="memory-ui-editor-mcp-auth-header" />
         </FormField>
         <FormField Text="Authentication value environment variable">
-            <TextBox Immediate="true" Value="@Transport.AuthHeaderEnvironmentVariable"
+            <TextInput Immediate="true" Value="@Transport.AuthHeaderEnvironmentVariable"
                      ValueChanged="@(value => Transport.AuthHeaderEnvironmentVariable = value)"
                      Placeholder="CANDOITALL_MEMORY_MCP_TOKEN"
                      data-testid="memory-ui-editor-mcp-auth-environment-variable" />
         </FormField>
         <FormField Text="Context query tool">
-            <TextBox Immediate="true" Value="@Transport.ContextQueryTool"
+            <TextInput Immediate="true" Value="@Transport.ContextQueryTool"
                      ValueChanged="@(value => Transport.ContextQueryTool = value)"
                      data-testid="memory-ui-editor-mcp-query-tool" />
         </FormField>
         <FormField Text="Operation status tool">
-            <TextBox Immediate="true" Value="@Transport.OperationStatusTool"
+            <TextInput Immediate="true" Value="@Transport.OperationStatusTool"
                      ValueChanged="@(value => Transport.OperationStatusTool = value)"
                      data-testid="memory-ui-editor-mcp-status-tool" />
         </FormField>

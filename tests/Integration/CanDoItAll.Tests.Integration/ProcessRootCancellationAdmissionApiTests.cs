@@ -21,6 +21,7 @@ namespace CanDoItAll.Tests.Integration.Processes;
 public sealed class ProcessRootCancellationAdmissionApiTests {
     internal static Dictionary<string, string?> Configuration(bool enabled = true, bool suppressed = false) => new() {
         [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = suppressed ? LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind : "Application",
+        [$"{ProcessRuntimeDispatchQueueOptions.ConfigurationSectionName}:{nameof(ProcessRuntimeDispatchQueueOptions.EnableRecovery)}"] = "false",
         [$"{ProcessCancellationRecoveryOptions.ConfigurationSectionName}:{nameof(ProcessCancellationRecoveryOptions.Enabled)}"] = enabled.ToString(),
         [$"{ProcessCancellationRecoveryOptions.ConfigurationSectionName}:{nameof(ProcessCancellationRecoveryOptions.IdleDelay)}"] = "00:00:00.025"
     };

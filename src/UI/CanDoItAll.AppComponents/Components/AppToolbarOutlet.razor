@@ -1,0 +1,28 @@
+@namespace CanDoItAll.AppComponents
+@implements IDisposable
+@inject AppToolbarState ToolbarState
+
+@if (Kind == AppToolbarOutletKind.Stats && ToolbarState.StatsContent is not null && ToolbarState.StatsVisible) {
+    <div class="app-toolbar__stats" aria-label="Page statistics">
+        <CompactStatStrip>@ToolbarState.StatsContent</CompactStatStrip>
+    </div>
+} else if (Kind == AppToolbarOutletKind.Help && ToolbarState.HelpContent is not null) {
+    <Dialog IsOpen="@ToolbarState.HelpVisible"
+            OnClose="@(() => ToolbarState.SetHelpVisibleAsync(false))"
+            Title="@ToolbarState.HelpHeading" Size="ModalSize.Compact" DenseChrome="true"
+            TestId="page-help-dialog">
+        @ToolbarState.HelpContent
+    </Dialog>
+}
+
+@code {
+    [Parameter]
+    public AppToolbarOutletKind Kind { get; set; }
+
+    protected override void OnInitialized()
+        => ToolbarState.Changed += HandleChanged;
+
+    private void HandleChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ToolbarState.Changed -= HandleChanged;
+}

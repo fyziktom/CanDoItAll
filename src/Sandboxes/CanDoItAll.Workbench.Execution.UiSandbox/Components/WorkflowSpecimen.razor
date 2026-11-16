@@ -1,8 +1,12 @@
 <SurfaceCard data-testid="execution-workflow-specimen">
     <Stack GapScale="LayoutGap.Small">
         <TextBlock TextStyle="TextStyle.H6" Value="@Name" />
-        <DropDown TValue="ExecutionScenario" Data="@(Enum.GetValues<ExecutionScenario>())" @bind-Value="scenario"
-            Change="@(_ => ChangeScenario())" aria-label="Workflow scenario" Style="width:15rem" />
+        <SelectInput TValue="ExecutionScenario" @bind-Value="scenario"
+            @bind-Value:after="ChangeScenario" aria-label="Workflow scenario" Style="width:15rem">
+    @foreach (var option in (Enum.GetValues<ExecutionScenario>())) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
         <TextBlock TextStyle="TextStyle.Note" Value="@ExecutionScenarioDescriptions.Describe(scenario)" data-testid="execution-scenario-description" />
         <Stack Orientation="Orientation.Horizontal" GapScale="LayoutGap.Small">
             <Button Text="Add workflow" Click="OpenAdd" />

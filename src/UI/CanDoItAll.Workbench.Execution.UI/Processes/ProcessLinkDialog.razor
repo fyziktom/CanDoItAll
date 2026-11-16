@@ -14,10 +14,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="@(() => actions.Close())" />
             <Button Text="@processDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-process-link-submit"
                     IsBusy="@processDialog.IsBusy"
                     Disabled="@(processDialog.IsBusy || processDialog.Options.Count == 0 || !processDialog.SelectedDefinitionId.HasValue)"

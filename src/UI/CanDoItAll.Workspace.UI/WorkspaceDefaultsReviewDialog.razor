@@ -21,7 +21,7 @@
         </Stack>
     </ChildContent>
     <Footer>
-        <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="State.CloseComparison" />
+        <Button Text="Cancel" Tone="ButtonTone.Default" Click="State.CloseComparison" />
         <Button Text="Apply choices to draft" Disabled="@(!State.CanCompare || !Review.CanApply(State.Draft))" Click="State.ApplyComparison" data-testid="defaults-review-apply" />
     </Footer>
 </Dialog>

@@ -26,31 +26,31 @@ else
                     <p>Connection @progress.ConnectionId: @progress.Stage. The provider callback confirms account connection.</p>
                 }
             }
-            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="grid gap-3 rounded-lg border border-[var(--tone-border-soft)] bg-[var(--tone-surface-soft)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <Stack GapScale="LayoutGap.Tiny">
                     <Cluster Gap="LayoutGap.Small">
                         <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? (Workspace.View.OAuth.IsCurrent ? "NotConnected" : "Unknown"))" />
                         <StatusBadge Tone="neutral" Text="@connectionDescriptor.Key.Value" />
                     </Cluster>
-                    <span class="text-sm font-medium text-[var(--cda-text)]">@connectionDescriptor.DisplayName</span>
-                    <span class="text-sm text-[var(--cda-text-muted)]">@connectionDescriptor.Description</span>
+                    <span class="text-sm font-medium text-[var(--tone-text)]">@connectionDescriptor.DisplayName</span>
+                    <span class="text-sm text-[var(--tone-text-muted)]">@connectionDescriptor.Description</span>
                     @if (oauthStatus is not null && oauthStatus.GrantedScopes.Count > 0)
                     {
-                        <span class="text-xs text-[var(--cda-text-muted)]">@string.Join(", ", oauthStatus.GrantedScopes)</span>
+                        <span class="text-xs text-[var(--tone-text-muted)]">@string.Join(", ", oauthStatus.GrantedScopes)</span>
                     }
                     @if (oauthStatus is not null && !string.IsNullOrWhiteSpace(oauthStatus.LastErrorDescription))
                     {
-                        <span class="text-sm text-[var(--cda-danger)]">Authorization failed. Review the connection settings and retry explicitly.</span>
+                        <span class="text-sm text-[var(--tone-danger-soft-fg)]">Authorization failed. Review the connection settings and retry explicitly.</span>
                     }
                     @if (!canStartOAuth)
                     {
-                        <span class="text-sm text-[var(--cda-warning)]">@PluginsPageHelpers.ResolveOAuthActionHint(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
+                        <span class="text-sm text-[var(--tone-warning-soft-fg)]">@PluginsPageHelpers.ResolveOAuthActionHint(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
                     }
                 </Stack>
                 <Cluster Gap="LayoutGap.Tiny" Class="self-start">
                     <Button Text="@PluginsPageHelpers.ResolveOAuthActionText(oauthStatus?.Status)"
                             Icon="login"
-                            ButtonStyle="ButtonStyle.Primary"
+                            Tone="ButtonTone.Primary"
                             Size="ButtonSize.Small"
                             data-testid="@PluginsPageHelpers.BuildOAuthLoginTestId(Plugin.PluginId, connectionDescriptor)"
                             Disabled="@(!canStartOAuth)"
@@ -58,7 +58,7 @@ else
                             Click="@(() => Workspace.StartOAuthAsync(editor))" />
                     <Button Text="Disconnect"
                             Icon="link_off"
-                            ButtonStyle="ButtonStyle.Warning"
+                            Tone="ButtonTone.Warning"
                             Variant="Variant.Outlined"
                             Size="ButtonSize.Small"
                             Disabled="@(editor.ConnectionId is null || editor.PreventsReplay || !Workspace.View.OAuth.IsCurrent || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"

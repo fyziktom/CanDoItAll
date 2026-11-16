@@ -39,7 +39,7 @@
                 <Alert AlertStyle="@(View.EditingRequiresAttention ? AlertStyle.Warning : AlertStyle.Info)" data-testid="crmhr-assignments-editing-status">
                     <Stack GapScale="LayoutGap.Small">
                         <TextBlock Value="@(View.RecordsChanged ? "Project assignments changed. Refresh the saved records; open drafts are retained." : View.EditingMessage)" />
-                        <Button Text="Refresh saved records" ButtonStyle="ButtonStyle.Light" Click="View.RefreshRecordsAsync" data-testid="crmhr-assignments-refresh-records" />
+                        <Button Text="Refresh saved records" Tone="ButtonTone.Default" Click="View.RefreshRecordsAsync" data-testid="crmhr-assignments-refresh-records" />
                         <AssignmentUnknownRecovery IsUnknown="View.HasUnknownOperation" CanDiscard="View.CanDiscardReviewedUnknown"
                             Refresh="View.RefreshRecordsAsync" Discard="View.DiscardReviewedUnknownAsync" />
                     </Stack>
@@ -60,7 +60,7 @@
                   SelectedIndex="@((int)View.SelectedWorkspaceTab)"
                   SelectedIndexChanged="View.HandleWorkspaceTabChangedAsync"
                   RenderMode="TabRenderMode.Client"
-                  Variant="TabsVariant.WorkspaceSecondary"
+                  Density="TabsDensity.Compact"
                   BorderMode="TabsBorderMode.Soft"
                   OverflowMode="TabsOverflowMode.Wrap"
                   AriaLabel="Project assignment workflows"
@@ -217,10 +217,10 @@
         @if (editor == AssignmentEditorKind.Staffing ? View.StaffingRequestDraft.Id.HasValue :
             editor == AssignmentEditorKind.Relationship ? View.DraftAssignment.AssignmentId.HasValue : View.AllocationDraft.AssignmentId.HasValue) {
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Compare saved changes" ButtonStyle="ButtonStyle.Light" Disabled="@(View.WritesDisabled || View.Comparisons.Reading)"
+                <Button Text="Compare saved changes" Tone="ButtonTone.Default" Disabled="@(View.WritesDisabled || View.Comparisons.Reading)"
                     Click="@(() => View.CompareAsync(editor))" data-testid="@($"{prefix}-compare")" />
                 @if (View.Comparisons.CanUndoFor(editor)) {
-                    <Button Text="Undo applied comparison" ButtonStyle="ButtonStyle.Light" Click="View.UndoComparisonAsync" data-testid="@($"{prefix}-undo-comparison")" />
+                    <Button Text="Undo applied comparison" Tone="ButtonTone.Default" Click="View.UndoComparisonAsync" data-testid="@($"{prefix}-undo-comparison")" />
                 }
             </Cluster>
         }

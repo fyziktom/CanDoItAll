@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.Application.UI.Dashboard;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Editing;
@@ -10,6 +11,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Workbench.Insights.UI;
+using CanDoItAll.Web.Dashboard;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
@@ -255,6 +257,97 @@ public sealed class ProjectStructureCanvasAccessTests {
         Assert.DoesNotContain(services.GetRequiredService<NotificationService>().Messages, message => message.Summary.StartsWith("Structure changes", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Unmounting_Canvas_during_preference_SQL_handles_cancellation_or_retired_access_and_allows_Dashboard(bool debounced) {
+        var hold = new HoldViewAfterSql { HonorCancellation = debounced };
+        await using var harness = await ComponentTestHarness.CreateAsync(services => {
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(hold), ServiceLifetime.Singleton);
+            services.AddCanDoItAllDashboard();
+            services.AddSingleton<IDashboardSnapshotLoadRunner, EmptyDashboardSnapshotRunner>();
+        });
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var services = harness.Context.Services;
+        var project = (await services.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Retiring preference owner" })).Value;
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        var navigation = services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"/projects/{project:D}/structure");
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
+        Func<Task> change;
+        if (debounced) {
+            var canvas = page.FindComponent<CanvasWorkbench>().Instance;
+            change = () => canvas.OnStateChanged(new CanvasWorkbenchUiState { Zoom = 1.4 }.ToJson());
+        } else {
+            await page.InvokeAsync(() => page.Find("[data-testid='project-structure-object-index-toggle']").ClickAsync(new MouseEventArgs()));
+            var index = page.FindComponent<ProjectStructureObjectIndexWindow>().Instance;
+            change = () => index.StateChanged.InvokeAsync(new InsightsWindowIntent(index.Origin, InsightsWindow.ObjectIndex,
+                new() { IsVisible = true, Left = 91, Top = 117, Width = 400, Height = 600 }));
+        }
+        var before = await CaptureAsync(workbench, project);
+        hold.Project = project;
+        hold.Armed = true;
+        var pending = page.InvokeAsync(change);
+        Task disposal;
+        try {
+            await hold.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            disposal = harness.Context.DisposeRenderedComponentsAsync();
+            await hold.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            if (!debounced) {
+                Assert.False(disposal.IsCompleted);
+            }
+        } finally {
+            hold.Release.TrySetResult();
+        }
+        await disposal.WaitAsync(TimeSpan.FromSeconds(20));
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.False(harness.Context.Renderer.UnhandledException.IsCompleted);
+        Assert.Equal(before, await CaptureAsync(workbench, project));
+        Assert.DoesNotContain(services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary.StartsWith("Structure", StringComparison.Ordinal));
+
+        navigation.NavigateTo("/dashboard");
+        var dashboard = harness.Context.Render<CanDoItAll.Web.Components.Pages.Home>();
+        dashboard.WaitForElement("[data-testid='dashboard-refresh-countdown']");
+        dashboard.WaitForAssertion(() => Assert.Contains("No projects yet", dashboard.Markup, StringComparison.Ordinal));
+        Assert.False(harness.Context.Renderer.UnhandledException.IsCompleted);
+    }
+
+    [Fact]
+    public async Task An_unexpected_preference_failure_remains_visible_to_the_active_Canvas_owner() {
+        var hold = new HoldViewAfterSql { FailureAfterRelease = new IOException("Preference persistence failed.") };
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+            services.ConfigureDbContext<WorkbenchDbContext>(options => options.AddInterceptors(hold), ServiceLifetime.Singleton));
+        harness.Context.JSInterop.Setup<bool>("CanDoItAll.canvasWorkbench.create", _ => true).SetResult(true);
+        var services = harness.Context.Services;
+        var project = (await services.GetRequiredService<ProjectsService>().SaveAsync(new() { Name = "Active preference owner" })).Value;
+        var workbench = services.GetRequiredService<ProjectWorkbenchService>();
+        services.GetRequiredService<NavigationManager>().NavigateTo($"/projects/{project:D}/structure");
+        var page = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(component => component.ProjectId, project));
+        page.WaitForElement("[data-testid='project-structure-canvas-loaded']");
+        var before = await CaptureAsync(workbench, project);
+        hold.Project = project;
+        hold.Armed = true;
+        await page.InvokeAsync(() => page.FindComponent<CanvasWorkbench>().Instance.OnStateChanged(new CanvasWorkbenchUiState { Zoom = 1.4 }.ToJson()));
+        try {
+            await hold.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        } finally {
+            hold.Release.TrySetResult();
+        }
+        page.WaitForAssertion(() => Assert.Contains(services.GetRequiredService<NotificationService>().Messages,
+            message => message.Summary == "Structure outcome unconfirmed" && message.Severity == NotificationSeverity.Warning));
+        Assert.Equal(before, await CaptureAsync(workbench, project));
+        await harness.Context.DisposeRenderedComponentsAsync().WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.False(harness.Context.Renderer.UnhandledException.IsCompleted);
+    }
+
+    private sealed class EmptyDashboardSnapshotRunner : IDashboardSnapshotLoadRunner {
+        public Task<DashboardSnapshotData> LoadAsync() => Task.FromResult(new DashboardSnapshotData(
+            [], DashboardActivityMode.RecentFallback, [], DashboardActivityMode.RecentFallback, [],
+            new DashboardUsageTotals(0, 0m, 0, DateTimeOffset.UtcNow)));
+    }
+
     private static async Task<string> CaptureAsync(ProjectWorkbenchService workbench, Guid project) {
         var surface = await workbench.GetStructureAsync(project);
         return JsonSerializer.Serialize(new {
@@ -266,7 +359,10 @@ public sealed class ProjectStructureCanvasAccessTests {
     private sealed class HoldViewAfterSql : SaveChangesInterceptor {
         public Guid Project { get; set; }
         public bool Armed { get; set; }
+        public bool HonorCancellation { get; init; } = true;
+        public Exception? FailureAfterRelease { get; init; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource CancellationObserved { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
@@ -275,8 +371,16 @@ public sealed class ProjectStructureCanvasAccessTests {
                     context.ChangeTracker.Entries<ProjectWorkbenchViewStateRecord>().Any(entry => entry.Entity.ProjectId == Project)) {
                 Assert.NotNull(context.Database.CurrentTransaction);
                 Armed = false;
+                using var registration = cancellationToken.Register(() => CancellationObserved.TrySetResult());
                 Entered.TrySetResult();
-                await Release.Task.WaitAsync(cancellationToken);
+                if (HonorCancellation) {
+                    await Release.Task.WaitAsync(cancellationToken);
+                } else {
+                    await Release.Task;
+                }
+                if (FailureAfterRelease is { } failure) {
+                    throw failure;
+                }
             }
             return result;
         }

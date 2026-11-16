@@ -7,6 +7,10 @@ namespace CanDoItAll.Modules.Workbench.CanvasAdapters;
 public sealed class ProjectStructureActionCatalogAdapter
 {
     public const string EditActionId = "edit";
+    public const string CopyIdentifierActionId = "copy-id";
+    public const string CopyInformationActionId = "copy-info";
+    public const string CopySubtreeIdentifiersActionId = "copy-subtree-ids";
+    public const string DeleteActionId = "delete";
 
     public IReadOnlyList<CanvasWorkbenchAction> BuildNodeContextActions(ProjectStructureNode node)
         => BuildNodeContextActions(
@@ -56,9 +60,9 @@ public sealed class ProjectStructureActionCatalogAdapter
         {
             new() { ActionId = "open", Label = "Open", MenuLabel = "Open", Description = "Open the linked artifact or routed workspace.", Icon = "open", Tone = "accent" },
             BuildEditAction(),
-            new() { ActionId = "copy-id", Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
-            new() { ActionId = "copy-info", Label = "Copy info", MenuLabel = "Copy info", Description = "Copy this node as type_title:id-hash.", Icon = "copy", Tone = "primary" },
-            new() { ActionId = "copy-subtree-ids", Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node and descendants as type_title:id-hash entries.", Icon = "copy", Tone = "sky" },
+            new() { ActionId = CopyIdentifierActionId, KeyboardCommand = CanvasWorkbenchKeyboardCommand.CopyIdentifier, Label = "Copy id", MenuLabel = "Copy id", Description = "Copy this node id to the clipboard.", Icon = "copy", Tone = "ghost" },
+            new() { ActionId = CopyInformationActionId, Label = "Copy info", MenuLabel = "Copy info", Description = "Copy this node as type_title:id-hash.", Icon = "copy", Tone = "primary" },
+            new() { ActionId = CopySubtreeIdentifiersActionId, Label = "Copy tree ids", MenuLabel = "Copy tree", Description = "Copy this node and descendants as type_title:id-hash entries.", Icon = "copy", Tone = "sky" },
             new() { ActionId = "summary", Label = "Summary", MenuLabel = "Summary", Description = "Open the hierarchical progress summary and export tools.", Icon = "summary", Tone = "sky" },
             new() { ActionId = "connect", Label = "Connect", MenuLabel = "Connect", Description = "Use the selected node as the source for a dependency link.", Icon = "link", Tone = "neutral" },
             new() { ActionId = "reconnect", Label = "Reconnect", MenuLabel = "Reconnect", Description = "Pick a new parent node for this branch explicitly.", Icon = "relink", Tone = "primary" },
@@ -343,7 +347,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             BuildPriorityAction(),
             new CanvasWorkbenchAction
             {
-                ActionId = "delete",
+                ActionId = DeleteActionId,
                 Label = "Delete selected",
                 MenuLabel = "Delete selected",
                 Description = "Delete the selected nodes, with confirmation when the impact is not trivial.",
@@ -360,7 +364,7 @@ public sealed class ProjectStructureActionCatalogAdapter
         var isMultiSelection = selectedNodeCount > 1;
         return new CanvasWorkbenchAction
         {
-            ActionId = "delete",
+            ActionId = DeleteActionId,
             Label = isMultiSelection ? "Delete selected" : "Delete",
             MenuLabel = isMultiSelection ? "Delete selected" : "Delete",
             Description = isMultiSelection
@@ -459,7 +463,8 @@ public sealed class ProjectStructureActionCatalogAdapter
             ProjectStructureFileActions.CreateCanvasAction(),
             new()
             {
-                ActionId = "copy-id",
+                ActionId = CopyIdentifierActionId,
+                KeyboardCommand = CanvasWorkbenchKeyboardCommand.CopyIdentifier,
                 Label = "Copy id",
                 MenuLabel = "Copy id",
                 Description = "Copy this project node id to the clipboard.",
@@ -468,7 +473,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             new()
             {
-                ActionId = "copy-info",
+                ActionId = CopyInformationActionId,
                 Label = "Copy info",
                 MenuLabel = "Copy info",
                 Description = "Copy this project node as type_title:id-hash.",
@@ -477,7 +482,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             new()
             {
-                ActionId = "copy-subtree-ids",
+                ActionId = CopySubtreeIdentifiersActionId,
                 Label = "Copy tree ids",
                 MenuLabel = "Copy tree",
                 Description = "Copy this project node and descendants as type_title:id-hash entries.",
@@ -641,7 +646,8 @@ public sealed class ProjectStructureActionCatalogAdapter
             ProjectStructureFileActions.CreateCanvasAction(),
             new()
             {
-                ActionId = "copy-id",
+                ActionId = CopyIdentifierActionId,
+                KeyboardCommand = CanvasWorkbenchKeyboardCommand.CopyIdentifier,
                 Label = "Copy id",
                 MenuLabel = "Copy id",
                 Description = "Copy this node id to the clipboard.",
@@ -650,7 +656,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             },
             new()
             {
-                ActionId = "copy-info",
+                ActionId = CopyInformationActionId,
                 Label = "Copy info",
                 MenuLabel = "Copy info",
                 Description = "Copy the folder identity and managed path details.",

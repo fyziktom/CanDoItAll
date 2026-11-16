@@ -10,14 +10,14 @@
             <TextBlock Value="The saved record changed again. Refresh this comparison before applying. Your choices are retained." />
         </Alert>
     }
-    <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" ButtonStyle="ButtonStyle.Light" Click="@(() => showUnchanged = !showUnchanged)" />
+    <Button Text="@(showUnchanged ? "Show changed fields" : "Show all fields")" Tone="ButtonTone.Default" Click="@(() => showUnchanged = !showUnchanged)" />
     @foreach (var row in Review.Strings) {
         <MergeFieldView TValue="string" Label="@row.Label" Field="@row.Field" Format="@(value => value)" ShowUnchanged="@showUnchanged" Changed="Changed">
             <ResultEditor Context="value">
                 @if (row.Multiline) {
-                    <TextArea Value="@value" Rows="3" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
+                    <TextAreaInput Value="@value" Rows="3" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
                 } else {
-                    <TextBox Value="@value" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
+                    <TextInput Value="@value" Immediate="true" ValueChanged="@(text => SetTextAsync(row.Field, text))" aria-label="@($"Merged {row.Label}")" />
                 }
             </ResultEditor>
         </MergeFieldView>

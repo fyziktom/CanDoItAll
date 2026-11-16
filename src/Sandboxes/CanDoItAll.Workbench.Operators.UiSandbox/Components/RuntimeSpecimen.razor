@@ -4,11 +4,11 @@
     <Stack GapScale="LayoutGap.Medium">
         <TextBlock TextStyle="TextStyle.H4" Value="@($"{Name} runtime specimen")" />
         <FormField Text="Scenario">
-            <InputSelect class="cda-input" @bind-Value="scenario" data-testid="operators-runtime-scenario">
+            <SelectInput @bind-Value="scenario" data-testid="operators-runtime-scenario">
                 @foreach (var value in Enum.GetValues<Scenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
         </FormField>
         <Cluster>
             <Button Text="Open quick actions" Click="OpenQuick" />

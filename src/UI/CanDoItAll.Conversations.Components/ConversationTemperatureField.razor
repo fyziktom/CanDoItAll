@@ -1,5 +1,5 @@
 <FormField Text="@Label" Class="@Class" data-testid="@TestId">
-    <Numeric TValue="double?"
+    <NumberInput TValue="double?"
              Value="@Value"
              ValueChanged="ValueChanged"
              Min="@Minimum"
@@ -9,7 +9,7 @@
              data-testid="@InputTestId" />
     @if (!string.IsNullOrWhiteSpace(Description))
     {
-        <p class="mt-2 text-sm leading-6 text-slate-600">@Description</p>
+        <p class="mt-2 text-sm leading-6 text-chrome-600">@Description</p>
     }
     @if (Validation is not null)
     {

@@ -32,7 +32,7 @@
     <SecondaryNavigation><CrmHrSecondaryTabs SelectedArea="CrmHrWorkspaceArea.Recruiting" /></SecondaryNavigation>
     <RecordUpdates>
         <Cluster Gap="LayoutGap.Small">
-            <Button Text="Refresh saved information" ButtonStyle="ButtonStyle.Light" Disabled="readingContext" Click="RefreshContextAsync" data-testid="crmhr-recruiting-refresh" />
+            <Button Text="Refresh saved information" Tone="ButtonTone.Default" Disabled="readingContext" Click="RefreshContextAsync" data-testid="crmhr-recruiting-refresh" />
             @if (contextOutdated) { <StatusBadge Text="Saved information changed" Tone="warning" /> }
         </Cluster>
         @if (records.Message is not null || IsUnknown) {

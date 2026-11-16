@@ -11,7 +11,7 @@
                     <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
                         <strong>Collaboration sandbox</strong>
                         <label for="scenario">Scenario</label>
-                        <select id="scenario" class="cda-input" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="collaboration-scenario">
+                        <select id="scenario" class="form-input ui-input ui-input--outlined" style="width: auto; max-width: 100%" value="@scenario" @onchange="ChangeScenario" data-testid="collaboration-scenario">
                             @foreach (var value in Enum.GetValues<CollaborationScenario>()) {
                                 <option value="@value">@value</option>
                             }

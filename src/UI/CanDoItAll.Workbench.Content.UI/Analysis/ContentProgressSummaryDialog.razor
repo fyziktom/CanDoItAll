@@ -8,9 +8,9 @@
                      Title="@state.Title" Summary="Hierarchy, inline status editing, and stored exports use this summary snapshot."
                      Close="@(() => actions.Close())" DataTestId="content-progress-summary" DialogClass="project-structure-summary-dialog">
     <Actions>
-        <Button Text="Export XLSX" ButtonStyle="ButtonStyle.Info" Disabled="@disabled" Click="@(() => actions.ExportWorkbook())" />
-        <Button Text="Export Gantt" ButtonStyle="ButtonStyle.Primary" Disabled="@disabled" Click="@(() => actions.ExportGantt())" />
-        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
+        <Button Text="Export XLSX" Tone="ButtonTone.Info" Disabled="@disabled" Click="@(() => actions.ExportWorkbook())" />
+        <Button Text="Export Gantt" Tone="ButtonTone.Primary" Disabled="@disabled" Click="@(() => actions.ExportGantt())" />
+        <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => actions.Close())" />
     </Actions>
     <Body>
         <section class="content-summary">
@@ -44,8 +44,12 @@
                             <TextBlock TextStyle="TextStyle.Caption" Value="@row.StartLabel" />
                             <TextBlock TextStyle="TextStyle.Caption" Value="@row.EndLabel" />
                         </Stack>
-                        <DropDown TValue="string" Data="@state.Statuses" Value="@row.Status" Disabled="@disabled"
-                                  Placeholder="Select status" Change="@(value => actions.ChangeStatus(row.NodeId, value?.ToString() ?? string.Empty))" />
+                        <SelectInput TValue="string" Value="@row.Status" Disabled="@disabled" ValueChanged="@(value => actions.ChangeStatus(row.NodeId, value?.ToString() ?? string.Empty))">
+    <option value="">Select status</option>
+    @foreach (var option in state.Statuses) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
                     </Split>
                 }
             </Stack>

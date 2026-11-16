@@ -18,12 +18,12 @@
         }
         <Stack GapScale="LayoutGap.Small">
             <Button Text="@(rendered.Reading ? "Reviewing saved receipts…" : rendered.Page is null ? "Review saved receipts" : "Review again from beginning")"
-                    Icon="history" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                    Icon="history" Size="ButtonSize.Small" Tone="ButtonTone.Secondary"
                     Disabled="@(rendered.Reading || !rendered.CanRead)"
                     Click="@(() => Intent.InvokeAsync(ReadIntent(rendered, origin, nextPage: false)))"
                     data-testid="agents-chat-review-saved-receipts" />
             @if (rendered.Page?.NextCursor is not null) {
-                <Button Text="Read next saved receipt page" Icon="navigate_next" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                <Button Text="Read next saved receipt page" Icon="navigate_next" Size="ButtonSize.Small" Tone="ButtonTone.Secondary"
                         Disabled="@(rendered.Reading || !rendered.CanRead)"
                         Click="@(() => Intent.InvokeAsync(ReadIntent(rendered, origin, nextPage: true)))"
                         data-testid="agents-chat-next-saved-receipts" />

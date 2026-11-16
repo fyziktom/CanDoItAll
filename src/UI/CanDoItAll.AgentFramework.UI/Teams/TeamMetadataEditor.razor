@@ -13,7 +13,7 @@
             <Alert AlertStyle="AlertStyle.Warning">This editor is no longer active. Reopen it in the current workspace.</Alert>
         } else if (owner.Loading) {
             <SurfaceCard Soft="true">
-                <p class="cda-eyebrow">Loading</p>
+                <TextBlock TextStyle="TextStyle.EyebrowCaption">Loading</TextBlock>
                 <h3 class="agent-team-details-dialog__title">Loading team details</h3>
             </SurfaceCard>
         } else if (owner.LoadFailed) {
@@ -40,7 +40,7 @@
                                 <MergeFieldView TValue="string" ShowUnchanged="false" Label="Description" Field="review.Description.Field" Format="@(value => value)" Changed="StateHasChanged" />
                                 <MergeFieldView TValue="string" ShowUnchanged="false" Label="Icon" Field="review.Icon" Format="@(value => value)" Changed="StateHasChanged" />
                                 <Cluster Gap="LayoutGap.Small">
-                                    <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="() => owner.Comparison = null" />
+                                    <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="() => owner.Comparison = null" />
                                     <Button Text="Apply to draft" Disabled="@(!review.IsResolved || owner.Revision != owner.CompareRevision || ChangeSequence != owner.CompareSequence)"
                                             Click="() => ApplyComparison(owner, review)" data-testid="agents-team-apply-comparison" />
                                 </Cluster>
@@ -48,22 +48,22 @@
                         </SurfaceCard>
                     }
                     <div class="grid gap-2">
-                        <span class="text-xs font-bold text-slate-600">Icon</span>
+                        <span class="text-xs font-bold text-chrome-600">Icon</span>
                         <Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
-                            <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700" data-testid="agents-team-selected-icon">
+                            <span class="flex h-14 w-14 items-center justify-center rounded-lg border border-chrome-200 bg-chrome-50 text-chrome-700" data-testid="agents-team-selected-icon">
                                 <Icon Name="@AgentTeamIconCatalog.Normalize(owner.Model.Icon)" Class="text-2xl" />
                             </span>
-                            <Button Text="Choose icon" Icon="widgets" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                            <Button Text="Choose icon" Icon="widgets" Tone="ButtonTone.Default" Variant="Variant.Outlined"
                                     Disabled="@owner.ChoosingIcon" Click="() => ChooseIconAsync(owner)" data-testid="agents-team-choose-icon" />
                         </Cluster>
                     </div>
                     <label class="agent-team-details-dialog__field">
                         <span>Name</span>
-                        <input value="@owner.Model.Name" @oninput="args => Edit(owner, args, name: true)" class="cda-input agent-team-details-dialog__input" data-testid="agents-team-name" />
+                        <input value="@owner.Model.Name" @oninput="args => Edit(owner, args, name: true)" class="form-input ui-input ui-input--outlined agent-team-details-dialog__input" data-testid="agents-team-name" />
                     </label>
                     <label class="agent-team-details-dialog__field">
                         <span>Description</span>
-                        <textarea value="@owner.Model.Description" @oninput="args => Edit(owner, args, name: false)" class="cda-input agent-team-details-dialog__textarea" data-testid="agents-team-description">@owner.Model.Description</textarea>
+                        <textarea value="@owner.Model.Description" @oninput="args => Edit(owner, args, name: false)" class="form-input ui-input ui-input--outlined agent-team-details-dialog__textarea" data-testid="agents-team-description">@owner.Model.Description</textarea>
                     </label>
                     <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
                         <Button Text="Cancel" Icon="close" Variant="Variant.Outlined" Click="() => CancelAsync(owner)" />

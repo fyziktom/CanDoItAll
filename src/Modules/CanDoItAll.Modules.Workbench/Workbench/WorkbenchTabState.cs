@@ -202,7 +202,8 @@ public sealed class WorkbenchStateService(
             cancellationToken);
     }
 
-    public async Task TrackTabAsync(WorkbenchTabDescriptor descriptor, CancellationToken cancellationToken = default)
+    public async Task TrackTabAsync(WorkbenchTabDescriptor descriptor, CancellationToken cancellationToken = default,
+        IReadOnlyList<WorkbenchTabState>? originalTabs = null)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var normalizedRoute = NormalizeRoute(descriptor.Route);
@@ -234,6 +235,9 @@ public sealed class WorkbenchStateService(
             Order: _tabs.Count));
 
         var existing = _tabs.FirstOrDefault(tab => IsSameLogicalTab(tab, candidateTab));
+        if (existing is null && originalTabs?.Any(tab => IsSameLogicalTab(tab, candidateTab)) == true) {
+            return;
+        }
 
         if (existing is null)
         {
@@ -422,6 +426,7 @@ public sealed class WorkbenchStateService(
 
         _tabs.Clear();
         _tabs.AddRange(ordered.Select((tab, orderIndex) => tab with { Order = orderIndex }));
+        EnsureActiveTabIsAvailable(tabId);
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -451,7 +456,7 @@ public sealed class WorkbenchStateService(
 
         _tabs.Clear();
         _tabs.AddRange(remaining.Select((tab, index) => tab with { Order = index }));
-        ActiveTabId ??= _tabs.FirstOrDefault()?.TabId;
+        EnsureActiveTabIsAvailable(keepTabId);
         EnsureActiveTabIsAwake();
         await PersistAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -610,6 +615,14 @@ public sealed class WorkbenchStateService(
             RecentTabs: _recentTabs.ToArray());
 
         await stateStore.SaveAsync(snapshot, cancellationToken);
+    }
+
+    private void EnsureActiveTabIsAvailable(string? preferredTabId) {
+        if (GetActiveTab() is not null) {
+            return;
+        }
+        ActiveTabId = _tabs.FirstOrDefault(tab => string.Equals(tab.TabId, preferredTabId, StringComparison.Ordinal))?.TabId
+            ?? _tabs.FirstOrDefault()?.TabId;
     }
 
     private void EnsureActiveTabIsAwake()

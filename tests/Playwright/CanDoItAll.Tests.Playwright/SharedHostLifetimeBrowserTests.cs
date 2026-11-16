@@ -60,7 +60,7 @@ public sealed class SharedHostLifetimeBrowserTests {
             await NavigateAsync("/agents?tab=simple-chats&simpleChatView=definitions");
             await queryHeld.Task.WaitAsync(TimeSpan.FromSeconds(15));
             await NavigateAsync("/collaboration");
-            await page.GetByTestId("collaboration-thread-subject").WaitForAsync();
+            await page.GetByTestId("collaboration-create-toggle").WaitForAsync();
             release.TrySetResult();
             Assert.True(await holding);
 
@@ -98,11 +98,11 @@ public sealed class SharedHostLifetimeBrowserTests {
                 await NavigateAsync("/agents?tab=simple-chats&simpleChatView=definitions");
                 await page.GetByTestId("llm-chat-definition-catalog").WaitForAsync();
                 await NavigateAsync("/collaboration");
-                await page.GetByTestId("collaboration-thread-subject").WaitForAsync();
+                await page.GetByTestId("collaboration-create-toggle").WaitForAsync();
                 await NavigateAsync("/test-lab");
                 await page.GetByTestId("testlab-title-input").WaitForAsync();
                 await page.EvaluateAsync("() => history.back()");
-                await page.GetByTestId("collaboration-thread-subject").WaitForAsync();
+                await page.GetByTestId("collaboration-create-toggle").WaitForAsync();
                 await page.EvaluateAsync("() => history.forward()");
                 await page.GetByTestId("testlab-title-input").WaitForAsync();
                 await NavigateAsync($"/projects/{host.ProjectA:D}/structure");

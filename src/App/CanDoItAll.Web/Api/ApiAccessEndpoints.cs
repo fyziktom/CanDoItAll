@@ -16,6 +16,18 @@ internal static class ApiAccessEndpoints {
                 .RequireAuthorization(ApiAuthorizationPolicies.UserSession).WithName("GetApiSession")
                 .DescribeApi("Read current API session", "Read the safe identity of the current registered user or administrator session. Machine and legacy tokens cannot use self-session operations.", "Current validated session identity.")
                 .Produces<ApiSessionIdentity>().ProducesApiErrors(401, 403);
+            sessions.MapGet("/preferences", async (HttpContext context, UserUiPreferencesService preferences) =>
+                Results.Ok((await preferences.ReadAsync(context.User, context.RequestAborted))?.Preferences
+                    ?? throw new UnauthorizedAccessException()))
+                .RequireAuthorization(ApiAuthorizationPolicies.UserSession).WithName("GetUserUiPreferences")
+                .DescribeApi("Read personal UI preferences", "Read the current registered account's theme and main-menu preference across browsers and devices. Anonymous, machine and legacy credentials cannot access account preferences.", "The current account's saved UI preferences, or their documented defaults.")
+                .Produces<UserUiPreferences>().ProducesApiErrors(401, 403, 503);
+            sessions.MapPatch("/preferences", async (HttpContext context, UserUiPreferencesPatch patch, UserUiPreferencesService preferences) =>
+                Results.Ok((await preferences.UpdateAsync(context.User, patch, context.RequestAborted))?.Preferences
+                    ?? throw new UnauthorizedAccessException()))
+                .RequireAuthorization(ApiAuthorizationPolicies.UserSession).WithName("UpdateUserUiPreferences")
+                .DescribeApi("Update personal UI preferences", "Merge only supplied fields into the current registered account's UI preferences. The server selects the account from the validated session; concurrent changes to other fields are retained.", "The complete saved UI preferences after applying this patch.", "Optional theme and main-menu collapsed fields. Omitted or null fields remain unchanged; caller-selected account identifiers and unknown fields are rejected.")
+                .Produces<UserUiPreferences>().ProducesApiErrors(400, 401, 403, 503);
             sessions.MapPost("/logout", LogoutAsync).RequireAuthorization(ApiAuthorizationPolicies.UserSession)
                 .WithName("LogoutApiSession")
                 .DescribeApi("Revoke current API session", "Revoke only this registered user or administrator session. Other sessions and unrelated machine credentials remain unchanged.", "Current session revoked; no response body.").Produces(204).ProducesApiErrors(401, 403);

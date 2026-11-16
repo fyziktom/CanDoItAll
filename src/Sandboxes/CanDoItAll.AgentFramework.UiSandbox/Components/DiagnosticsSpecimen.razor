@@ -3,7 +3,7 @@
 <header class="catalog-sandbox__controls">
     <h1 class="cda-title-xl">Diagnostics sandbox</h1>
     <label for="diagnostics-scenario">Scenario</label>
-    <select id="diagnostics-scenario" class="cda-input" value="@scenario" @onchange="ChangeScenario">
+    <select id="diagnostics-scenario" class="form-input ui-input ui-input--outlined" value="@scenario" @onchange="ChangeScenario">
         @foreach (var value in DiagnosticsSandboxFixture.Scenarios) {
             <option value="@value">@value</option>
         }

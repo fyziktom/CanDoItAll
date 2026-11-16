@@ -13,16 +13,16 @@
         <Actions>
             <Button Text="Create new project"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     data-testid="project-structure-hierarchy-create-project"
                     Disabled="@(hierarchyDialog.IsBusy || hierarchyDialog.RequiresObservation)"
                     Click="OpenProjectCreateDialog" />
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseProjectHierarchy" />
             <Button Text="@hierarchyDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-hierarchy-submit"
                     Disabled="@(hierarchyDialog.AvailableProjects.Count == 0 || hierarchyDialog.IsBusy || hierarchyDialog.RequiresObservation)"
                     Click="ExecuteProjectHierarchyCommand" />
@@ -83,10 +83,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseBlockMutation" />
             <Button Text="@blockDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-block-mutation-submit"
                     Disabled="@(blockDialog.IsBusy || blockDialog.RequiresObservation)"
                     Click="ExecuteBlockMutation" />
@@ -149,10 +149,10 @@
         <Actions>
             <Button Text="Cancel"
                     Variant="Variant.Text"
-                    ButtonStyle="ButtonStyle.Base"
+                    Tone="ButtonTone.Default"
                     Click="CloseSubprojectTransfer" />
             <Button Text="@transferDialog.SubmitLabel"
-                    ButtonStyle="ButtonStyle.Info"
+                    Tone="ButtonTone.Info"
                     data-testid="project-structure-subproject-transfer-submit"
                     Disabled="@(transferDialog.IsBusy || transferDialog.RequiresObservation)"
                     Click="ExecuteSubprojectTransfer" />

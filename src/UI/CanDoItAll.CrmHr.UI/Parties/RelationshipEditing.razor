@@ -3,11 +3,11 @@
 @if (State.IsOutdated || State.IsUnknown || Message is not null) {
     <Alert AlertStyle="AlertStyle.Warning" data-testid="crmhr-relationship-freshness">
         <TextBlock Value="@(Message ?? (State.IsUnknown ? "The relationship save outcome is unknown. Your submission and draft are retained; resubmission is blocked." : "Saved relationships changed. Review their current values before saving."))" />
-        <Button Text="Review relationships" ButtonStyle="ButtonStyle.Light" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-relationship-review-open" />
+        <Button Text="Review relationships" Tone="ButtonTone.Default" Disabled="@(Reading || State.IsSaving)" Click="ReviewRequested" data-testid="crmhr-relationship-review-open" />
     </Alert>
 }
 @if (State.CanUndo) {
-    <Button Text="Undo relationship merge" ButtonStyle="ButtonStyle.Light" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
+    <Button Text="Undo relationship merge" Tone="ButtonTone.Default" Disabled="@(State.IsSaving || State.IsUnknown)" Click="UndoRequested" />
 }
 <Dialog IsOpen="@(State.Review is not null)" Title="Review party relationships" Size="ModalSize.Full" DenseChrome="true" CloseOnBackdrop="false" OnClose="Cancelled" TestId="crmhr-relationship-review-dialog">
     <ChildContent>
@@ -20,7 +20,7 @@
                 @if (review.GroupError is { } error) {
                     <Alert AlertStyle="AlertStyle.Warning"><TextBlock Value="@error" /></Alert>
                 }
-                <Button Text="@(showAll ? "Show changed relationships" : "Show all relationships")" ButtonStyle="ButtonStyle.Light" Click="@(() => showAll = !showAll)" />
+                <Button Text="@(showAll ? "Show changed relationships" : "Show all relationships")" Tone="ButtonTone.Default" Click="@(() => showAll = !showAll)" />
                 <PartyMergeRows TRow="PartyRelationshipEditorModel" Title="Party relationships" Rows="review.Rows" WholeCollection="review.WholeCollection" Format="FormatRow" ShowUnchanged="@showAll" Changed="Changed">
                     <ResultActions Context="row">
                         @if (row.Field.IsResolved && row.Field.Result is { Exists: true, Value: { } value }) {
@@ -28,7 +28,7 @@
                                 <CheckBox TValue="bool" Value="@value.IsPrimary" ValueChanged="@((bool primary) => SetPrimaryAsync(row, value, primary))" />
                             </FormField>
                             <FormField Text="Merged relationship notes">
-                                <TextArea Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetNotesAsync(row, value, text))" aria-label="Merged relationship notes" />
+                                <TextAreaInput Value="@value.Notes" Immediate="true" Rows="3" ValueChanged="@(text => SetNotesAsync(row, value, text))" aria-label="Merged relationship notes" />
                             </FormField>
                         }
                     </ResultActions>
@@ -38,9 +38,9 @@
     </ChildContent>
     <Footer>
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
-            <Button Text="Cancel review" ButtonStyle="ButtonStyle.Light" Click="Cancelled" />
+            <Button Text="Cancel review" Tone="ButtonTone.Default" Click="Cancelled" />
             <Cluster Gap="LayoutGap.Small">
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-relationship-review-refresh" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="@Reading" Click="ReviewRequested" data-testid="crmhr-relationship-review-refresh" />
                 <Button Text="Apply to my draft" Disabled="@(Reading || State.IsSaving || State.IsUnknown || State.ReviewIsStale || State.Review?.CanApply != true)" Click="ApplyRequested" data-testid="crmhr-relationship-review-apply" />
             </Cluster>
         </Cluster>

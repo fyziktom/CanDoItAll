@@ -48,6 +48,9 @@ public static class ApiServiceCollectionExtensions
         services.TryAddSingleton<IApiTokenService, ApiTokenService>();
         services.TryAddSingleton<ApiPasswordService>();
         services.TryAddSingleton<ApiSessionService>();
+        services.TryAddSingleton<CanDoItAll.Infrastructure.ControlPlane.IUserUiPreferencesStore,
+            CanDoItAll.Infrastructure.ControlPlane.FileUserUiPreferencesStore>();
+        services.TryAddScoped<UserUiPreferencesService>();
         services.TryAddSingleton<ApiLoginThrottle>();
         services.TryAddScoped<ApiUserAdministrationService>();
         services.Replace(ServiceDescriptor.Scoped<IApiTokenAdministrationAccess, WebApiTokenAdministrationAccess>());

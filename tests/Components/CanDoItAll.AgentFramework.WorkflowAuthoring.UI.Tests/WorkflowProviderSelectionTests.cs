@@ -23,10 +23,20 @@ public sealed class WorkflowProviderSelectionTests {
             .Add(x => x.Value, "route").Add(x => x.ValueChanged, value => accepted = value));
         Assert.Equal(["Provider default (Native default)", "Native lower case", "Native spaced"],
             cut.FindAll("option").Select(option => option.TextContent));
-        Assert.Equal("1", cut.Find("select").GetAttribute("value"));
-        await cut.InvokeAsync(() => cut.Find("select").Change("2"));
+        var choices = cut.FindAll("option").ToDictionary(option => option.TextContent, option => option.GetAttribute("value"));
+        Assert.All(choices.Values, value => Assert.True(Guid.TryParse(value, out var id) && id != Guid.Empty));
+        Assert.Equal(choices.Count, choices.Values.Distinct().Count());
+        Assert.Equal(choices["Native lower case"], cut.Find("select").GetAttribute("value"));
+
+        cut.Render(p => p.Add(x => x.Value, "route"));
+        Assert.Equal(choices.Values, cut.FindAll("option").Select(option => option.GetAttribute("value")));
+        await cut.InvokeAsync(() => cut.Find("select").Change(choices["Native spaced"]));
         Assert.Equal(" route ", accepted);
-        await cut.InvokeAsync(() => cut.Find("select").Change("0"));
+        await cut.InvokeAsync(() => cut.Find("select").Change(choices["Provider default (Native default)"]));
         Assert.Equal("Route", accepted);
+
+        accepted = null;
+        await cut.InvokeAsync(() => cut.Find("select").Change(Guid.NewGuid().ToString()));
+        Assert.Null(accepted);
     }
 }

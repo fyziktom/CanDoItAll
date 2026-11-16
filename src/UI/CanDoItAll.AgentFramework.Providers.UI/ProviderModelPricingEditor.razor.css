@@ -18,10 +18,10 @@
     }
 
     .provider-pricing-summary {
-        border: 1px solid var(--cda-border-subtle, #dbe3ef);
+        border: 1px solid var(--tone-border-soft);
         border-radius: 0.5rem;
         padding: 1rem;
-        background: color-mix(in srgb, var(--cda-surface, #fff) 92%, var(--cda-info, #0ea5e9));
+        background: color-mix(in srgb, var(--tone-surface) 92%, var(--tone-info-solid-bg));
     }
 
     .provider-pricing-summary dl {
@@ -36,7 +36,7 @@
     }
 
     .provider-pricing-summary dt {
-        color: var(--cda-text-muted, #475569);
+        color: var(--tone-text-muted);
         font-size: 0.75rem;
         font-weight: 700;
         letter-spacing: 0;
@@ -45,7 +45,7 @@
 
     .provider-pricing-summary dd {
         margin: 0;
-        color: var(--cda-text, #0f172a);
+        color: var(--tone-text);
         font-size: 0.95rem;
         font-weight: 700;
     }

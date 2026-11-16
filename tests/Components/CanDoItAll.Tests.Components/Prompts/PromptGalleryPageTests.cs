@@ -1,11 +1,13 @@
 using Bunit;
 using Bunit.TestDoubles;
+using CanDoItAll.AppComponents;
 using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Prompts.Components;
 using CanDoItAll.Modules.Prompts.Pages;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Tests.Components.AgentFramework;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +22,7 @@ public sealed class PromptGalleryPageTests
         var launcher = new RecordingCuratorLauncher();
         using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
 
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         var button = cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']");
 
         Assert.Equal($"Open {launcher.Presentation.Name}", button.GetAttribute("aria-label"));
@@ -48,13 +50,13 @@ public sealed class PromptGalleryPageTests
             context.Services.GetRequiredService<NotificationService>().Messages,
             notification => notification.Summary == "Chat ready");
 
-        cut.Render();
+        cut.FindComponent<PromptGalleryPage>().Render();
 
         Assert.Equal(1, launcher.ActivateCount);
         Assert.Equal(2, launcher.ContextLease.SynchronizeCount);
         Assert.Equal(1, launcher.PresentationCount);
 
-        cut.Instance.Dispose();
+        cut.FindComponent<PromptGalleryPage>().Instance.Dispose();
 
         Assert.Equal(1, launcher.ContextLease.DisposeCount);
     }
@@ -68,7 +70,7 @@ public sealed class PromptGalleryPageTests
         };
         using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
 
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
 
         cut.WaitForAssertion(() => Assert.Equal(1, launcher.PresentationCount));
         var button = cut.Find("[data-testid='prompt-gallery-prompts-curator-open']");
@@ -96,12 +98,12 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, launcher);
         var notifications = context.Services.GetRequiredService<NotificationService>();
 
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         Assert.Single(gallery.Queries);
         Assert.Contains(notifications.Messages, message => message.Summary == "Unable to prepare Prompts Curator");
-        cut.Render();
+        cut.FindComponent<PromptGalleryPage>().Render();
         Assert.Equal(1, launcher.ActivateCount);
         Assert.Single(notifications.Messages, message => message.Summary == "Unable to prepare Prompts Curator");
     }
@@ -120,7 +122,7 @@ public sealed class PromptGalleryPageTests
         var navigation = Navigation(context);
         navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}");
 
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
         Assert.Equal([knownId], gallery.GetItemCalls);
         var entries = navigation.History.Count;
@@ -134,7 +136,7 @@ public sealed class PromptGalleryPageTests
         Assert.Equal(0, back.Calls);
 
         // An echo of the same location on rerender does not reopen the closed editor.
-        cut.Render();
+        cut.FindComponent<PromptGalleryPage>().Render();
         Assert.Empty(cut.FindAll("[data-testid='prompt-gallery-item-editor']"));
 
         await cut.InvokeAsync(() => navigation.NavigateTo($"/prompt-gallery?promptId={knownId:D}"));
@@ -164,7 +166,7 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), back);
         var navigation = Navigation(context);
         navigation.NavigateTo("/prompt-gallery?kind=part");
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-edit']")));
         var itemId = Assert.Single(cut.FindComponent<PromptGallerySearchHost>().Instance.Presentation.Items).Id;
         var entries = navigation.History.Count;
@@ -192,7 +194,7 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), new ScriptedBack());
         var navigation = Navigation(context);
         navigation.NavigateTo("/prompt-gallery");
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         var entries = navigation.History.Count;
 
@@ -218,7 +220,7 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher(), new ScriptedBack());
         var navigation = Navigation(context);
         navigation.NavigateTo("/prompt-gallery");
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         var entries = navigation.History.Count;
 
@@ -260,7 +262,7 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher());
         // The committed filters live in the URL, which the page writes only at its own route.
         context.Services.GetRequiredService<NavigationManager>().NavigateTo("/prompt-gallery");
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         var searchHost = cut.FindComponent<PromptGallerySearchHost>().Instance;
 
@@ -289,7 +291,7 @@ public sealed class PromptGalleryPageTests
     {
         var gallery = new ScriptedPromptGalleryService();
         using var context = CreateContext(gallery, new UnavailableCuratorLauncher());
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-edit']")));
 
         cut.Find("[data-testid='prompt-gallery-edit']").Click();
@@ -309,7 +311,7 @@ public sealed class PromptGalleryPageTests
         using var context = CreateContext(gallery, launcher);
         context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/prompt-gallery?promptId={knownId:D}");
 
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-grid']")));
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='prompt-gallery-editor-title']")));
@@ -338,9 +340,9 @@ public sealed class PromptGalleryPageTests
         var launcher = new ControllableCuratorLauncher { HonorsCancellation = honorsCancellation };
         using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
         var notifications = context.Services.GetRequiredService<NotificationService>();
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForAssertion(() => Assert.Equal(1, launcher.PresentationCount));
-        var page = cut.Instance;
+        var page = cut.FindComponent<PromptGalleryPage>().Instance;
 
         // The real render/dispose cycle runs through the renderer; the lease goes with the page.
         await context.DisposeComponentsAsync();
@@ -378,7 +380,7 @@ public sealed class PromptGalleryPageTests
         launcher.Presentation.SetResult(launcher.KnownPresentation);
         using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
         var notifications = context.Services.GetRequiredService<NotificationService>();
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         var button = cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']:not([disabled])");
 
         button.Click();
@@ -408,7 +410,7 @@ public sealed class PromptGalleryPageTests
         launcher.Presentation.SetResult(launcher.KnownPresentation);
         using var context = CreateContext(new ScriptedPromptGalleryService(), launcher);
         var notifications = context.Services.GetRequiredService<NotificationService>();
-        var cut = context.Render<PromptGalleryPage>();
+        var cut = RenderPage(context);
         cut.WaitForElement("[data-testid='prompt-gallery-prompts-curator-open']:not([disabled])").Click();
         cut.WaitForAssertion(() => Assert.Equal(1, launcher.OpenCount));
 
@@ -424,11 +426,21 @@ public sealed class PromptGalleryPageTests
         Assert.Equal(0, launcher.ContextLease.DisposeCount);
     }
 
+    private static IRenderedComponent<AppToolbarActionsTestHost> RenderPage(BunitContext context) {
+        RenderFragment pageContent = builder => {
+            builder.OpenComponent<PromptGalleryPage>(0);
+            builder.CloseComponent();
+        };
+        return context.Render<AppToolbarActionsTestHost>(parameters => parameters
+            .Add(component => component.ChildContent, pageContent));
+    }
+
     private static BunitContext CreateContext(ScriptedPromptGalleryService gallery, IPromptGalleryCuratorLauncher launcher, ScriptedBack? back = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddCanDoItAllBaseLib();
+        context.Services.AddScoped<AppToolbarState>();
         context.Services.AddSingleton<IPromptGalleryService>(gallery);
         CanDoItAll.Tests.Support.PromptGalleryUiTestAccess.Register(context.Services);
         context.Services.AddSingleton(launcher);

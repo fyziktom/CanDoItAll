@@ -3,7 +3,7 @@
 <header class="catalog-sandbox__controls">
     <h1 class="cda-title-xl">@(Voice ? "Voice settings" : "Floating chat settings") sandbox</h1>
     <label for="agent-settings-scenario">Scenario</label>
-    <select id="agent-settings-scenario" class="cda-input" value="@(Voice ? voice.Scenario.ToString() : floating.Scenario.ToString())" @onchange="ChangeScenario">
+    <select id="agent-settings-scenario" class="form-input ui-input ui-input--outlined" value="@(Voice ? voice.Scenario.ToString() : floating.Scenario.ToString())" @onchange="ChangeScenario">
         @foreach (var scenario in Scenarios) {
             <option value="@scenario">@scenario</option>
         }

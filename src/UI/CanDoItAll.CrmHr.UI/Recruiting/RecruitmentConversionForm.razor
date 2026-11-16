@@ -20,23 +20,23 @@
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                 <FormField Text="Workforce kind">
-                    <InputSelect @bind-Value="Draft.WorkforceKind" @bind-Value:after="@(() => ReportAsync(RecruitmentConversionField.Kind))" class="cda-input" data-testid="crmhr-recruiting-convert-kind">
+                    <SelectInput @bind-Value="Draft.WorkforceKind" @bind-Value:after="@(() => ReportAsync(RecruitmentConversionField.Kind))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-kind">
                         @foreach (var workforceKind in Enum.GetValues<WorkforceKind>()) {
                             <option value="@workforceKind">@workforceKind</option>
                         }
-                    </InputSelect>
+                    </SelectInput>
                 </FormField>
                 <FormField Text="Job title">
-                    <NativeValueInput TValue="string" @bind-Value="Draft.JobTitle" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Title))" class="cda-input" data-testid="crmhr-recruiting-convert-job-title" />
+                    <NativeValueInput TValue="string" @bind-Value="Draft.JobTitle" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Title))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-job-title" />
                 </FormField>
                 <FormField Text="Discipline">
-                    <NativeValueInput TValue="string" @bind-Value="Draft.Discipline" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Discipline))" class="cda-input" data-testid="crmhr-recruiting-convert-discipline" />
+                    <NativeValueInput TValue="string" @bind-Value="Draft.Discipline" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Discipline))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-discipline" />
                 </FormField>
             </Grid>
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="3" Class="mt-4">
                 <FormField Text="Seniority">
-                    <NativeValueInput TValue="string" @bind-Value="Draft.Seniority" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Seniority))" class="cda-input" data-testid="crmhr-recruiting-convert-seniority" />
+                    <NativeValueInput TValue="string" @bind-Value="Draft.Seniority" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Seniority))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-seniority" />
                 </FormField>
                 <PartyPicker Label="Home unit"
                              TestIdPrefix="crmhr-recruiting-convert-home-unit"
@@ -54,15 +54,15 @@
             </Grid>
 
             <Grid Gap="LayoutGap.Medium" ColumnsMd="4" Class="mt-4">
-                <FormField Text="Start date"><NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Draft.StartDate" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.StartDate, pending))" class="cda-input" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
-                <FormField Text="Location"><NativeValueInput TValue="string" @bind-Value="Draft.Location" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Location))" class="cda-input" data-testid="crmhr-recruiting-convert-location" /></FormField>
-                <FormField Text="Time zone"><NativeValueInput TValue="string" @bind-Value="Draft.TimeZone" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.TimeZone))" class="cda-input" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
-                <FormField Text="Capacity h/week"><NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Draft.CapacityHoursPerWeek" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.Capacity, pending))" class="cda-input" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
+                <FormField Text="Start date"><NativeValueInput TValue="DateOnly?" DisplayName="Start date" @bind-Value="Draft.StartDate" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.StartDate, pending))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-start-date" /></FormField>
+                <FormField Text="Location"><NativeValueInput TValue="string" @bind-Value="Draft.Location" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Location))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-location" /></FormField>
+                <FormField Text="Time zone"><NativeValueInput TValue="string" @bind-Value="Draft.TimeZone" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.TimeZone))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-timezone" /></FormField>
+                <FormField Text="Capacity h/week"><NativeValueInput TValue="decimal" DisplayName="Capacity hours per week" @bind-Value="Draft.CapacityHoursPerWeek" PendingChanged="@(pending => ReportAsync(RecruitmentConversionField.Capacity, pending))" class="form-input ui-input ui-input--outlined" data-testid="crmhr-recruiting-convert-capacity" /></FormField>
             </Grid>
 
             <div class="mt-4">
                 <FormField Text="Notes">
-                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Notes))" class="cda-input cda-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
+                    <NativeValueInput TValue="string" Multiline="true" @bind-Value="Draft.Notes" PendingChanged="@(_ => TextAsync(RecruitmentConversionField.Notes))" class="form-input ui-input ui-input--outlined ui-input--textarea min-h-[7rem]" data-testid="crmhr-recruiting-convert-notes" />
                 </FormField>
             </div>
 
@@ -72,7 +72,7 @@
                         Type="submit"
                         data-testid="crmhr-recruiting-convert-save-button" />
                 @if (CandidatePartyId.HasValue) {
-                    <Button Text="Open workforce" ButtonStyle="ButtonStyle.Light" Click="OpenWorkforce" data-testid="crmhr-recruiting-convert-open-workforce" />
+                    <Button Text="Open workforce" Tone="ButtonTone.Default" Click="OpenWorkforce" data-testid="crmhr-recruiting-convert-open-workforce" />
                 }
             </Cluster>
         </SurfaceCard>

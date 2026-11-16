@@ -7,11 +7,11 @@
       "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    --color-slate-50: oklch(98.4% 0.003 247.858);
-    --color-slate-100: oklch(96.8% 0.007 247.896);
-    --color-slate-200: oklch(92.9% 0.013 255.508);
-    --color-slate-500: oklch(55.4% 0.046 257.417);
-    --color-slate-950: oklch(12.9% 0.042 264.695);
+    --color-chrome-50: oklch(98.4% 0.003 247.858);
+    --color-chrome-100: oklch(96.8% 0.007 247.896);
+    --color-chrome-200: oklch(92.9% 0.013 255.508);
+    --color-chrome-500: oklch(55.4% 0.046 257.417);
+    --color-chrome-950: oklch(12.9% 0.042 264.695);
     --color-white: #fff;
     --spacing: 0.25rem;
     --text-sm: 0.875rem;
@@ -241,14 +241,14 @@
     border-style: var(--tw-border-style);
     border-width: 1px;
   }
-  .border-slate-200 {
-    border-color: var(--color-slate-200);
+  .border-chrome-200 {
+    border-color: var(--color-chrome-200);
   }
-  .bg-slate-50 {
-    background-color: var(--color-slate-50);
+  .bg-chrome-50 {
+    background-color: var(--color-chrome-50);
   }
-  .bg-slate-950 {
-    background-color: var(--color-slate-950);
+  .bg-chrome-950 {
+    background-color: var(--color-chrome-950);
   }
   .bg-white\/85 {
     background-color: color-mix(in srgb, #fff 85%, transparent);
@@ -287,14 +287,14 @@
   .break-all {
     word-break: break-all;
   }
-  .text-slate-100 {
-    color: var(--color-slate-100);
+  .text-chrome-100 {
+    color: var(--color-chrome-100);
   }
-  .text-slate-500 {
-    color: var(--color-slate-500);
+  .text-chrome-500 {
+    color: var(--color-chrome-500);
   }
-  .text-slate-950 {
-    color: var(--color-slate-950);
+  .text-chrome-950 {
+    color: var(--color-chrome-950);
   }
   .uppercase {
     text-transform: uppercase;

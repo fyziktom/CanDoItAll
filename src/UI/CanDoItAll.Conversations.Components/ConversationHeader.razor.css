@@ -1,5 +1,5 @@
 .chat-panel-header {
-    border-bottom: 1px solid rgb(226 232 240);
+    border-bottom: 1px solid var(--tone-border);
     flex: 0 0 auto;
     padding-bottom: 0.55rem;
 }

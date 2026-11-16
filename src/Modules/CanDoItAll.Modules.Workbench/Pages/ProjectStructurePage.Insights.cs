@@ -238,7 +238,10 @@ public partial class ProjectStructurePage {
             : ProjectWorkbenchService.AddObjectMarkerDetailedAsync(admission.ProjectId, ids, marker.Badge, marker.Tone, marker.Label, expectedProjectAdmission: admission, expectedStates: ProjectStructureNodeStateGuard.CaptureMany(context.Nodes, admission), authorizeCommit: authorize));
     }
 
-    private async Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {
+    private Task<bool> PersistInsightsStateAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation)
+        => TrackAuthoringOperationAsync(PersistInsightsStateCoreAsync(context, state, operation));
+
+    private async Task<bool> PersistInsightsStateCoreAsync(InsightsContext context, CanvasWorkbenchUiState state, string operation) {
         CancelPendingCanvasViewStatePersistence();
         var json = NormalizePersistedCanvasUiState(state).ToJson();
         ApplyCanvasViewState(json);

@@ -867,6 +867,13 @@ public static class WorkflowCanvasDefinitionMapper
         var executor = node.ExecutorId is { } executorId && executorsById.TryGetValue(executorId, out var matchedExecutor)
             ? matchedExecutor
             : null;
+        var removeAction = new CanvasWorkbenchAction {
+            ActionId = RemoveNodeActionId,
+            Label = "Remove node",
+            MenuLabel = "Remove",
+            Icon = "delete",
+            Tone = "danger"
+        };
         return new CanvasWorkbenchNode
         {
             Id = node.Id.Value,
@@ -911,15 +918,9 @@ public static class WorkflowCanvasDefinitionMapper
                     Icon = "edit",
                     Tone = "info"
                 },
-                new CanvasWorkbenchAction
-                {
-                    ActionId = RemoveNodeActionId,
-                    Label = "Remove node",
-                    MenuLabel = "Remove",
-                    Icon = "delete",
-                    Tone = "danger"
-                }
+                removeAction
             ],
+            ToolbarActions = [removeAction],
             InputPorts = node.Kind == WorkflowNodeKind.Start ? [] : BuildCanvasPorts(node, WorkflowPortDirection.Input),
             OutputPorts = node.Kind == WorkflowNodeKind.End ? [] : BuildCanvasPorts(node, WorkflowPortDirection.Output)
         };

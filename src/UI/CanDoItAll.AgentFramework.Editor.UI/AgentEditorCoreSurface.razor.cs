@@ -23,10 +23,13 @@ public partial class AgentEditorCoreSurface {
 
     private static string ResolveAvatarSelectionText(AgentEditorModel editorModel) {
         if (string.IsNullOrWhiteSpace(editorModel.AvatarImageUrl)) {
-            return "Default generated avatar";
+            return "Default human avatar";
+        }
+        if (AgentAvatarImageCatalog.BundledRobotAvatarUrls.Contains(editorModel.AvatarImageUrl.Trim(), StringComparer.OrdinalIgnoreCase)) {
+            return "Robot avatar selected";
         }
         if (AgentAvatarImageCatalog.IsBundledAvatarUrl(editorModel.AvatarImageUrl)) {
-            return "Bundled avatar selected";
+            return "Human avatar selected";
         }
         return editorModel.AvatarImageUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
             ? "Custom avatar loaded"

@@ -33,14 +33,14 @@ public sealed class StructureNodeComparisonRendererTests {
         var rendered = context.Render<StructureNodeComparison>(parameters => parameters.Add(component => component.Review, review));
         await rendered.InvokeAsync(() => rendered.Find("button").ClickAsync(new()));
         var input = rendered.Find("[data-testid='structure-node-result-amount']");
-        var control = rendered.FindComponents<TextBox>().Single(component => component.FindAll("[data-testid='structure-node-result-amount']").Count == 1).Instance;
+        var control = rendered.FindComponents<TextInput>().Single(component => component.FindAll("[data-testid='structure-node-result-amount']").Count == 1).Instance;
         await rendered.InvokeAsync(() => input.InputAsync(new() { Value = "2e" }));
         Assert.True(review.HasPendingInput);
         Assert.False(review.CanApply);
 
         await rendered.InvokeAsync(() => rendered.Find("button").ClickAsync(new()));
 
-        Assert.Same(control, rendered.FindComponents<TextBox>().Single(component => component.FindAll("[data-testid='structure-node-result-amount']").Count == 1).Instance);
+        Assert.Same(control, rendered.FindComponents<TextInput>().Single(component => component.FindAll("[data-testid='structure-node-result-amount']").Count == 1).Instance);
         Assert.Equal("2e", rendered.Find("[data-testid='structure-node-result-amount']").GetAttribute("value"));
         Assert.Equal("2e", Assert.Single(review.Fields).ResultInput);
     }

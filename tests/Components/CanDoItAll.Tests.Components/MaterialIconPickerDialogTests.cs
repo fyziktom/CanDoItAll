@@ -2,6 +2,7 @@ using Bunit;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
@@ -26,19 +27,19 @@ public sealed class MaterialIconPickerDialogTests {
     }
 
     [Fact]
-    public void Picker_filters_and_preserves_selection_when_search_is_cleared() {
+    public async Task Picker_filters_and_preserves_selection_when_search_is_cleared() {
         using var context = CreateContext();
         var cut = context.Render<MaterialIconPickerDialog>(parameters => parameters
             .Add(component => component.SelectedIcon, AgentTeamIconCatalog.DefaultIcon));
         var selectedOption = AgentTeamIconCatalog.Options.Single(option => option.Icon == "engineering");
 
-        cut.Find("[data-testid='material-icon-picker-search']").Input(selectedOption.Label);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='material-icon-picker-search']").InputAsync(new ChangeEventArgs { Value = selectedOption.Label }));
         var card = Assert.Single(cut.FindAll("[data-testid='material-icon-picker-option']"));
         Assert.Equal(selectedOption.Label, card.GetAttribute("title"));
-        card.Click();
-        cut.Find("[data-testid='material-icon-picker-search']").Input(string.Empty);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='material-icon-picker-option']").ClickAsync(new()));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='material-icon-picker-search']").InputAsync(new ChangeEventArgs { Value = string.Empty }));
 
-        var selectedCard = Assert.Single(cut.FindAll("[data-testid='material-icon-picker-option'].border-sky-500"));
+        var selectedCard = Assert.Single(cut.FindAll("[data-testid='material-icon-picker-option'][aria-pressed='true']"));
         Assert.Equal(selectedOption.Label, selectedCard.GetAttribute("title"));
         Assert.Equal(AgentTeamIconCatalog.Options.Count, cut.FindAll("[data-testid='material-icon-picker-option']").Count);
         Assert.Empty(cut.FindAll(".rz-icon-fallback"));

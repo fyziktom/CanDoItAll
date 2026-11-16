@@ -11,7 +11,7 @@
                                     <StatusBadge Tone="info" Text="@Presentation.DefinitionCount.ToString()" />
                                     <Button Text="Templates"
                                             Icon="content_copy"
-                                            ButtonStyle="ButtonStyle.Light"
+                                            Tone="ButtonTone.Default"
                                             Click="OpenTemplatesAsync"
                                             Disabled="@Presentation.IsBusy"
                                             data-testid="workflows-open-template-catalogue" />
@@ -19,7 +19,7 @@
                             </Split>
 
                             <FormField Text="Search workflows">
-                                <TextBox Value="@Presentation.Search" ValueChanged="SearchAsync"
+                                <TextInput Value="@Presentation.Search" ValueChanged="SearchAsync"
                                          Placeholder="Name or description" Disabled="Presentation.IsBusy"
                                          data-testid="workflows-catalog-search" />
                             </FormField>
@@ -90,7 +90,7 @@
                                     @if (selectedDefinition.CanPublish) {
                                         <Button Text="Publish"
                                                 Icon="publish"
-                                                ButtonStyle="ButtonStyle.Primary"
+                                                Tone="ButtonTone.Primary"
                                                 Size="ButtonSize.Small"
                                                 Click="PublishAsync"
                                                 Disabled="@(Presentation.IsBusy || Presentation.Issues.Length > 0)"

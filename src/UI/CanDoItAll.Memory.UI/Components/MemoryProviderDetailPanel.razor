@@ -25,7 +25,7 @@
             <MemoryProviderFact Label="Driver" Value="@Provider.DriverKind.ToString()" />
             <MemoryProviderFact Label="Workspace" Value="@Provider.WorkspaceScope.ToString()" />
             <MemoryProviderFact Label="Protocol" Value="@Provider.ProtocolVersion.Value" />
-            <MemoryProviderFact Label="Fallback" Value="@Provider.DefaultPolicy.FallbackBehavior.ToString()" />
+            <MemoryProviderFact Label="Fallback" Value="@FormatFallback(Provider.DefaultPolicy.FallbackBehavior)" />
             <MemoryProviderFact Label="Sections" Value="@Provider.Limits.MaxContextSections.ToString()" />
             <MemoryProviderFact Label="Timeout" Value="@Provider.Limits.OperationTimeout.ToString()" />
         </div>
@@ -41,6 +41,12 @@
 </SurfaceCard>
 
 @code {
+    private static string FormatFallback(MemoryProviderFallbackBehavior behavior) => behavior switch {
+        MemoryProviderFallbackBehavior.DenyImplicitFallback => "No implicit fallback",
+        MemoryProviderFallbackBehavior.AllowDefaultProviderWhenNoAssignment => "Default when unassigned",
+        _ => throw new ArgumentOutOfRangeException(nameof(behavior), behavior, "Unsupported fallback behavior.")
+    };
+
     [Parameter]
     public MemoryProviderManagementProfile? Provider { get; set; }
 

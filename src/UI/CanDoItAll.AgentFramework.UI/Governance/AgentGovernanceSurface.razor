@@ -8,7 +8,7 @@
         <Stack GapScale="LayoutGap.Small">
         <ListPanelHeader Title="Execution runs">
             <Actions>
-                <Button Text="Refresh" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" Class="whitespace-nowrap shrink-0"
+                <Button Text="Refresh" Tone="ButtonTone.Default" Size="ButtonSize.Small" Class="whitespace-nowrap shrink-0"
                         Disabled="@State.IsBusy" Click="@(() => EmitAsync(new GovernanceIntent.Refresh()))" />
             </Actions>
         </ListPanelHeader>
@@ -18,9 +18,9 @@
     <ListContent>
         <Stack GapScale="LayoutGap.Medium">
             <SurfaceCard Soft="true">
-                <label class="cda-field-label" for="@filterId">Agent filter</label>
-                <InputSelect TValue="Guid?" id="@filterId" Value="@State.DesiredAgentId"
-                             ValueChanged="SelectAgentAsync" ValueExpression="@(() => State.DesiredAgentId)" class="cda-input">
+                <label class="cda-form-field__label" for="@filterId">Agent filter</label>
+                <SelectInput TValue="Guid?" id="@filterId" Value="@State.DesiredAgentId"
+                             ValueChanged="SelectAgentAsync" ValueExpression="@(() => State.DesiredAgentId)" class="form-input ui-input ui-input--outlined">
                     <option value="">All technical agents</option>
                     @if (State.DesiredAgentId is { } missing && Presentation.Agents.All(agent => agent.Id != missing)) {
                         <option @key="missing" value="@missing">Requested technical agent</option>
@@ -28,7 +28,7 @@
                     @foreach (var agent in Presentation.Agents) {
                         <option @key="agent.Id" value="@agent.Id">@agent.Label</option>
                     }
-                </InputSelect>
+                </SelectInput>
             </SurfaceCard>
             @if (State.Catalog.Error is { } catalogError) {
                 <div role="alert" data-testid="agents-governance-catalog-error">

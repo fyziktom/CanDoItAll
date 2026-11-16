@@ -76,9 +76,9 @@ public sealed class AgentEditorCoreRoundTripTests : AgentMemorySettingsPanelTest
         cut.Find("[data-testid='agents-catalog-summary']").Input("Revised summary");
         cut.Find("[data-testid='agents-catalog-instructions']").Input("Revised instructions");
         await Tab(AgentEditorSection.Runtime);
-        cut.FindComponent<InputSelect<AgentLifecycleStatus>>().Find("select").Change(nameof(AgentLifecycleStatus.Active));
-        cut.FindComponent<InputSelect<AgentWorkloadKind>>().Find("select").Change(nameof(AgentWorkloadKind.Programming));
-        cut.FindComponent<InputSelect<AgentChatHistoryMode>>().Find("select").Change(nameof(AgentChatHistoryMode.FrameworkManaged));
+        cut.FindComponent<SelectInput<AgentLifecycleStatus>>().Find("select").Change(nameof(AgentLifecycleStatus.Active));
+        cut.FindComponent<SelectInput<AgentWorkloadKind>>().Find("select").Change(nameof(AgentWorkloadKind.Programming));
+        cut.FindComponent<SelectInput<AgentChatHistoryMode>>().Find("select").Change(nameof(AgentChatHistoryMode.FrameworkManaged));
         await Tab(AgentEditorSection.Images);
         cut.Find("[data-testid='agents-catalog-image-generation-project-assets']").Change(true);
         await Tab(AgentEditorSection.Voice);

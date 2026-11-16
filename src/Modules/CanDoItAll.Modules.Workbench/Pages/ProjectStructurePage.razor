@@ -76,7 +76,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
 @{
     var hasVisibleAgentChat = FloatingAgentChats.Snapshot().VisibleChat is not null;
-    RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+    RenderFragment updatesToggle = @<Button Icon="history" Text="@(changeInbox.NeedsRefresh ? "Updates •" : "Updates")" Variant="Variant.Text" Tone="ButtonTone.Default"
                                              aria-label="Structure updates" title="Show structure updates" data-testid="project-structure-changes-toggle"
                                              Click="@(() => changeInbox.ToggleWindow())" />;
 }
@@ -89,7 +89,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     </ToolbarSupplement>
     <EditorActions>
         @if (composerOpening?.Session is { CanUndo: true } nodeEditor) {
-            <Button Text="Undo node comparison" ButtonStyle="ButtonStyle.Light" Disabled="@nodeEditor.Busy"
+            <Button Text="Undo node comparison" Tone="ButtonTone.Default" Disabled="@nodeEditor.Busy"
                     Click="@(() => ApplyNodeComparisonAsync(nodeEditor, undo: true))" data-testid="structure-node-compare-undo" />
         }
     </EditorActions>
@@ -1771,7 +1771,8 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         CancellationToken cancellationToken = default,
         Action<ProjectStructureNode>? onNodeCommitted = null,
         Func<bool>? canPublish = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        ProjectStructurePendingLinkWriter? writePendingLink = null) {
         await using var access = ObserveActionAccess();
         await access.StartAsync(_ => Task.CompletedTask, () => Task.CompletedTask);
         async ValueTask AuthorizeCreateAsync(CancellationToken token) {
@@ -1810,13 +1811,17 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 
         foreach (var pendingLink in prepared.PendingLinks)
         {
-            await ProjectWorkbenchService.LinkObjectsAsync(
-                mutationProjectId,
-                created.Id,
-                pendingLink.TargetNodeId,
-                pendingLink.LinkKind,
-                cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
-                authorizeCommit: AuthorizeCreateAsync);
+            if (writePendingLink is not null) {
+                await writePendingLink(created, pendingLink, createRequest, cancellationToken, AuthorizeCreateAsync);
+            } else {
+                await ProjectWorkbenchService.LinkObjectsAsync(
+                    mutationProjectId,
+                    created.Id,
+                    pendingLink.TargetNodeId,
+                    pendingLink.LinkKind,
+                    cancellationToken, createRequest.ExpectedProjectAdmission, createRequest.ProcessMutationAdmission,
+                    authorizeCommit: AuthorizeCreateAsync);
+            }
         }
 
         if (placementPlan.FollowUpMoves.Count > 0)
@@ -2022,7 +2027,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         {
             CanvasAuthoringMode.Dependency => "Dependency tool: drag normally to move nodes, or click a second node to say the selected node depends on it.",
             CanvasAuthoringMode.Delete => "Delete tool: hover a node or dependency arrow to highlight it, then click to delete. Connected branches may ask for confirmation.",
-            _ => "Click to select, Ctrl + Shift + click to multi-select, Alt-drag to marquee, drag to move, and right-click for grouped project actions."
+            _ => "Click to select, Ctrl+M for node actions, Ctrl+I to copy the node id, Ctrl+Shift+click to multi-select, Alt-drag to marquee, and right-click for grouped actions."
         };
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()
@@ -2203,7 +2208,7 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     }
 
     private Task<bool> PersistCapturedViewStateAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken = default)
-        => IsCurrentAction(context) ? TrackAuthoringOperationAsync(PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken)) : Task.FromResult(false);
+        => IsCurrentAction(context) ? PersistCapturedViewStateCoreAsync(context, stateJson, cancellationToken) : Task.FromResult(false);
 
     private async Task<bool> PersistCapturedViewStateCoreAsync(ProjectStructureActionContext context, string stateJson, CancellationToken cancellationToken) {
         await canvasViewStateCommitGate.WaitAsync(cancellationToken);
@@ -2229,14 +2234,16 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         persistCts?.Cancel();
     }
 
-    private async Task PersistCurrentViewStateAsync() {
+    private Task PersistCurrentViewStateAsync() => TrackAuthoringOperationAsync(PersistCurrentViewStateCoreAsync());
+
+    private async Task PersistCurrentViewStateCoreAsync() {
         CancelPendingCanvasViewStatePersistence();
         if (string.IsNullOrWhiteSpace(currentViewStateJson)) {
             return;
         }
         var context = CaptureActionContext();
         try {
-            await TrackAuthoringOperationAsync(PersistCapturedViewStateAsync(context, currentViewStateJson));
+            await PersistCapturedViewStateAsync(context, currentViewStateJson);
         } catch (Exception failure) {
             ReportCanvasPreferenceFailure(context, failure);
         }

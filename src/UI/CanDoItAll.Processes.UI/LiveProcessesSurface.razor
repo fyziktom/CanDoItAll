@@ -7,12 +7,9 @@
               Class="live-processes-page"
               data-testid="live-processes-page">
     <Header>
-        <Toolbar Class="live-processes-command-strip"
-                 data-testid="live-processes-command-strip">
-            <ToolbarRow Class="live-processes-command-strip__row">
-                <CompactStatStrip Class="min-w-0">
-                    <p class="cda-eyebrow whitespace-nowrap">Processes</p>
-                    <h1 class="live-processes-title">@Session.PageTitleText</h1>
+        <PageHeader Eyebrow="Processes" Title="@Session.PageTitleText" Compact="true">
+            <Stats>
+                <CompactStatStrip data-testid="live-processes-summary">
                     <CompactStat Tone="info"
                                  Text="@FormatCount(Session.Shell?.LiveRuns.ActiveRunCount ?? 0, "active", "active")"
                                  TooltipText="Process runs currently active in the live projection." />
@@ -31,9 +28,23 @@
                                      TooltipText="Hidden runs stay hidden in this browser on every live process page until they need attention again. Use the eye button to show them."
                                      data-testid="live-processes-hidden-count" />
                     }
+                    @if (Session.Shell is not null) {
+                        <CompactStat Label="definitions"
+                                     Value="@Session.DefinitionCountText"
+                                     TooltipText="@Session.Shell.DefinitionCatalog.Summary"
+                                     Tone="info" />
+                        <CompactStat Label="last event"
+                                     Value="@Session.LastEventText"
+                                     TooltipText="Most recent live-run event observed by the projection." />
+                        <CompactStat Label="backlog"
+                                     Value="@Session.Shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
+                                     TooltipText="@Session.Shell.Refresh.Summary"
+                                     Tone="@Session.ProjectionTone" />
+                    }
                 </CompactStatStrip>
-
-                <ToolbarActions Class="live-processes-command-strip__actions">
+            </Stats>
+            <Actions>
+                <ToolbarActions data-testid="live-processes-command-strip">
                     @if (Session.HiddenRelatedRunCount > 0) {
                         <PageHeaderActionButton Icon="visibility"
                                                 Label="@($"Show {Session.HiddenRelatedRunCount} hidden")"
@@ -56,8 +67,8 @@
                                             Click="Session.OpenDefinitionsAsync"
                                             data-testid="live-processes-open-definitions" />
                 </ToolbarActions>
-            </ToolbarRow>
-        </Toolbar>
+            </Actions>
+        </PageHeader>
     </Header>
 
     <ChildContent>
@@ -115,40 +126,11 @@
                               Title="Loading process projection"
                               Description="Collecting the current live run projection through the process application boundary." />
             } else if (Session.Shell is not null) {
-                <div class="live-processes-summary"
-                     data-testid="live-processes-summary">
-                    <CompactStatStrip>
-                        <CompactStat Label="definitions"
-                                     Value="@Session.DefinitionCountText"
-                                     TooltipText="@Session.Shell.DefinitionCatalog.Summary"
-                                     Tone="info" />
-                        <CompactStat Label="active"
-                                     Value="@Session.Shell.LiveRuns.ActiveRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Active process runs in this scope."
-                                     Tone="success" />
-                        <CompactStat Label="attention"
-                                     Value="@Session.Shell.LiveRuns.AttentionRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Runs that need operator attention."
-                                     Tone="warning" />
-                        <CompactStat Label="failed"
-                                     Value="@Session.Shell.LiveRuns.FailedRunCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="Failed runs in this scope."
-                                     Tone="danger" />
-                        <CompactStat Label="last event"
-                                     Value="@Session.LastEventText"
-                                     TooltipText="Most recent live-run event observed by the projection." />
-                        <CompactStat Label="backlog"
-                                     Value="@Session.Shell.Refresh.BacklogEventCount.ToString("N0", CultureInfo.CurrentCulture)"
-                                     TooltipText="@Session.Shell.Refresh.Summary"
-                                     Tone="@Session.ProjectionTone" />
-                    </CompactStatStrip>
-                </div>
-
                 <div class="live-processes-tabs-frame"
                      data-testid="live-processes-tabs-frame">
                     <Tabs SelectedIndex="@Session.SelectedTabIndex"
                           SelectedIndexChanged="Session.HandleTabChangedAsync"
-                          Variant="TabsVariant.WorkspacePrimary"
+                          Density="TabsDensity.Normal"
                           RenderMode="TabRenderMode.Client"
                           OverflowMode="TabsOverflowMode.Auto"
                           PanelOverflowMode="TabsPanelOverflowMode.Auto"
@@ -208,13 +190,13 @@
                     }
                     <Button Icon="folder"
                             Text="Files"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             data-testid="live-processes-run-files"
                             Click="@(() => Session.OpenRunFilesAsync(footerRun.RunId.Value))" />
                 }
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="Session.CloseRunDetailDialogAsync" />
             </Cluster>
@@ -244,12 +226,12 @@
                 @if (Session.AgentDetailAgent is { } footerAgent) {
                     <Button Icon="open_in_new"
                             Text="Process"
-                            ButtonStyle="ButtonStyle.Light"
+                            Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
                             Click="@(() => Session.OpenProcessControlAsync(footerAgent.RunId))" />
                 }
                 <Button Text="Close"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         Click="Session.CloseAgentDetailDialogAsync" />
             </Cluster>
@@ -350,9 +332,9 @@
                                                         data-testid="live-processes-agents">
         <SurfaceCard Soft="true">
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager context" />
-            <h2 class="text-base font-semibold text-slate-900">@Session.Shell!.AgentEntry.Label</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">@Session.Shell.AgentEntry.ContextKey</p>
-            <p class="mt-2 text-sm leading-6 text-slate-600">@Session.Shell.Runtime.AttentionSummary</p>
+            <h2 class="text-base font-semibold text-chrome-900">@Session.Shell!.AgentEntry.Label</h2>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">@Session.Shell.AgentEntry.ContextKey</p>
+            <p class="mt-2 text-sm leading-6 text-chrome-600">@Session.Shell.Runtime.AttentionSummary</p>
             <Cluster Gap="LayoutGap.Small"
                      Class="mt-4 flex-wrap">
                 <StatusBadge Tone="@(Session.Shell.AgentEntry.IsAvailable ? "success" : "warning")"
@@ -507,9 +489,9 @@
               ColumnTemplateXl="minmax(14rem,0.55fr) minmax(14rem,0.55fr) minmax(16rem,1fr) auto"
               AlignItems="AlignItems.End">
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-window")">History</label>
+                <label class="text-xs font-semibold text-[var(--tone-text-muted)]" for="@($"{testId}-window")">History</label>
                 <select id="@($"{testId}-window")"
-                        class="cda-input"
+                        class="form-input ui-input ui-input--outlined"
                         value="@Session.RuntimeHistoryWindow"
                         @onchange="Session.ChangeRuntimeHistoryWindowAsync"
                         data-testid="live-processes-history-window">
@@ -519,9 +501,9 @@
                 </select>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-status")">Status</label>
+                <label class="text-xs font-semibold text-[var(--tone-text-muted)]" for="@($"{testId}-status")">Status</label>
                 <select id="@($"{testId}-status")"
-                        class="cda-input"
+                        class="form-input ui-input ui-input--outlined"
                         value="@Session.StatusFilterValue"
                         @onchange="Session.ChangeStatusFilterAsync"
                         data-testid="live-processes-status-filter">
@@ -532,9 +514,9 @@
                 </select>
             </Stack>
             <Stack GapScale="LayoutGap.Tiny">
-                <label class="text-xs font-semibold text-slate-500" for="@($"{testId}-run")">Run</label>
+                <label class="text-xs font-semibold text-[var(--tone-text-muted)]" for="@($"{testId}-run")">Run</label>
                 <select id="@($"{testId}-run")"
-                        class="cda-input"
+                        class="form-input ui-input ui-input--outlined"
                         value="@Session.RuntimeRunSelectValue"
                         @onchange="Session.SelectRuntimeRunAsync"
                         data-testid="live-processes-run-filter">
@@ -543,7 +525,7 @@
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap justify-end">
                 <Button Icon="chevron_left"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Previous event page"
                         aria-label="Previous event page"
@@ -552,7 +534,7 @@
                         data-testid="live-processes-events-prev" />
                 <StatusBadge Tone="neutral" Text="@($"Page {Session.RuntimeEventPage + 1}")" />
                 <Button Icon="chevron_right"
-                        ButtonStyle="ButtonStyle.Light"
+                        Tone="ButtonTone.Default"
                         Size="ButtonSize.Small"
                         title="Next event page"
                         aria-label="Next event page"
@@ -570,7 +552,7 @@
             <Split Gap="LayoutGap.Small">
                 <Stack GapScale="LayoutGap.Tiny">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Needs attention" />
-                    <h2 class="text-base font-semibold text-slate-900">@FormatCount(Session.AttentionRuns.Count, "run needs operator action", "runs need operator action")</h2>
+                    <h2 class="text-base font-semibold text-chrome-900">@FormatCount(Session.AttentionRuns.Count, "run needs operator action", "runs need operator action")</h2>
                 </Stack>
                 <span title="Runs that need operator action stay listed until they are resolved, cancelled or hidden, even when they are older than the selected window."
                       data-testid="live-processes-attention-window">
@@ -621,7 +603,7 @@
                             @if (action is not null) {
                                 <Button Icon="replay"
                                         Text="@action.Label"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         Disabled="@Session.IsOperatorActionBusy(action)"
                                         IsBusy="@Session.IsOperatorActionBusy(action)"
@@ -630,19 +612,19 @@
                             }
                             <Button Icon="info"
                                     Text="Details"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Click="@(() => Session.OpenRunDetailDialogAsync(run))"
                                     data-testid="live-processes-attention-open-details" />
                             <Button Icon="forum"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Open process control"
                                     aria-label="Open process control"
                                     Click="@(() => Session.OpenProcessControlAsync(run.RunId.Value))" />
                             <Button Icon="visibility_off"
                                     Text="Hide run"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Hide this run group until it needs attention again"
                                     aria-label="Hide this run group"
@@ -673,7 +655,7 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current window" />
-                <h2 class="text-base font-semibold text-slate-900">@Session.Shell!.Runtime.Summary</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@Session.Shell!.Runtime.Summary</h2>
             </Stack>
             <StatusBadge Tone="info" Text="@FormatHistoryWindow(Session.Shell!.Runtime.HistoryWindow)" />
         </Split>
@@ -773,7 +755,7 @@
             @if (action is not null) {
                 <Button Icon="replay"
                         Text="@action.Label"
-                        ButtonStyle="ButtonStyle.Primary"
+                        Tone="ButtonTone.Primary"
                         Size="ButtonSize.Small"
                         title="@action.Label"
                         aria-label="@action.Label"
@@ -784,21 +766,21 @@
             }
             <Button Icon="open_in_new"
                     Text="Details"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open run details"
                     aria-label="Open run details"
                     Click="@(() => Session.OpenRunDetailDialogAsync(run))" />
             <Button Icon="forum"
                     Text="Control"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open process control"
                     aria-label="Open process control"
                     Click="@(() => Session.OpenProcessControlAsync(run.RunId.Value))" />
             <Button Icon="visibility_off"
                     Text="Hide run"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Hide this run group until it needs attention again"
                     aria-label="Hide this run group"
@@ -847,17 +829,17 @@
                     <Stack GapScale="LayoutGap.XSmall"
                            Class="live-processes-run-card__actions">
                         <Button Icon="open_in_new"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
-                                Class="cda-button--quick live-processes-run-card__open"
+                                Class="ui-button--quick live-processes-run-card__open"
                                 title="Open run details"
                                 aria-label="Open run details"
                                 Click="@(() => Session.OpenRunDetailDialogAsync(run))"
                                 data-testid="live-processes-run-open-details" />
                         <Button Icon="visibility_off"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
-                                Class="cda-button--quick live-processes-run-card__open"
+                                Class="ui-button--quick live-processes-run-card__open"
                                 title="Hide this run group until it needs attention again"
                                 aria-label="Hide this run group"
                                 Click="@(() => Session.HideRunGroupAsync(run))"
@@ -922,14 +904,14 @@
         <Cluster Gap="LayoutGap.XSmall" Class="live-processes-agent-card__actions">
             <Button Icon="info"
                     Text="Details"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     title="Open active agent details"
                     aria-label="Open active agent details"
                     Click="@(() => Session.OpenAgentDetailDialogAsync(agent))"
                     data-testid="live-processes-agent-open-details" />
             <Button Icon="open_in_new"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Class="live-processes-agent-card__open"
                     title="Open process control"
@@ -944,12 +926,12 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="History" />
-                <h2 class="text-base font-semibold text-slate-900">@($"{Session.Shell!.Runtime.Events.Count} event(s)")</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@($"{Session.Shell!.Runtime.Events.Count} event(s)")</h2>
             </Stack>
             <StatusBadge Tone="neutral" Text="@FormatHistoryWindow(Session.Shell!.Runtime.HistoryWindow)" />
         </Split>
         @if (Session.Shell!.Runtime.Events.Count == 0) {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime events match the selected history filters.</p>
+            <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No runtime events match the selected history filters.</p>
         } else {
             <Stack GapScale="LayoutGap.Small" Class="mt-4">
                 @foreach (var runtimeEvent in Session.Shell.Runtime.Events) {
@@ -958,9 +940,9 @@
                             @RenderEventRunTitleContent(runtimeEvent)
                             <StatusBadge Tone="@ResolveEventTone(runtimeEvent)" Text="@runtimeEvent.EventType" />
                             <StatusBadge Tone="neutral" Text="@runtimeEvent.Sensitivity.ToString()" />
-                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            <span class="text-xs text-[var(--tone-text-muted)]">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@runtimeEvent.Summary</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@runtimeEvent.Summary</p>
                     </div>
                 }
             </Stack>
@@ -976,12 +958,12 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool types" />
-                <h2 class="text-base font-semibold text-slate-900">@FormatCount(toolFamilies.Count, "family", "families")</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@FormatCount(toolFamilies.Count, "family", "families")</h2>
             </Stack>
             <StatusBadge Tone="info" Text="@FormatCount(Session.Shell!.Runtime.Stats.ToolCallCount, "call", "calls")" />
         </Split>
         @if (toolFamilies.Count == 0) {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No tool families are present in this history window.</p>
+            <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No tool families are present in this history window.</p>
         } else {
             <Grid Gap="LayoutGap.Small"
                   ColumnsXl="2"
@@ -1015,12 +997,12 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Tool cards" />
-                <h2 class="text-base font-semibold text-slate-900">@FormatCount(Session.Shell!.Runtime.ToolUsage.Count, "tool", "tools")</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@FormatCount(Session.Shell!.Runtime.ToolUsage.Count, "tool", "tools")</h2>
             </Stack>
             <StatusBadge Tone="neutral" Text="@FormatHistoryWindow(Session.Shell!.Runtime.HistoryWindow)" />
         </Split>
         @if (Session.Shell!.Runtime.ToolUsage.Count == 0) {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No runtime tool usage is present in this history window.</p>
+            <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No runtime tool usage is present in this history window.</p>
         } else {
             <Grid Gap="LayoutGap.Small"
                   ColumnsXl="2"
@@ -1093,7 +1075,7 @@
                              data-testid="live-processes-run-detail-decision">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator decision" />
                             <p>@FirstNonEmpty(primaryAction.RequiredOperatorDecision, primaryAction.Summary)</p>
-                            <TextArea Value="@Session.GetOperatorActionNote(primaryAction)"
+                            <TextAreaInput Value="@Session.GetOperatorActionNote(primaryAction)"
                                       Change="@((string? value) => Session.SetOperatorActionNote(primaryAction, value))"
                                       Rows="4"
                                       Placeholder="Optional note for the manager or next agent"
@@ -1102,7 +1084,7 @@
                             <Cluster Gap="LayoutGap.Small" Class="live-processes-run-detail-decision__actions">
                                 <Button Icon="replay"
                                         Text="@primaryAction.Label"
-                                        ButtonStyle="ButtonStyle.Primary"
+                                        Tone="ButtonTone.Primary"
                                         Size="ButtonSize.Small"
                                         Disabled="@Session.IsOperatorActionBusy(primaryAction)"
                                         IsBusy="@Session.IsOperatorActionBusy(primaryAction)"
@@ -1110,7 +1092,7 @@
                                         data-testid="live-processes-dialog-request-rework" />
                                 <Button Icon="science"
                                         Text="Run tests"
-                                        ButtonStyle="ButtonStyle.Light"
+                                        Tone="ButtonTone.Default"
                                         Size="ButtonSize.Small"
                                         Click="@(() => Session.OpenProcessControlAsync(primaryAction.RunId))" />
                             </Cluster>
@@ -1158,16 +1140,16 @@
                         <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                             @RenderRunTitleContent(run)
                             <StatusBadge Tone="@ResolveRunStatusTone(run.Status)" Text="@runtimeEvent.EventType" />
-                            <span class="text-xs text-slate-500">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                            <span class="text-xs text-[var(--tone-text-muted)]">@runtimeEvent.OccurredAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">@runtimeEvent.Summary</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-600">@runtimeEvent.Summary</p>
                     </div>
                 }
             </SurfaceCard>
             <SurfaceCard Soft="true">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Incidents" />
                 @if (run.Incidents.Count == 0) {
-                    <p class="mt-3 text-sm leading-6 text-slate-500">No incidents are attached to this run.</p>
+                    <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No incidents are attached to this run.</p>
                 } else {
                     @foreach (var incident in run.Incidents.OrderByDescending(item => item.RaisedAtUtc)) {
                         <div class="live-processes-event-row">
@@ -1175,9 +1157,9 @@
                                 <StatusBadge Tone="warning" Text="@incident.Severity" />
                                 <StatusBadge Tone="neutral" Text="@incident.Status" />
                             </Cluster>
-                            <p class="mt-2 text-sm font-semibold text-slate-900">@incident.Classification</p>
-                            <p class="mt-1 text-sm leading-6 text-slate-600">@incident.SafeSummary</p>
-                            <p class="mt-1 text-xs text-slate-500">@incident.DiagnosticReference</p>
+                            <p class="mt-2 text-sm font-semibold text-chrome-900">@incident.Classification</p>
+                            <p class="mt-1 text-sm leading-6 text-chrome-600">@incident.SafeSummary</p>
+                            <p class="mt-1 text-xs text-[var(--tone-text-muted)]">@incident.DiagnosticReference</p>
                         </div>
                     }
                 }
@@ -1185,17 +1167,17 @@
             <SurfaceCard Soft="true">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Manager messages" />
                 @if (Session.ResolveManagerMessages(run.RunId).Count == 0) {
-                    <p class="mt-3 text-sm leading-6 text-slate-500">No manager messages are attached to this run.</p>
+                    <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No manager messages are attached to this run.</p>
                 } else {
                     @foreach (var message in Session.ResolveManagerMessages(run.RunId)) {
                         <div class="live-processes-event-row">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                 <StatusBadge Tone="@ResolveManagerMessageTone(message)" Text="@message.Kind" />
-                                <span class="text-xs text-slate-500">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                <span class="text-xs text-[var(--tone-text-muted)]">@message.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                             </Cluster>
-                            <p class="mt-2 text-sm leading-6 text-slate-600">@message.Summary</p>
+                            <p class="mt-2 text-sm leading-6 text-chrome-600">@message.Summary</p>
                             @if (!string.IsNullOrWhiteSpace(message.RestrictedDiagnosticReference)) {
-                                <p class="mt-1 text-xs text-slate-500">@message.RestrictedDiagnosticReference</p>
+                                <p class="mt-1 text-xs text-[var(--tone-text-muted)]">@message.RestrictedDiagnosticReference</p>
                             }
                         </div>
                     }
@@ -1210,13 +1192,13 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Operator actions" />
-                <h2 class="text-base font-semibold text-slate-900">@FormatCount(run.OperatorActions.Count, "available action", "available actions")</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@FormatCount(run.OperatorActions.Count, "available action", "available actions")</h2>
             </Stack>
             <StatusBadge Tone="@(run.OperatorActions.Count > 0 ? "warning" : "success")"
                          Text="@(run.OperatorActions.Count > 0 ? "Actionable" : "No action needed")" />
         </Split>
         @if (run.OperatorActions.Count == 0) {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No blocked or failed executable step is waiting for operator rework.</p>
+            <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No blocked or failed executable step is waiting for operator rework.</p>
         } else {
             <div class="live-processes-operator-action-grid">
                 @foreach (var action in run.OperatorActions) {
@@ -1242,7 +1224,7 @@
                             @if (!string.IsNullOrWhiteSpace(action.DisabledReason)) {
                                 <p class="live-processes-operator-action-row__disabled">@action.DisabledReason</p>
                             }
-                            <TextArea Value="@Session.GetOperatorActionNote(action)"
+                            <TextAreaInput Value="@Session.GetOperatorActionNote(action)"
                                       Change="@((string? value) => Session.SetOperatorActionNote(action, value))"
                                       Rows="3"
                                       Placeholder="Optional note for the manager or next agent"
@@ -1251,7 +1233,7 @@
                         </div>
                         <Button Icon="replay"
                                 Text="@action.Label"
-                                ButtonStyle="ButtonStyle.Primary"
+                                Tone="ButtonTone.Primary"
                                 Size="ButtonSize.Small"
                                 Disabled="@(!action.IsEnabled || Session.IsOperatorActionBusy(action))"
                                 IsBusy="@Session.IsOperatorActionBusy(action)"
@@ -1269,7 +1251,7 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Current step" />
-                <h2 class="text-base font-semibold text-slate-900">@step.StepKey</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@step.StepKey</h2>
             </Stack>
             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                 <StatusBadge Tone="info" Text="@step.StepStatus" />
@@ -1280,7 +1262,7 @@
                 }
             </Cluster>
         </Split>
-        <p class="mt-3 text-sm leading-6 text-slate-700">@step.Summary</p>
+        <p class="mt-3 text-sm leading-6 text-chrome-700">@step.Summary</p>
         @if (step.Diagnostics.Count > 0) {
             <Stack GapScale="LayoutGap.XSmall" Class="mt-4">
                 @foreach (var diagnostic in step.Diagnostics) {
@@ -1289,7 +1271,7 @@
                             <StatusBadge Tone="warning" Text="@diagnostic.Code" />
                             <StatusBadge Tone="neutral" Text="@diagnostic.Category" />
                         </Cluster>
-                        <p class="mt-2 text-sm leading-6 text-slate-700">@diagnostic.SafeSummary</p>
+                        <p class="mt-2 text-sm leading-6 text-chrome-700">@diagnostic.SafeSummary</p>
                         @if (diagnostic.OperatorDetails is { } details) {
                             <Cluster Gap="LayoutGap.XSmall" Class="mt-2 flex-wrap">
                                 <StatusBadge Tone="info" Text="@details.GateId" />
@@ -1306,7 +1288,7 @@
                                     <StatusBadge Tone="neutral" Text="@string.Join(", ", details.ReceiptRuleIds)" />
                                 }
                             </Cluster>
-                            <p class="mt-2 text-sm leading-6 text-slate-700">@details.NextAction</p>
+                            <p class="mt-2 text-sm leading-6 text-chrome-700">@details.NextAction</p>
                         }
                     </div>
                 }
@@ -1320,12 +1302,12 @@
         <Split Gap="LayoutGap.Small">
             <Stack GapScale="LayoutGap.Tiny">
                 <TextBlock TextStyle="TextStyle.Eyebrow" Value="Child runs" />
-                <h2 class="text-base font-semibold text-slate-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h2>
+                <h2 class="text-base font-semibold text-chrome-900">@FormatCount(run.WaitingOnChildRuns.Count, "wait", "waits")</h2>
             </Stack>
             <StatusBadge Tone="info" Text="Subprocess" />
         </Split>
         @if (run.WaitingOnChildRuns.Count == 0) {
-            <p class="mt-3 text-sm leading-6 text-slate-500">No parent step is waiting on an active child process run.</p>
+            <p class="mt-3 text-sm leading-6 text-[var(--tone-text-muted)]">No parent step is waiting on an active child process run.</p>
         } else {
             <Stack GapScale="LayoutGap.Small" Class="mt-4">
                 @foreach (var wait in run.WaitingOnChildRuns) {
@@ -1339,10 +1321,10 @@
                                         <StatusBadge Tone="warning" Text="@wait.ChildStepStatus" />
                                     }
                                 </Cluster>
-                                <p class="mt-2 text-sm leading-6 text-slate-700">@wait.Summary</p>
+                                <p class="mt-2 text-sm leading-6 text-chrome-700">@wait.Summary</p>
                             </div>
                             <Button Icon="open_in_new"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     title="Open child run"
                                     aria-label="Open child run"
@@ -1405,9 +1387,9 @@
                         <div class="live-processes-event-row">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                 <StatusBadge Tone="info" Text="@activity.Phase" />
-                                <span class="text-xs text-slate-500">@activity.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                <span class="text-xs text-[var(--tone-text-muted)]">@activity.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                             </Cluster>
-                            <p class="mt-2 text-sm leading-6 text-slate-600">@activity.Message</p>
+                            <p class="mt-2 text-sm leading-6 text-chrome-600">@activity.Message</p>
                         </div>
                     }
                 }
@@ -1421,19 +1403,19 @@
                         <div class="live-processes-event-row">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                 <StatusBadge Tone="warning" Text="@tool.ToolName" />
-                                <span class="text-xs text-slate-500">@tool.CompletedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                <span class="text-xs text-[var(--tone-text-muted)]">@tool.CompletedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                             </Cluster>
-                            <p class="mt-2 text-sm leading-6 text-slate-600">@FirstNonEmpty(tool.ExitSummary, tool.RequestSummary)</p>
+                            <p class="mt-2 text-sm leading-6 text-chrome-600">@FirstNonEmpty(tool.ExitSummary, tool.RequestSummary)</p>
                         </div>
                     }
                     @foreach (var artifact in agent.Artifacts.OrderByDescending(item => item.CreatedAtUtc)) {
                         <div class="live-processes-event-row">
                             <Cluster Gap="LayoutGap.XSmall" Class="flex-wrap">
                                 <StatusBadge Tone="info" Text="@artifact.ArtifactKind" />
-                                <span class="text-xs text-slate-500">@artifact.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
+                                <span class="text-xs text-[var(--tone-text-muted)]">@artifact.CreatedAtUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture)</span>
                             </Cluster>
-                            <p class="mt-2 text-sm font-semibold text-slate-900">@artifact.DisplayName</p>
-                            <p class="mt-1 text-xs text-slate-500">@artifact.RelativePath</p>
+                            <p class="mt-2 text-sm font-semibold text-chrome-900">@artifact.DisplayName</p>
+                            <p class="mt-1 text-xs text-[var(--tone-text-muted)]">@artifact.RelativePath</p>
                         </div>
                     }
                 }
@@ -1802,8 +1784,8 @@
         string tone,
         string summary) => @<SurfaceCard Soft="true">
         <TextBlock TextStyle="TextStyle.Eyebrow" Value="@label" />
-        <h3 class="text-base font-semibold text-slate-900">@value</h3>
-        <p class="mt-2 text-sm leading-6 text-slate-600">@summary</p>
+        <h3 class="text-base font-semibold text-chrome-900">@value</h3>
+        <p class="mt-2 text-sm leading-6 text-chrome-600">@summary</p>
         <StatusBadge Tone="@tone" Text="@label" />
     </SurfaceCard>;
 

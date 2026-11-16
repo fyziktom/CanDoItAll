@@ -6,6 +6,23 @@
     grid-column: 1 / -1;
 }
 
+.project-structure-task-create-dialog__section[hidden],
+.project-structure-task-create-dialog__section > summary[hidden] {
+    display: none;
+}
+
+.project-structure-task-create-dialog__section > summary {
+    padding-block: 0.6rem;
+    color: var(--tone-text-strong);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.project-structure-task-create-dialog__section > summary:focus-visible {
+    outline: 2px solid var(--tone-info-solid-bg);
+    outline-offset: 2px;
+}
+
 @media (max-width: 760px) {
     .project-structure-task-create-dialog__grid {
         grid-template-columns: minmax(0, 1fr) !important;

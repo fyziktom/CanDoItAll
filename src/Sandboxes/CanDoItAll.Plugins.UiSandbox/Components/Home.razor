@@ -6,7 +6,7 @@
         <FormSection Title="Plugins sandbox" Description="The complete production renderer with deterministic local storage and harmless effects.">
             <Cluster Gap="LayoutGap.Small">
                 <label class="cda-field-label" for="plugins-scenario">Scenario</label>
-                <select id="plugins-scenario" class="cda-input" style="width: 18rem; max-width: 100%;" data-testid="plugins-scenario" @onchange="ChangeScenarioAsync">
+                <select id="plugins-scenario" class="form-input ui-input ui-input--outlined" style="width: 18rem; max-width: 100%;" data-testid="plugins-scenario" @onchange="ChangeScenarioAsync">
                     @foreach (var scenario in Enum.GetValues<PluginScenario>()) {
                         <option value="@scenario">@scenario</option>
                     }
@@ -14,7 +14,7 @@
                 <Button Text="Release pending operations" data-testid="plugins-release" Click="Release" />
                 <Button Text="Restore settings reads" data-testid="plugins-restore-reads" Click="RestoreReadsAsync" />
                 <label class="cda-field-label" for="plugins-catalog-scenario">Catalog visibility</label>
-                <select id="plugins-catalog-scenario" class="cda-input" style="width: 10rem;" data-testid="plugins-catalog-scenario"
+                <select id="plugins-catalog-scenario" class="form-input ui-input ui-input--outlined" style="width: 10rem;" data-testid="plugins-catalog-scenario"
                         value="@host.Store.CatalogScenario" @onchange="ChangeCatalogAsync">
                     @foreach (var scenario in Enum.GetValues<PluginCatalogScenario>()) {
                         <option value="@scenario">@scenario</option>

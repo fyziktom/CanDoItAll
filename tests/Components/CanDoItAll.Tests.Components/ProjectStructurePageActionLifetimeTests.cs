@@ -6,11 +6,13 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Projects.Pages;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Operators.UI.Secrets;
 using Microsoft.AspNetCore.Components;
@@ -243,8 +245,8 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
     [InlineData(false)]
     [InlineData(true)]
     public async Task Secret_creation_retains_original_vault_receipt_without_post_retirement_reference(bool recreate) {
-        var vault = new VaultGate();
-        await using var harness = await CreateHarnessAsync(vault: vault);
+        var secrets = new SecretSaveGate();
+        await using var harness = await CreateHarnessAsync(secrets: secrets);
         var original = await CreateTargetAsync(harness, "Original secret project");
         var next = await CreateTargetAsync(harness, "Next secret project");
         var cut = Render(harness, original.ProjectId);
@@ -254,21 +256,24 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-external-reference']").InputAsync(new ChangeEventArgs { Value = "Original note" }));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-create-name']").InputAsync(new ChangeEventArgs { Value = "Original UI secret" }));
         await cut.InvokeAsync(() => cut.Find("input[data-testid='project-structure-secret-create-value']").ChangeAsync(new ChangeEventArgs { Value = "synthetic-component-secret" }));
-        vault.Armed = true;
-        var pending = cut.Find("[data-testid='project-structure-secret-create-use']").ClickAsync(new MouseEventArgs());
+        secrets.Armed = true;
+        var pending = cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-create-use']").ClickAsync(new MouseEventArgs()));
         try {
-            await vault.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await secrets.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await using (var committed = await harness.Context.Services.GetRequiredService<IDbContextFactory<SecurityDbContext>>().CreateDbContextAsync()) {
+                Assert.True(await committed.Set<SecretRecord>().AnyAsync(row => row.Name == "Original UI secret"));
+            }
             if (recreate) {
-                await RecreateProjectAsync(harness, original);
+                await RecreateProjectAsync(harness, original).WaitAsync(TimeSpan.FromSeconds(20));
             }
             Navigate(harness, cut, next.ProjectId);
             await OpenSecretCreateAsync(cut, next.Node.Id);
             await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-purpose']").InputAsync(new ChangeEventArgs { Value = "New purpose" }));
             await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-secret-create-name']").InputAsync(new ChangeEventArgs { Value = "New unfinished secret" }));
         } finally {
-            vault.Release.TrySetResult();
+            secrets.Release.TrySetResult();
         }
-        await pending;
+        await pending.WaitAsync(TimeSpan.FromSeconds(20));
 
         await using var security = await harness.Context.Services.GetRequiredService<IDbContextFactory<SecurityDbContext>>().CreateDbContextAsync();
         var secret = Assert.Single(await security.Set<SecretRecord>().AsNoTracking().Where(row => row.Name == "Original UI secret").ToListAsync());
@@ -377,9 +382,15 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
     }
 
     private static Task<ComponentTestHarness> CreateHarnessAsync(MutationGate? mutation = null, TextGeneratorGate? generator = null,
-        ProviderGate? provider = null, VaultGate? vault = null, SecretReadGate? read = null)
+        ProviderGate? provider = null, SecretSaveGate? secrets = null, SecretReadGate? read = null)
         => ComponentTestHarness.CreateAsync(services => {
-            services.Replace(ServiceDescriptor.Singleton<ISecretVault>(vault is null ? new InMemorySecretVault() : vault));
+            services.Replace(ServiceDescriptor.Singleton<ISecretVault, InMemorySecretVault>());
+            if (secrets is not null) {
+                services.AddScoped<IWorkspaceSecretsOwner>(provider => {
+                    secrets.Inner = new WorkspaceSecretsOwner(provider.GetRequiredService<SecretService>(), provider.GetRequiredService<ICanonicalRuntimeDatabase>());
+                    return secrets;
+                });
+            }
             if (mutation is not null) {
                 services.AddSingleton<IDbContextFactory<WorkbenchDbContext>>(serviceProvider => new PooledDbContextFactory<WorkbenchDbContext>(
                     new DbContextOptionsBuilder<WorkbenchDbContext>(serviceProvider.GetRequiredService<DbContextOptions<WorkbenchDbContext>>())
@@ -590,21 +601,24 @@ public sealed partial class ProjectStructurePageActionLifetimeTests {
         }
     }
 
-    private sealed class VaultGate : ISecretVault {
-        private readonly InMemorySecretVault inner = new();
+    private sealed class SecretSaveGate : IWorkspaceSecretsOwner {
+        public IWorkspaceSecretsOwner Inner { private get; set; } = default!;
+        public bool IsCurrent => Inner.IsCurrent;
         public bool Armed { get; set; }
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public async Task SetAsync(string key, string value, CancellationToken ct = default) {
-            await inner.SetAsync(key, value, ct);
+        public async Task<SettingsWriteResult<Guid>> SaveAsync(SecretEditorModel command, CancellationToken cancellationToken) {
+            var result = await Inner.SaveAsync(command, cancellationToken);
             if (Armed) {
                 Armed = false;
                 Entered.TrySetResult();
-                await Release.Task.WaitAsync(ct);
+                await Release.Task.WaitAsync(cancellationToken);
             }
+            return result;
         }
-        public Task<string?> GetAsync(string key, CancellationToken ct = default) => inner.GetAsync(key, ct);
-        public Task DeleteAsync(string key, CancellationToken ct = default) => inner.DeleteAsync(key, ct);
+        public Task<IReadOnlyList<SecretListItem>> ListAsync(CancellationToken cancellationToken) => Inner.ListAsync(cancellationToken);
+        public Task<SecretEditorModel?> GetAsync(Guid id, CancellationToken cancellationToken) => Inner.GetAsync(id, cancellationToken);
+        public Task<SettingsWriteResult<Guid>> DeleteAsync(SecretMetadataCondition expected, CancellationToken cancellationToken) => Inner.DeleteAsync(expected, cancellationToken);
     }
 
     private sealed class SecretReadGate : DbCommandInterceptor {

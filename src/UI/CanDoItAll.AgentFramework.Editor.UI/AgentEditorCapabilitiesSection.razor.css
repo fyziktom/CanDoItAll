@@ -1,6 +1,6 @@
 .agent-details-dialog__capability-actions {
-    border: 1px solid rgb(226 232 240);
-    background: rgb(248 250 252);
+    border: 1px solid var(--tone-border);
+    background: var(--tone-surface-soft);
     border-radius: 0.75rem;
     padding: 0.65rem;
 }

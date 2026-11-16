@@ -9,7 +9,7 @@
         </Alert>
         <Button Text="Retry sharing read" Click="@(() => View.RetryAsync(origin))" Disabled="@state.Loading" data-testid="shared-provider-retry" />
         @if (state.CanAcknowledgeCurrent) {
-            <Button Text="Acknowledge current sharing state" ButtonStyle="ButtonStyle.Light"
+            <Button Text="Acknowledge current sharing state" Tone="ButtonTone.Default"
                     Click="@(() => View.AcknowledgeCurrentAsync(origin))" data-testid="shared-provider-acknowledge-current" />
         }
     }
@@ -43,8 +43,8 @@
             Size="ModalSize.Compact" OnClose="@(() => View.CloseConfirmation(confirmation))" TestId="shared-provider-confirmation-dialog">
         <Footer>
             <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                <Button Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@(() => View.CloseConfirmation(confirmation))" />
-                <Button Text="@confirmation.ActionText" ButtonStyle="ButtonStyle.Danger" Disabled="state.WritesBlocked"
+                <Button Text="Cancel" Tone="ButtonTone.Default" Click="@(() => View.CloseConfirmation(confirmation))" />
+                <Button Text="@confirmation.ActionText" Tone="ButtonTone.Danger" Disabled="state.WritesBlocked"
                         Click="@(() => View.ConfirmAsync(confirmation))" data-testid="shared-provider-confirmation-apply" />
             </Cluster>
         </Footer>

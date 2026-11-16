@@ -7,11 +7,11 @@
     <TextBlock TextStyle="TextStyle.Body2" Value="Simulation using the actual profile and transfer renderers. No database, driver, credential store or process is registered." />
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
         <label>Scenario
-            <InputSelect TValue="DataSourcesScenario" Value="scenario" ValueChanged="ChangeScenario" ValueExpression="@(() => scenario)" data-testid="data-sources-scenario">
+            <SelectInput TValue="DataSourcesScenario" Value="scenario" ValueChanged="ChangeScenario" ValueExpression="@(() => scenario)" data-testid="data-sources-scenario">
                 @foreach (var value in Enum.GetValues<DataSourcesScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
         </label>
         <Button Text="Release delayed operation" Click="Release" data-testid="data-sources-release" />
         <Button Text="Allow observation" Click="AllowObservation" data-testid="data-sources-allow-observation" />

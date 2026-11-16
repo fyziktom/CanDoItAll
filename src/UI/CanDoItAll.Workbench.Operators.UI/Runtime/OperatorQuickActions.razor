@@ -11,7 +11,7 @@
                      DataTestId="project-structure-node-quick-actions" Close="close">
     <Actions>
         <Pill Tone="PillTone.Info" Text="@view.NodeLabel" />
-        <Button Text="Close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="close" />
+        <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="close" />
     </Actions>
     <Body>
         <div class="operator-quick-actions__body">
@@ -25,7 +25,7 @@
             }
             <Grid Columns="2" Gap="LayoutGap.Medium" Class="operator-quick-actions__grid">
                 @foreach (var action in view.Actions) {
-                    <Button ButtonStyle="@Style(action.Tone)" Variant="Variant.Outlined" Class="operator-quick-actions__card"
+                    <Button Tone="@Style(action.Tone)" Variant="Variant.Outlined" Class="operator-quick-actions__card"
                             data-testid="@action.TestId" Disabled="@(action.IsDisabled || submitting == view.OpeningId)"
                             Click="@(() => DispatchAsync(view, action, execute))">
                         <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Center">
@@ -60,11 +60,11 @@
             }
         }
     }
-    private static ButtonStyle Style(OperatorActionTone tone) => tone switch {
-        OperatorActionTone.Information => ButtonStyle.Info,
-        OperatorActionTone.Success => ButtonStyle.Success,
-        OperatorActionTone.Warning => ButtonStyle.Warning,
-        OperatorActionTone.Danger => ButtonStyle.Danger,
-        _ => ButtonStyle.Primary
+    private static ButtonTone Style(OperatorActionTone tone) => tone switch {
+        OperatorActionTone.Information => ButtonTone.Info,
+        OperatorActionTone.Success => ButtonTone.Success,
+        OperatorActionTone.Warning => ButtonTone.Warning,
+        OperatorActionTone.Danger => ButtonTone.Danger,
+        _ => ButtonTone.Primary
     };
 }

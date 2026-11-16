@@ -3,11 +3,11 @@
 <Stack Class="p-4" GapScale="LayoutGap.Small" data-testid="editor-sandbox" data-interactive="@interactive.ToString().ToLowerInvariant()">
     <FormSection Title="Agent Editor Completion A2" Description="One ten-section editor with the real memory rows, root list, storage chooser, capability list and confirmations. Native effects are simulated with in-memory fixture state.">
         <Cluster Gap="LayoutGap.Small">
-            <InputSelect @bind-Value="scenario" aria-label="Scenario" data-testid="editor-scenario">
+            <SelectInput @bind-Value="scenario" aria-label="Scenario" data-testid="editor-scenario">
                 @foreach (var value in Enum.GetValues<AgentEditorScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Reset scenario" Click="() => revision++" data-testid="editor-reset" />
             <Button Text="Two independent editors" Click="() => twoEditors = !twoEditors" data-testid="editor-two" />
         </Cluster>

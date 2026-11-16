@@ -59,6 +59,9 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
 
             // Task 1: the seeded person, chosen in the real assignee picker. The organization is never offered.
             var createDialog = await OpenTaskCreateDialogAsync(page, seed.ProjectId);
+            await page.GetByTestId("project-structure-task-create-title").FillAsync(keptTitle);
+            await page.GetByTestId("project-structure-task-create-notes").FillAsync($"Stays assigned to the first person {suffix}");
+            await createDialog.GetByTestId("project-structure-task-steps").GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Assignment") }).ClickAsync();
             var pickerSearch = page.GetByTestId("project-structure-task-create-assignee-picker-search");
             var picker = page.GetByTestId("project-structure-task-create-assignee-picker");
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-assignee-picker-filter-person")).ToBeVisibleAsync();
@@ -72,8 +75,6 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             await Assertions.Expect(picker.Locator($"[data-testid*='{seed.OrganizationId:N}']")).ToHaveCountAsync(0);
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifactsDir, "01-organization-not-offered-1600.png") });
 
-            await page.GetByTestId("project-structure-task-create-title").FillAsync(keptTitle);
-            await page.GetByTestId("project-structure-task-create-notes").FillAsync($"Stays assigned to the first person {suffix}");
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-effort")).ToHaveValueAsync("8");
             await pickerSearch.FillAsync(seed.PersonOneName);
             await PersonOption(page, seed.PersonOneId).ClickAsync();
@@ -105,6 +106,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             // Task 2: a synchronized AI agent. The owner stores the agent's CRM party, never the technical agent id.
             createDialog = await OpenTaskCreateDialogAsync(page, seed.ProjectId);
             await page.GetByTestId("project-structure-task-create-title").FillAsync(agentTitle);
+            await createDialog.GetByTestId("project-structure-task-steps").GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Assignment") }).ClickAsync();
             await pickerSearch.FillAsync(seed.AgentName);
             await AgentOption(page, seed.AgentPartyId).ClickAsync();
             await Assertions.Expect(AgentOption(page, seed.AgentPartyId)).ToHaveAttributeAsync("aria-pressed", "true");
@@ -128,6 +130,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
             // Task 3: created for the first person, then replaced and cleared through the edit dialog.
             createDialog = await OpenTaskCreateDialogAsync(page, seed.ProjectId);
             await page.GetByTestId("project-structure-task-create-title").FillAsync(lifecycleTitle);
+            await createDialog.GetByTestId("project-structure-task-steps").GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Assignment") }).ClickAsync();
             await pickerSearch.FillAsync(seed.PersonOneName);
             await PersonOption(page, seed.PersonOneId).ClickAsync();
             await Assertions.Expect(page.GetByTestId("project-structure-task-create-estimate-cost")).ToHaveValueAsync("320");
@@ -357,6 +360,7 @@ public sealed class ProjectStructureTaskAssigneeJourneyTests
         await page.GetByTestId("project-structure-outline-context-action-edit").ClickAsync();
         var dialog = page.GetByTestId("project-structure-task-edit-dialog");
         await Assertions.Expect(dialog).ToBeVisibleAsync();
+        await dialog.GetByTestId("project-structure-task-assignment-section").Locator("summary").ClickAsync();
         return dialog;
     }
 

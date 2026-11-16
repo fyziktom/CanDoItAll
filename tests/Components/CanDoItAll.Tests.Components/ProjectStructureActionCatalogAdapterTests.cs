@@ -184,6 +184,10 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         Assert.Contains(actions, action => action.ActionId == "open-local" && action.Label == "Open in Explorer");
         Assert.DoesNotContain(actions, action => action.ActionId == ProjectStructureActionCatalogAdapter.EditActionId);
         Assert.DoesNotContain(actions, action => action.ActionId is "delete" or "reconnect" or "disconnect");
+        var surface = new ProjectStructureSurface(Guid.NewGuid(), "Read-only projected folder", [node], [], null);
+        var projected = Assert.Single(new ProjectStructureGraphAdapter().BuildSurface(surface, new(), new(), adapter).Nodes);
+        Assert.Equal(["copy-id", "copy-info"], projected.ToolbarActions.Select(action => action.ActionId));
+        Assert.Equal(CanvasWorkbenchKeyboardCommand.CopyIdentifier, projected.ToolbarActions[0].KeyboardCommand);
     }
 
     [Fact]

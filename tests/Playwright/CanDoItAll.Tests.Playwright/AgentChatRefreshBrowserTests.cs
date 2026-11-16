@@ -112,6 +112,8 @@ public sealed class AgentChatRefreshBrowserTests {
             passed = true;
 
             async Task ReopenActiveAsync() {
+                // The navigation toggle is enabled only after the shell's interactive browser round-trip.
+                await Assertions.Expect(page.GetByTestId("shell-navigation-toggle")).ToBeEnabledAsync();
                 var catalog = page.GetByTestId("floating-agent-catalog-window");
                 if (await catalog.CountAsync() == 0) {
                     await page.GetByTestId("shell-agent-chats-action").ClickAsync();

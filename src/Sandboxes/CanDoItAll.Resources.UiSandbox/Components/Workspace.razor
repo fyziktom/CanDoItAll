@@ -7,17 +7,17 @@
     <TextBlock TextStyle="TextStyle.Subtitle1" Value="Resources development sandbox" />
     <TextBlock Value="Synthetic owner metadata and bounded in-memory files. FTP/IPFS labels do not use live transports. Local actions record intent without launching applications. Downloads contain only fixture text." />
     <Cluster Wrap="FlexWrap.Wrap">
-        <InputSelect @bind-Value="scenario" class="cda-input" style="width: 20rem" data-testid="resources-scenario-select">
+        <SelectInput @bind-Value="scenario" style="width: 20rem" data-testid="resources-scenario-select">
             @foreach (var option in Enum.GetValues<ResourceScenario>()) {
                 <option value="@option">@option</option>
             }
-        </InputSelect>
+        </SelectInput>
         <Button Text="Reset scenario" Click="ResetAsync" data-testid="resources-reset-scenario" />
-        <InputSelect @bind-Value="lane" class="cda-input" style="width: 12rem" data-testid="resources-hold-lane">
+        <SelectInput @bind-Value="lane" style="width: 12rem" data-testid="resources-hold-lane">
             @foreach (var option in Enum.GetValues<ResourceScenarioLane>()) {
                 <option value="@option">@option</option>
             }
-        </InputSelect>
+        </SelectInput>
         <Button Text="Hold next operation" Click="() => store.HoldNext(lane)" data-testid="resources-hold" />
         <Button Text="Release pending" Click="store.ReleaseAll" data-testid="resources-release" />
         <Button Text="Fail next read" Click="() => store.FailNextRead = true" />

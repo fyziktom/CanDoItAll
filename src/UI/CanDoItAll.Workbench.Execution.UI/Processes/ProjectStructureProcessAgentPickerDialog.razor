@@ -98,7 +98,7 @@
                             <Button Text="Details"
                                     Icon="info"
                                     Variant="Variant.Text"
-                                    ButtonStyle="ButtonStyle.Base"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     data-testid="@($"{candidateTestId}-details")"
                                     Click="@(() => OpenCandidateDetailsAsync(candidate))" />
@@ -109,7 +109,7 @@
                             else {
                                 <Button Text="Select agent"
                                         Icon="check"
-                                        ButtonStyle="ButtonStyle.Info"
+                                        Tone="ButtonTone.Info"
                                         Size="ButtonSize.Small"
                                         Disabled="@(!candidate.IsResolvable)"
                                         data-testid="@($"{candidateTestId}-select")"
@@ -127,7 +127,7 @@
            GapScale="LayoutGap.Small">
         <Button Text="Close"
                 Variant="Variant.Outlined"
-                ButtonStyle="ButtonStyle.Base"
+                Tone="ButtonTone.Default"
                 data-testid="project-structure-process-assignment-agent-picker-close"
                 Click="CancelAsync" />
     </Stack>

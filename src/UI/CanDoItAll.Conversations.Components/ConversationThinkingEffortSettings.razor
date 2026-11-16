@@ -6,14 +6,15 @@
 }
 <FormField Text="Thinking effort">
     <Stack GapScale="LayoutGap.Small">
-        <DropDown TValue="string"
-                  Data="@presentation.Options"
-                  TextProperty="@nameof(ConversationThinkingEffortOption<TValue>.Text)"
-                  ValueProperty="@nameof(ConversationThinkingEffortOption<TValue>.ChoiceValue)"
+        <SelectInput TValue="string"
                   Value="@presentation.SelectedChoiceValue"
                   ValueChanged="choice => SelectAsync(presentation, changed, choice)"
                   Disabled="@(Disabled || presentation.IsDisabled)"
-                  data-testid="@TestId" />
+                  data-testid="@TestId">
+    @foreach (var option in presentation.Options) {
+        <option value="@option.ChoiceValue">@option.Text</option>
+    }
+</SelectInput>
         <Alert AlertStyle="@presentation.SupportStyle" Variant="Variant.Outlined" data-testid="@SupportTestId">
             @presentation.SupportMessage
         </Alert>

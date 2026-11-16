@@ -5,10 +5,10 @@
 
 @if (Owner is not null) {
     <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-        <Button Text="Compare changes" Icon="compare_arrows" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || IsSaving)"
+        <Button Text="Compare changes" Icon="compare_arrows" Tone="ButtonTone.Default" Disabled="@(busy || !Owner.IsActive || IsSaving)"
                 Click="CompareAsync" data-testid="planning-task-compare" />
         @if (undo is not null) {
-            <Button Text="Undo local apply" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || !CanAccept)"
+            <Button Text="Undo local apply" Tone="ButtonTone.Default" Disabled="@(busy || !Owner.IsActive || !CanAccept)"
                     Click="UndoAsync" data-testid="planning-task-compare-undo" />
         }
     </Cluster>
@@ -25,13 +25,13 @@
                 <PlanningTaskComparisonFields Review="review" ResourceOptions="ResourceOptions" Changed="RecordInput" />
             }
             @if (previous is not null) {
-                <details><summary>Previous comparison retained for copying</summary><TextArea Value="@previous.CopyResults()" Rows="10" ReadOnly="true" data-testid="planning-task-previous-result" /></details>
+                <details><summary>Previous comparison retained for copying</summary><TextAreaInput Value="@previous.CopyResults()" Rows="10" ReadOnly="true" data-testid="planning-task-previous-result" /></details>
             }
         </ChildContent>
         <Footer>
             <Cluster Wrap="FlexWrap.Wrap">
-                <Button Text="Return to editor" ButtonStyle="ButtonStyle.Light" Click="Cancel" data-testid="planning-task-compare-cancel" />
-                <Button Text="Refresh comparison" ButtonStyle="ButtonStyle.Light" Disabled="@(busy || !Owner.IsActive || IsSaving)" Click="CompareAsync" data-testid="planning-task-compare-refresh" />
+                <Button Text="Return to editor" Tone="ButtonTone.Default" Click="Cancel" data-testid="planning-task-compare-cancel" />
+                <Button Text="Refresh comparison" Tone="ButtonTone.Default" Disabled="@(busy || !Owner.IsActive || IsSaving)" Click="CompareAsync" data-testid="planning-task-compare-refresh" />
                 <Button Text="Apply to draft" Disabled="@(busy || review?.CanApply != true || !Owner.IsActive || !CanAccept)" Click="ApplyAsync" data-testid="planning-task-compare-apply" />
             </Cluster>
         </Footer>

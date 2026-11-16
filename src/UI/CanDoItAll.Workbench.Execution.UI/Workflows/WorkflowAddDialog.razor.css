@@ -17,7 +17,7 @@
 .project-structure-checkbox-row input {
     width: 1rem;
     height: 1rem;
-    accent-color: #2563eb;
+    accent-color: var(--tone-info-soft-fg);
 }
 
 .project-structure-facts-list {
@@ -31,6 +31,6 @@
     grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr);
     gap: 0.75rem;
     padding-block: 0.4rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--tone-border);
     overflow-wrap: anywhere;
 }

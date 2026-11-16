@@ -3,14 +3,14 @@
     <div class="scheduler-list-toolbar" data-testid="scheduler-schedules-toolbar">
         <div>
             <TextBlock TextStyle="TextStyle.Eyebrow" Value="Schedules" />
-            <h2 class="text-base font-semibold text-slate-900">Saved scheduled runs</h2>
+            <h2 class="text-base font-semibold text-chrome-900">Saved scheduled runs</h2>
         </div>
-        <InputText @bind-Value="scheduleSearchText"
-                   class="cda-input scheduler-list-toolbar__search"
+        <TextInput @bind-Value="scheduleSearchText"
+                   class="form-input ui-input ui-input--outlined scheduler-list-toolbar__search"
                    placeholder="Search schedules"
                    data-testid="scheduler-schedules-search" />
         <select value="@FormatScheduleTargetKindFilter()"
-                class="cda-input scheduler-list-toolbar__select"
+                class="form-input ui-input ui-input--outlined scheduler-list-toolbar__select"
                 @onchange="HandleScheduleTargetKindFilterChanged"
                 data-testid="scheduler-schedules-target-kind">
             <option value="">All targets</option>
@@ -18,18 +18,18 @@
                 <option value="@kind">@kind</option>
             }
         </select>
-        <InputSelect @bind-Value="scheduleStateFilter"
-                     class="cda-input scheduler-list-toolbar__select"
+        <SelectInput @bind-Value="scheduleStateFilter"
+                     class="form-input ui-input ui-input--outlined scheduler-list-toolbar__select"
                      data-testid="scheduler-schedules-state">
             @foreach (var state in Enum.GetValues<ScheduleStateFilter>()) {
                 <option value="@state">@FormatScheduleStateFilter(state)</option>
             }
-        </InputSelect>
+        </SelectInput>
         <span class="scheduler-list-toolbar__result">@ScheduleFilterResultText</span>
         <div class="scheduler-list-toolbar__actions">
             <Button Text="Clear"
                     Icon="restart_alt"
-                    ButtonStyle="ButtonStyle.Light"
+                    Tone="ButtonTone.Default"
                     Size="ButtonSize.Small"
                     Disabled="@(!HasScheduleFilters)"
                     Click="ClearScheduleFilters"
@@ -107,13 +107,13 @@
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="scheduler-plan-card__actions">
                             <Button Text="@(plan.IsEnabled ? "Pause" : "Resume")"
                                     Icon="@(plan.IsEnabled ? "pause" : "play_arrow")"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Size="ButtonSize.Small"
                                     Disabled="@Workspace.IsPlanLocked(plan.Id)"
                                     Click="@(() => Workspace.ToggleAsync(plan))" />
                             <Button Text="Delete"
                                     Icon="delete"
-                                    ButtonStyle="ButtonStyle.Danger"
+                                    Tone="ButtonTone.Danger"
                                     Size="ButtonSize.Small"
                                     Disabled="@Workspace.IsPlanLocked(plan.Id)"
                                     Click="@(() => Workspace.AskDelete(plan))"

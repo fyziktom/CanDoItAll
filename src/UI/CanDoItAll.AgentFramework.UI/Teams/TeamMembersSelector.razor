@@ -35,7 +35,7 @@
                         </Grid>
                         <FormField Text="Combined membership"><TextBlock Value="@MemberNames(owner, review.Result)" /></FormField>
                         <Cluster Gap="LayoutGap.Small">
-                            <Button Text="Cancel comparison" ButtonStyle="ButtonStyle.Light" Click="() => owner.Comparison = null" />
+                            <Button Text="Cancel comparison" Tone="ButtonTone.Default" Click="() => owner.Comparison = null" />
                             <Button Text="Apply to selection" Disabled="@(owner.Revision != review.Revision || ChangeSequence != review.ChangeSequence)"
                                     Click="() => ApplyComparison(owner, review)" data-testid="agents-team-members-apply" />
                         </Cluster>
@@ -43,7 +43,7 @@
                 </SurfaceCard>
             }
             <FilterBar ResultText="@($"{Filtered(owner).Count} of {owner.Agents.Count} agent(s)")">
-                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="cda-input min-w-[14rem] flex-1" placeholder="Search agents" data-testid="agents-team-members-search" />
+                <input value="@owner.Search" @oninput="args => Search(owner, args)" class="form-input ui-input ui-input--outlined min-w-[14rem] flex-1" placeholder="Search agents" data-testid="agents-team-members-search" />
                 <StatusBadge Tone="info" Text="@($"{owner.Selected.Count} selected")" />
             </FilterBar>
             @foreach (var missing in owner.Selected.Where(id => owner.Agents.All(agent => agent.Id != id)).Order()) {

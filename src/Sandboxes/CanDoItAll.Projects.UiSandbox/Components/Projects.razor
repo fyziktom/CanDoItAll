@@ -4,11 +4,11 @@
 <Stack Class="p-4" GapScale="LayoutGap.Medium">
     <FormSection Title="Projects portfolio scenarios" Description="Synthetic state only. The production host owns Files, packages and native mutations.">
         <Cluster Gap="LayoutGap.Small">
-            <InputSelect @bind-Value="scenario" aria-label="Scenario">
+            <SelectInput @bind-Value="scenario" aria-label="Scenario">
                 @foreach (var value in Enum.GetValues<ProjectsScenario>()) {
                     <option value="@value">@value</option>
                 }
-            </InputSelect>
+            </SelectInput>
             <Button Text="Reset scenario" Click="Reset" />
             <Button Text="Hold next save" Click="() => store.HoldNextSave()" Disabled="@store.IsHeld" />
             <Button Text="Release save" Click="() => store.Release()" Disabled="@(!store.IsHeld)" />

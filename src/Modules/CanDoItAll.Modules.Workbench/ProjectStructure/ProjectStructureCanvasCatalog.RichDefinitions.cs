@@ -243,8 +243,7 @@ internal static partial class ProjectStructureCanvasCatalog
             true,
             "Add transcript",
             [
-                Field("recordingRef", "Recording", "select", "Optional recording"),
-                Field("transcriptText", "Transcript", "textarea", "Paste transcript text")
+                Field("recordingRef", "Recording", "select", "Optional recording")
             ]),
 
         new("add-participant-hr", ProjectObjectType.Participant, "hr", "people", "HR", "Add a reusable HR participant record.", "person", "sky", "HR contact", "Name", "HR partner", "Role", "Recruitment partner", "Notes", "Context for this participant", false, string.Empty, "Drop a file here or choose one.", true, "Add participant", ParticipantFields(ProjectParticipantKind.Hr)),
@@ -383,9 +382,9 @@ internal static partial class ProjectStructureCanvasCatalog
     private static IReadOnlyList<CanvasWorkbenchInputField> PaymentFields()
         =>
         [
-            ..WorkItemFields(ProjectWorkItemKind.Payment),
             Field("amount", "Amount", "number", "1000"),
-            Field("currencyCode", "Currency", "text", "USD")
+            Field("currencyCode", "Currency", "text", "USD"),
+            ..WorkItemFields(ProjectWorkItemKind.Payment)
         ];
 
     private static IReadOnlyList<CanvasWorkbenchInputField> SendFields()
@@ -429,22 +428,63 @@ internal static partial class ProjectStructureCanvasCatalog
             Field("localhostUrl", "Localhost URL", "url", "https://localhost:5001")
         ];
 
+    private static CanvasWorkbenchInputField FileLocationField(string key, string label, string placeholder) {
+        var field = Field(key, label, "text", placeholder);
+        field.SectionKey = "file-locations";
+        field.SectionTitle = "File locations";
+        field.SectionDescription = "Optional. Leave these empty for meetings, planning, and other work that does not produce files.";
+        return field;
+    }
+
     private static CanvasWorkbenchInputField Field(
         string key,
         string label,
         string inputMode = "text",
         string placeholder = "",
         bool isRequired = false,
-        IReadOnlyList<CanvasWorkbenchInputOption>? options = null)
-        => new()
-        {
+        IReadOnlyList<CanvasWorkbenchInputOption>? options = null) {
+        (string Key, string Title, string Description) section = key switch {
+            "startUtc" or "endUtc" or "repeatCadence" or "dueUtc" =>
+                ("schedule", "Schedule", "Set the dates you know. Optional dates can be added later."),
+            "channel" or "meetingUrl" or "address" or "mapUrl" =>
+                ("meeting-place", "Meeting place", "Choose how or where people will meet."),
+            "participantKind" or "role" or "organization" or "email" or "phone" or "parentParticipantRef" =>
+                ("contact", "Contact details", "Add the role and contact information you need. Optional details can wait."),
+            "participantRef" or "assigneeRef" =>
+                ("people", "People", "Link a person when known, or leave the item unassigned."),
+            "recordingRef" or "meetingRef" or "recordingSource" or "storageReference" or "durationMinutes" =>
+                ("recording", "Recording context", "Connect the source recording or meeting when available."),
+            "repositoryMode" or "repositoryUrl" or "localPath" or "defaultBranch" or "relativePath" or "repositoryRef" =>
+                ("repository", "Repository", "Configure a source repository only when this item uses one."),
+            "scriptKind" or "scriptPath" or "command" or "arguments" or "workingDirectory" or "terminalRoute" or
+                "runtimeCommand" or "runtimeArguments" or "dockerMode" or "entryPoint" or "environmentArguments" =>
+                ("execution", "Execution", "Configure the command and its working context for this runnable item."),
+            "environmentKind" or "pythonProvider" or "environmentName" or "projectPath" or "launchProfileName" or "runtimeProtocol" or "localhostUrl" =>
+                ("environment", "Environment", "Choose the environment and project used to run this item."),
+            "host" or "port" or "connectionReference" or "secretRef" or "databaseType" =>
+                ("connection", "Connection", "Enter connection details or a saved secret reference. Do not enter secret values here."),
+            "providerName" or "providerUrl" or "loginUrl" or "accountName" or "monthlyPrice" =>
+                ("provider", "Provider and account", "Optional provider, account, and cost information."),
+            "cpuCores" or "memoryGb" or "storageGb" =>
+                ("capacity", "Capacity", "Optional capacity information for planning."),
+            "folderPath" or "storageCatalogId" or "storagePurpose" or "storagePathPrefix" =>
+                ("storage", "Storage", "Choose where this item stores or delivers its files."),
+            "amount" or "currencyCode" or "sendKind" or "deliveryChannel" =>
+                ("handover", "Payment and handover", "Add the payment or delivery details relevant to this item."),
+            _ => ("settings", "Settings", "Complete required fields; optional details can be added later.")
+        };
+        return new() {
             Key = key,
+            SectionKey = section.Key,
+            SectionTitle = section.Title,
+            SectionDescription = section.Description,
             Label = label,
             InputMode = inputMode,
             Placeholder = placeholder,
             IsRequired = isRequired,
             Options = options?.ToList() ?? []
         };
+    }
 
     private static CanvasWorkbenchInputOption Option(string value, string label)
         => new()

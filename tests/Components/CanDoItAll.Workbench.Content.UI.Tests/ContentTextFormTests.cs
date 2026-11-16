@@ -11,6 +11,56 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Components.WorkbenchContent;
 
 public sealed class ContentTextFormTests {
+    [Fact]
+    public async Task Step_navigation_preserves_selected_upload_and_optional_notes_without_submitting() {
+        using var context = Context();
+        ContentTextSubmission? submitted = null;
+        var cut = Render(context, ContentTextKind.Text, (submission, _) => {
+            submitted = submission;
+            return Task.FromResult(new ContentTextOutcome(ContentTextOutcomeKind.Prepared, "Prepared"));
+        });
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-next']").Click());
+        await Upload(cut, new FixtureFile([1, 2, 3], 3));
+        var uploadComponent = cut.FindComponent<InputFile>().Instance;
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-next']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-notes']").Input("Context for the handover"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-back']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-back']").Click());
+
+        Assert.Null(submitted);
+        Assert.Same(uploadComponent, cut.FindComponent<InputFile>().Instance);
+        Assert.False(cut.Find("[data-testid='content-text-details-step']").HasAttribute("hidden"));
+        Assert.True(cut.Find("[data-testid='content-text-content-step']").HasAttribute("hidden"));
+        await Submit(cut);
+        Assert.NotNull(submitted);
+        Assert.Equal("Context for the handover", submitted.Notes);
+        Assert.Equal(new byte[] { 1, 2, 3 }, submitted.Upload!.Bytes.ToArray());
+    }
+
+    [Fact]
+    public async Task Validation_reveals_details_and_rejection_reveals_content_without_losing_the_draft() {
+        using var context = Context();
+        var submissions = new List<ContentTextSubmission>();
+        var cut = Render(context, ContentTextKind.Json, (submission, _) => {
+            submissions.Add(submission);
+            return Task.FromResult(new ContentTextOutcome(ContentTextOutcomeKind.Rejected, "Correct the JSON content"));
+        });
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-title']").Input(string.Empty));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-next']").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-content']").Input("{ unfinished"));
+        await cut.InvokeAsync(() => cut.Find("[data-testid='content-text-next']").Click());
+        await Submit(cut);
+
+        Assert.Empty(submissions);
+        Assert.False(cut.Find("[data-testid='content-text-details-step']").HasAttribute("hidden"));
+        Assert.Contains("title is required", cut.Find("[data-testid='project-structure-text-asset-validation-error']").TextContent, StringComparison.Ordinal);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-title']").Input("Meeting notes"));
+        await Submit(cut);
+        Assert.Single(submissions);
+        Assert.False(cut.Find("[data-testid='content-text-content-step']").HasAttribute("hidden"));
+        Assert.Equal("{ unfinished", submissions[0].Content);
+    }
+
     [Theory]
     [InlineData(ContentTextKind.Text)]
     [InlineData(ContentTextKind.Json)]
@@ -27,6 +77,7 @@ public sealed class ContentTextFormTests {
             entered.TrySetResult(submission);
             return await finish.Task;
         });
+        Assert.All(cut.FindAll("input[type='text']"), input => Assert.False(input.HasAttribute("disabled")));
         await cut.InvokeAsync(async () => {
             await cut.Find("[data-testid='project-structure-text-asset-title']").InputAsync(new ChangeEventArgs { Value = "  Exact title  " });
             await cut.Find("[data-testid='project-structure-text-asset-subtitle']").InputAsync(new ChangeEventArgs { Value = "  Exact context  " });
@@ -35,6 +86,7 @@ public sealed class ContentTextFormTests {
         });
         var pending = Submit(cut);
         var accepted = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.All(cut.FindAll("input[type='text']"), input => Assert.True(input.HasAttribute("disabled"))));
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-text-asset-notes']")
             .InputAsync(new ChangeEventArgs { Value = "Later attempted edit" }));
         await Submit(cut);

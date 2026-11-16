@@ -11,8 +11,8 @@
             <Button Text="Prepare another launch" Variant="Variant.Text" Disabled="@startDialog.IsBusy"
                 Click="@(() => actions.PrepareAnother())" data-testid="project-structure-process-start-new-intent" />
         }
-        <Button Text="Cancel" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Click="@(() => actions.Close())" />
-        <Button Text="@startDialog.SubmitLabel" ButtonStyle="ButtonStyle.Warning" IsBusy="@startDialog.IsBusy"
+        <Button Text="Cancel" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => actions.Close())" />
+        <Button Text="@startDialog.SubmitLabel" Tone="ButtonTone.Warning" IsBusy="@startDialog.IsBusy"
             Disabled="@startDialog.IsBusy" data-testid="project-structure-process-start-continue" Click="@(() => actions.Submit())" />
     </Actions>
     <Body>

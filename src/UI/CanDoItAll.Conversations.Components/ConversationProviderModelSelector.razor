@@ -3,29 +3,30 @@
 <div class="@Class" data-testid="@TestId">
     <FormField Text="@Label">
         <Stack GapScale="LayoutGap.Small">
-            <DropDown TValue="ProviderModelSelectorOption"
-                      Data="@modelChoices"
-                      TextProperty="@nameof(ProviderModelSelectorOption.Text)"
-                      Value="@selectedChoice"
+            <SelectInput TValue="Guid"
+                      Value="@(selectedChoice is null ? Guid.Empty : ChoiceId(selectedChoice))"
                       ValueChanged="HandleChoiceChangedAsync"
                       Disabled="@(Disabled || isOverrideEnabled)"
-                      data-testid="@ChoiceTestId" />
+                      data-testid="@ChoiceTestId">
+    @foreach (var choice in modelChoices) {
+        <option value="@ChoiceId(choice)">@choice.Text</option>
+    }
+</SelectInput>
 
             @if (Provider?.AllowsModelOverride != false) {
-                <label class="cda-inline-option">
-                    <CheckBox TValue="bool"
-                              Value="@isOverrideEnabled"
-                              ValueChanged="HandleOverrideChangedAsync"
-                              Disabled="@Disabled"
-                              aria-label="Override model name"
-                              data-testid="@OverrideTestId" />
+                <CheckboxOption TValue="bool"
+                                Value="@isOverrideEnabled"
+                                ValueChanged="HandleOverrideChangedAsync"
+                                Disabled="@Disabled"
+                                aria-label="Override model name"
+                                data-testid="@OverrideTestId">
                     <span>Override model name</span>
-                </label>
+                </CheckboxOption>
             }
 
             @if (isOverrideEnabled)
             {
-                <TextBox Value="@customModelName"
+                <TextInput Value="@customModelName"
                          ValueChanged="HandleCustomModelChangedAsync"
                          Immediate="true"
                          Disabled="@Disabled"
@@ -41,6 +42,8 @@
         System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(left, right,
             System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.NumericOrdering));
     private readonly List<ProviderModelSelectorOption> modelChoices = [];
+    private readonly Dictionary<(ProviderModelChoiceKind Kind, string Model), Guid> choiceIds = [];
+    private ConversationPresentationKey? choiceProviderKey;
     private ProviderModelSelectorOption? selectedChoice;
     private string customModelName = string.Empty;
     private string? previousProviderFingerprint;
@@ -90,6 +93,10 @@
 
     protected override void OnParametersSet()
     {
+        if (!Equals(choiceProviderKey, Provider?.Key)) {
+            choiceProviderKey = Provider?.Key;
+            choiceIds.Clear();
+        }
         RebuildModelChoices();
 
         var providerFingerprint = ResolveProviderFingerprint();
@@ -210,9 +217,22 @@
                string.Equals(NormalizeSelectedModel(value), providerDefault, ModelComparison);
     }
 
-    private async Task HandleChoiceChangedAsync(ProviderModelSelectorOption? choice)
+    private Guid ChoiceId(ProviderModelSelectorOption choice) {
+        var identity = (choice.Kind, choice.Model);
+        if (!choiceIds.TryGetValue(identity, out var id)) {
+            id = Guid.NewGuid();
+            choiceIds.Add(identity, id);
+        }
+        return id;
+    }
+
+    private async Task HandleChoiceChangedAsync(Guid choiceId)
     {
-        selectedChoice = choice ?? modelChoices[0];
+        var choice = modelChoices.SingleOrDefault(option => ChoiceId(option) == choiceId);
+        if (choice is null || Disabled) {
+            return;
+        }
+        selectedChoice = choice;
         isOverrideEnabled = false;
         var nextValue = selectedChoice.Kind == ProviderModelChoiceKind.ProviderDefault
             ? ResolveProviderDefaultEmittedValue()

@@ -1,0 +1,26 @@
+@layer components {
+  /* app-shell-body-surface carries no padding of its own (see .app-page-content in
+     workbench-shell.css), so the bar sits flush against the surface edge in both StandardPage and
+     FocusWorkbench mode — own horizontal padding plus a bottom margin, no breakout needed. */
+  .app-toolbar {
+    @apply sticky top-0 shrink-0;
+    @apply z-[40] flex items-center justify-between gap-3 border-b border-chrome-300 bg-chrome-50 px-4 py-2;
+    @apply 2xl:px-6;
+  }
+
+  .app-toolbar__crumbs {
+    @apply flex min-w-0 items-center gap-1 truncate text-sm text-chrome-900;
+  }
+
+  .app-toolbar__crumb--tab {
+    @apply text-chrome-600;
+  }
+
+  .app-toolbar__actions {
+    @apply flex shrink-0 items-center gap-2;
+  }
+
+  .app-toolbar__stats {
+    @apply min-w-0 flex-1;
+  }
+}

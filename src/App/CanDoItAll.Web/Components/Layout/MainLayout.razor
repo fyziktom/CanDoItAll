@@ -25,9 +25,14 @@
 @inject ProjectsService ProjectsService
 @inject IConversationShellLauncher ConversationShellLauncher
 @inject IJSRuntime JS
+@inject CanDoItAll.Web.Infrastructure.UserUiPreferencesState Preferences
+@inject AppToolbarState ToolbarState
 
 <AppShell NavigationItems="@NavigationItems"
           Mode="ShellMode"
+          NavigationMode="@(Preferences.Current.MainMenuCollapsed ? AppShellNavigationMode.Collapsed : AppShellNavigationMode.Expanded)"
+          NavigationModeChanged="SaveNavigationModeAsync"
+          NavigationModeBusy="@(!((IUserUiPreferencesState)Preferences).CanEdit)"
           ShowRightRail="false"
           ShowTabSummary="@(ShellMode == AppShellMode.FocusWorkbench)"
           Workspaces="workspaces"
@@ -38,8 +43,6 @@
           OpenedProjects="OpenedProjectTabs"
           OpenedSessions="OpenedPromptTabs"
           ActiveTabId="@Workbench.ActiveTabId"
-          ProjectContextTitle="@ActiveProjectTitle"
-          PhaseContextTitle="@ActivePhaseTitle"
           SelectWorkspace="HandleSelectWorkspaceAsync"
           Navigate="HandleNavigateAsync"
           OpenWorkbenchItem="HandleOpenWorkbenchItemAsync"
@@ -63,6 +66,17 @@
                                ActivateProfile="SwitchDatabaseProfileFromFlyoutAsync" />
     </BottomUtilities>
     <TopBar>
+        @if (Preferences.Failure != UserUiPreferencesFailure.None) {
+            <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="ui-preferences-failure">
+                <Stack GapScale="LayoutGap.Small">
+                    <TextBlock Value="@(Preferences.Failure == UserUiPreferencesFailure.Load
+                        ? "Your theme and menu preferences could not be loaded. Retry when account or browser storage is available."
+                        : "Your preference change could not be confirmed. Reload preferences before trying again.")" />
+                    <Button Text="Reload preferences" Icon="refresh" Click="Preferences.RetryAsync"
+                            Disabled="Preferences.IsBusy" data-testid="ui-preferences-retry" />
+                </Stack>
+            </Alert>
+        }
         @if (layoutInitializationFailed) {
             <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Outlined" data-testid="layout-initialization-failure">
                 <Stack GapScale="LayoutGap.Small">
@@ -84,13 +98,24 @@
     </TopBar>
     <Body>
         <Notification Position="NotificationPosition.BottomCenter" />
-        @if (databaseDialogStartupMode && databaseDialogOpen) {
-            <EmptyState Eyebrow="Database startup"
-                        Title="Continue with the active database to load the workspace"
-                        Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
-        } else {
-            @Body
-        }
+        <AppToolbar PageText="@ActiveNavigation.Title" ContextText="@ActiveProjectContextText" />
+        <div class="app-page-content @(ShellMode == AppShellMode.FocusWorkbench ? "app-page-content--focus" : null)">
+            <AppToolbarOutlet Kind="AppToolbarOutletKind.Help" />
+            @if (databaseDialogStartupMode && databaseDialogOpen)
+            {
+                <EmptyState Eyebrow="Database startup"
+                            Title="Continue with the active database to load the workspace"
+                            Description="The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state." />
+            }
+            else
+            {
+                <div class="app-page-body">
+                    <CascadingValue TValue="IPageHeaderOutlet" Value="ToolbarState" IsFixed="true">
+                        @Body
+                    </CascadingValue>
+                </div>
+            }
+        </div>
     </Body>
 </AppShell>
 

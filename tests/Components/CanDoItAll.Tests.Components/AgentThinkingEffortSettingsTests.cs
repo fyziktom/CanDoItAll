@@ -77,12 +77,12 @@ public sealed class AgentThinkingEffortSettingsTests
             .Add(component => component.Value, null)
             .Add(component => component.ValueChanged, callback));
 
-        cut.Find($"[data-testid='{SelectorTestId}']").Change("2");
+        SelectOption(cut, "Low");
         cut.Render(parameters => parameters
             .Add(component => component.Provider, provider)
             .Add(component => component.Value, AgentReasoningEffortLevel.Low)
             .Add(component => component.ValueChanged, callback));
-        cut.Find($"[data-testid='{SelectorTestId}']").Change("0");
+        SelectOption(cut, "Provider default");
 
         Assert.Equal(
             [AgentReasoningEffortLevel.Low, null],
@@ -232,7 +232,7 @@ public sealed class AgentThinkingEffortSettingsTests
         Assert.Contains("cannot be applied", guidance, StringComparison.Ordinal);
         Assert.Contains("Select Provider default to remove this override", guidance, StringComparison.Ordinal);
 
-        cut.Find($"[data-testid='{SelectorTestId}']").Change("0");
+        SelectOption(cut, "Provider default");
 
         Assert.Null(Assert.Single(changes));
     }
@@ -323,6 +323,13 @@ public sealed class AgentThinkingEffortSettingsTests
             "cannot be disabled",
             cut.Find($"[data-testid='{SupportTestId}']").TextContent,
             StringComparison.Ordinal);
+    }
+
+    private static void SelectOption(IRenderedComponent<AgentThinkingEffortSettings> component, string label) {
+        var selector = component.Find($"[data-testid='{SelectorTestId}']");
+        var value = selector.QuerySelectorAll("option").Single(option => option.TextContent == label).GetAttribute("value");
+        Assert.NotNull(value);
+        selector.Change(value);
     }
 
     private static IReadOnlyList<string> ReadOptionLabels(

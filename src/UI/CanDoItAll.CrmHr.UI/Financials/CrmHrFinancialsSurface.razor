@@ -82,13 +82,13 @@
             </div>
             <Cluster Gap="LayoutGap.Small">
                 <Button Text="Monthly"
-                        ButtonStyle="@(Presentation.Period == CrmHrFinancialPeriod.Month ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(Presentation.Period == CrmHrFinancialPeriod.Month ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined"
                         Size="ButtonSize.Small"
                         Click="@(() => SetPeriodAsync(CrmHrFinancialPeriod.Month))"
                         data-testid="crmhr-financials-month" />
                 <Button Text="Yearly"
-                        ButtonStyle="@(Presentation.Period == CrmHrFinancialPeriod.Year ? ButtonStyle.Info : ButtonStyle.Light)"
+                        Tone="@(Presentation.Period == CrmHrFinancialPeriod.Year ? ButtonTone.Info : ButtonTone.Default)"
                         Variant="Variant.Outlined"
                         Size="ButtonSize.Small"
                         Click="@(() => SetPeriodAsync(CrmHrFinancialPeriod.Year))"

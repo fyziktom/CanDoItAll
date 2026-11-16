@@ -5,7 +5,7 @@
     <Alert AlertStyle="AlertStyle.Info" data-testid="agents-chat-planning-status">
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
             <TextBlock Value="@($"{Status(review.State)} · generation {review.Expected.Generation}")" />
-            <Button Text="Review plan" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+            <Button Text="Review plan" Tone="ButtonTone.Secondary" Size="ButtonSize.Small"
                     Click="@(() => SendAsync(rendered, AgentChatAction.OpenPlanningReview))" data-testid="agents-chat-planning-open" />
         </Cluster>
     </Alert>
@@ -36,12 +36,12 @@
                     @foreach (var action in review.AvailableActions) {
                         var selected = action;
                         <Button Text="@ActionText(selected)" Disabled="@(rendered.Busy || rendered.PlanningActionUnconfirmed || review.HasUnsettledWork)"
-                                ButtonStyle="@(selected == AgentPlanningAction.Approve ? ButtonStyle.Primary : ButtonStyle.Secondary)"
+                                Tone="@(selected == AgentPlanningAction.Approve ? ButtonTone.Primary : ButtonTone.Secondary)"
                                 Click="@(() => ApplyAsync(rendered, selected))" data-testid="@($"agents-chat-planning-{selected.ToString().ToLowerInvariant()}")" />
                     }
-                    <Button Text="Reload review" ButtonStyle="ButtonStyle.Light" Disabled="@rendered.Busy"
+                    <Button Text="Reload review" Tone="ButtonTone.Default" Disabled="@rendered.Busy"
                             Click="@(() => SendAsync(rendered, AgentChatAction.ReloadPlanningReview))" data-testid="agents-chat-planning-reload" />
-                    <Button Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => SendAsync(rendered, AgentChatAction.ClosePlanningReview))" />
+                    <Button Text="Close" Tone="ButtonTone.Default" Click="@(() => SendAsync(rendered, AgentChatAction.ClosePlanningReview))" />
                 </Cluster>
             </Footer>
         </Dialog>

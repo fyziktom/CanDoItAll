@@ -76,7 +76,7 @@
                 <Sections>
                     <Tabs SelectedIndex="@selectedTabIndex"
                           SelectedIndexChanged="HandleSelectedTabChanged"
-                          Variant="TabsVariant.ModalCompact"
+                          Density="TabsDensity.Compact"
                           BorderMode="TabsBorderMode.Soft"
                           Tone="TabsTone.Info"
                           OverflowMode="TabsOverflowMode.Scroll"
@@ -147,7 +147,7 @@
                                                                                CustomModelTestId="llm-chat-definition-custom-model" />
                                         </Grid>
                                         <FormField Text="System prompt">
-                                            <p class="mb-2 text-sm leading-6 text-slate-600">Applied to every conversation created from this definition.</p>
+                                            <p class="mb-2 text-sm leading-6 text-chrome-600">Applied to every conversation created from this definition.</p>
                                             <ConversationPromptTextArea Value="@form.SystemPrompt"
                                                                         ValueChanged="HandleSystemPromptChanged"
                                                                         Rows="12"
@@ -156,21 +156,23 @@
                                         </FormField>
                                         <Grid ColumnsMd="3" Gap="LayoutGap.Large">
                                             <FormField Text="Temperature (optional, 0 to 2)">
-                                                <TextBox Value="@form.TemperatureText" ValueChanged="HandleTemperatureChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-temperature" />
+                                                <TextInput Value="@form.TemperatureText" ValueChanged="HandleTemperatureChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-temperature" />
                                             </FormField>
                                             <FormField Text="Thinking effort">
-                                                <DropDown TValue="DefinitionEditorEffort?"
-                                                          Data="@ThinkingEffortChoices"
+                                                <SelectInput TValue="DefinitionEditorEffort?"
                                                           Value="@form.ThinkingEffort"
                                                           ValueChanged="HandleThinkingEffortChanged"
-                                                          Placeholder="Provider default"
-                                                          AllowClear="true"
                                                           Disabled="@(fieldsBlocked || ThinkingEffortChoices.Count == 0)"
-                                                          data-testid="llm-chat-definition-thinking-effort" />
-                                                <p class="mt-2 text-sm leading-6 text-slate-600">@ThinkingEffortDescription</p>
+                                                          data-testid="llm-chat-definition-thinking-effort">
+    <option value="">Provider default</option>
+    @foreach (var option in ThinkingEffortChoices) {
+        <option value="@option">@option</option>
+    }
+</SelectInput>
+                                                <p class="mt-2 text-sm leading-6 text-chrome-600">@ThinkingEffortDescription</p>
                                             </FormField>
                                             <FormField Text="Timeout (seconds)">
-                                                <TextBox Value="@form.TimeoutText" ValueChanged="HandleTimeoutChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-timeout" />
+                                                <TextInput Value="@form.TimeoutText" ValueChanged="HandleTimeoutChanged" Immediate="true" Disabled="@fieldsBlocked" inputmode="decimal" data-testid="llm-chat-definition-timeout" />
                                             </FormField>
                                         </Grid>
                                         <FormField Text="Model parameter configuration (JSON)">
@@ -188,26 +190,27 @@
                                 <FormSection Title="Output and revision" Description="Control structured output and record why the new immutable revision is being saved.">
                                     <Stack GapScale="LayoutGap.Large">
                                         <FormField Text="Response format">
-                                            <DropDown TValue="DefinitionEditorFormat"
-                                                      Data="@ResponseFormatOptions"
-                                                      TextProperty="@nameof(ResponseFormatOption.Label)"
-                                                      ValueProperty="@nameof(ResponseFormatOption.Value)"
+                                            <SelectInput TValue="DefinitionEditorFormat"
                                                       Value="@form.ResponseFormat"
                                                       ValueChanged="HandleResponseFormatChanged"
                                                       Disabled="@fieldsBlocked"
-                                                      data-testid="llm-chat-definition-response-format" />
+                                                      data-testid="llm-chat-definition-response-format">
+    @foreach (var option in ResponseFormatOptions) {
+        <option value="@option.Value">@option.Label</option>
+    }
+</SelectInput>
                                         </FormField>
 
                                         @if (form.ResponseFormat == DefinitionEditorFormat.JsonSchema) {
                                             <Grid ColumnsMd="2" Gap="LayoutGap.Large">
                                                 <FormField Text="Schema name">
-                                                    <TextBox Value="@form.SchemaName"
+                                                    <TextInput Value="@form.SchemaName"
                                                              ValueChanged="HandleSchemaNameChanged"
                                                              Disabled="@fieldsBlocked"
                                                              data-testid="llm-chat-definition-schema-name" />
                                                 </FormField>
                                                 <FormField Text="Schema description">
-                                                    <TextBox Value="@form.SchemaDescription"
+                                                    <TextInput Value="@form.SchemaDescription"
                                                              ValueChanged="HandleSchemaDescriptionChanged"
                                                              Disabled="@fieldsBlocked"
                                                              data-testid="llm-chat-definition-schema-description" />
@@ -223,7 +226,7 @@
                                         }
 
                                         <FormField Text="Revision reason">
-                                            <TextArea Value="@form.RevisionReason"
+                                            <TextAreaInput Value="@form.RevisionReason"
                                                       ValueChanged="HandleRevisionReasonChanged"
                                                       Size="TextAreaSize.Standard"
                                                       Disabled="@fieldsBlocked"
@@ -242,7 +245,7 @@
                                 @foreach (var status in DefinitionEditorTransitions.From(current.Status)) {
                                     <Button Text="@DefinitionEditorTransitions.Label(status)"
                                             Variant="Variant.Outlined"
-                                            ButtonStyle="@(status == LlmChatDefinitionStatusFilter.Archived ? ButtonStyle.Danger : ButtonStyle.Secondary)"
+                                            Tone="@(status == LlmChatDefinitionStatusFilter.Archived ? ButtonTone.Danger : ButtonTone.Secondary)"
                                             Click="@(() => ChangeStatusAsync(status))"
                                             Disabled="@writesBlocked"
                                             data-testid="@($"llm-chat-definition-status-{status.ToString().ToLowerInvariant()}")" />
@@ -257,7 +260,7 @@
                                     data-testid="llm-chat-definition-editor-cancel" />
                             <Button Text="Save definition"
                                     Icon="save"
-                                    ButtonStyle="ButtonStyle.Primary"
+                                    Tone="ButtonTone.Primary"
                                     Click="SaveAsync"
                                     Disabled="@writesBlocked"
                                     IsBusy="@isBusy"

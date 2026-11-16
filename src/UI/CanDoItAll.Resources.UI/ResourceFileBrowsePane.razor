@@ -23,7 +23,7 @@
                                  Count="@($"{catalog.Sources.Count} source(s)")">
                     <Actions>
                         <Button Icon="refresh" aria-label="Refresh sources"
-                                ButtonStyle="ButtonStyle.Light"
+                                Tone="ButtonTone.Default"
                                 Size="ButtonSize.Small"
 
                                 data-testid="resources-browse-refresh"
@@ -71,7 +71,7 @@
                 <Split Gap="LayoutGap.Medium">
                     <Stack GapScale="LayoutGap.Tiny">
                         <TextBlock TextStyle="TextStyle.Eyebrow" Value="Storage browser" />
-                        <h2 class="cda-title-xl">@(interaction?.Request.FileName ?? workspace?.Source.DisplayName ?? "Select a source")</h2>
+                        <h2 class="cda-text-block cda-text-block--h4">@(interaction?.Request.FileName ?? workspace?.Source.DisplayName ?? "Select a source")</h2>
                         <TextBlock TextStyle="TextStyle.Body2" Value="@DetailDescription" />
                     </Stack>
                     <Cluster Gap="LayoutGap.Small">
@@ -105,7 +105,7 @@
                         <Cluster Gap="LayoutGap.Small">
                             <Button Text="Back to source"
                                     Icon="arrow_back"
-                                    ButtonStyle="ButtonStyle.Light"
+                                    Tone="ButtonTone.Default"
                                     Click="CloseInteractionAsync" />
                             <StatusBadge Tone="info" Text="Governed reopen" />
                         </Cluster>

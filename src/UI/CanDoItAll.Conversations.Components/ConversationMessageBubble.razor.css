@@ -16,31 +16,31 @@
 }
 
 .chat-message-footer ::deep .chat-message-copy {
-    color: rgb(100 116 139);
+    color: var(--tone-text-muted);
 }
 
 .chat-message-footer ::deep .chat-message-copy:hover:not(:disabled) {
-    background: rgb(226 232 240 / 0.72);
-    color: rgb(37 99 235);
+    background: color-mix(in srgb, var(--tone-surface-soft) 72%, transparent);
+    color: var(--tone-info-soft-fg);
 }
 
 .chat-message-footer ::deep .chat-message-copy--user {
-    color: rgb(255 255 255 / 0.72);
+    color: color-mix(in srgb, var(--tone-primary-solid-fg) 72%, transparent);
 }
 
 .chat-message-footer ::deep .chat-message-copy--user:hover:not(:disabled) {
-    background: rgb(255 255 255 / 0.12);
-    color: rgb(255 255 255 / 0.96);
+    background: color-mix(in srgb, var(--tone-primary-solid-fg) 12%, transparent);
+    color: color-mix(in srgb, var(--tone-primary-solid-fg) 96%, transparent);
 }
 
 .chat-message-context {
-    border-top: 1px solid rgb(226 232 240 / 0.72);
+    border-top: 1px solid var(--tone-border);
     margin-top: 0.75rem;
     padding-top: 0.55rem;
 }
 
 .chat-message-context--user {
-    border-top-color: rgb(255 255 255 / 0.18);
+    border-top-color: color-mix(in srgb, var(--tone-primary-solid-fg) 18%, transparent);
 }
 
 .chat-message-context summary {

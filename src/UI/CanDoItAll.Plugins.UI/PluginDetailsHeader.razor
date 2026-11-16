@@ -9,15 +9,15 @@
     <Stack GapScale="LayoutGap.Tiny">
         <Cluster Gap="LayoutGap.Small">
             @PluginsPageHelpers.RenderPluginIcon(Plugin.Icon, "h-8 w-8")
-            <span class="cda-eyebrow">@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)</span>
+            <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)" />
         </Cluster>
         <Cluster Gap="LayoutGap.Small">
             <StatusBadge Tone="@PluginsPageHelpers.ResolveAvailabilityTone(Plugin)" Text="@Plugin.Availability.ToString()" />
             <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(Plugin)" Text="@Plugin.InstallationState.ToString()" />
             <StatusBadge Tone="neutral" Text="@Plugin.SourceKind.ToString()" />
         </Cluster>
-        <h2 class="cda-title-xl">@Plugin.DisplayName</h2>
-        <p class="cda-body-muted">@Plugin.Description</p>
+        <h2 class="app-title-xl">@Plugin.DisplayName</h2>
+        <p class="app-body-muted">@Plugin.Description</p>
     </Stack>
 
     <Cluster Gap="LayoutGap.Tiny" Class="shrink-0">
@@ -25,7 +25,7 @@
         {
             <Button Text="Install and enable"
                     Icon="download"
-                    ButtonStyle="ButtonStyle.Primary"
+                    Tone="ButtonTone.Primary"
                     Size="ButtonSize.Small"
                     Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
                     IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
@@ -35,7 +35,7 @@
         {
             <Button Text="Disable"
                     Icon="block"
-                    ButtonStyle="ButtonStyle.Warning"
+                    Tone="ButtonTone.Warning"
                     Variant="Variant.Outlined"
                     Size="ButtonSize.Small"
                     Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
@@ -46,7 +46,7 @@
         {
             <Button Text="Enable"
                     Icon="play_arrow"
-                    ButtonStyle="ButtonStyle.Success"
+                    Tone="ButtonTone.Success"
                     Size="ButtonSize.Small"
                     Disabled="@Workspace.View.IsBlocked(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"
                     IsBusy="@Workspace.View.IsBusy(new PluginOperationTarget.Lifecycle(Plugin.PluginId))"

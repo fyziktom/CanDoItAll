@@ -31,13 +31,15 @@ from installed resources, the application on port 5032 and retained manual-provi
 Leases create uniquely named databases and retain the existing bounded cleanup contract.
 CI records `server_version_num` before its database lanes.
 
-Linux CI selects the Kernel.org [Ubuntu archive mirror](https://mirrors.kernel.org/)
-before installing PostgreSQL dependencies. It replaces only the Ubuntu archive and
-security URLs, retaining the distribution suites and Ubuntu signing keys. This avoids
-the Canonical archive DNS outage that blocked dependency setup across fresh runners;
-HTTPS and package-signature verification remain enabled. Index retrieval fails on any
-error, so a partial update cannot silently reuse stale indexes. The application runtime
-image uses the same mirror; see [container operations](operations/containers.md).
+Linux CI uses the official Ubuntu archive and security sources over HTTPS before
+installing PostgreSQL dependencies. Regional archive URLs are normalized to
+`https://archive.ubuntu.com/ubuntu/`; security updates use
+`https://security.ubuntu.com/ubuntu/`. The distribution suites and Ubuntu signing keys
+are retained, with certificate and package-signature verification enabled. A fixed
+third-party mirror is not required: its unavailability previously blocked dependency
+setup across Linux runners. Index retrieval fails on any error, so a partial update
+cannot silently reuse stale indexes. The application runtime image uses the same
+sources; see [container operations](operations/containers.md).
 
 For local runs reuse a suitable explicitly isolated PostgreSQL 18 test server, or provision
 one temporary fixture for the development session if none exists. Reuse it across related
@@ -1050,6 +1052,17 @@ be claimed by no class selector or by two. Inside a shard, tests keep their asse
 policy: shards add processes on separate runners, each with its own PostgreSQL server, never
 concurrency within one test process. The workflow policy test requires each sharded step's
 `-ShardCount` to match its matrix, so removing a matrix entry cannot silently drop classes.
+
+Shard execution prints normal per-case progress and xUnit diagnostic messages, including
+the active test after 60 seconds without progress. Host CI shards additionally opt into
+`-HangTimeoutMinutes 30`; the default is zero, so Linux and local calls retain their
+existing execution limits. This uses VSTest's per-case hang watchdog with dump type
+`none`: a stall terminates the test host, fails the shard, and retains sequence and
+available partial TRX evidence under the existing results directory for artifact upload.
+It does not retry tests or change the 180/240-minute host job limits. The bound is over
+three times the slowest completed host case observed in CI 132 and the successful CI 129
+macOS shard (526 seconds); that margin avoids treating normal slow integration work as
+the stalled Components execution seen in CI 132.
 
 Inspect a shard locally with `-ListOnly`, or run it with the same filter and shard arguments as
 CI. Refresh the weights from complete Linux runs of both assemblies when shard durations drift

@@ -1,0 +1,965 @@
+# Product-owner walkthrough transcript
+
+- Source: `2026-08-23 17-43-44.mkv`
+- Duration: 2230 seconds
+- Detected language: cs (probability 0.97)
+- Generated locally with faster-whisper `base`; review wording against the recording before treating it as a quoted source.
+
+## Timestamped transcript
+
+- **00:01–00:16** Ahoj, kážo takový example end-to-end možnýho použití, kendují to, že v ten začátek vlastně vám tady nějaký připravený e-mail, který vně posov zákazník.
+- **00:16–00:27** Požadujení nějaký napsání simple Tetris game, který to stažený zrenu na programovací uloho, ale nemusí to být vyloženě o programováň.
+- **00:27–00:31** Takže tady budu do projektu, a tady mám už otevření.
+- **00:31–00:41** Vytvřím si nový projekt, a už na merent Tetris mám, ale vytvřím nový, takže Tetris game dvě.
+- **00:41–00:59** Kasi tady předmělám blog Trevor Research, spracovat automatický ten e-mail.
+- **01:00–01:04** 365 v kategorii e-mail sumořit project.
+- **01:04–01:07** Štám blog flow.
+- **01:07–01:17** Ten e-mail mám oznáčený tej kategorii, akým konkrétním tegiem, co mám nastavený v tom blog flow, aby to bralo, akože to ještě není spracovaný.
+- **01:17–01:36** Tady si rám start blog flow, blog flow.
+- **01:37–01:41** Ten e-mail až se tady refrešné, možná stone refrešné hned.
+- **01:41–01:42** Ledy si vychledám znovu.
+- **01:42–01:45** Jeho tak už je oznáčené jako proces.
+- **01:45–01:51** A tady mám vlastně sumoři, o tom, co je tam potřeba tak dál.
+- **01:51–01:53** Takže jsem tojí v téhle fázy.
+- **01:53–01:58** Takže můžeme daj od blog Trevor Research Architecture.
+- **01:58–02:05** Nemusí agenta.
+- **02:05–02:14** A tady mám připravení prumpty.
+- **02:15–02:18** Tohle už máme zasebou.
+- **02:18–02:21** Takže jsme uportfory architektat na základě.
+- **02:21–02:27** Toho sumoři uděháňa, ký základní pokys.
+- **02:27–02:30** Na strzele kobyné vyloženě přesně architektory.
+- **02:30–02:33** Ale jsme základních jako bybodů, který bychom se mějit.
+- **02:33–02:46** Ještě tohle architektory, když se to podbré realizovat.
+- **02:46–02:47** Vště volno tady.
+- **02:47–02:53** Tůli tých agentů tady, jak se trochu díl Trevor.
+- **02:53–02:56** Takže jsme trochu, když se potřebují, ale mě se v rychle zeptu.
+- **02:56–02:59** Takže je to elelem čet.
+- **02:59–03:01** Byte simple čet.
+- **03:01–03:09** A tam je to v podstatě čistej čet z tům elelemkem.
+- **03:09–03:12** Ale zase nemí, že se takhle číst perště jednodlí běci.
+- **03:12–03:14** Co v téhle mám a pěsov.
+- **03:14–03:22** Tak předal akurat.
+- **03:22–03:25** Tak je to dláho zení nějak blybě.
+- **03:25–03:29** Takže se podjám to je na to.
+- **03:29–03:32** Máme jsme, že můžem vzapnotí.
+- **03:32–03:37** Tak, jako další krok, abych tam předal a výstupní slošku,
+- **03:37–03:46** kterže o tam kce je tady tudla dotnáct output.
+- **03:46–03:55** Kotře, Trevor.
+- **03:55–04:01** Sej se mi stej se by to přičetl ten agent.
+- **04:01–04:07** Tak můto reč 4 šterebíšu output.
+- **04:07–04:09** Tak je kreat.
+- **04:09–04:13** Tak.
+- **04:13–04:15** Jeho títka štěp.
+- **04:15–04:17** Jeho per jeho vlastního odpovět.
+- **04:17–04:19** Teď se rejli štěk od vřít rantám,
+- **04:19–04:23** kdy dítal z o tom konkrétním mekový běhu.
+- **04:23–04:32** Tady námáme je štět tady uděláme na vrchlajoutu.
+- **04:32–04:41** Podle na stovění agenta,
+- **04:41–04:43** taková s nebude, že bytou dělatře,
+- **04:43–04:45** jako SVG čko róvnou,
+- **04:45–04:49** křištřáne bude mít přístupka tůlům neđelání obrázku,
+- **04:49–04:51** ale agent vlastně může mít na stovění,
+- **04:51–04:53** i to vždy dělá,
+- **04:53–04:56** že vlastně přímo generové obrázek,
+- **04:56–04:59** kde by pomocí AI-moderů.
+- **04:59–05:13** Jeho on dělá,
+- **05:13–05:15** ale tady se to vlastně přítějí další,
+- **05:15–05:16** to je to zechu šukazové,
+- **05:16–05:17** a nám takhle neskáč,
+- **05:17–05:18** že to tam v tom střímo,
+- **05:18–05:19** a to už jsou,
+- **05:19–05:21** kdytechů detajili.
+- **05:21–05:35** Nakon má speciea přížazanej
+- **05:35–05:36** i speciální skil,
+- **05:36–05:37** proto obr,
+- **05:37–05:38** joo lipte,
+- **05:38–05:40** stímá SVG čkama.
+- **05:40–05:41** Jeho,
+- **05:41–05:42** tak do tady dalo,
+- **05:42–05:49** ale,
+- **05:49–05:50** no, bet,
+- **05:50–05:51** jako,
+- **05:51–05:52** na to, co.
+- **05:52–05:54** Ale to je to next piece,
+- **05:54–05:55** dalo,
+- **05:55–05:57** jsme jsou něco takový, jo.
+- **05:57–05:59** Tak,
+- **05:59–06:01** teď tam je další,
+- **06:01–06:02** další krokě,
+- **06:02–06:04** jsme zůždeli verymeni Čerem.
+- **06:04–06:06** Jime že,
+- **06:06–06:08** chcí,
+- **06:08–06:09** to si zavřem,
+- **06:09–06:11** to už tady na brém potřebuvat,
+- **06:11–06:13** a no to jsme si,
+- **06:13–06:28** joo tedy ho požádám,
+- **06:28–06:29** ať vlastně přijdá,
+- **06:29–06:31** konkrétní plan,
+- **06:31–06:33** podobě vlastně tásknou,
+- **06:33–06:34** důk, který,
+- **06:34–06:36** už jsou došku komplikovanější,
+- **06:36–06:37** ne jsou,
+- **06:37–06:39** v sobie informace,
+- **06:39–06:41** o tom časé návaznosti, a tak.
+- **06:41–06:44** Ty pak důvydět,
+- **06:44–06:45** k návy,
+- **06:45–06:46** popřebnutí v tom,
+- **06:46–06:47** v tom gantu.
+- **06:47–06:57** Stímže,
+- **06:57–06:58** vytváření tásku,
+- **06:58–06:59** ještě speciální,
+- **06:59–07:00** vlastně,
+- **07:00–07:01** level prav,
+- **07:01–07:03** který se předěluje agentové,
+- **07:03–07:04** když má možnost,
+- **07:04–07:05** třeba předávat
+- **07:05–07:06** tajte standardní noudy.
+- **07:06–07:07** Tak,
+- **07:07–07:08** to neznamená,
+- **07:08–07:10** že može předávat tásky,
+- **07:10–07:11** musí se mu tam doloženě,
+- **07:11–07:12** že jako by,
+- **07:12–07:13** i stázka má,
+- **07:13–07:14** a nebo,
+- **07:14–07:15** jen stázku,
+- **07:15–07:16** ale ten dlás,
+- **07:16–07:17** a se to mám dobré,
+- **07:17–07:18** vlastně vlastně,
+- **07:18–07:19** že,
+- **07:19–07:27** tak tím, že používat.
+- **07:27–07:28** Myrbří, že on dělá,
+- **07:28–07:29** ity,
+- **07:29–07:30** ich návaznosti,
+- **07:30–07:31** dokonce,
+- **07:31–07:32** když jsem to jednou,
+- **07:32–07:33** tak lezkoušou,
+- **07:33–07:34** tak,
+- **07:34–07:35** on tam nechal volnej weekend,
+- **07:35–07:36** to vo hrozně heský,
+- **07:36–07:37** že vlastně,
+- **07:37–07:38** uvažoval,
+- **07:38–07:39** že ten,
+- **07:39–07:41** ty ukuli bude uděnit člověkém,
+- **07:41–07:42** uvažoval jako,
+- **07:42–07:44** že bychomně remít asi free weekend,
+- **07:44–07:45** že až nás aj aj,
+- **07:45–07:46** se otročí,
+- **07:46–07:47** tak třeba weekend,
+- **07:47–07:48** by bude upořád frým.
+- **07:48–08:10** Namom nastavenýho na Medium,
+- **08:10–08:11** ako by,
+- **08:11–08:13** thinking effort,
+- **08:13–08:14** to taky spomaluje,
+- **08:14–08:16** některý tady tedyte jednoruší ulohy,
+- **08:16–08:17** a zváraľ úplně jako,
+- **08:17–08:18** z tím instant,
+- **08:18–08:19** postatě,
+- **08:19–08:23** už je pakou konkrétních nastaveních,
+- **08:23–08:24** že už,
+- **08:36–08:38** postatě ho tové,
+- **08:38–08:43** result.
+- **08:44–08:45** Jo,
+- **08:45–08:46** to tam,
+- **08:46–08:50** jo,
+- **08:50–08:51** da samo je říste,
+- **08:51–08:52** udělá víc,
+- **08:52–08:53** třeba jako do liny,
+- **08:53–08:54** takže,
+- **08:54–08:55** sčeba,
+- **08:55–08:57** kdy to mě vnímat.
+- **08:57–09:38** Sím, že da samozadat,
+- **09:38–09:39** i to, aby,
+- **09:39–09:40** vlastně,
+- **09:40–09:41** když má zase na to práve
+- **09:41–09:42** vytvářit subprojekty,
+- **09:42–09:44** když trá to pak člověk umozbopná,
+- **09:44–09:45** tak může říste,
+- **09:45–09:46** hleda ten plan,
+- **09:46–09:47** dáme si plan do subprojektu,
+- **09:47–09:48** a,
+- **09:48–09:49** vytvořně,
+- **09:49–09:50** da triz game,
+- **09:50–09:51** plan,
+- **09:51–09:52** a udějho jako subprojekt,
+- **09:52–09:53** a přesvím tam přižný tadyte
+- **09:53–09:54** dla noudy.
+- **09:54–09:55** No, tak to je schopný,
+- **09:55–09:56** postatě,
+- **09:56–09:57** zorganizovat,
+- **09:57–09:58** sam.
+- **09:58–10:00** Co se pak může,
+- **10:00–10:01** může to zdavit,
+- **10:01–10:02** počom tam,
+- **10:02–10:03** že na hrádě o nějaký
+- **10:03–10:04** wardowský dokument
+- **10:04–10:05** práve tak levstukní
+- **10:05–10:06** a říste,
+- **10:06–10:07** už si to spracují,
+- **10:07–10:08** a nebo mít vyloženě
+- **10:08–10:10** vlastně nastavený proces,
+- **10:10–10:11** jeho,
+- **10:11–10:12** kde, kde tě,
+- **10:12–10:13** udělájte jednotlivý krok,
+- **10:13–10:14** tak, jak je dám,
+- **10:14–10:15** vlastně,
+- **10:15–10:16** teďka trá rúčo,
+- **10:16–10:17** tak to dlouž se rá nastavit
+- **10:17–10:18** v tom.
+- **10:18–10:19** Jeho, tak je,
+- **10:19–10:20** tak to vlastně přesvím
+- **10:20–10:21** labětovo,
+- **10:21–10:22** vedět jako jeden,
+- **10:22–10:23** za druhým,
+- **10:23–10:24** a zoveň,
+- **10:24–10:25** když se tady přepnodu gantu,
+- **10:25–10:27** jeho, tak tady už vidím
+- **10:27–10:28** to formou,
+- **10:28–10:30** formou gantu.
+- **10:32–10:33** A tady může,
+- **10:33–10:34** vždyjí strá,
+- **10:34–10:35** ale,
+- **10:35–10:49** může tady to interaktyvní živlyš,
+- **10:49–10:50** tady může pohnout,
+- **10:50–10:51** a že tady dependence
+- **10:51–10:52** tak se posinou,
+- **10:52–10:53** je všechně ostatní,
+- **10:53–10:54** ale to ukážováš
+- **10:54–10:55** potom, co, co, co teď dělá
+- **10:55–10:56** tak ten táskat,
+- **10:56–10:57** že,
+- **10:57–10:58** že on je,
+- **10:58–11:00** že on je,
+- **11:00–11:01** že on je,
+- **11:01–11:02** že on je,
+- **11:02–11:03** že on je,
+- **11:03–11:06** že on je,
+- **11:06–11:08** jeho tady můj pekněské.
+- **11:08–11:09** Ččččččččo, jeho,
+- **11:09–11:10** Ččččččččččččččččččččče, jeho,
+- **11:10–11:11** interaktyvní činů,
+- **11:11–11:12** agreementsčččččččččččččččččččččččččččččččččččččččččččččččččččččččččččččya, jeho.
+- **11:12–11:12** Jako tady můžu
+- **11:12–11:14** som jealous
+- **11:14–11:15** tady můžu ne weirdly pret physicistov
+- **11:15–11:18** je sais k postecept 9.
+- **11:18–11:21** Kedy Tieیں le на vys grateku
+- **11:21–11:22** díc tak expostit sto League
+- **11:22–11:24** stá impl Kubernetes
+- **11:24–11:25** ne té bezorní,
+- **11:25–11:26** tak se pamouky
+- **11:26–11:31** ale chtěl na mnodyké reztelé helylaty, tyte hely zlíky.
+- **11:31–11:36** A už je, a stačo o to pak o tevříc.
+- **11:36–11:41** Zavříc, a už tam jsou nějaká chybíčkanou.
+- **11:41–11:46** Tím dle se daposová, tím dla dělám další propojení.
+- **11:46–11:51** U možno je to mene, takže oby když še,
+- **11:51–11:56** kdyby třeba zavazbanejk začátko a tak dalé.
+- **11:56–12:02** Takže tím jsme vytvřejmě nějaký plan, takhle zavřán.
+- **12:02–12:08** Já už je taky vydět mene, že jsou mary,
+- **12:08–12:12** všechny tady dám plus remaining plan.
+- **12:12–12:14** Takhle tady vlastně věde.
+- **12:14–12:17** Jednak to, že už jim se o tom projektu bavel s nějakým agentama,
+- **12:17–12:20** takže už se stálo nějaký samotní peníze,
+- **12:20–12:22** když se tady podívám tak,
+- **12:22–12:24** ale kdyby týklopáv,
+- **12:24–12:26** tady jsou mary vlastně toho,
+- **12:26–12:30** vočem svégečkoho stálo tady katoly.
+- **12:30–12:33** Takže to dlesnám už treku,
+- **12:33–12:35** když si, že tu stěm floating agentem
+- **12:35–12:38** vlastně nad tov projektovou, projektovou strukturou,
+- **12:38–12:40** štám pak jsou třad Workflow,
+- **12:40–12:42** s nebo ty egzikutory,
+- **12:42–12:45** třady Workflow a nebo procesy.
+- **12:45–12:47** Takže se tady taktovou také.
+- **12:47–12:49** Takže to může vidět k tomu konkrétnímu projektu
+- **12:49–12:53** i v kombinace slickým ozdrojem a takže tady pak nějakým otásku
+- **12:53–12:57** přiředim člověk, který má nějaký
+- **12:57–13:00** té, m nějaký finanční zdruje,
+- **13:00–13:03** tak hesnou internálko,
+- **13:03–13:05** tak tak tady ten zdrovna, takové nemá,
+- **13:05–13:07** městom byčka, městom budiná,
+- **13:07–13:17** který, který má tená,
+- **13:17–13:27** se tam nemá vám nějaký tom,
+- **13:27–13:32** takové nemá, takové nemá,
+- **13:32–13:34** takové nemá, takové nemá,
+- **13:34–13:36** takové nemá, takové nemá, takové nemá,
+- **13:36–13:39** kdy som věr dňaký očlověk,
+- **13:39–13:42** ten by to mě obřiřezený typeníze, tak na kolik,
+- **13:42–13:45** jakobystojí oparyho v dním perzen, co můle rít,
+- **13:45–13:47** tak tady už by bylo vlastně spočítany,
+- **13:47–13:49** či by si to relobnou,
+- **13:49–13:52** kolik to budé stát vlastně i z tím danym,
+- **13:52–13:54** z tím danym zdrujem.
+- **13:54–13:58** Tak se vrátím štětají do to,
+- **13:58–13:59** kán vásu,
+- **13:59–14:01** a štětají ukážu,
+- **14:01–14:03** takový další jakobysteb
+- **14:03–14:05** postatědědět v být děl,
+- **14:05–14:06** že ho trá náky,
+- **14:06–14:09** a jo, jak ty je můti nejnamyře,
+- **14:10–14:14** tak tojí fináñšník,
+- **14:15–14:18** a fináñšník námeště udělá jeksco,
+- **14:18–14:33** leko je nějaké jednou híky,
+- **14:34–14:36** oklájí šná OK,
+- **14:36–14:38** e-state,
+- **14:38–14:39** a posyba marchón dá,
+- **14:39–14:40** aby sa vlastně s toho pak,
+- **14:40–14:41** když tak dávučí,
+- **14:41–14:43** zdelali udělei니다 znabitku,
+- **14:43–14:44** nebo perevko,
+- **14:44–14:45** finalní znabitku,
+- **14:45–14:46** o tedy dál,
+- **14:46–15:01** Tím jsme pro páré vkou, vytváření tam přímono má tak lo tůli.
+- **15:01–15:08** Přičo budé.
+- **15:08–15:11** No je překvapuje, že jako tak všechno, jako prohází o funguje.
+- **15:11–15:14** Takhle škoro až nečekou.
+- **15:14–15:45** Tam pro ex cově takový, polegký vývrého, ale zatím není upextra do tažené.
+- **15:45–15:48** Nejde asi v něm jako editová prínu.
+- **15:48–15:59** Result.
+- **15:59–16:07** Vom opředout.
+- **16:07–16:08** Nie nepříde, že bylo tej przáho.
+- **16:08–16:10** Hele, jak jsem do zakřeklo.
+- **16:10–16:11** Super.
+- **16:11–16:13** A zaspelní jaka chybka.
+- **16:13–16:27** Analist ONLY.
+- **16:27–16:29** Projekstřeštěn od autora.
+- **16:29–16:30** Estef Brighter.
+- **16:30–16:32** Oh, ok.
+- **16:32–16:33** Takhle.
+- **16:33–16:35** Čekat takhle.
+- **16:35–16:37** Takhle zavrhu počánc.
+- **16:37–16:39** A možná bude musete reflešnout.
+- **16:39–16:40** Takhle.
+- **16:40–16:41** Takhle.
+- **16:41–16:42** Takhle.
+- **16:42–16:43** Femin.
+- **16:43–16:45** Čestrati čest.
+- **16:45–16:50** Ojtej má všechno.
+- **16:50–16:52** I tady.
+- **16:52–16:57** Skoro působ, jak on nějaký bop.
+- **16:57–17:04** Tráme tře a takhle.
+- **17:04–17:11** Mátej v rantá je můkou živá pteru.
+- **17:11–17:12** Neměme.
+- **17:12–17:22** I tady on nemě a problém vytvřit ten...
+- **17:22–17:26** ...ten file samotnaj.
+- **17:26–17:28** To bylo vidět, že tam přídel.
+- **17:28–17:30** Ale nemohle přídeat nout.
+- **17:30–17:34** Coš je divný.
+- **17:34–17:35** Dej si vzmém toho.
+- **17:35–17:37** Vazmém z tém historické.
+- **17:37–18:20** Ploskopirovat a zkusit.
+- **18:20–18:24** Předit si, a potfolio manager.
+- **18:24–18:27** Potfolio architect.
+- **18:27–18:34** A nendel to tam v rantstím má problem.
+- **18:34–18:36** A je stil keno odcreate finance.
+- **18:36–18:37** Ok.
+- **18:37–18:39** Však si, tak to.
+- **18:39–19:11** Koujíme si ten dle to zvádná.
+- **19:11–19:18** Takhle, jak tam normájde oši více, jak opředá bez problému.
+- **19:18–19:21** Předitli také v podstatěstejnej prínci půl.
+- **19:21–19:22** A to je soubor.
+- **19:22–19:24** Enem bobala nejaký by obál kou.
+- **19:24–19:25** Ale...
+- **19:25–19:27** Jaké to odkaz na soubor.
+- **19:27–19:43** Proude, že někdy býva samozobí pasky.
+- **19:43–19:47** Vosně to, jak s tam musí všichni tady práva nastavovat různě.
+- **19:47–19:49** Če pak šově koně, co nájde.
+- **19:49–19:51** A to enem tím, že tam není zakliknou tý.
+- **19:51–19:54** Dětřám, že zapisováte do té projecto veste, který.
+- **19:54–19:57** Těto jedaní nějaké motorkázky, genk, normáj.
+- **19:57–20:07** Jako lám pstí.
+- **20:07–20:21** Tánu k té hlavném části, že pak pustím proces, kterým vlastně vytvřím tajten basic.
+- **20:21–20:24** Hele, a ten tajten ekstronomá je předěl.
+- **20:24–20:27** Jo, i když je o votevřů tak hele.
+- **20:27–20:29** Stavčat.
+- **20:29–20:31** To vstajte.
+- **20:31–20:33** Psořesplán.
+- **20:33–20:35** Population sumarej.
+- **20:35–20:38** Ono umíte ten vývrgrafy, ale tady si, že tak můžu dát.
+- **20:38–20:43** Upenen preferit ap, a mňo by to otevřit normáj klasycké excavia.
+- **20:43–20:50** To je synáme close.
+- **20:50–20:53** Těm v podstatě máme, že spracovanou základní analizou,
+- **20:53–20:55** jakoby na bitky za akaznikám,
+- **20:55–20:59** aby si zamozřeně ty informace různě revidovat a zadlále,
+- **20:59–21:03** ale ko bude na vtečka pro tajten příklad.
+- **21:03–21:08** Co tady mám nastavený předů tak a oni jsou v tém playtech,
+- **21:08–21:10** takže se dají.
+- **21:10–21:12** Co tady za vřem?
+- **21:12–21:19** Gdy bylo to je to, to je o feed default.
+- **21:19–21:22** Tak tím znam daj na feedva defaulten jáky.
+- **21:22–21:25** Tady je třeba proces Blazor Abdeliveri,
+- **21:25–21:27** kde jsou základní rôla,
+- **21:27–21:31** ten proces není zes tak brytáně rozsáhlej,
+- **21:31–21:33** ale má už soby injaký logik,
+- **21:33–21:37** jakoby evaluace přípaných escalací na opravě a tak.
+- **21:37–21:39** Ale nepoľžíval,
+- **21:39–21:41** a vlastně je opoľžíval,
+- **21:41–21:42** tady nějaký sub proces.
+- **21:42–21:43** Takže i tady ten lema,
+- **21:43–21:44** a vlastně v sobe,
+- **21:44–21:45** nějaký sub proces,
+- **21:45–21:47** který jsou pak, jakoby jednoduší.
+- **21:47–21:48** A...
+- **21:48–21:50** Myslím, tak jsem,
+- **21:50–21:51** jsem třeba kliknout.
+- **21:51–21:53** Ja, a by se načetlom.
+- **21:53–21:55** Tak a ty se poľžíval jako jednotlivý proces,
+- **21:55–21:56** nikroke, takže a poľžíval,
+- **21:56–21:58** tady to Blazor Abdeliveri,
+- **21:58–21:59** tady pak ještě hodně složití,
+- **21:59–22:02** kde ještě ten multi-tím software Deliveri,
+- **22:02–22:04** kde je,
+- **22:04–22:06** je vlastně i reviu jako security,
+- **22:06–22:08** a takvíde jako další sub procesy,
+- **22:08–22:10** ale to už pak brutálně bupná
+- **22:10–22:13** celý to flotoho procesu.
+- **22:13–22:14** Nincmá jené dobrý,
+- **22:14–22:15** že to dla i přes a peduka,
+- **22:15–22:17** že pomoc nastovat agent,
+- **22:17–22:19** a nebo zasežou agentitary,
+- **22:19–22:21** když se tady otevrů agent,
+- **22:21–22:23** tak a mám patřiční tůli,
+- **22:23–22:25** tak je schopný a práva,
+- **22:25–22:27** tak je schopný čist
+- **22:27–22:28** a zapisovat v rámci,
+- **22:28–22:31** a toho v rámci project structure.
+- **22:32–22:34** Tady prociční procesu,
+- **22:34–22:36** kanva sub procesu.
+- **22:36–22:38** Tak, nic mě,
+- **22:38–22:41** a tej procesy zavrům samka,
+- **22:41–22:43** a tady si u toho ta,
+- **22:43–22:44** sku si přijelám,
+- **22:44–22:46** a toho toho,
+- **22:46–22:50** a tady dáme ten blaizer,
+- **22:50–22:58** no v dáma jako continu.
+- **23:00–23:01** Tak, a tady to dlo bým neobit
+- **23:01–23:03** rožku dobrouc na komplikovanieší,
+- **23:03–23:05** protože jdíš,
+- **23:05–23:07** třeba použaduje,
+- **23:07–23:09** vlastně je tam ten delivéry,
+- **23:09–23:10** blokstou,
+- **23:10–23:11** oput folder,
+- **23:11–23:13** dňáky hůjního,
+- **23:13–23:14** ulužíště,
+- **23:14–23:16** kde vlastně ten agent standardně nemá přístu.
+- **23:16–23:18** Tak já jsem,
+- **23:18–23:20** je můso říčně nastavit
+- **23:20–23:21** vlastně tůstošku,
+- **23:21–23:22** o kontakt jsem,
+- **23:22–23:23** takže třeba,
+- **23:23–23:25** to je mám to teda application developera,
+- **23:25–23:26** a tady work space tools
+- **23:26–23:28** se mě vlastně nastavl
+- **23:28–23:29** tůstošku,
+- **23:29–23:30** k nemají přístu,
+- **23:30–23:32** že to jeden z jejich růtu.
+- **23:32–23:34** Ale kdyby tam,
+- **23:34–23:36** nejaký, byl vybranej,
+- **23:36–23:38** že to nemá,
+- **23:38–23:39** tak, který to nemá,
+- **23:39–23:40** tak vlastně,
+- **23:40–23:41** běpack na tom,
+- **23:41–23:42** vznikla,
+- **23:42–23:43** eskalace, verámcí,
+- **23:43–23:44** toho byl to o procesu.
+- **23:44–23:45** I tak tam možná,
+- **23:45–23:46** zniklím nějaký eskalace,
+- **23:46–23:47** byče,
+- **23:47–23:48** jsem uděl,
+- **23:48–23:49** co tam dozměnout,
+- **23:49–23:50** a to by jsem tak vydlofrou,
+- **23:50–23:51** tak ne pouštěl.
+- **23:51–23:52** Takže,
+- **23:52–23:54** ale možná na opokto,
+- **23:54–23:55** jsem oprováný,
+- **23:55–23:56** který věcí,
+- **23:56–23:57** ale nobo,
+- **23:57–23:58** já agent,
+- **23:58–23:59** ale tak,
+- **23:59–24:00** udevr.
+- **24:00–24:02** Teď jsou namačovaný skoré,
+- **24:02–24:04** který penět o konkrétně o agenta,
+- **24:04–24:05** změní tania,
+- **24:05–24:06** který je koby,
+- **24:06–24:07** a spuněl povídají,
+- **24:07–24:08** tím základněm,
+- **24:08–24:10** puštěravku na to konkrétní,
+- **24:10–24:11** roli.
+- **24:11–24:12** Jí jsem z tím ok,
+- **24:12–24:13** tak tam,
+- **24:13–24:17** ale jí jen start,
+- **24:17–24:19** a vlastně dají mě to přepné přímodo
+- **24:19–24:21** toho před vybraního,
+- **24:21–24:23** běhu vlastně toho,
+- **24:23–24:25** a toho procesu,
+- **24:26–24:27** a co myslím,
+- **24:27–24:28** tady fungu je spravně tak,
+- **24:28–24:29** tak, tak,
+- **24:29–24:30** olo ranc,
+- **24:30–24:31** a onosto pořád přepnájo,
+- **24:31–24:32** že znamené,
+- **24:32–24:33** nezmění ten ten,
+- **24:33–24:34** no základě přepnou týtady,
+- **24:34–24:35** tak,
+- **24:35–24:36** se nemění,
+- **24:36–24:37** ale ten odkás,
+- **24:37–24:38** a je to hlavně,
+- **24:38–24:39** koby,
+- **24:39–24:40** skrz,
+- **24:40–24:41** ta adresa,
+- **24:41–24:42** skrz projekce.
+- **24:42–24:44** Jsi budu tady,
+- **24:44–24:45** ale to vřesil aj v projekce,
+- **24:45–24:46** tak tady už,
+- **24:46–24:47** mám možnost,
+- **24:47–24:48** mít olo ranc,
+- **24:48–24:49** adyž tam jsou trápak,
+- **24:49–24:50** už z nísu procesi,
+- **25:20–25:21** je úrovně,
+- **25:21–25:22** a koby,
+- **25:22–25:23** self-governance,
+- **25:23–25:24** toho projek,
+- **25:24–25:25** procesuje,
+- **25:25–25:26** slyje,
+- **25:26–25:27** mám,
+- **25:27–25:28** víc volný rucám,
+- **25:28–25:29** že stořešitám,
+- **25:29–25:30** a nebo má každou,
+- **25:30–25:31** by to most spíš,
+- **25:31–25:32** eskalovat, takže,
+- **25:32–25:33** k
+- **25:33–25:34** John Matrá,
+- **25:34–25:35** mechanizměna to,
+- **25:35–25:36** když vznikné eskalace,
+- **25:36–25:37** že nejaký,
+- **25:37–25:38** předešlej,
+- **25:38–25:39** proces nikrok,
+- **25:39–25:40** nedidrál artefakt,
+- **25:40–25:41** kterým neodudat,
+- **25:41–25:43** a kterým nejv nějakým pozdíším
+- **25:43–25:44** procesu,
+- **25:44–25:45** ním kroků,
+- **25:45–25:46** nejenom hnedka,
+- **25:46–25:47** v tom následvícím,
+- **25:50–25:51** vlastně sam,
+- **25:51–25:52** a může se vrátit k tomu
+- **25:52–25:53** proces nímu kroků,
+- **25:53–25:54** který,
+- **25:54–25:56** kde ten artefakt neozniknout,
+- **25:56–25:58** a vlastně projícím
+- **25:58–26:00** a agentem, nebo stěma agentama,
+- **26:00–26:01** který tam byl jako
+- **26:01–26:03** zástupcí v těch rolih,
+- **26:03–26:04** tak vlastně zakonserovat
+- **26:04–26:05** ten artefakt,
+- **26:05–26:06** a pak pokračovat
+- **26:06–26:07** zasedal.
+- **26:07–26:11** Hvalo,
+- **26:11–26:12** to ještmané jaké,
+- **26:12–26:13** eskalacejnou.
+- **26:13–26:14** Je tím nebru zdržovat,
+- **26:14–26:15** jeho prostě,
+- **26:15–26:16** takhvalo je redá,
+- **26:16–26:17** ale jeho na čice
+- **26:17–26:18** tam procenta rekud
+- **26:18–26:19** stane napíše,
+- **26:19–26:20** aplikacé tam,
+- **27:03–27:07** to byl neneměl potřebuvat
+- **27:07–27:12** no, takhle tam nějaký bak.
+- **27:12–27:14** To je to také nepotřebu,
+- **27:14–27:16** a on můste činom
+- **27:16–27:17** děžete informace.
+- **27:17–27:19** To je můset,
+- **27:19–27:20** můset skontrolovat
+- **27:20–27:21** poče práve by měl mít,
+- **27:21–27:23** ale evidentně
+- **27:23–27:24** k něčemu nemá,
+- **27:24–27:25** takže
+- **27:25–27:27** a díždáme
+- **27:27–27:28** na prův revor
+- **27:28–27:29** k někdy to za fungu
+- **27:29–27:30** jakože,
+- **27:30–27:31** že tam prostě namčeba
+- **27:31–27:32** splete nějaký
+- **27:32–27:33** výstupní formát
+- **27:33–27:34** něčeho,
+- **27:34–27:35** a pak ta eskalace
+- **27:35–27:36** prostě je
+- **27:36–27:37** taková,
+- **27:37–27:38** třeho nesmysl na
+- **27:38–27:39** odpovidára
+- **27:39–27:40** liděte.
+- **27:40–27:41** Té věc,
+- **27:41–27:42** která dížeduje,
+- **27:42–27:43** jako jsem jsem turing,
+- **27:43–27:44** a zároveň,
+- **27:44–27:45** potom v tom dětaj lute
+- **27:45–27:46** eskalace
+- **27:46–27:47** a mít možnost
+- **27:47–27:48** rovnou četovacím mene ženem.
+- **27:48–27:49** Prčet se tady,
+- **27:49–27:51** a tak vždycké a můžujíc
+- **27:51–27:55** tady do toho procesů
+- **27:55–27:57** tady by mene četů
+- **27:57–27:59** a tady se mě načitou
+- **27:59–28:00** poslední
+- **28:00–28:01** a poslední,
+- **28:01–28:02** a že
+- **28:02–28:32** je obyčky,
+- **28:32–28:33** a to asi,
+- **28:33–28:34** kdy tomu živom
+- **28:34–28:35** makádom lidi
+- **28:35–28:36** na ten proces,
+- **28:36–28:37** a před tom si
+- **28:37–28:38** si nedákec
+- **28:38–28:43** od
+- **28:43–28:44** toho jsem tady
+- **28:44–28:45** všetnou
+- **28:45–29:02** a tak to
+- **29:02–29:03** druhý bak
+- **29:03–29:04** to sa vydí
+- **29:04–29:06** a
+- **29:06–29:08** když pěch za
+- **29:08–29:11** nabyčky
+- **29:11–29:15** sytory
+- **29:15–29:52** R&ID
+- **29:52–29:53** a on by mě o mít
+- **29:53–29:54** přístu
+- **29:54–29:55** a
+- **29:55–29:56** možnost tam
+- **29:56–29:57** číscí opoho
+- **29:57–29:59** a tak proces sech i historii
+- **29:59–30:00** takže on z tož takže dohoda
+- **30:00–30:01** když tam dostone to
+- **30:01–30:02** možná
+- **30:02–30:03** pokud to mene nějaký bak
+- **30:03–30:30** vní
+- **30:30–30:31** artefakt
+- **30:31–30:32** posnovu
+- **30:32–30:33** vstupní artefaktista
+- **30:33–30:35** a ste project structure
+- **30:35–30:37** ok
+- **30:37–30:39** no už to dobyhne
+- **30:39–30:40** tak prostě on
+- **30:40–30:41** vstupnějí přijdá
+- **30:41–30:42** informace samkaj
+- **30:42–30:43** o tady už je to vidět
+- **30:43–30:44** vlastně, že
+- **30:44–30:46** tak jsou rán artefakt
+- **30:46–30:47** ta složka by se mě
+- **30:47–30:48** obyvit
+- **30:48–30:49** o ten filbreus
+- **30:49–30:50** reakoráto
+- **30:50–30:51** někdy hrozně dlouho trváne
+- **30:51–30:52** bo sa na tomu si poklika
+- **30:52–30:53** dva krátá
+- **30:53–30:54** můžem se obyví
+- **30:54–30:55** tam nějaká blvo
+- **30:55–30:56** s nevím nevenco
+- **30:56–30:58** a návom možná
+- **30:58–31:00** ký už ná
+- **31:00–31:05** javký vej
+- **31:05–31:06** ký se obyvé
+- **31:06–31:07** akoráctama
+- **31:07–31:08** se mutkomplit
+- **31:08–31:10** tak tam být se
+- **31:10–31:11** fakt rozbyt jeho možná
+- **31:11–31:12** obecně
+- **31:12–31:13** ohledně čtyní
+- **31:13–31:14** čtyní
+- **31:14–31:15** ni kterých
+- **31:15–31:16** jsou voru
+- **31:16–31:21** nebo složek
+- **31:21–31:22** a to je reším
+- **31:22–31:23** to jsou
+- **31:23–31:24** ostě
+- **31:24–31:25** opostupně poklika
+- **31:25–31:27** a testama více, více, více, více
+- **31:27–31:29** no
+- **31:29–31:30** a tady nějaký
+- **31:30–31:31** sumory
+- **31:31–31:32** vstovat
+- **31:32–31:33** tak dála
+- **31:33–31:34** a co to vřeho
+- **31:34–31:35** a to jsou
+- **31:35–31:36** skomplit
+- **31:36–31:37** ok, vyřeším
+- **31:37–31:38** tak to takový
+- **31:38–31:39** základníča intro
+- **31:39–31:40** tak
+- **31:40–31:41** jaký ofíc
+- **31:41–31:42** end-to-end
+- **31:42–31:43** flow
+- **31:43–31:45** to
+- **31:45–31:48** moži jedním možným vyvžítím
+- **31:48–31:49** to že jsme to
+- **31:49–31:50** to bolst rozmytelný
+- **31:50–31:51** tady
+- **31:51–31:52** štěnom možná do ukážu
+- **31:52–31:53** když to
+- **31:53–31:54** se mane prošli
+- **31:54–31:55** v rancu to okolu
+- **31:55–31:57** takové co na stavejnitých
+- **31:57–31:58** agentů
+- **31:58–31:59** na zdvořití části
+- **31:59–32:00** vlastně na stavejnitů
+- **32:00–32:01** a rantaj mógde si můžu vybrat pro
+- **32:01–32:02** vydra
+- **32:02–32:03** nebo možná
+- **32:03–32:04** spiš
+- **32:04–32:05** začít tím, že
+- **32:05–32:06** tady jsou pro vydry
+- **32:06–32:08** a tady si může na stavejt
+- **32:08–32:09** a třeba lokalního
+- **32:09–32:10** pro vydra
+- **32:10–32:11** učej
+- **32:11–32:13** a co mám trávsíky
+- **32:13–32:14** o nebo
+- **32:14–32:16** doležení jako by na
+- **32:16–32:18** lokalhostu
+- **32:18–32:19** nebo
+- **32:19–32:21** přes openAI
+- **32:21–32:22** připedně
+- **32:22–32:23** i
+- **32:23–32:24** vision
+- **32:24–32:25** takže
+- **32:25–32:26** a třeba jsem skoušou
+- **32:26–32:27** config UI
+- **32:27–32:29** pro generování
+- **32:29–32:30** přímo obrazku
+- **32:30–32:32** takže na některý už tam
+- **32:32–32:33** jsou jako vydršku specivisit
+- **32:33–32:35** si driv real
+- **32:35–32:37** ne nítam potřeba ideal
+- **32:37–32:38** haremali to será
+- **32:38–32:39** do plnit postupně
+- **32:39–32:40** a když mám to
+- **32:40–32:41** tak jsem už vlastně
+- **32:41–32:42** tady na stavec
+- **32:42–32:43** a agento vyžil
+- **32:43–32:44** ten
+- **32:44–32:45** provider
+- **32:45–32:46** a jeho konkrétní model
+- **32:46–32:47** tingu effort
+- **32:47–32:48** když se podporuje
+- **32:48–32:49** a připedně
+- **32:49–32:50** a kipřed připravení
+- **32:50–32:51** jako bysché
+- **32:51–32:52** ma toho nastavení
+- **32:52–32:54** a tady auto-apruvo
+- **32:54–32:55** vyžone má
+- **32:55–32:56** tak normájtom
+- **32:56–32:57** četu vlastně
+- **32:57–32:58** skáče
+- **32:58–32:59** a průvla request
+- **32:59–33:00** že vlastně člověk
+- **33:00–33:01** musí o to
+- **33:01–33:02** odkliknout
+- **33:02–33:03** pak na mory provider
+- **33:03–33:04** jsme samozavíšmí nastavení
+- **33:04–33:05** za snyaki
+- **33:05–33:06** jako byme mory provider
+- **33:06–33:07** je třeba vyčnou
+- **33:07–33:08** přes nmcp
+- **33:08–33:09** jsou
+- **33:09–33:10** ale
+- **33:10–33:11** z týmě je to mám
+- **33:11–33:12** jako definovaný
+- **33:12–33:13** jako samostatnou
+- **33:13–33:14** urstu na jako
+- **33:14–33:15** mcp server
+- **33:15–33:16** který
+- **33:16–33:17** pamět
+- **33:17–33:18** ale jako
+- **33:18–33:19** pamětivý provider
+- **33:19–33:20** z týmě
+- **33:20–33:21** pro generování
+- **33:21–33:22** obrazku
+- **33:22–33:23** pak je dajdem
+- **33:23–33:24** proček strakčia
+- **33:24–33:25** akces
+- **33:25–33:26** takže tady vlastně
+- **33:26–33:27** ten výběr
+- **33:27–33:28** a tam jsem jsme žeme na něco rozbytí
+- **33:28–33:29** ho tady klantoho
+- **33:29–33:30** kdy vyberet
+- **33:30–33:31** vlastně, že
+- **33:31–33:32** může
+- **33:32–33:33** i tásky měnit
+- **33:33–33:34** a nebo
+- **33:34–33:35** může všechno
+- **33:35–33:36** vlastně except
+- **33:36–33:37** tásks.
+- **33:37–33:38** Workspace
+- **33:38–33:39** tůl jsou
+- **33:39–33:40** opřistupov postate
+- **33:40–33:41** jaké stori dům
+- **33:41–33:42** a my tam máme
+- **33:42–33:44** storič
+- **33:44–33:45** katalog
+- **33:45–33:46** také vlastně
+- **33:46–33:47** no-to-elout
+- **33:47–33:48** protože mám tady všechny
+- **33:48–33:49** ale jinak
+- **33:49–33:50** může by brat storič
+- **33:50–33:51** což může by tváro system
+- **33:51–33:53** než to byť FTP, IPFS
+- **33:53–33:55** když můdám ke všechny
+- **33:55–33:57** tak vlastně, což je relevantní
+- **33:57–33:58** tak
+- **33:59–34:00** vlastně tak secret
+- **34:00–34:01** takže přístov
+- **34:01–34:02** kvaltu
+- **34:02–34:04** proceset
+- **34:04–34:05** tak jednodový
+- **34:05–34:06** celkem, že
+- **34:06–34:07** zapisovat číst
+- **34:07–34:08** pak kapabilitíst
+- **34:08–34:09** takže
+- **34:09–34:10** skěli tůli
+- **34:10–34:11** MCP
+- **34:11–34:12** jeho stvím, že tam už
+- **34:12–34:13** urvnou
+- **34:13–34:14** irvnou i přijelat
+- **34:14–34:15** a nebo to je rimu
+- **34:15–34:16** a připeněti
+- **34:16–34:17** not assigned
+- **34:17–34:18** assigned
+- **34:18–34:20** a voice
+- **34:20–34:21** jeho takže může
+- **34:21–34:22** se vybratí pro každý
+- **34:22–34:23** akentav
+- **34:23–34:24** konkrétní
+- **34:24–34:25** a voice podlotov
+- **34:25–34:26** jaký tom
+- **34:26–34:27** mám ten defaultní driver
+- **34:27–34:28** týtom zatímenom pro
+- **34:28–34:29** a
+- **34:29–34:30** upenajaj
+- **34:30–34:31** ale vlastně
+- **34:31–34:32** tady
+- **34:32–34:33** tady
+- **34:33–34:34** vlastně může
+- **34:34–34:35** povolit centránia
+- **34:35–34:36** a potom ti jednotlivý
+- **34:36–34:37** akentím musímit povolony
+- **34:37–34:38** že ten
+- **34:38–34:39** voice můžou
+- **34:39–34:40** můžou
+- **34:40–34:41** můžou
+- **34:41–34:42** použít
+- **34:42–34:43** než
+- **34:43–34:44** ještě jsem do
+- **34:44–34:45** tak nechci
+- **34:45–34:46** tak jsem do
+- **34:46–34:47** kliir
+- **34:47–34:48** tak to můžou byť nějaký
+- **34:48–34:49** čekt
+- **34:50–34:52** ty pak můžou přeřezova
+- **34:52–34:53** do tímu
+- **34:53–34:54** a ště tam dobrý
+- **34:54–34:55** vědět
+- **34:55–34:57** že ještě jsem přeředněm
+- **34:57–34:58** prvádního
+- **34:58–34:59** provider
+- **34:59–35:00** nevím, když
+- **35:00–35:01** to
+- **35:01–35:02** sytarně
+- **35:02–35:03** aký o mám
+- **35:03–35:04** a syna
+- **35:04–35:05** až jeho zmotráto
+- **35:05–35:06** je toho
+- **35:06–35:07** přepovych
+- **35:07–35:08** odajerám
+- **35:08–35:09** na lokal
+- **35:09–35:10** tak by jsem uměl
+- **35:10–35:11** je automatický
+- **35:11–35:12** předat beč
+- **35:12–35:13** jakože
+- **35:13–35:14** ho uvidíme jako private
+- **35:14–35:15** takže tráliš
+- **35:15–35:16** pak vybíram
+- **35:16–35:17** v tom tímu
+- **35:17–35:18** a proto
+- **35:18–35:19** procesu
+- **35:19–35:20** joje tady private
+- **35:20–35:21** nebo včetu
+- **35:21–35:22** tráftaj
+- **35:22–35:23** v tom Agents
+- **35:23–35:24** čeků
+- **35:24–35:25** ty Agents
+- **35:25–35:26** tak to oni
+- **35:26–35:27** tady mají
+- **35:27–35:28** ty beče
+- **35:28–35:29** a myslím, že to je ten private
+- **35:29–35:30** zaróvná
+- **35:30–35:31** by měl byť
+- **35:31–35:33** možná leně
+- **35:33–35:34** kvědět
+- **35:34–35:35** toho
+- **35:35–35:36** na doladiní
+- **35:36–35:37** ale
+- **35:37–35:38** je uvidím tady aspenty
+- **35:38–35:39** modely
+- **35:39–35:40** ho
+- **35:40–35:42** hledíme to máko
+- **35:42–35:43** na umodilo
+- **35:43–35:44** konfigurat
+- **35:44–35:46** a díž jsem přepno něká
+- **35:46–35:47** má tak to na tůmůže
+- **35:47–35:49** když tady se rešnout
+- **35:49–35:50** tak už o tom bude mídě
+- **35:50–35:52** až má to by
+- **35:52–35:53** čeho skrypt
+- **35:53–35:54** na
+- **35:54–35:55** děvají tady
+- **35:55–35:56** má pořád
+- **35:56–35:57** konat konfigurat
+- **35:57–35:59** sory
+- **35:59–36:00** že to trošku
+- **36:00–36:01** pro tožil to videó
+- **36:01–36:02** no
+- **36:02–36:03** a díž jsem na razom
+- **36:03–36:04** a tak jenom
+- **36:04–36:05** ozma půl tím vidám
+- **36:05–36:06** a tě
+- **36:06–36:07** to
+- **36:07–36:08** počená to nebo
+- **36:08–36:09** tady to bylo
+- **36:09–36:11** tady čeho skrypt
+- **36:11–36:12** kvě
+- **36:12–36:14** revu líít
+- **36:14–36:15** a im
+- **36:15–36:16** to je týmánama
+- **36:16–36:17** ulušený
+- **36:17–36:27** to je dývní
+- **36:27–36:28** okey
+- **36:28–36:29** to je bak
+- **36:29–36:33** tak jeho to je tak
+- **36:33–36:34** v kostce
+- **36:34–36:35** asesnout
+- **36:35–36:36** tak je tak
+- **36:36–36:37** první
+- **36:37–36:38** fazěk
+- **36:38–36:39** sít
+- **36:39–36:40** tady zodla
+- **36:40–36:41** až ještě
+- **36:41–36:42** to jeho
+- **36:42–36:44** až ještě
+- **36:44–36:45** to jeho
+- **36:45–36:46** tak už tady
+- **36:46–36:47** blok
+- **36:47–36:50** a už tady aj ten proces
+- **36:50–36:51** a takže
+- **36:51–36:52** a takže
+- **36:52–36:53** takže
+- **36:53–36:54** takže
+- **36:54–36:55** takže
+- **36:55–36:56** takže
+- **36:56–36:57** takže
+- **36:57–36:58** takže
+- **36:58–36:59** takže
+- **36:59–37:01** a takže
+- **37:01–37:07** takže
+- **37:07–37:08** takže
+- **37:08–37:09** takže
+- **37:09–37:10** takže

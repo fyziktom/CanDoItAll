@@ -42,7 +42,7 @@
                             Icon="folder_open"
                             Size="ButtonSize.Small"
                             Variant="Variant.Outlined"
-                            ButtonStyle="ButtonStyle.Info"
+                            Tone="ButtonTone.Info"
                             Disabled="@view.IsLoading"
                             data-testid="project-structure-file-browser-open-root-explorer"
                             Click="view.OpenRoot" />
@@ -92,7 +92,7 @@
                    Class="h-full min-h-0 overflow-hidden">
                 <Cluster Gap="LayoutGap.XSmall"
                          Class="shrink-0">
-                    <Button ButtonStyle="ButtonStyle.Light"
+                    <Button Tone="ButtonTone.Default"
                             Icon="arrow_back"
                             Text="Back to files"
                             data-testid="project-structure-file-browser-back"

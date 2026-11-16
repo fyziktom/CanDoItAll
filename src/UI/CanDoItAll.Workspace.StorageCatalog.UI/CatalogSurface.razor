@@ -5,9 +5,9 @@
         <EmptyState Title="Storage view retired" Description="Reopen Storage for the active workspace. Accepted operations retain their original receipts." />
     } else {
         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
-            <Button Text="Refresh catalog" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshCatalogAsync" data-testid="storage-refresh-catalog" />
-            <Button Text="Refresh secrets" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshSecretsAsync" data-testid="storage-refresh-secrets" />
-            <Button Text="Refresh routing" ButtonStyle="ButtonStyle.Light" Click="Session.RefreshRoutesAsync" data-testid="storage-refresh-routes" />
+            <Button Text="Refresh catalog" Tone="ButtonTone.Default" Click="Session.RefreshCatalogAsync" data-testid="storage-refresh-catalog" />
+            <Button Text="Refresh secrets" Tone="ButtonTone.Default" Click="Session.RefreshSecretsAsync" data-testid="storage-refresh-secrets" />
+            <Button Text="Refresh routing" Tone="ButtonTone.Default" Click="Session.RefreshRoutesAsync" data-testid="storage-refresh-routes" />
             @if (Session.Catalog.IsLoading || Session.Secrets.IsLoading || Session.Routes.IsLoading) {
                 <StatusBadge Tone="info" Text="Reading catalog references" />
             }
@@ -31,17 +31,17 @@
                     <Actions>
                         <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap">
                             @foreach (var provider in Session.Choices.Providers) {
-                                <Button Text="@provider.Label" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                <Button Text="@provider.Label" Tone="ButtonTone.Default" Size="ButtonSize.Small"
                                         Click="@(() => Session.New(provider.Value))" data-testid="@($"storage-settings-new-{provider.Value.ToString().ToLowerInvariant()}")" />
                             }
-                            <Button Text="Recovery" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                            <Button Text="Recovery" Tone="ButtonTone.Default" Size="ButtonSize.Small"
                                     Click="@(() => RecoveryRequested.InvokeAsync(Session.Draft?.Id ?? Session.SelectedId))" data-testid="storage-settings-recovery" />
                         </Cluster>
                     </Actions>
                     <Filters>
                         <FilterBar ResultText="@($"{Session.Filtered.Count()} matching storage target(s)")">
-                            <TextBox Immediate="true" @bind-Value="Session.Search" Placeholder="Search storage catalog" aria-label="Search storage catalog" data-testid="storage-settings-search" />
-                            <Button Text="Reset" ButtonStyle="ButtonStyle.Light" Click="@(() => Session.Search = string.Empty)" />
+                            <TextInput Immediate="true" @bind-Value="Session.Search" Placeholder="Search storage catalog" aria-label="Search storage catalog" data-testid="storage-settings-search" />
+                            <Button Text="Reset" Tone="ButtonTone.Default" Click="@(() => Session.Search = string.Empty)" />
                         </FilterBar>
                     </Filters>
                 </ListPanelHeader>
@@ -76,8 +76,8 @@
                 </Stack>
             </ListContent>
             <DetailHeader>
-                <h2 class="cda-title-xl">@(Session.Draft is { } titleDraft ? titleDraft.Id.HasValue ? titleDraft.Name : $"New {Session.ProviderLabel(titleDraft.ProviderKind)} target" : "Storage editor")</h2>
-                <p class="cda-body-muted">Configure identity, connectivity and default routing. System defaults are managed by the storage owner.</p>
+                <h2 class="cda-text-block cda-text-block--h4">@(Session.Draft is { } titleDraft ? titleDraft.Id.HasValue ? titleDraft.Name : $"New {Session.ProviderLabel(titleDraft.ProviderKind)} target" : "Storage editor")</h2>
+                <TextBlock TextStyle="TextStyle.Muted" Class="leading-5">Configure identity, connectivity and default routing. System defaults are managed by the storage owner.</TextBlock>
             </DetailHeader>
             <DetailContent>
                 @if (Session.EditorRead.IsLoading) {

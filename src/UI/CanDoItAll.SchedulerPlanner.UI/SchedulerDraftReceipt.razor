@@ -12,10 +12,10 @@
         }
         @if (receipt.Status == SchedulerMutationStatus.Unknown) {
             <label>Review exact saved plan ID <input value="@reviewId" @oninput="args => reviewId = args.Value?.ToString() ?? string.Empty" data-testid="scheduler-review-id" /></label>
-            <Button Text="Read and review this exact plan" ButtonStyle="ButtonStyle.Light" Disabled="@(Draft.IsReviewing || !Guid.TryParse(reviewId, out _))" IsBusy="@Draft.IsReviewing" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
+            <Button Text="Read and review this exact plan" Tone="ButtonTone.Default" Disabled="@(Draft.IsReviewing || !Guid.TryParse(reviewId, out _))" IsBusy="@Draft.IsReviewing" Click="ReviewAsync" data-testid="scheduler-review-unknown" />
         }
         @if (receipt.Status == SchedulerMutationStatus.Conflict) {
-            <Button Text="Compare changes" ButtonStyle="ButtonStyle.Light" IsBusy="@Draft.IsReviewing"
+            <Button Text="Compare changes" Tone="ButtonTone.Default" IsBusy="@Draft.IsReviewing"
                     Click="@(() => Workspace.CompareChangesAsync(Draft))" data-testid="scheduler-compare-changes" />
         }
     </SurfaceCard>
@@ -34,7 +34,7 @@
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Apply choices to form" Disabled="@(!review.IsResolved || Draft.Revision != review.Revision)"
                     Click="@(() => Workspace.ApplyComparisonAsync(Draft, review))" data-testid="scheduler-apply-comparison" />
-            <Button Text="Close comparison" ButtonStyle="ButtonStyle.Light" Click="@(() => Workspace.CloseComparison(Draft))" />
+            <Button Text="Close comparison" Tone="ButtonTone.Default" Click="@(() => Workspace.CloseComparison(Draft))" />
         </Cluster>
     </Stack>
 }

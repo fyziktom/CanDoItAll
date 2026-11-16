@@ -3,6 +3,6 @@
     overflow-wrap: anywhere;
 }
 
-.governance-surface ::deep .cda-input {
+.governance-surface ::deep .ui-input {
     max-width: 100%;
 }

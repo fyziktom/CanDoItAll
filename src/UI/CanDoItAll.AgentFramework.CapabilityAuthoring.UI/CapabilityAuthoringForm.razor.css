@@ -40,7 +40,7 @@
 }
 
 .capability-authoring ::deep .validation-errors {
-    color: var(--cda-danger, #b91c1c);
+    color: var(--cda-danger, var(--tone-danger-soft-fg));
     margin: 0;
     flex: 0 0 auto;
     max-height: 7rem;

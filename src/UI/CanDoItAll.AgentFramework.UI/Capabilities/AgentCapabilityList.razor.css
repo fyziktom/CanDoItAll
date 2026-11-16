@@ -13,7 +13,7 @@
 }
 
 .agent-capability-list__title {
-    color: rgb(15 23 42);
+    color: var(--tone-text-strong);
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.3;
@@ -22,7 +22,7 @@
 }
 
 .agent-capability-list__description {
-    color: rgb(71 85 105);
+    color: var(--tone-text-muted);
     display: -webkit-box;
     font-size: 0.82rem;
     line-height: 1.4;
@@ -33,7 +33,7 @@
 }
 
 .agent-capability-list__endpoint {
-    color: rgb(51 65 85);
+    color: var(--tone-text);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.72rem;
     line-height: 1.35;
@@ -45,7 +45,7 @@
 
 .agent-capability-list__endpoint:focus-visible {
     border-radius: 0.25rem;
-    outline: 2px solid rgb(56 189 248);
+    outline: 2px solid var(--tone-info-solid-bg);
     outline-offset: 2px;
 }
 

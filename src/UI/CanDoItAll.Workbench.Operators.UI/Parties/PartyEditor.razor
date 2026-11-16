@@ -50,7 +50,7 @@
                     <ResourceCardPicker TItem="Guid" Options="@Options(state)" SelectionChanged="@(id => Select(state, id))"
                         SearchPlaceholder="Search people, agents, and organizations" EmptyTitle="No parties match the current search"
                         DataTestId="project-structure-participant-party" />
-                    <Button Text="Clear selection" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Disabled="@(disabled || draft.Participant is null)"
+                    <Button Text="Clear selection" Variant="Variant.Text" Tone="ButtonTone.Default" Disabled="@(disabled || draft.Participant is null)"
                         data-testid="project-structure-participant-party-clear" Click="@(() => Select(state, null))" />
                     <SurfaceCard Soft="true">
                         <Stack GapScale="LayoutGap.Medium">
@@ -58,33 +58,33 @@
                             <TextBlock Value="Create a directory record when nothing reusable exists. An AI-agent party does not create a runtime Agent configuration." TextStyle="TextStyle.Note" />
                             <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
                                 <FormField Text="Kind">
-                                    <InputSelect @bind-Value="draft.Kind" disabled="@disabled" class="cda-input" data-testid="project-structure-participant-quick-kind">
+                                    <SelectInput @bind-Value="draft.Kind" disabled="@disabled" data-testid="project-structure-participant-quick-kind">
                                         @foreach (var kind in Enum.GetValues<PartyQuickCreateKind>()) {
                                             <option value="@kind">@KindLabel(kind)</option>
                                         }
-                                    </InputSelect>
+                                    </SelectInput>
                                 </FormField>
                                 <FormField Text="Name">
-                                    <TextBox Value="@draft.Name" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Name), () => draft.Name = value ?? string.Empty))" data-testid="project-structure-participant-quick-name" />
+                                    <TextInput Value="@draft.Name" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Name), () => draft.Name = value ?? string.Empty))" data-testid="project-structure-participant-quick-name" />
                                 </FormField>
                                 <FormField Text="Email">
-                                    <TextBox Value="@draft.Email" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Email), () => draft.Email = value ?? string.Empty))" data-testid="project-structure-participant-quick-email" />
+                                    <TextInput Value="@draft.Email" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Email), () => draft.Email = value ?? string.Empty))" data-testid="project-structure-participant-quick-email" />
                                 </FormField>
                                 <FormField Text="Phone">
-                                    <TextBox Value="@draft.Phone" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Phone), () => draft.Phone = value ?? string.Empty))" data-testid="project-structure-participant-quick-phone" />
+                                    <TextInput Value="@draft.Phone" Immediate="true" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Phone), () => draft.Phone = value ?? string.Empty))" data-testid="project-structure-participant-quick-phone" />
                                 </FormField>
                             </Grid>
                             <FormField Text="Summary">
-                                <TextArea Value="@draft.Summary" Immediate="true" Rows="3" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Summary), () => draft.Summary = value ?? string.Empty))" data-testid="project-structure-participant-quick-summary" />
+                                <TextAreaInput Value="@draft.Summary" Immediate="true" Rows="3" Disabled="@disabled" ValueChanged="@(value => Change(state, nameof(draft.Summary), () => draft.Summary = value ?? string.Empty))" data-testid="project-structure-participant-quick-summary" />
                             </FormField>
-                            <Button Text="Create party" ButtonStyle="ButtonStyle.Light" Disabled="@(disabled || state.Created is not null)"
+                            <Button Text="Create party" Tone="ButtonTone.Default" Disabled="@(disabled || state.Created is not null)"
                                 data-testid="project-structure-participant-quick-create" Click="@(() => CreateAsync(state))" />
                         </Stack>
                     </SurfaceCard>
                 }
                 <Button Text="Save participant sync" Disabled="@disabled" data-testid="project-structure-participant-save" Click="@(() => SaveAsync(state))" />
             } else if (!state.IsLoading && !participant) {
-                <Button Text="Use project defaults" ButtonStyle="ButtonStyle.Light" Disabled="@disabled" data-testid="project-structure-meeting-project-defaults" Click="@(() => Defaults(state))" />
+                <Button Text="Use project defaults" Tone="ButtonTone.Default" Disabled="@disabled" data-testid="project-structure-meeting-project-defaults" Click="@(() => Defaults(state))" />
                 <Grid ColumnTemplate="repeat(2,minmax(0,1fr))" Gap="LayoutGap.Medium">
                     @foreach (var choice in state.Choices) {
                         <label class="operator-party__choice" data-testid="project-structure-meeting-party-option">
