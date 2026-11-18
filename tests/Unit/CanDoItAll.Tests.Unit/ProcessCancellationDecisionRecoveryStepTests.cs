@@ -12,7 +12,7 @@ public sealed class ProcessCancellationDecisionRecoveryStepTests {
         fixture.Claim = fixture.Claim with { Position = new(ProcessCancellationRecoveryStage.Decisions) };
         var selection = await fixture.AdvanceAsync();
         Assert.Equal(fixture.Data.Selection.Head!.Reference, fixture.Claim.Position.CurrentDecision);
-        Assert.Equal(TimeSpan.Zero, selection.RetryAfter);
+        Assert.Null(selection.RetryAfter);
         Assert.Equal(0, fixture.Loads);
         Assert.Equal(0, fixture.Stops);
         Assert.Equal(0, fixture.Data.Commits);

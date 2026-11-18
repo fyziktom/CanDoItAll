@@ -27,11 +27,8 @@ public sealed class ProcessCancellationDecisionRecoveryStep(IProcessCancellation
             if (selected is not null && claim.Position.DecisionAfter is { } after && selected.DecisionId.Value.CompareTo(after.Value) <= 0) {
                 throw new InvalidDataException("Decision selection returned a repeated head.");
             }
-            if (selected is null) {
-                return new(new(ProcessCancellationRecoveryStage.SharedScope, CycleHadPending: claim.Position.CycleHadPending), Pending: RetainedPending(claim));
-            }
-            // Give other due roots a turn and the selected child's stop a fresh slice.
-            return new(claim.Position with { CurrentDecision = selected }, Pending: RetainedPending(claim), RetryAfter: TimeSpan.Zero);
+            return new(selected is not null ? claim.Position with { CurrentDecision = selected }
+                : new(ProcessCancellationRecoveryStage.SharedScope, CycleHadPending: claim.Position.CycleHadPending), Pending: RetainedPending(claim));
         }
         var metadata = await decisions.ReadAsync(claim.RootRunId, reference, cancellationToken).ConfigureAwait(false);
         if (metadata is null || metadata.Reference != reference || metadata.RunId.Value == Guid.Empty || metadata.StepInstanceId.Value == Guid.Empty) {

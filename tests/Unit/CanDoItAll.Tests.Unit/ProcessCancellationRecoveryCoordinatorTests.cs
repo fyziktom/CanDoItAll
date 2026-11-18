@@ -289,6 +289,21 @@ public sealed class ProcessCancellationRecoveryCoordinatorTests {
     }
 
     [Fact]
+    public async Task Selecting_a_decision_yields_its_saved_position_before_child_work() {
+        var fixture = new Fixture();
+        fixture.Queue.Saved = fixture.Queue.Saved! with { Position = new(ProcessCancellationRecoveryStage.Decisions) };
+        var selected = fixture.Queue.Saved.Position with { CurrentDecision = new(new(Guid.NewGuid()), 1) };
+        fixture.Step = (_, _) => Task.FromResult(new ProcessCancellationRecoveryCheckpoint(selected));
+
+        var result = await fixture.RunAsync();
+
+        Assert.Equal(ProcessCancellationRecoverySliceStatus.Yielded, result.Status);
+        Assert.Equal(1, result.Operations);
+        Assert.Equal(selected, fixture.Queue.Saved.Position);
+        Assert.Equal(TimeSpan.Zero, Assert.Single(fixture.Queue.Checkpoints).RetryAfter);
+    }
+
+    [Fact]
     public async Task Explicit_pending_release_does_not_add_another_yield() {
         var fixture = new Fixture();
         fixture.Step = (claim, _) => Task.FromResult(new ProcessCancellationRecoveryCheckpoint(claim.Position,

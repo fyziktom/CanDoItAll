@@ -77,15 +77,20 @@ public sealed class ProcessCancellationRecoveryCoordinator(IProcessCancellationR
                         RetryAfter: limits.FailureDelay);
                 }
                 token.ThrowIfCancellationRequested();
+                var releasedStatus = checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Completed
+                    ? ProcessCancellationRecoverySliceStatus.Completed : ProcessCancellationRecoverySliceStatus.Pending;
+                if (claim.Position.CurrentDecision is null && checkpoint.Position.CurrentDecision is not null && checkpoint.RetryAfter is null) {
+                    // Let another due root run before spending a fresh slice on the selected child.
+                    checkpoint = checkpoint with { RetryAfter = TimeSpan.Zero };
+                    releasedStatus = ProcessCancellationRecoverySliceStatus.Yielded;
+                }
                 var result = await queue.CheckpointAsync(claim, checkpoint, token).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
                 if (result.Status == ProcessCancellationCheckpointStatus.NotOwned) {
                     return new(ProcessCancellationRecoverySliceStatus.NotOwned, claim.RootRunId, operations, claim.Pending);
                 }
                 if (result.Status == ProcessCancellationCheckpointStatus.Released) {
-                    return new(checkpoint.Position.Stage == ProcessCancellationRecoveryStage.Completed
-                        ? ProcessCancellationRecoverySliceStatus.Completed : ProcessCancellationRecoverySliceStatus.Pending,
-                        claim.RootRunId, operations, checkpoint.Pending);
+                    return new(releasedStatus, claim.RootRunId, operations, checkpoint.Pending);
                 }
                 if (result.Status != ProcessCancellationCheckpointStatus.Applied || result.Claim is null) {
                     throw new InvalidDataException("A recovery checkpoint did not return a supported outcome and its owned claim.");
