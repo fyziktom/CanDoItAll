@@ -73,6 +73,26 @@ public sealed class WorkflowRuntimePersistenceLifecycleTests
         }));
     }
 
+    [Fact]
+    public async Task ConcurrentAdmissionsAndTransitionsOfOneRunCommitOneEventEach() {
+        await using var fixture = await RetryFixture.CreateAsync();
+        var run = CreateRun(WorkflowRunState.Running, StartedAtUtc);
+        var started = CreateEvent(run.RunId, WorkflowEventKind.Started, StartedAtUtc);
+        var admissions = await Task.WhenAll(Enumerable.Range(0, 12).Select(_ =>
+            Record.ExceptionAsync(() => fixture.Store.CreateRunWithStartedEventAsync(run, started))));
+        Assert.Single(admissions, error => error is null);
+        Assert.All(admissions.OfType<Exception>(), error => Assert.IsType<WorkflowRunAlreadyExistsException>(error));
+        var completed = run with { State = WorkflowRunState.Completed, TerminalAtUtc = StartedAtUtc.AddSeconds(1) };
+        var results = await Task.WhenAll(Enumerable.Range(0, 12).Select(_ =>
+            fixture.Store.TryTransitionRunAsync(run.RunId, [WorkflowRunState.Running], completed,
+                CreateEvent(run.RunId, WorkflowEventKind.Completed, completed.TerminalAtUtc.Value))));
+        Assert.Single(results, result => result.Transitioned);
+        Assert.All(results, result => Assert.Equal(WorkflowRunState.Completed, result.Run?.State));
+        var events = await fixture.Store.ListEventsAsync(run.RunId);
+        Assert.Single(events, item => item.Kind == WorkflowEventKind.Started);
+        Assert.Single(events, item => item.Kind == WorkflowEventKind.Completed);
+    }
+
     private sealed class RetryFixture(PostgresTestDatabaseLease database, PersistentWorkflowRunStore store, AbortCommitProbe probe) : IAsyncDisposable {
         public PersistentWorkflowRunStore Store { get; } = store;
         public AbortCommitProbe Probe { get; } = probe;

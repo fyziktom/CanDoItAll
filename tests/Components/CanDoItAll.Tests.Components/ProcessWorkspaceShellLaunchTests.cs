@@ -60,8 +60,11 @@ public sealed partial class ProcessWorkspaceShellTests {
         cut.WaitForAssertion(() => Assert.Equal(1, client.FeedDefaultsCommandCount));
         var initialRequests = client.Requests.Count;
         client.DeferShellRequests = true;
-        await cut.InvokeAsync(() => cut.Render(p => p.Add(c => c.ProjectId, Guid.NewGuid())));
-        cut.WaitForAssertion(() => Assert.Equal(initialRequests + 1, client.Requests.Count));
+        var successorProjectId = Guid.NewGuid();
+        await cut.InvokeAsync(() => cut.Render(p => p.Add(c => c.ProjectId, successorProjectId)));
+        var successor = await client.DeferredShellRequestStarted.Task.WaitAsync(BunitContext.DefaultWaitTimeout);
+        Assert.Equal(successorProjectId, successor.Scope.ProjectId);
+        Assert.Equal(initialRequests + 1, client.Requests.Count);
         var requestCount = client.Requests.Count;
         if (fail) {
             client.FeedCompletion.SetException(new InvalidOperationException("Retired feed details"));

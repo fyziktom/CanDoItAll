@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Infrastructure.ControlPlane;
@@ -11,6 +12,7 @@ using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.Pages;
+using CanDoItAll.Modules.Workbench.Pages.Components.ProjectStructure;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Structure.UI;
 using Microsoft.AspNetCore.Components;
@@ -231,8 +233,14 @@ public sealed class ProjectStructurePartyQuickCreateTests(ITestOutputHelper outp
         try {
             await gate.Created.Task.WaitAsync(TimeSpan.FromSeconds(20));
             if (changeActor) {
+                var originalSurface = cut.FindComponent<ProjectStructureAgentChatContextProvider>().Instance.Surface;
                 await host.InvokeAsync(() => host.Render(parameters => parameters.Add(component => component.Value, Actor("Successor"))
                     .AddChildContent<ProjectStructurePage>(child => child.Add(component => component.ProjectId, projectId))));
+                cut.WaitForAssertion(() => {
+                    var context = cut.FindComponent<ProjectStructureAgentChatContextProvider>().Instance;
+                    Assert.NotSame(originalSurface, context.Surface);
+                    Assert.Equal(AgentChatContextAccessState.Ready, context.ContextAccessState);
+                });
             } else {
                 runtime!.Generation++;
                 var workspace = cut.FindComponent<StructureWorkspace>().Instance;

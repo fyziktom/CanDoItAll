@@ -3706,6 +3706,7 @@ public sealed partial class ProcessWorkspaceShellTests
         public CancellationToken LastShellCancellationToken { get; private set; }
 
         public bool DeferShellRequests { get; set; }
+        public TaskCompletionSource<ProcessWorkspaceShellRequest> DeferredShellRequestStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public bool DeferEditorCommands { get; set; }
         public TaskCompletionSource? AuthoringCompletion { get; set; }
@@ -3765,6 +3766,7 @@ public sealed partial class ProcessWorkspaceShellTests
                 var completion = new TaskCompletionSource(
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 shellRequestCompletions.Add(completion);
+                DeferredShellRequestStarted.TrySetResult(request);
                 await completion.Task.WaitAsync(cancellationToken);
             }
             else
