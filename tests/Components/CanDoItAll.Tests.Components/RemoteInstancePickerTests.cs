@@ -20,12 +20,13 @@ public sealed class RemoteInstancePickerTests {
         var selections = new List<RemoteInstanceSelection?>();
         var picker = harness.Context.Render<RemoteInstancePicker>(p => p.Add(c => c.SelectedChanged,
             (RemoteInstanceSelection? value) => selections.Add(value)));
-        await picker.WaitForElement("[data-testid=remote-instance-add]").ClickAsync();
+        await picker.WaitForElement("[data-testid=remote-instance-add]:enabled").ClickAsync();
         picker.WaitForElement("[data-testid=remote-instance-name]").Input("West division");
         picker.Find("[data-testid=remote-instance-url]").Input("https://west.example.com/candoitall/");
+        picker.WaitForElement($"[data-testid=remote-instance-credential] option[value='{secret:D}']");
         picker.Find("[data-testid=remote-instance-credential]").Change(secret.ToString());
         Assert.DoesNotContain("component-test-token-value", picker.Markup, StringComparison.Ordinal);
-        await picker.Find("[data-testid=remote-instance-save]").ClickAsync();
+        await picker.WaitForElement("[data-testid=remote-instance-save]:enabled").ClickAsync();
 
         var registry = harness.Context.Services.GetRequiredService<IRemoteInstanceRegistry>();
         var saved = Assert.Single(await registry.ListAsync());
@@ -39,9 +40,9 @@ public sealed class RemoteInstancePickerTests {
         harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo(Assert.IsType<string>(settingsHref));
         var settings = harness.Context.Render<SettingsPage>();
         settings.WaitForAssertion(() => Assert.Contains("West division", settings.Markup, StringComparison.Ordinal));
-        await settings.Find("[data-testid=remote-instance-edit]").ClickAsync();
-        settings.Find("[data-testid=remote-instance-enabled]").Change(false);
-        await settings.Find("[data-testid=remote-instance-save]").ClickAsync();
+        await settings.WaitForElement("[data-testid=remote-instance-edit]:enabled").ClickAsync();
+        settings.WaitForElement("[data-testid=remote-instance-enabled]").Change(false);
+        await settings.WaitForElement("[data-testid=remote-instance-save]:enabled").ClickAsync();
         picker.WaitForAssertion(() => Assert.Null(selections.Last()));
         Assert.False((await registry.GetAsync(saved.Id)).IsEnabled);
         Assert.True(picker.Find($"option[value='{saved.Id:D}']").HasAttribute("disabled"));
@@ -55,7 +56,8 @@ public sealed class RemoteInstancePickerTests {
         var original = new RemoteInstanceSettings("East division", new Uri("https://east.example.com/"), secret, true, false);
         var instance = await registry.CreateAsync(Guid.NewGuid(), original);
         var manager = harness.Context.Render<RemoteInstancePicker>(p => p.Add(c => c.ManageInstances, true));
-        await manager.WaitForElement("[data-testid=remote-instance-edit]").ClickAsync();
+        await manager.WaitForElement("[data-testid=remote-instance-edit]:enabled").ClickAsync();
+        manager.WaitForElement("[data-testid=remote-instance-save]:enabled");
         manager.Find("[data-testid=remote-instance-name]").Input("Unsubmitted edit");
         var peer = await registry.UpdateAsync(instance.Id, instance.ConcurrencyToken, original with { Name = "Accepted by peer" });
         manager.WaitForAssertion(() => Assert.True(manager.Find("[data-testid=remote-instance-save]").HasAttribute("disabled")));
