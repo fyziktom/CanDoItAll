@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.SharedProviders.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,50 @@ public sealed class SharedProviderSourceUriPolicyTests
         Guid.Parse("a157823e-ad47-43e7-9b52-e9cd43f89820"));
     private static readonly SharedProviderPublicationId PublicationId = new(
         Guid.Parse("62fb875c-dc08-4e4b-a182-9bedcd814928"));
+
+    [Fact]
+    public async Task Remote_reader_preserves_proxy_path_and_sends_the_selected_token_with_the_protected_client() {
+        var factory = new RecordingHttpClientFactory((request, _) => {
+            Assert.Equal("https://central.example.test/proxy/api/templates", request.RequestUri?.AbsoluteUri);
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("test-credential", request.Headers.Authorization?.Parameter);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+                Content = new StringContent("[1,2]", Encoding.UTF8, "application/json")
+            });
+        });
+        var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
+        var rows = await reader.ReadAsync<int[]>(new Uri("https://central.example.test/proxy"),
+            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), "api/templates", CancellationToken.None);
+        Assert.Equal(new[] { 1, 2 }, rows);
+        Assert.Equal(SharedProviderCatalogClient.PublicClientName, factory.RequestedClientName);
+    }
+
+    [Theory]
+    [InlineData("//alternate.example.test/catalog")]
+    [InlineData("api/../other")]
+    [InlineData("api/%2e%2e/other")]
+    public async Task Remote_reader_rejects_paths_that_leave_the_selected_resource(string path) {
+        var factory = new RecordingHttpClientFactory((_, _) => throw new InvalidOperationException());
+        var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
+        await Assert.ThrowsAsync<ArgumentException>(() => reader.ReadAsync<int[]>(new Uri("https://central.example.test/"),
+            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), path, CancellationToken.None));
+        Assert.Null(factory.RequestedClientName);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.Redirect)]
+    [InlineData(HttpStatusCode.OK)]
+    public async Task Remote_reader_bounds_response_and_reports_only_local_diagnostics(HttpStatusCode status) {
+        using var content = new StringContent("private-upstream-diagnostic", Encoding.UTF8, "application/json");
+        content.Headers.ContentLength = RemoteInstanceJsonReader.MaximumBytes + 1;
+        var factory = new RecordingHttpClientFactory((_, _) => Task.FromResult(new HttpResponseMessage(status) { Content = content }));
+        var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
+        var error = await Assert.ThrowsAsync<RemoteInstanceReadException>(() => reader.ReadAsync<int[]>(new Uri("https://central.example.test/"),
+            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), "api/templates", CancellationToken.None));
+        Assert.DoesNotContain("private-upstream-diagnostic", error.Message);
+        Assert.DoesNotContain("test-credential", error.Message);
+    }
 
     [Fact]
     public void Normalize_CanonicalizesHostPortAndReverseProxyRoot()

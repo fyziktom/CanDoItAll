@@ -26,6 +26,7 @@ public static class SharedProviderHttpServiceCollectionExtensions
             SharedProviderCatalogClient.PrivateHttpClientName,
             SharedProviderDestinationAccess.ApprovedPrivateOnly);
         services.TryAddScoped<ISharedProviderCatalogClient, SharedProviderCatalogClient>();
+        services.TryAddScoped<CanDoItAll.RemoteInstances.IRemoteInstanceJsonReader, RemoteInstanceJsonReader>();
         services.TryAddSingleton<ISharedProviderRelaySupportCatalog, SharedProviderRelaySupportCatalog>();
         services.TryAddSingleton<ISharedProviderRelayRequestPolicy, SharedProviderRelayRequestPolicy>();
         services.AddHttpClient(SharedProviderHttpRelayClient.ClientName, client =>
