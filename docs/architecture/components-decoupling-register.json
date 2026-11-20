@@ -3,7 +3,7 @@
   "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "entry_commit": "663fb1391e4acb12439173f1cb1d287fb1f24685",
   "implementation_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-  "coverage": "1278 current rendering inputs. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
+  "coverage": "1282 current rendering inputs. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
   "limitations": [
     "Route declarations and reviewed source activations are complemented by evaluated consumer closure and actual compiled/native/browser proof. Excluded generic-type/name matches are retained explicitly; arbitrary reflection cannot be inferred from lexical callers.",
     "Assets/scenario/evidence fields refer to family entries; execution outcomes are recorded by dimension in the closure document.",
@@ -9955,7 +9955,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "8740fea960416db97def0354aca7cd9edbf3c1f2560c886299d37912d472fc68",
+      "sha256_lf": "66d0b0fca01870a7cd5095a12ba5142ea693583f5b081950a1c92b65d5da5bfc",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9964,12 +9964,13 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
-      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime",
-      "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog; AgentDecisionPolicyRecoveryDialog",
+      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime. Owns the template dialog lifetime, catalog refresh and local editor opening after an accepted import.",
+      "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog; AgentDecisionPolicyRecoveryDialog, RemoteAgentTemplateDialog",
       "descendants": [
         "AgentCatalogPanel",
         "AgentDecisionPolicyDialog",
-        "AgentDecisionPolicyRecoveryDialog"
+        "AgentDecisionPolicyRecoveryDialog",
+        "RemoteAgentTemplateDialog"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
@@ -10975,6 +10976,30 @@
       "rationale": "No current repository product route, symbol caller, component registry or generic/dynamic dialog registration. Test-only consumers do not make it a product surface. Kept intact; no execution claimed."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor",
+      "sha256_lf": "bb92a53036ce3279b48eb227fc6a8505d506be72a933c56661013d82e08db55a",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteAgentTemplateDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
+      ],
+      "native_owner": "Agent catalog opening binds discovery and local import to its original authority. The dialog owns source selection, cancellable reads, template preview and accepted local identity.",
+      "visual_owner": "RemoteInstancePicker, BaseLib Dialog and template controls",
+      "descendants": [
+        "Dialog",
+        "RemoteInstancePicker",
+        "SelectInput"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Composes the reusable instance picker with an agent-specific preview and explicit local creation. Direct callers receive the accepted agent identity."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor",
       "sha256_lf": "089a62f8e9ed22ba5bd8e4d0cd6ef5d7382b9678630e5378c9d63ff5cec76324",
@@ -11083,7 +11108,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
-      "sha256_lf": "1110c066d6f4df6c5942e2acdf890285f1b589772c4b7ff7c91e7d8b5e4fb018",
+      "sha256_lf": "12628e88b5e9c4335a7fc43c993ffea3b96f2ada6a35b65bdd281563ffe2f1ee",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.SharedProviderSourcesDialog",
@@ -11100,7 +11125,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form. Current source delta reviewed against the actual descendant/owner seam; historical result is not re-labelled as new execution."
+      "rationale": "The provider host passes the canonical Settings location to the existing source renderer and retains provider catalog discovery, governed writes and recovery."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
@@ -15235,6 +15260,53 @@
       "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor",
+      "sha256_lf": "4f68226d5ec3c2e9ec4f59d3a6359a444620683a898e1f591611565bb01380cd",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Workspace.Pages.Components.RemoteInstancePicker",
+      "project": "src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor"
+      ],
+      "native_owner": "Workspace owns the connection edit opening, list observer, credential metadata reads, create, update and deletion. The feature caller receives an enabled source and its revision.",
+      "visual_owner": "RemoteInstanceEditor, BaseLib list, selector and confirmation dialog",
+      "descendants": [
+        "RemoteInstanceEditor",
+        "SectionCard",
+        "SelectionListItem",
+        "SelectInput",
+        "Dialog"
+      ],
+      "assets": "CanDoItAll.Modules.Workspace",
+      "scenario": "CanDoItAll.Modules.Workspace",
+      "evidence": "CanDoItAll.Modules.Workspace",
+      "rationale": "The Settings list and inline feature picker share the same guarded registry and connection editor. Provider and agent import behavior stays in the consuming features."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor.cs",
+      "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor.cs",
+      "sha256_lf": "1b587aa2f90c1f30f723503a187c0b0fee24dbea5d78eaca2521169f002f314f",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Workspace.Pages.Components.RemoteInstancePicker",
+      "project": "src/Modules/CanDoItAll.Modules.Workspace/CanDoItAll.Modules.Workspace.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor"
+      ],
+      "native_owner": "Workspace owns scoped registry reads, source revisions, secret metadata, editor lifecycle, mutation outcomes and parent selection notification.",
+      "visual_owner": "RemoteInstancePicker.razor",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.Workspace",
+      "scenario": "CanDoItAll.Modules.Workspace",
+      "evidence": "CanDoItAll.Modules.Workspace",
+      "rationale": "The code-behind supplies the production lifetime and control handlers for the picker and Settings list."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/SettingsRendererHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/SettingsRendererHost.razor",
       "sha256_lf": "8da3443507453e8b50dda6801132f88138486d50111102e59b14fb3b7a3bde18",
@@ -15327,7 +15399,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
-      "sha256_lf": "8bea567167452c8e0d93c5297ee13e033c21f7b8a41447a89cd2a908597a6e3f",
+      "sha256_lf": "e4bb287b5030b7595027da7e8fd77efa61e2e771337ec11575ef2c9a74950121",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.SettingsPage",
@@ -15337,18 +15409,19 @@
         "/settings"
       ],
       "native_owner": "CanDoItAll.Modules.Workspace",
-      "visual_owner": "DatabaseSourcesSettingsPanel, ProviderHistoryPolicyPanel, StorageSettingsPanel, WorkspaceApiAccessHost, WorkspaceSettingsSurface",
+      "visual_owner": "DatabaseSourcesSettingsPanel, ProviderHistoryPolicyPanel, StorageSettingsPanel, WorkspaceApiAccessHost, WorkspaceSettingsSurface, RemoteInstancePicker",
       "descendants": [
         "DatabaseSourcesSettingsPanel",
         "ProviderHistoryPolicyPanel",
         "StorageSettingsPanel",
         "WorkspaceApiAccessHost",
-        "WorkspaceSettingsSurface"
+        "WorkspaceSettingsSurface",
+        "RemoteInstancePicker"
       ],
       "assets": "CanDoItAll.Modules.Workspace",
       "scenario": "CanDoItAll.Modules.Workspace",
       "evidence": "CanDoItAll.Modules.Workspace",
-      "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
+      "rationale": "The Settings route activates the remote instance registry only for the selected section and current profile. Feature hosts retain their read, edit and import lifetimes."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor.cs",
@@ -24457,7 +24530,7 @@
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Workspace.razor",
       "path": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Workspace.razor",
-      "sha256_lf": "00e57b362b651c0ca6c2bf7fc64e0806499e42dad5a2bd9948da4e263f6a16e0",
+      "sha256_lf": "5ac5451326df091ad1eeb3af88f41dfbd4e1af8de716a6996564f559734d2a47",
       "kind": "RAZOR",
       "role": "SCENARIO",
       "type": "CanDoItAll.Workspace.UiSandbox.Components.Workspace",
@@ -24467,16 +24540,17 @@
         "/"
       ],
       "native_owner": "CanDoItAll.Workspace.UiSandbox",
-      "visual_owner": "WorkspaceHistorySurface, WorkspaceScenario, WorkspaceSettingsSurface",
+      "visual_owner": "WorkspaceHistorySurface, WorkspaceScenario, WorkspaceSettingsSurface, RemoteInstanceEditor",
       "descendants": [
         "WorkspaceHistorySurface",
         "WorkspaceScenario",
-        "WorkspaceSettingsSurface"
+        "WorkspaceSettingsSurface",
+        "RemoteInstanceEditor"
       ],
       "assets": "CanDoItAll.Workspace.UiSandbox",
       "scenario": "CanDoItAll.Workspace.UiSandbox",
       "evidence": "CanDoItAll.Workspace.UiSandbox",
-      "rationale": "Independent developer scenario owner. Its synthetic state/receipts are not product persistence proof."
+      "rationale": "The backend-free scenario drives the production connection editor with vault metadata and handles the submitted draft locally. Registry persistence belongs to the production owner."
     },
     {
       "identity": "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/_Imports.razor",
@@ -25716,7 +25790,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.SharedProviders.UI/SharedProviderSourcesSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.SharedProviders.UI/SharedProviderSourcesSurface.razor",
-      "sha256_lf": "449f3ec43bce96bbbba7e56fba6f8f438632f80098c7529f32a0c8091cbeaff4",
+      "sha256_lf": "adc69ef425fc3ffe2044a5e5a715398e863fe81ed3321ab1b2ee10ba072da1ed",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.SharedProviders.UI.SharedProviderSourcesSurface",
@@ -25734,7 +25808,7 @@
       "assets": "CanDoItAll.AgentFramework.SharedProviders.UI",
       "scenario": "CanDoItAll.AgentFramework.SharedProviders.UI",
       "evidence": "CanDoItAll.AgentFramework.SharedProviders.UI",
-      "rationale": "Existing light value/intent or controlled-operation seam; no re-extraction."
+      "rationale": "Renders the host-supplied Settings link alongside existing source and provider catalog intents. Source writes and navigation policy remain with the host."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.SharedProviders.UI/SharedProviderSourcesSurface.razor.css",
@@ -25993,7 +26067,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
-      "sha256_lf": "54b12de36ce6c63a85a42831b5407e5a742fc359648296fae794702f25fd579c",
+      "sha256_lf": "4e0b680361099e2fe10e73707f8826f066ba4f69259b0c29d7e36b0ba705cfdf",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -26011,7 +26085,7 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Existing toolbar renders a typed retained-save intent only for a capable native host; no new layout, owner read or browser access."
+      "rationale": "Existing toolbar renders a typed retained-save intent only for a capable native host; no new layout, owner read or browser access. The catalog toolbar also emits a typed import intent. The native catalog host owns the dialog and local refresh."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
@@ -36938,6 +37012,33 @@
       "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
     },
     {
+      "identity": "src/UI/CanDoItAll.Workspace.UI/RemoteInstanceEditor.razor",
+      "path": "src/UI/CanDoItAll.Workspace.UI/RemoteInstanceEditor.razor",
+      "sha256_lf": "394f04059b0efaddc0cb9e0b1ee56369a456fd8908ed6f8b21158d9dcead0284",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Workspace.UI.RemoteInstanceEditor",
+      "project": "src/UI/CanDoItAll.Workspace.UI/CanDoItAll.Workspace.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor",
+        "src/Sandboxes/CanDoItAll.Workspace.UiSandbox/Components/Workspace.razor"
+      ],
+      "native_owner": "The owning picker supplies a draft and credential names and handles save and close. The sandbox exercises the same editor with a scenario draft.",
+      "visual_owner": "CanDoItAll.Workspace.UI and the BaseLib dialog and input components",
+      "descendants": [
+        "Dialog",
+        "FormField",
+        "TextInput",
+        "SelectInput",
+        "CheckBox"
+      ],
+      "assets": "CanDoItAll.Workspace.UI",
+      "scenario": "CanDoItAll.Workspace.UI",
+      "evidence": "CanDoItAll.Workspace.UI",
+      "rationale": "Renders a supplied connection draft and validation feedback, with typed save and close callbacks. The registry owner validates and writes the submitted settings."
+    },
+    {
       "identity": "src/UI/CanDoItAll.Workspace.UI/SecretReceiptReview.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/SecretReceiptReview.razor",
       "sha256_lf": "19a22a795d05d674dd376d90ce97fc5ed2dfd12c07fc40bd0241fdefae695b93",
@@ -37146,7 +37247,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSettingsSurface.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/WorkspaceSettingsSurface.razor",
-      "sha256_lf": "a75294ea26d6220272440f1ad8bb18b799a40c634b5e0405d94841891f3ae6cc",
+      "sha256_lf": "1e6a238b95748a1ef4b97095acc05877ca6d35bc9ea7f35e7ef5ea1df1b26904",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.WorkspaceSettingsSurface",
@@ -37166,7 +37267,7 @@
       "assets": "CanDoItAll.Workspace.UI",
       "scenario": "CanDoItAll.Workspace.UI",
       "evidence": "CanDoItAll.Workspace.UI",
-      "rationale": "Reviewed family presentation seam. Actual descendants and evaluated closure accompany the family contract; host owns business effects."
+      "rationale": "The shell selects the typed remote-instances section and renders its deferred slot. The route owns that section and chooses its native host."
     },
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/_Imports.razor",
