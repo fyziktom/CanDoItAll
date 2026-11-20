@@ -1,4 +1,5 @@
 using Bunit;
+using System.Collections.Concurrent;
 using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Security;
@@ -17,9 +18,18 @@ public sealed class RemoteInstancePickerTests {
     public async Task Feature_create_selects_the_saved_identity_and_both_management_surfaces_show_the_same_connection() {
         await using var harness = await ComponentTestHarness.CreateAsync();
         var secret = await SaveSecretAsync(harness);
-        var selections = new List<RemoteInstanceSelection?>();
+        var selections = new ConcurrentQueue<RemoteInstanceSelection?>();
+        var selected = new TaskCompletionSource<RemoteInstanceSelection>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var picker = harness.Context.Render<RemoteInstancePicker>(p => p.Add(c => c.SelectedChanged,
-            (RemoteInstanceSelection? value) => selections.Add(value)));
+            (RemoteInstanceSelection? value) => {
+                selections.Enqueue(value);
+                if (value is null) {
+                    cleared.TrySetResult();
+                } else {
+                    selected.TrySetResult(value);
+                }
+            }));
         await picker.WaitForElement("[data-testid=remote-instance-add]:enabled").ClickAsync();
         picker.WaitForElement("[data-testid=remote-instance-name]").Input("West division");
         picker.Find("[data-testid=remote-instance-url]").Input("https://west.example.com/candoitall/");
@@ -28,9 +38,11 @@ public sealed class RemoteInstancePickerTests {
         Assert.DoesNotContain("component-test-token-value", picker.Markup, StringComparison.Ordinal);
         await picker.WaitForElement("[data-testid=remote-instance-save]:enabled").ClickAsync();
 
+        var selection = await selected.Task.WaitAsync(TimeSpan.FromSeconds(15));
         var registry = harness.Context.Services.GetRequiredService<IRemoteInstanceRegistry>();
         var saved = Assert.Single(await registry.ListAsync());
-        Assert.Equal(new RemoteInstanceSelection(saved.Id, saved.ConcurrencyToken), Assert.Single(selections));
+        Assert.Equal(new RemoteInstanceSelection(saved.Id, saved.ConcurrencyToken), selection);
+        picker.WaitForElement($"[data-testid=remote-instance-select]:enabled option[value='{saved.Id:D}']:enabled");
         Assert.Empty(picker.FindAll("[data-testid=remote-instance-editor]"));
         var registryHref = SettingsUrlCodec.Instance.Href(SettingsUrlCodec.Path, new(WorkspaceSection.RemoteInstances));
         var providerDialog = harness.Context.Render<SharedProviderSourcesDialog>(p => p.Add(c => c.RegistryHref, registryHref));
@@ -43,9 +55,10 @@ public sealed class RemoteInstancePickerTests {
         await settings.WaitForElement("[data-testid=remote-instance-edit]:enabled").ClickAsync();
         settings.WaitForElement("[data-testid=remote-instance-enabled]").Change(false);
         await settings.WaitForElement("[data-testid=remote-instance-save]:enabled").ClickAsync();
-        picker.WaitForAssertion(() => Assert.Null(selections.Last()));
+        await cleared.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        picker.WaitForElement($"[data-testid=remote-instance-select]:enabled option[value='{saved.Id:D}']:disabled");
+        Assert.Equal(new RemoteInstanceSelection?[] { selection, null }, selections.ToArray());
         Assert.False((await registry.GetAsync(saved.Id)).IsEnabled);
-        Assert.True(picker.Find($"option[value='{saved.Id:D}']").HasAttribute("disabled"));
     }
 
     [Fact]
