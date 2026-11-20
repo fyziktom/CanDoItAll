@@ -15,7 +15,11 @@ retry only PostgreSQL serialization failures or deadlocks. Each of at most five 
 opens a fresh context/transaction and reacquires source authority. Provider calls are
 outside this boundary. Other errors and exhausted retries propagate; run/event identities
 remain stable. PostgreSQL 18 tests exercise aborted commits, exhaustion, non-retryable
-errors and twelve concurrent independent lifecycles.
+errors and twelve concurrent independent lifecycles. On PostgreSQL, admission without
+a source lease relies on the unique run key. Admission with a source lease retains its
+serializable authority checks. A lifecycle transition locks the run row before checking
+its authority and applying the expected-state update at read committed. The terminal
+event commits in the same transaction. Concurrent transitions of one run have one winner.
 
 Workflows can convert uploaded documents through the existing `document.to-markdown`
 executor. Agent attachment staging only accepts images.

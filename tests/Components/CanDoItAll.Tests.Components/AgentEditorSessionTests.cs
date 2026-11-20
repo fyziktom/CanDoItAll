@@ -100,18 +100,24 @@ public sealed class AgentEditorSessionTests {
 
     [Fact]
     public async Task Reset_invalidates_pending_project_result_and_allows_new_request() {
-        var pending = new TaskCompletionSource<IReadOnlyList<AgentEditorProject>>();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = new TaskCompletionSource<IReadOnlyList<AgentEditorProject>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var reads = new AgentEditorReadFixture { Draft = new() { ProjectStructureAccess = new() { CanRead = true } } };
-        reads.ReadProjects = _ => reads.ProjectReads == 1 ? pending.Task : Task.FromResult<IReadOnlyList<AgentEditorProject>>([]);
+        reads.ReadProjects = _ => started.TrySetResult() ? pending.Task : Task.FromResult<IReadOnlyList<AgentEditorProject>>([]);
         await using var harness = await CreateHarnessAsync(reads);
         var cut = harness.Context.Render<AgentDetailsDialog>(parameters => parameters.Add(component => component.Section, AgentEditorSection.ProjectStructureAccess));
-        cut.Find("[data-testid='agents-catalog-project-structure-load']").Click();
-        cut.FindComponent<StickyActionFooter>().FindAll("button").Single(button => button.TextContent.Trim() == "Clear").Click();
-        await cut.InvokeAsync(() => pending.SetResult([new(Guid.NewGuid(), "Stale project")]));
+        var loading = cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-project-structure-load']").ClickAsync());
+        try {
+            await started.Task.WaitAsync(BunitContext.DefaultWaitTimeout);
+            await cut.InvokeAsync(() => cut.FindComponent<StickyActionFooter>().FindAll("button").Single(button => button.TextContent.Trim() == "Clear").ClickAsync());
+        } finally {
+            pending.TrySetResult([new(Guid.NewGuid(), "Stale project")]);
+        }
+        await loading;
         cut.Render(parameters => parameters.Add(component => component.Section, AgentEditorSection.ProjectStructureAccess));
         Assert.Equal(1, reads.ProjectReads);
         Assert.DoesNotContain("Stale project", cut.Markup);
-        cut.Find("[data-testid='agents-catalog-project-structure-read']").Change(true);
+        await cut.InvokeAsync(() => cut.Find("[data-testid='agents-catalog-project-structure-read']").ChangeAsync(true));
         cut.WaitForAssertion(() => Assert.Equal(2, reads.ProjectReads));
         Assert.DoesNotContain("Stale project", cut.Markup);
     }

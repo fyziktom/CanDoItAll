@@ -1500,7 +1500,7 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
 
         WorkflowPersistenceProvider.EnsureRelational(dbContext);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable,
+            source is null && dbContext.Database.IsNpgsql() ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
             cancellationToken);
         using var coordination = source is not null ? coordinatedTransactions!.Enter(dbContext) : null;
         if (source is not null) {
@@ -1523,8 +1523,7 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
             await transaction.CommitAsync(cancellationToken);
             coordination?.Dispose();
         }
-        catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception) ||
-                startedEvent.DisclosureDeclaration is not null && IsWorkflowEventPrimaryKeyViolation(exception)) {
+        catch (DbUpdateException exception) when (IsWorkflowRunPrimaryKeyViolation(exception) || IsWorkflowEventPrimaryKeyViolation(exception)) {
             await transaction.RollbackAsync(CancellationToken.None);
             if (!IsWorkflowRunPrimaryKeyViolation(exception)) {
                 await using var verify = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -1649,16 +1648,18 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
         }
 
         WorkflowPersistenceProvider.EnsureRelational(dbContext);
+        var isPostgres = dbContext.Database.IsNpgsql();
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable,
+            isPostgres ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
             cancellationToken);
-        var currentQuery = dbContext.Database.IsNpgsql() ? dbContext.Set<WorkflowRunRecordEntity>().FromSqlInterpolated(
+        var currentQuery = isPostgres ? dbContext.Set<WorkflowRunRecordEntity>().FromSqlInterpolated(
             $"SELECT * FROM \"AgentFramework_WorkflowRuns\" WHERE \"RunId\" = {runId.Value} FOR UPDATE")
             : dbContext.Set<WorkflowRunRecordEntity>();
         var current = await currentQuery.AsNoTracking().SingleOrDefaultAsync(row => row.RunId == runId.Value, cancellationToken);
-        if (current is not null) {
-            RequireFrozenAuthority(current, updatedRun);
+        if (current is null) {
+            return new(false, null);
         }
+        RequireFrozenAuthority(current, updatedRun);
         var originJson = WorkflowRunRecordEntity.SerializeOrigin(updatedRun.Origin);
         var originKind = updatedRun.Origin?.Kind;
         var originProjectId = WorkflowRunRecordEntity.ResolveOriginProjectId(updatedRun.Origin);

@@ -10,8 +10,9 @@ public sealed class ProcessCancellationDecisionRecoveryStepTests {
     public async Task Selection_retains_one_original_generation_before_loading_or_stopping_children() {
         var fixture = new Fixture();
         fixture.Claim = fixture.Claim with { Position = new(ProcessCancellationRecoveryStage.Decisions) };
-        await fixture.AdvanceAsync();
+        var selection = await fixture.AdvanceAsync();
         Assert.Equal(fixture.Data.Selection.Head!.Reference, fixture.Claim.Position.CurrentDecision);
+        Assert.Null(selection.RetryAfter);
         Assert.Equal(0, fixture.Loads);
         Assert.Equal(0, fixture.Stops);
         Assert.Equal(0, fixture.Data.Commits);
