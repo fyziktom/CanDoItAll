@@ -6,6 +6,7 @@ using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Editing;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -28,6 +29,7 @@ public static class ProviderManagementServiceCollectionExtensions
         services.TryAddSingleton<EditingChangeFeed>();
         services.TryAddScoped<IEditingUiAccess, UnavailableEditingUiAccess>();
         services.TryAddScoped<ProviderEditingChanges>();
+        services.TryAddScoped<IRemoteInstanceEditing>(provider => provider.GetRequiredService<ProviderEditingChanges>());
         services.AddScoped<ProviderDiagnosticPersistence>();
         services.AddScoped<ProviderMutationWitness>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IProviderProfileCommitObserver, ProviderEditingChanges>());
@@ -107,6 +109,7 @@ public static class ProviderManagementServiceCollectionExtensions
             IProviderDatabaseTransferGuard,
             SharedProviderDatabaseTransferGuard>());
         services.TryAddScoped<SharedProviderSourceService>();
+        services.TryAddScoped<IRemoteInstanceRegistry, RemoteInstanceRegistry>();
         services.TryAddScoped<SharedProviderReconciliationCoordinator>();
         services.TryAddScoped<SharedProviderSourceSyncService>();
         services.TryAddScoped<ISharedProviderManagementService, SharedProviderManagementService>();

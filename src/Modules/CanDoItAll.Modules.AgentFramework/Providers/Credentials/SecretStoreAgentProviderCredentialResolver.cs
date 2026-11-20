@@ -268,13 +268,7 @@ internal sealed class SecretStoreAgentProviderCredentialResolver(
                         binding.ConsumerId)),
             (ProviderCredentialPurpose.SourceAccessToken,
                 ProviderCredentialConsumerKind.Source) =>
-                new SecretRuntimeRequest(
-                    binding.SecretId,
-                    SecretRuntimePurposes.SharedProviderSourceToken,
-                    AllowedSecretIds: [binding.SecretId],
-                    ConsumerType: SecretRuntimeConsumerTypes.SharedProviderSource,
-                    ConsumerId: SecretRuntimeConsumerIds.SharedProviderSource(
-                        binding.ConsumerId)),
+                SecretRuntimeRequests.RemoteInstanceToken(binding.ConsumerId, binding.SecretId),
             _ => throw new InvalidOperationException(
                 "The provider credential binding is incompatible with the provider profile.")
         };

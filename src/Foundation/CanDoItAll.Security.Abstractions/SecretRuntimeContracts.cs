@@ -79,6 +79,13 @@ public sealed record SecretRuntimeRequest(
     string? ConsumerType = null,
     string? ConsumerId = null);
 
+public static class SecretRuntimeRequests {
+    public static SecretRuntimeRequest RemoteInstanceToken(Guid instanceId, Guid secretId)
+        => new(secretId, SecretRuntimePurposes.SharedProviderSourceToken, AllowedSecretIds: [secretId],
+            ConsumerType: SecretRuntimeConsumerTypes.SharedProviderSource,
+            ConsumerId: SecretRuntimeConsumerIds.SharedProviderSource(instanceId));
+}
+
 public interface ISecretRuntimeResolver
 {
     Task<string?> ResolveValueAsync(SecretRuntimeRequest request, CancellationToken cancellationToken = default);
