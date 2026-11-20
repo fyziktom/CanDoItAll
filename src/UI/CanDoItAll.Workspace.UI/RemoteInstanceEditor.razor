@@ -24,7 +24,7 @@
                                 <option value="@credential.Id">@credential.Name</option>
                             }
                         </SelectInput>
-                        <TextBlock TextStyle="TextStyle.Muted">Manage credentials in Settings → Secrets. For an open API, select a dedicated placeholder.</TextBlock>
+                        <TextBlock TextStyle="TextStyle.Muted">Manage credentials in Settings → Secrets. Agent templates require a publisher token with permission to read shared agent templates. For provider sharing through an open API, select a dedicated placeholder.</TextBlock>
                     </FormField>
                     <FormField Text="Enabled">
                         <CheckBox TValue="bool" @bind-Value="Draft.Enabled" data-testid="remote-instance-enabled" />

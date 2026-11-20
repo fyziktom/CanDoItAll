@@ -1,5 +1,8 @@
 @page "/agents"
 @using CanDoItAll.AgentFramework.UI.Shell
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Workspace
+@using CanDoItAll.Modules.Workspace.Pages
 
 <PageTitle>Agents</PageTitle>
 
@@ -10,6 +13,7 @@
             <AgentProviderProfilesPanel ProviderId="@route.ProviderId"
                                         Section="@route.ProviderSection"
                                         ConnectionsOpen="@route.IsSharedConnectionsOpen"
+                                        RegistryHref="@SettingsUrlCodec.Instance.Href(SettingsUrlCodec.Path, new(WorkspaceSection.RemoteInstances))"
                                         HistoryLocation="@historyLocation"
                                         ProviderRequested="HandleProviderRequestedAsync"
                                         ProviderPublished="HandleProviderPublishedAsync"

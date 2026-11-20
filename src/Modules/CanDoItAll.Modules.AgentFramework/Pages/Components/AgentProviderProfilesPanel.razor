@@ -19,6 +19,7 @@
     </HistorySlot>
     <ConnectionsSlot Context="slot">
         <SharedProviderSourcesDialog Secrets="session.Catalog.Secrets.Items"
+                                     RegistryHref="@RegistryHref"
                                      OriginalOpening="opening"
                                      SecretMetadataError="@session.Catalog.Secrets.Error"
                                      ProvidersChanged="@(delivery => RefreshSharedAsync(slot.Target, delivery))"

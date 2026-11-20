@@ -22,6 +22,7 @@ public partial class AgentProviderProfilesPanel : IProviderProfilesView, IAsyncD
     [Parameter] public Guid? ProviderId { get; set; }
     [Parameter] public ProviderEditorSection Section { get; set; } = ProviderEditorSection.Connection;
     [Parameter] public bool ConnectionsOpen { get; set; }
+    [Parameter] public string? RegistryHref { get; set; }
     [Parameter] public ProviderHistoryLocation? HistoryLocation { get; set; }
     [Parameter] public EventCallback<ProviderRouteSelection> ProviderRequested { get; set; }
     [Parameter] public EventCallback<ProviderRouteSelection> ProviderPublished { get; set; }

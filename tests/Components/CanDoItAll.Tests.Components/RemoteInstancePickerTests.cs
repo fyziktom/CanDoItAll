@@ -1,6 +1,8 @@
 using Bunit;
+using CanDoItAll.AppComponents.Navigation;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Modules.Workspace.Pages;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.RemoteInstances;
@@ -29,12 +31,12 @@ public sealed class RemoteInstancePickerTests {
         var saved = Assert.Single(await registry.ListAsync());
         Assert.Equal(new RemoteInstanceSelection(saved.Id, saved.ConcurrencyToken), Assert.Single(selections));
         Assert.Empty(picker.FindAll("[data-testid=remote-instance-editor]"));
-        var providerDialog = harness.Context.Render<SharedProviderSourcesDialog>();
+        var registryHref = SettingsUrlCodec.Instance.Href(SettingsUrlCodec.Path, new(WorkspaceSection.RemoteInstances));
+        var providerDialog = harness.Context.Render<SharedProviderSourcesDialog>(p => p.Add(c => c.RegistryHref, registryHref));
         providerDialog.WaitForAssertion(() => Assert.Equal(saved.Id.ToString(),
             providerDialog.Find("[data-testid=shared-provider-source-card]").GetAttribute("data-source-id")));
-        Assert.NotNull(providerDialog.Find("a[href='/settings?tab=remote-instances']"));
-
-        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo("/settings?tab=remote-instances");
+        var settingsHref = providerDialog.Find($"a[href='{registryHref}']").GetAttribute("href");
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo(Assert.IsType<string>(settingsHref));
         var settings = harness.Context.Render<SettingsPage>();
         settings.WaitForAssertion(() => Assert.Contains("West division", settings.Markup, StringComparison.Ordinal));
         await settings.Find("[data-testid=remote-instance-edit]").ClickAsync();

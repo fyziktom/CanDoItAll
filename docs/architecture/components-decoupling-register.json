@@ -9812,7 +9812,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
-      "sha256_lf": "d471762b40474518c3d669a6a125bf69f0de11e13c02f1af8d5c13a4becb011b",
+      "sha256_lf": "353eeebf0c8f0ad5f6d13cbca8719efb6669a0deee4a6899fa38e60acbec5582",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9842,7 +9842,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
+      "rationale": "The routed Agents page composes its feature tabs and supplies the canonical Settings link to the provider panel."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
@@ -10417,7 +10417,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor",
-      "sha256_lf": "c4aa7967a95d881416659d2dc8395ec25f3fddad1a642549b998ccbf173157a7",
+      "sha256_lf": "a78f0c8b79112d7b6765bc74eead11789527014968debe5245ff9fe236c43702",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentProviderProfilesPanel",
@@ -10438,12 +10438,12 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Route/effect/context or exact dialog-result adapter; inspect linked descendants and code-behind. No exemption for a substantial form."
+      "rationale": "The provider panel supplies the optional registry link from its caller to the connections slot alongside its original provider opening and reconciliation callback."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs",
-      "sha256_lf": "04ffb6a9f0facc775070fb739fef8ee6d34a339577889dc893f650491b401b1c",
+      "sha256_lf": "ac6c3a7573cdff92705435e76b2a8405b3fe8091175eed2ed8763c1db72d73e4",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentProviderProfilesPanel",
@@ -11108,7 +11108,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor",
-      "sha256_lf": "12628e88b5e9c4335a7fc43c993ffea3b96f2ada6a35b65bdd281563ffe2f1ee",
+      "sha256_lf": "356cb4ee76b44854ce517a92dfd4ab34a8091f21f969e7c526cfe4e23ec20dba",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.SharedProviderSourcesDialog",
@@ -11125,12 +11125,12 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "The provider host passes the canonical Settings location to the existing source renderer and retains provider catalog discovery, governed writes and recovery."
+      "rationale": "The provider dialog passes the optional registry link from its host to the source renderer and retains provider discovery, governed writes and recovery."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SharedProviderSourcesDialog.razor.cs",
-      "sha256_lf": "ea480b2058b7c0a7181772232c930080fe8aac7e1d02f48db625604049b898ee",
+      "sha256_lf": "fd37c8a92702c2242775cfd4989f740cf0b00e5d76f425ac2b0d66ff0c18e0cd",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.SharedProviderSourcesDialog",
@@ -37014,7 +37014,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workspace.UI/RemoteInstanceEditor.razor",
       "path": "src/UI/CanDoItAll.Workspace.UI/RemoteInstanceEditor.razor",
-      "sha256_lf": "394f04059b0efaddc0cb9e0b1ee56369a456fd8908ed6f8b21158d9dcead0284",
+      "sha256_lf": "c4f61d525e5fcd22fc66b3be24edf13e435d0edf36dbea1d36ac4e504df63375",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workspace.UI.RemoteInstanceEditor",
