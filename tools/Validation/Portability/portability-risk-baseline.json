@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-14T15:53:08.942025+00:00",
+  "generated_utc": "2026-11-20T19:39:22.991423+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15824,
+  "allowance_count": 15838,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -17036,6 +17036,12 @@
       "count": 1
     },
     {
+      "path": "src/Integration/CanDoItAll.SharedProviders.Http/RemoteInstanceJsonReader.cs",
+      "category": "case-policy",
+      "source_fingerprint": "6edef35c5975e265336004f5eca850e77c78908f599a9ca11fd22df68ce62f8f",
+      "count": 1
+    },
+    {
       "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs",
       "category": "case-policy",
       "source_fingerprint": "621c6b51b3a2dbb4f25a7cf12f46e277a80a87eddd9dd0837fde66067de01ef5",
@@ -17045,12 +17051,6 @@
       "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs",
       "category": "case-policy",
       "source_fingerprint": "c9f530659ca28699350a6db1e460a06a0195c80c773be5bd8620e2876421fbb6",
-      "count": 1
-    },
-    {
-      "path": "src/Integration/CanDoItAll.SharedProviders.Http/SharedProviderCatalogClient.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e3cf5124016ed33127f59db4589f2429597c7ef54bc740c2f4be8821f51a4f09",
       "count": 1
     },
     {
@@ -18215,6 +18215,78 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/Recruiting/AgentRecruitingReadinessProjector.cs",
       "category": "case-policy",
       "source_fingerprint": "c58071153d5ee3dfa650ba64f774e957f28246b29052191ec6e9c0a5da6690bf",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "5a834d1683210a17df909c6e7fad0a35f762842ba1fb079777afbb1565719f34",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "9a4659aed923ecb9a468f754b0b3aea175bb2bf34b743bc443c5261f9b028c61",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "ad13d65a45f4c20de55b3ad15632bddafdadbd42a0e701d4e894462b9bbfee10",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "dc25ffa333f6ad328731a22a37b635bee72de63fb1f2267be28500b8b2fd9671",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "process-start",
+      "source_fingerprint": "4222ba0adb0259bc0d0e65f0642b8ed0d3ec68c850e1d6fe86497535eaa71b07",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "process-start",
+      "source_fingerprint": "996cea1463d92bbcc1a537aa7b317051aa43f1e21b78db66a7faa16393ac5a90",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "case-policy",
+      "source_fingerprint": "00f341070a650700f5f15df287d67a034ee4a76b73725939df0bb8ee87e56957",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "case-policy",
+      "source_fingerprint": "46dcb866d710115164bc7d9c8c46dc392ac5b531b092e85b9a4e3056e7ada605",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4aba1e6582fb7fa49ff5880ad2a0761603aae1e0852e87e67b4e4361a64bf372",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "case-policy",
+      "source_fingerprint": "a302722e7952bf61559186523081d50e37c32352c3aad8bbce0c625c6c676272",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "process-start",
+      "source_fingerprint": "033361a609cea96955293fac0b6c1ab1eaa1e9fe71d95e0d626c56998fc86092",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateImport.cs",
+      "category": "process-start",
+      "source_fingerprint": "4c35d5eeff2c2d0bf5ac33163ebf64f53bf1d6b2ca3c101d6aef0d6aed2a33e4",
       "count": 1
     },
     {
@@ -33206,6 +33278,18 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteAgentTemplate.cs",
+      "category": "mcp",
+      "source_fingerprint": "4d26966c6a1f7ccfc1161ebfa878fdef010fa7128409308dd6a8330db58354be",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteAgentTemplate.cs",
+      "category": "process-start",
+      "source_fingerprint": "792054caf0b291e23e8dd3f73a11eef8ba1ae76668de1358b3fa093ad4ec3d96",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/SchedulerAgentIdentity.cs",
       "category": "case-policy",
       "source_fingerprint": "aab28be0cfdff196eb507ee4509e2a8e0411fc0aff635a40b9e70e1931022fc9",
@@ -35326,6 +35410,12 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
       "category": "case-policy",
+      "source_fingerprint": "38ea92f3ce034ea28ce2e26efa55ca108d0ff89de8174e4cb12009e04e92023e",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
+      "category": "case-policy",
       "source_fingerprint": "3937b05cb13ccf65c10d4dd4bf06cf37b56778cdaa41098c4754a9438094797d",
       "count": 1
     },
@@ -35602,13 +35692,13 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
       "category": "case-policy",
-      "source_fingerprint": "a8dd9528801642c7a372ebc38d16ef2283fc4fa5a8c6c4d47577ee0d9f74f380",
+      "source_fingerprint": "a96d37d488befb69bfb643aefeb33d4b7a28f37cb95271eca072bf5cb6d4f4cb",
       "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
       "category": "case-policy",
-      "source_fingerprint": "a96d37d488befb69bfb643aefeb33d4b7a28f37cb95271eca072bf5cb6d4f4cb",
+      "source_fingerprint": "acdaabbd958c92e2a0e21a614d975422c7053c9c3b7feaec6a96c60963d044e3",
       "count": 1
     },
     {
@@ -35699,12 +35789,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
       "category": "case-policy",
       "source_fingerprint": "cd6af9326915ca93d1152d2adcee1bd728445dc1a517eab50768ba1623e47d85",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs",
-      "category": "case-policy",
-      "source_fingerprint": "cdb6198b459e224c19863d7c07a1c6bab1bcbf49bf63be2a0931af655bef16cc",
       "count": 1
     },
     {

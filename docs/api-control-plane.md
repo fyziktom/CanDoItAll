@@ -106,6 +106,21 @@ Historical acceptance preserves later draft edits and requires an explicit curre
 and reconciliation before another save. An unsent Prepared record can be discarded;
 a dispatched unresolved record remains blocked. See [native recovery proof and limits](../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
 
+## Shared agent templates
+
+When API authorization is enabled, an access token with the
+`api.shared-agent-templates.read` scope can read the publisher's active and draft
+agent templates through two endpoints.
+
+| Method | Route | Result |
+| --- | --- | --- |
+| GET | `/api/shared-agent-templates/v1/templates` | Selectable summaries with public publisher identity and catalog revision |
+| GET | `/api/shared-agent-templates/v1/templates/{id}` | Definition, inline skill content and local capability requirements |
+
+The consumer previews the selected document and imports it into its own workspace.
+The agent's execution, provider selection, permissions and history belong to that workspace.
+See [remote instance connections and agent templates](architecture/remote-instance-connections.md).
+
 ## Shared providers and history
 
 The five [shared-provider operations](shared-providers.md#http-surface) expose a

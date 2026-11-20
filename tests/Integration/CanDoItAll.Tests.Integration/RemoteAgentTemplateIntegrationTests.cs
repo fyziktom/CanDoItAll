@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
@@ -10,12 +11,41 @@ using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.Tests.Integration.Api;
+using CanDoItAll.Web.Api;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class RemoteAgentTemplateIntegrationTests {
+    [Fact]
+    public async Task Secured_OpenApi_describes_both_template_routes_and_their_read_permission() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
+        var document = await host.Client.GetFromJsonAsync<JsonObject>("/openapi/v1.json");
+        Assert.NotNull(document);
+        var endpoints = host.App.Services.GetRequiredService<EndpointDataSource>().Endpoints;
+        const string catalog = "/api/shared-agent-templates/v1/templates";
+        CheckOperation(catalog, "ListRemoteAgentTemplates", ["200", "401", "403", "409"]);
+        CheckOperation(catalog + "/{id}", "GetRemoteAgentTemplate", ["200", "401", "403", "404", "409"]);
+        var gaps = OpenApiDescriptionCoverage.FindGaps(document, catalog);
+        Assert.True(gaps.Count == 0, string.Join(Environment.NewLine, gaps));
+
+        void CheckOperation(string path, string name, string[] statusCodes) {
+            var operation = document["paths"]?[path]?["get"];
+            Assert.NotNull(operation);
+            Assert.Equal(name, operation["operationId"]?.GetValue<string>());
+            Assert.NotNull(operation["security"]?[0]?["Bearer"]);
+            var responses = Assert.IsType<JsonObject>(operation["responses"]);
+            Assert.All(statusCodes, code => Assert.True(responses.ContainsKey(code), $"{path} response {code}"));
+            var endpoint = Assert.Single(endpoints, item => item.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
+            Assert.Equal(ApiAccessScopeNames.ReadSharedAgentTemplates, endpoint.Metadata.GetMetadata<ApiPermissionMetadata>()?.Scope);
+            Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(), data => data.Policy == ApiAuthorizationPolicies.ReadSharedAgentTemplates);
+        }
+    }
+
     [Fact]
     public async Task Publisher_requires_template_scope_and_discloses_only_portable_template_content() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
@@ -154,7 +184,8 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.Equal(template.Instructions, (await workspace.GetAgentEditorAsync(second)).Instructions);
         var repointed = await workspace.ImportRemoteAgentTemplateAsync(source, template with { PublisherId = Guid.NewGuid() }, before.Workspace);
         Assert.NotEqual(first, repointed);
-        await workspace.DeleteAgentAsync(first);
+        var current = await workspace.GetAgentEditorAsync(first);
+        await workspace.DeleteAgentAsync(first, Assert.IsType<DateTimeOffset>(current.ExpectedUpdatedAtUtc));
         var importedAgain = await workspace.ImportRemoteAgentTemplateAsync(source, template, before.Workspace);
         Assert.NotEqual(first, importedAgain);
         Assert.NotEqual(external.AgentId, importedAgain);
