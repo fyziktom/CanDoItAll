@@ -38,7 +38,11 @@ protocol with explicit dependency resolution before it can produce a local agent
   using kind and stable key. Reject unresolved prerequisites before creating an agent.
 * A user explicitly imports one selected template. Create an independent local
   definition with a fresh identity, local runtime configuration and local authority.
-  The connection and source template identity distinguish companies that reuse keys.
+  The saved connection ID, public publisher ID and source template ID identify an
+  import. Repointing a connection to another publisher cannot adopt the first
+  publisher's local agent. A dedicated provenance record keeps imports independent
+  of public provisioning keys. A changed catalog revision, including a skill-only
+  edit, requires fresh discovery before preview.
   Refreshing a catalog must never overwrite a local customization. Future remote
   execution will require its own permission, operation and lifecycle.
 
@@ -47,11 +51,14 @@ protocol with explicit dependency resolution before it can produce a local agent
 In the product, open **Settings → Remote instances** or choose **Agents → Import template
 → Add instance**. Select a saved workspace secret containing the publisher's API token.
 On the publisher enable API authorization, grant the token `api.shared-agent-templates.read`
-and mark the desired agents as templates. Each token with this scope can read the
-templates in that publisher workspace. On the consumer, choose an instance, review a
+and mark the desired agents as templates. Each token with this scope can read the draft
+and active templates in that publisher workspace. On the consumer, choose an instance, review a
 template's requirements and click **Import locally**. Open the local agent to select its
-provider and configure runtime permissions. Repeating an import with the same connection
-and template returns the existing local agent. An imported agent continues to use local
+provider, configure runtime permissions and activate it for execution. Inline skill
+instructions and embedded resources are copied. Registered or filesystem-backed skills,
+tools and other runtime dependencies must be present locally under their declared kind
+and key. Repeating an import from the same connection and publisher returns the existing
+local agent for that template. An imported agent continues to use local
 capabilities if its connection is later disabled or removed. A local provider selection
 can itself point to an explicitly imported remote provider.
 

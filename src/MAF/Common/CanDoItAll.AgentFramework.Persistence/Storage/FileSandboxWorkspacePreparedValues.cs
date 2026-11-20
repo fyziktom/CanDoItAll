@@ -19,6 +19,7 @@ internal static class FileSandboxWorkspacePreparedValues {
                 }
             }),
             AgentExternalBindings = Copy(value.AgentExternalBindings),
+            RemoteTemplateBindings = value.RemoteTemplateBindings is { } bindings ? Copy(bindings) : null,
             AgentExternalProvisioningOperations = Copy(value.AgentExternalProvisioningOperations, operation => operation with {
                 Receipt = operation.Receipt is null ? null! : operation.Receipt with { Warnings = Copy(operation.Receipt.Warnings) }
             })
@@ -37,6 +38,7 @@ internal static class FileSandboxWorkspacePreparedValues {
             AgentTeams = catalog.AgentTeams,
             AgentPackageImportOperations = catalog.AgentPackageImportOperations,
             AgentExternalBindings = catalog.AgentExternalBindings,
+            RemoteTemplateBindings = catalog.RemoteTemplateBindings,
             AgentExternalProvisioningOperations = catalog.AgentExternalProvisioningOperations,
             AgentDecisionDataPolicyReceipts = catalog.AgentDecisionDataPolicyReceipts,
             ChatSessions = execution.ChatSessions,

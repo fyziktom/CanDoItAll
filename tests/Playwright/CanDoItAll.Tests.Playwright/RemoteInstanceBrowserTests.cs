@@ -27,15 +27,12 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         var admin = await ApiAccessSettingsBrowserTests.LoginAsync(publisher.Client, "admin", password);
         publisher.ProtectSecrets(admin.Token);
         publisher.Client.DefaultRequestHeaders.Authorization = new("Bearer", admin.Token);
+        var author = await IssueAsync(publisher, "regional-template-author", ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents);
+        var reader = await IssueAsync(publisher, "regional-template-reader", ApiAccessScopeNames.ReadSharedAgentTemplates);
+        publisher.Client.DefaultRequestHeaders.Authorization = new("Bearer", author.Token);
         var templateId = await SaveAgentAsync(publisher.Client, TemplateName, isTemplate: true);
         const string privateName = "Regional private agent";
         await SaveAgentAsync(publisher.Client, privateName, isTemplate: false);
-        using var issued = await publisher.Client.PostAsJsonAsync("/api/access/tokens", new ApiTokenIssueRequest {
-            Subject = "regional-template-reader", Scopes = [ApiAccessScopeNames.ReadSharedAgentTemplates]
-        });
-        issued.EnsureSuccessStatusCode();
-        var reader = Assert.IsType<ApiTokenIssueResult>(await issued.Content.ReadFromJsonAsync<ApiTokenIssueResult>());
-        publisher.ProtectSecrets(reader.Token);
         Assert.Equal(ApiAccessScopeNames.ReadSharedAgentTemplates, Assert.Single(reader.Scopes));
         await ApiAccessSettingsBrowserTests.AssertStatusAsync(publisher.Client, reader.Token, "/api/shared-providers/v1/catalog", HttpStatusCode.Forbidden);
 
@@ -101,6 +98,16 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         await page.GotoAsync(consumer.BaseUrl + "/settings?tab=remote-instances");
         await Assertions.Expect(page.GetByText(DisabledConnectionName, new() { Exact = true })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByText(ConnectionName, new() { Exact = true })).ToBeVisibleAsync();
+    }
+
+    private static async Task<ApiTokenIssueResult> IssueAsync(ApiAccessProductionHost publisher, string subject, params string[] scopes) {
+        using var response = await publisher.Client.PostAsJsonAsync("/api/access/tokens", new ApiTokenIssueRequest {
+            Subject = subject, Scopes = [.. scopes]
+        });
+        response.EnsureSuccessStatusCode();
+        var issued = Assert.IsType<ApiTokenIssueResult>(await response.Content.ReadFromJsonAsync<ApiTokenIssueResult>());
+        publisher.ProtectSecrets(issued.Token);
+        return issued;
     }
 
     private static async Task<Guid> SaveAgentAsync(HttpClient client, string name, bool isTemplate) {

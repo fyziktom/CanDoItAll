@@ -392,6 +392,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return document with
         {
             Agents = document.Agents.Where(item => item.Id != agentId).ToList(),
+            RemoteTemplateBindings = document.RemoteTemplateBindings?.Where(binding => binding.AgentId != agentId).ToArray(),
             AgentExternalBindings = document.AgentExternalBindings
                 .Where(item => item.AgentId != agentId)
                 .ToList(),

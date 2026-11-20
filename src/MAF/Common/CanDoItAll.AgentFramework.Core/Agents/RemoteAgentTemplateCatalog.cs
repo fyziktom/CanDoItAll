@@ -7,14 +7,16 @@ public static class RemoteAgentTemplateCatalog {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string Inline = "inline";
 
-    public static IReadOnlyList<RemoteAgentTemplateSummary> List(SandboxWorkspaceCatalog catalog) =>
-        catalog.Agents.Where(agent => agent.IsTemplate).OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+    public static IReadOnlyList<RemoteAgentTemplateSummary> List(SandboxWorkspaceCatalog catalog, Guid publisherId) =>
+        catalog.Agents.Where(IsPublished).OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(agent => agent.Id)
-            .Select(agent => new RemoteAgentTemplateSummary(agent.Id, agent.Name, agent.Summary, agent.UpdatedAtUtc, agent.Capabilities.Count))
+            .Select(agent => new RemoteAgentTemplateSummary(agent.Id, agent.Name, agent.Summary, agent.UpdatedAtUtc, agent.Capabilities.Count) {
+                PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value
+            })
             .ToArray();
 
-    public static RemoteAgentTemplate? Find(SandboxWorkspaceCatalog catalog, Guid id) {
-        var agent = catalog.Agents.SingleOrDefault(item => item.Id == id && item.IsTemplate);
+    public static RemoteAgentTemplate? Find(SandboxWorkspaceCatalog catalog, Guid publisherId, Guid id) {
+        var agent = catalog.Agents.SingleOrDefault(item => item.Id == id && IsPublished(item));
         if (agent is null) {
             return null;
         }
@@ -26,8 +28,12 @@ public static class RemoteAgentTemplateCatalog {
             }
             return new RemoteAgentTemplateCapability(item.Kind, item.Key, ReadInlineSkill(item));
         }).ToArray();
-        return new(id, agent.Name, agent.RoleTitle, agent.Summary, agent.Instructions, agent.Workload, agent.Tags, requirements, agent.UpdatedAtUtc);
+        return new(id, agent.Name, agent.RoleTitle, agent.Summary, agent.Instructions, agent.Workload, agent.Tags, requirements, agent.UpdatedAtUtc) {
+            PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value
+        };
     }
+
+    private static bool IsPublished(AgentDefinition agent) => agent.IsTemplate && agent.Status is AgentLifecycleStatus.Draft or AgentLifecycleStatus.Active;
 
     internal static string InlineConfiguration(RemoteAgentInlineSkill skill) =>
         JsonSerializer.Serialize(new SkillConfiguration(Inline, skill), JsonOptions);

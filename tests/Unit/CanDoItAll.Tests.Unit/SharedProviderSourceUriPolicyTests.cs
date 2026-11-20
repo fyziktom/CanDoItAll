@@ -17,8 +17,11 @@ public sealed class SharedProviderSourceUriPolicyTests
     private static readonly SharedProviderPublicationId PublicationId = new(
         Guid.Parse("62fb875c-dc08-4e4b-a182-9bedcd814928"));
 
-    [Fact]
-    public async Task Remote_reader_preserves_proxy_path_and_sends_the_selected_token_with_the_protected_client() {
+    [Theory]
+    [InlineData(RemoteInstanceNetworkPolicy.PublicOnly, SharedProviderCatalogClient.PublicClientName)]
+    [InlineData(RemoteInstanceNetworkPolicy.AllowPrivateNetwork, SharedProviderCatalogClient.TrustedNetworkClientName)]
+    public async Task Remote_reader_preserves_proxy_path_and_sends_the_selected_token_with_the_protected_client(
+        RemoteInstanceNetworkPolicy policy, string expectedClientName) {
         var factory = new RecordingHttpClientFactory((request, _) => {
             Assert.Equal("https://central.example.test/proxy/api/templates", request.RequestUri?.AbsoluteUri);
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
@@ -29,9 +32,9 @@ public sealed class SharedProviderSourceUriPolicyTests
         });
         var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
         var rows = await reader.ReadAsync<int[]>(new Uri("https://central.example.test/proxy"),
-            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), "api/templates", CancellationToken.None);
+            policy, new("test-credential"), "api/templates", CancellationToken.None);
         Assert.Equal(new[] { 1, 2 }, rows);
-        Assert.Equal(SharedProviderCatalogClient.PublicClientName, factory.RequestedClientName);
+        Assert.Equal(expectedClientName, factory.RequestedClientName);
     }
 
     [Theory]
@@ -42,7 +45,7 @@ public sealed class SharedProviderSourceUriPolicyTests
         var factory = new RecordingHttpClientFactory((_, _) => throw new InvalidOperationException());
         var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
         await Assert.ThrowsAsync<ArgumentException>(() => reader.ReadAsync<int[]>(new Uri("https://central.example.test/"),
-            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), path, CancellationToken.None));
+            RemoteInstanceNetworkPolicy.PublicOnly, new("test-credential"), path, CancellationToken.None));
         Assert.Null(factory.RequestedClientName);
     }
 
@@ -56,7 +59,7 @@ public sealed class SharedProviderSourceUriPolicyTests
         var factory = new RecordingHttpClientFactory((_, _) => Task.FromResult(new HttpResponseMessage(status) { Content = content }));
         var reader = new RemoteInstanceJsonReader(factory, new SharedProviderSourceUriPolicy());
         var error = await Assert.ThrowsAsync<RemoteInstanceReadException>(() => reader.ReadAsync<int[]>(new Uri("https://central.example.test/"),
-            SharedProviderSourceNetworkPolicy.PublicOnly, new("test-credential"), "api/templates", CancellationToken.None));
+            RemoteInstanceNetworkPolicy.PublicOnly, new("test-credential"), "api/templates", CancellationToken.None));
         Assert.DoesNotContain("private-upstream-diagnostic", error.Message);
         Assert.DoesNotContain("test-credential", error.Message);
     }

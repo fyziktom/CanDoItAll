@@ -5,7 +5,6 @@ using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.RemoteInstances;
-using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Components.AgentFramework;
@@ -47,11 +46,16 @@ public sealed class RemoteAgentTemplateDialogTests {
         Assert.Empty(cut.FindAll("[data-testid=remote-agent-template-error]"));
     }
 
-    [Fact]
-    public async Task A_changed_template_revision_leaves_import_disabled_and_keeps_the_local_catalog() {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_changed_publisher_or_catalog_revision_leaves_import_disabled_and_keeps_the_local_catalog(bool changedPublisher) {
         var entry = Summary("Remote technical template");
         var changed = new RemoteAgentTemplate(entry.Id, entry.Name, "Reviewer", entry.Summary, "Review reports.",
-            AgentWorkloadKind.General, [], [], entry.UpdatedAtUtc.AddMinutes(1));
+            AgentWorkloadKind.General, [], [], entry.UpdatedAtUtc) {
+            PublisherId = changedPublisher ? Guid.NewGuid() : entry.PublisherId,
+            CatalogRevision = changedPublisher ? entry.CatalogRevision : entry.CatalogRevision + 1
+        };
         var reader = new TemplateReader((_, path) => Task.FromResult<object>(path switch {
             RemoteAgentTemplateRoutes.Catalog => new[] { entry },
             _ when path == RemoteAgentTemplateRoutes.Details(entry.Id) => changed,
@@ -92,7 +96,9 @@ public sealed class RemoteAgentTemplateDialogTests {
         Assert.Empty(cut.FindAll("[data-testid=remote-agent-template-error]"));
     }
 
-    private static RemoteAgentTemplateSummary Summary(string name) => new(Guid.NewGuid(), name, "Review template", DateTimeOffset.UtcNow, 0);
+    private static RemoteAgentTemplateSummary Summary(string name) => new(Guid.NewGuid(), name, "Review template", DateTimeOffset.UtcNow, 0) {
+        PublisherId = Guid.NewGuid(), CatalogRevision = 1
+    };
 
     private static Task<ComponentTestHarness> CreateAsync(TemplateReader reader) =>
         ComponentTestHarness.CreateAsync(services => services.AddSingleton<IRemoteInstanceJsonReader>(reader));
@@ -116,9 +122,9 @@ public sealed class RemoteAgentTemplateDialogTests {
     }
 
     private sealed class TemplateReader(Func<Uri, string, Task<object>> read) : IRemoteInstanceJsonReader {
-        public async Task<T> ReadAsync<T>(Uri baseUri, SharedProviderSourceNetworkPolicy networkPolicy,
-            SharedProviderCatalogAccessToken credential, string relativeApiPath, CancellationToken cancellationToken) {
-            Assert.Equal(SharedProviderSourceNetworkPolicy.PublicOnly, networkPolicy);
+        public async Task<T> ReadAsync<T>(Uri baseUri, RemoteInstanceNetworkPolicy networkPolicy,
+            RemoteInstanceAccessToken credential, string relativeApiPath, CancellationToken cancellationToken) {
+            Assert.Equal(RemoteInstanceNetworkPolicy.PublicOnly, networkPolicy);
             Assert.True(credential.UseValue(value => value == "component-remote-test-token"));
             return Assert.IsType<T>(await read(baseUri, relativeApiPath));
         }

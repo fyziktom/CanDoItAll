@@ -14,7 +14,7 @@ internal sealed class RemoteAgentTemplateImport(
     public async Task<Guid> ImportAsync(Guid sourceId, RemoteAgentTemplate template, AgentExecutionActivityWorkspaceIdentity expectedWorkspace,
         CancellationToken cancellationToken) {
         ArgumentNullException.ThrowIfNull(template);
-        if (sourceId == Guid.Empty || template.Id == Guid.Empty || template.UpdatedAtUtc == default ||
+        if (sourceId == Guid.Empty || template.PublisherId == Guid.Empty || template.Id == Guid.Empty || template.CatalogRevision <= 0 || template.UpdatedAtUtc == default ||
             !Text(template.Name, 512) || !Text(template.RoleTitle, 1024, true) || !Text(template.Summary, 64 * 1024, true) ||
             !Text(template.Instructions, 1024 * 1024, true) || !Enum.IsDefined(template.Workload) ||
             template.Tags is not { Count: <= 128 } || template.Tags.Any(tag => !Text(tag, 256)) ||
@@ -22,8 +22,7 @@ internal sealed class RemoteAgentTemplateImport(
             throw InvalidTemplate();
         }
 
-        var origin = new AgentExternalIdentity($"remote-instance-{sourceId:N}", template.Id.ToString("N"));
-        var id = Guid.NewGuid();
+        var origin = new RemoteAgentTemplateBinding(sourceId, template.PublisherId, template.Id, Guid.NewGuid());
         RequireOriginalWorkspace();
         try {
             var accepted = await store.UpdateCatalogAsync(catalog => {
@@ -35,7 +34,7 @@ internal sealed class RemoteAgentTemplateImport(
                     }
                     return catalog;
                 }
-                return Materialize(catalog, origin, id, template);
+                return Materialize(catalog, origin, template);
             }, _ => RequireOriginalWorkspace(), cancellationToken);
             return FindBinding(accepted, origin)!.AgentId;
         } catch (SandboxWorkspaceCatalogCommittedException committed) {
@@ -49,7 +48,8 @@ internal sealed class RemoteAgentTemplateImport(
         }
     }
 
-    private SandboxWorkspaceCatalog Materialize(SandboxWorkspaceCatalog catalog, AgentExternalIdentity origin, Guid id, RemoteAgentTemplate template) {
+    private SandboxWorkspaceCatalog Materialize(SandboxWorkspaceCatalog catalog, RemoteAgentTemplateBinding origin, RemoteAgentTemplate template) {
+        var id = origin.AgentId;
         var capabilities = catalog.Capabilities.ToList();
         var selected = new List<Guid>(template.Capabilities.Count);
         var seen = new HashSet<(CapabilityKind, string)>();
@@ -92,10 +92,9 @@ internal sealed class RemoteAgentTemplateImport(
             SelectedCapabilityIds = selected
         };
         var agent = AgentDefinitionFactory.Create(candidate, editor, id, null, DateTimeOffset.UtcNow, providers, "Remote template import");
-        var binding = new AgentExternalBindingRecord(origin.Namespace, origin.Key, id, AgentConfigurationVersion.Create(agent), false, agent.UpdatedAtUtc);
         return candidate with {
             Agents = candidate.Agents.Append(agent).OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
-            AgentExternalBindings = [.. candidate.AgentExternalBindings, binding]
+            RemoteTemplateBindings = [.. candidate.RemoteTemplateBindings ?? [], origin]
         };
     }
 
@@ -112,8 +111,9 @@ internal sealed class RemoteAgentTemplateImport(
             RemoteAgentTemplateCatalog.InlineConfiguration(skill), CapabilityProofStatus.NotRun, string.Empty, null, false);
     }
 
-    private static AgentExternalBindingRecord? FindBinding(SandboxWorkspaceCatalog catalog, AgentExternalIdentity origin) =>
-        catalog.AgentExternalBindings.SingleOrDefault(binding => binding.Namespace == origin.Namespace && binding.Key == origin.Key);
+    private static RemoteAgentTemplateBinding? FindBinding(SandboxWorkspaceCatalog catalog, RemoteAgentTemplateBinding origin) =>
+        catalog.RemoteTemplateBindings?.SingleOrDefault(binding => binding.SourceId == origin.SourceId && binding.PublisherId == origin.PublisherId &&
+            binding.TemplateId == origin.TemplateId);
 
     private static bool Text(string? value, int maximumLength, bool allowEmpty = false) =>
         value is not null && value.Length <= maximumLength && (allowEmpty || !string.IsNullOrWhiteSpace(value));

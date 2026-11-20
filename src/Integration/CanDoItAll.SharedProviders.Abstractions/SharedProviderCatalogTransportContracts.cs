@@ -1,3 +1,5 @@
+using CanDoItAll.RemoteInstances;
+
 namespace CanDoItAll.SharedProviders.Abstractions;
 
 public enum SharedProviderSourceNetworkPolicy
@@ -13,36 +15,13 @@ public interface ISharedProviderSourceUriPolicy
         SharedProviderSourceNetworkPolicy networkPolicy);
 }
 
-public sealed class SharedProviderCatalogAccessToken
-{
-    public const int MaximumLength = 16 * 1024;
+public sealed class SharedProviderCatalogAccessToken(string value) {
+    public const int MaximumLength = RemoteInstanceAccessToken.MaximumLength;
+    private readonly RemoteInstanceAccessToken token = new(value);
 
-    private readonly string value;
+    public TResult UseValue<TResult>(Func<string, TResult> action) => token.UseValue(action);
 
-    public SharedProviderCatalogAccessToken(string value)
-    {
-        if (!IsValid(value))
-        {
-            throw new ArgumentException("The shared-provider catalog access token is invalid.", nameof(value));
-        }
-
-        this.value = value;
-    }
-
-    public TResult UseValue<TResult>(Func<string, TResult> action)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        return action(value);
-    }
-
-    public override string ToString()
-        => "[REDACTED]";
-
-    private static bool IsValid(string? candidate)
-        => candidate is { Length: > 0 and <= MaximumLength } &&
-            candidate.All(character =>
-                char.IsAsciiLetterOrDigit(character) ||
-                character is '-' or '.' or '_' or '~' or '+' or '/' or '=');
+    public override string ToString() => token.ToString();
 }
 
 public readonly record struct SharedProviderCatalogEntityTag

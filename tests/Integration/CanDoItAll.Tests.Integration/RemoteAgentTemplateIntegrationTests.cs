@@ -22,6 +22,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         await using var scope = host.App.Services.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var local = await workspace.SaveAgentAsync(new() { Name = "Ordinary agent outside the catalog" });
+        var withdrawn = await workspace.SaveAgentAsync(new() { Name = "Archived template", IsTemplate = true, Status = AgentLifecycleStatus.Archived });
         var capability = await workspace.SaveCapabilityAsync(new() {
             Kind = CapabilityKind.Skill, Key = "publication-skill", Name = "Publication skill", Description = "Skill guidance",
             EndpointOrPath = "inline://publication-skill",
@@ -39,8 +40,14 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         catalogResponse.EnsureSuccessStatusCode();
         var catalog = await catalogResponse.Content.ReadFromJsonAsync<RemoteAgentTemplateSummary[]>();
         Assert.NotNull(catalog);
-        Assert.Contains(catalog, item => item.Id == agent.Id && item.CapabilityCount == 1);
+        var offered = Assert.Single(catalog, item => item.Id == agent.Id);
+        Assert.Equal(1, offered.CapabilityCount);
+        Assert.NotEqual(Guid.Empty, offered.PublisherId);
+        Assert.True(offered.CatalogRevision > 0);
         Assert.DoesNotContain(catalog, item => item.Id == local);
+        Assert.DoesNotContain(catalog, item => item.Id == withdrawn);
+        using var archived = await ReadAsync(RemoteAgentTemplateRoutes.Details(withdrawn), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        Assert.Equal(HttpStatusCode.NotFound, archived.StatusCode);
         using var nativeAgent = await ReadAsync(RemoteAgentTemplateRoutes.Details(local), ApiAccessScopeNames.ReadSharedAgentTemplates);
         Assert.Equal(HttpStatusCode.NotFound, nativeAgent.StatusCode);
         using var details = await ReadAsync(RemoteAgentTemplateRoutes.Details(agent.Id), ApiAccessScopeNames.ReadSharedAgentTemplates);
@@ -51,10 +58,19 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var payload = JsonSerializer.Deserialize<RemoteAgentTemplate>(json, JsonSerializerOptions.Web);
         Assert.NotNull(payload);
         Assert.Equal(agent.UpdatedAtUtc, payload.UpdatedAtUtc);
+        Assert.Equal(offered.PublisherId, payload.PublisherId);
+        Assert.Equal(offered.CatalogRevision, payload.CatalogRevision);
         var skill = Assert.Single(payload.Capabilities).InlineSkill;
         Assert.NotNull(skill);
         Assert.Equal("Portable instructions", skill.Instructions);
         Assert.Equal("Read locally", Assert.Single(skill.Resources).Content);
+        var skillEditor = await workspace.GetCapabilityEditorAsync(capability);
+        skillEditor.ConfigurationJson = """{"inlineSkill":{"name":"publication-skill","description":"Help","instructions":"Changed skill content"}}""";
+        await workspace.SaveCapabilityAsync(skillEditor);
+        using var changed = await ReadAsync(RemoteAgentTemplateRoutes.Details(agent.Id), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        var changedTemplate = await changed.Content.ReadFromJsonAsync<RemoteAgentTemplate>();
+        Assert.NotNull(changedTemplate);
+        Assert.True(changedTemplate.CatalogRevision > offered.CatalogRevision);
 
         async Task<HttpResponseMessage> ReadAsync(string route, string permission) {
             var token = scope.ServiceProvider.GetRequiredService<IApiTokenService>().IssueToken(new() {
@@ -84,7 +100,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var source = Guid.NewGuid();
         var template = new RemoteAgentTemplate(Guid.NewGuid(), "Imported local draft", "Writer", "Summary", "Compose a note", AgentWorkloadKind.General, [],
             [new(CapabilityKind.Skill, "note-skill", new("note-skill", "Draft a note", "Review the note.", [new("format", "short", null)])),
-             new(CapabilityKind.Tool, "local-fixture-tool", null)], DateTimeOffset.UtcNow);
+             new(CapabilityKind.Tool, "local-fixture-tool", null)], DateTimeOffset.UtcNow) { PublisherId = Guid.NewGuid(), CatalogRevision = 1 };
         var missing = template with { Capabilities = [.. template.Capabilities, new(CapabilityKind.Tool, "uninstalled-tool", null)] };
         var failure = await Assert.ThrowsAsync<RemoteAgentTemplateImportException>(() => workspace.ImportRemoteAgentTemplateAsync(source, missing, before.Workspace));
         Assert.Contains("uninstalled-tool", failure.Message, StringComparison.Ordinal);
@@ -99,6 +115,8 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var refused = (await workspace.LoadCatalogSnapshotAsync()).Snapshot.Catalog;
         Assert.Equal(before.Snapshot.Catalog.Agents.Count, refused.Agents.Count);
         Assert.Equal(before.Snapshot.Catalog.Capabilities.Count, refused.Capabilities.Count);
+        var external = await workspace.ProvisionAgentByExternalKeyAsync(new($"remote-instance-{source:N}", template.Id.ToString("N"),
+            "pre-existing-external-agent", null, new() { Name = "Existing independently provisioned local agent" }));
         var feed = services.GetRequiredService<EditingChangeFeed>();
         using var subscriber = feed.Subscribe(new(editingScope, EditingOwner.AgentDefinition, null));
         Guid first;
@@ -109,6 +127,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var change = Assert.Single((await subscriber.ReadAsync(timeout.Token)).Changes);
         Assert.Equal(first, change.Resource.ResourceId);
         Assert.Equal(operation.OperationId, change.OperationId);
+        Assert.NotEqual(external.AgentId, first);
         var editor = await workspace.GetAgentEditorAsync(first);
         Assert.False(editor.IsTemplate);
         Assert.Null(editor.ProviderProfileId);
@@ -133,5 +152,12 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var second = await workspace.ImportRemoteAgentTemplateAsync(Guid.NewGuid(), template, before.Workspace);
         Assert.NotEqual(first, second);
         Assert.Equal(template.Instructions, (await workspace.GetAgentEditorAsync(second)).Instructions);
+        var repointed = await workspace.ImportRemoteAgentTemplateAsync(source, template with { PublisherId = Guid.NewGuid() }, before.Workspace);
+        Assert.NotEqual(first, repointed);
+        await workspace.DeleteAgentAsync(first);
+        var importedAgain = await workspace.ImportRemoteAgentTemplateAsync(source, template, before.Workspace);
+        Assert.NotEqual(first, importedAgain);
+        Assert.NotEqual(external.AgentId, importedAgain);
+        Assert.Equal(external.AgentId, (await workspace.GetAgentByExternalKeyAsync(external.Namespace, external.Key)).AgentId);
     }
 }

@@ -14,7 +14,10 @@ public sealed record RemoteAgentTemplateSummary(
     [property: Description("Display name of the template.")] string Name,
     [property: Description("Short description of the agent's purpose.")] string Summary,
     [property: Description("Revision timestamp of the agent definition.")] DateTimeOffset UpdatedAtUtc,
-    [property: Description("Number of assigned skills, tools and other capabilities.")] int CapabilityCount);
+    [property: Description("Number of assigned skills, tools and other capabilities.")] int CapabilityCount) {
+    [Description("Public identity of the publishing instance.")] public Guid PublisherId { get; init; }
+    [Description("Publisher catalog revision at selection, including capability changes.")] public long CatalogRevision { get; init; }
+}
 
 [Description("Version-one portable definition for creating an independent local draft agent.")]
 public sealed record RemoteAgentTemplate(
@@ -26,7 +29,12 @@ public sealed record RemoteAgentTemplate(
     [property: Description("Workload category: 0 General, 1 Management, 2 Hr, 3 Sales, 4 Assistant, 5 Qa, 6 Support, 7 Programming, 8 Spreadsheet, 9 Mail, 10 Research.")] AgentWorkloadKind Workload,
     [property: Description("Searchable labels assigned to the definition.")] IReadOnlyList<string> Tags,
     [property: Description("Capability declarations required by this template.")] IReadOnlyList<RemoteAgentTemplateCapability> Capabilities,
-    [property: Description("Revision timestamp of the agent definition shown in the catalog.")] DateTimeOffset UpdatedAtUtc);
+    [property: Description("Revision timestamp of the agent definition shown in the catalog.")] DateTimeOffset UpdatedAtUtc) {
+    [Description("Public identity of the publishing instance.")] public Guid PublisherId { get; init; }
+    [Description("Publisher catalog revision from which the content and all dependencies were read.")] public long CatalogRevision { get; init; }
+}
+
+public sealed record RemoteAgentTemplateBinding(Guid SourceId, Guid PublisherId, Guid TemplateId, Guid AgentId);
 
 [Description("An assigned runtime capability identified by its kind and catalog key.")]
 public sealed record RemoteAgentTemplateCapability(

@@ -216,7 +216,7 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         var snapshot = await workspace.LoadCatalogSnapshotAsync();
         var localProvider = snapshot.Snapshot.Catalog.Agents.First(agent => !agent.IsTemplate && agent.ProviderProfileId.HasValue);
         var template = new RemoteAgentTemplate(Guid.NewGuid(), "Local output agent", "Writer", "Create a status report", "Summarize the input",
-            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow);
+            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow) { PublisherId = Guid.NewGuid(), CatalogRevision = 1 };
         var id = await workspace.ImportRemoteAgentTemplateAsync(Guid.NewGuid(), template, snapshot.Workspace);
         var editor = await workspace.GetAgentEditorAsync(id);
         editor.ProviderProfileId = localProvider.ProviderProfileId;

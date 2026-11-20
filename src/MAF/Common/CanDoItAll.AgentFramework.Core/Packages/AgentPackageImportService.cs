@@ -496,6 +496,7 @@ internal sealed class AgentPackageImportService(
             AgentExternalBindings = document.AgentExternalBindings
                 .Where(item => item.AgentId != agentId)
                 .ToList(),
+            RemoteTemplateBindings = document.RemoteTemplateBindings?.Where(binding => binding.AgentId != agentId).ToArray(),
             Memory = document.Memory.Where(item => item.AgentId != agentId).ToList(),
             ChatSessions = document.ChatSessions.Where(item => item.AgentId != agentId).ToList(),
             ExecutionRuns = document.ExecutionRuns.Where(item => !runIds.Contains(item.Id)).ToList(),

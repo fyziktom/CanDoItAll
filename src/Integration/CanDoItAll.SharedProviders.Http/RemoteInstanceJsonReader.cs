@@ -10,8 +10,9 @@ public sealed class RemoteInstanceJsonReader(
     IHttpClientFactory clients, ISharedProviderSourceUriPolicy uriPolicy) : IRemoteInstanceJsonReader {
     internal const int MaximumBytes = 4 * 1024 * 1024;
 
-    public async Task<T> ReadAsync<T>(Uri baseUri, SharedProviderSourceNetworkPolicy networkPolicy,
-        SharedProviderCatalogAccessToken credential, string relativeApiPath, CancellationToken cancellationToken) {
+    public async Task<T> ReadAsync<T>(Uri baseUri, RemoteInstanceNetworkPolicy networkPolicy,
+        RemoteInstanceAccessToken credential, string relativeApiPath, CancellationToken cancellationToken) {
+        ArgumentNullException.ThrowIfNull(credential);
         ArgumentException.ThrowIfNullOrWhiteSpace(relativeApiPath);
         if (!relativeApiPath.StartsWith("api/", StringComparison.Ordinal) ||
             relativeApiPath.Split('/').Any(segment => segment.Length == 0 ||
@@ -19,11 +20,16 @@ public sealed class RemoteInstanceJsonReader(
             throw new ArgumentException("A relative API resource path is required.", nameof(relativeApiPath));
         }
 
-        var origin = uriPolicy.Normalize(baseUri, networkPolicy);
+        var transportPolicy = networkPolicy switch {
+            RemoteInstanceNetworkPolicy.PublicOnly => SharedProviderSourceNetworkPolicy.PublicOnly,
+            RemoteInstanceNetworkPolicy.AllowPrivateNetwork => SharedProviderSourceNetworkPolicy.AllowPrivateNetwork,
+            _ => throw new ArgumentOutOfRangeException(nameof(networkPolicy))
+        };
+        var origin = uriPolicy.Normalize(baseUri, transportPolicy);
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(origin, relativeApiPath));
         request.Headers.Authorization = credential.UseValue(value => new AuthenticationHeaderValue("Bearer", value));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        using var client = clients.CreateClient(SelectClientName(origin, networkPolicy));
+        using var client = clients.CreateClient(SelectClientName(origin, transportPolicy));
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(SharedProviderCatalogClient.RequestTimeout);
         try {
