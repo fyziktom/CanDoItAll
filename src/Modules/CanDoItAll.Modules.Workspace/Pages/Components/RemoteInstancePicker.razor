@@ -1,0 +1,65 @@
+@using CanDoItAll.Workspace.UI
+@if (ManageInstances) {
+    <SectionCard Title="Remote instances" Description="Save connections here or add them when importing from another instance. Each feature selects what to use.">
+        <Stack GapScale="LayoutGap.Medium">
+            @Toolbar
+            @Feedback
+            @if (!loading && available && instances.Count == 0) {
+                <EmptyState Title="No remote instances" Description="Add an instance to make it available to providers and agent templates." />
+            }
+            @foreach (var instance in instances) {
+                <SelectionListItem @key="instance.Id" Title="@instance.Name" Summary="@instance.BaseUri.AbsoluteUri"
+                                   IsSelected="@(instance.Id == selectedId)" OnSelect="@(() => SelectAsync(instance.Id))">
+                    <Status><StatusBadge Text="@(instance.IsEnabled ? "Enabled" : "Disabled")" Tone="@(instance.IsEnabled ? "success" : "neutral")" /></Status>
+                    <Actions>
+                        <Button Text="Edit" Size="ButtonSize.Small" Click="@(() => OpenAsync(instance))" Disabled="Blocked" data-testid="remote-instance-edit" />
+                        <Button Text="Delete" Tone="ButtonTone.Danger" Size="ButtonSize.Small" Click="@(() => ConfirmDeletion(instance))" Disabled="Blocked" data-testid="remote-instance-delete" />
+                    </Actions>
+                </SelectionListItem>
+            }
+        </Stack>
+    </SectionCard>
+} else {
+    <Stack GapScale="LayoutGap.Small">
+        <FormField Text="Remote instance">
+            <SelectInput TValue="Guid?" @bind-Value:get="selectedId" @bind-Value:set="SelectAsync"
+                         disabled="@Blocked" data-testid="remote-instance-select">
+                <option value="">Select an instance</option>
+                @foreach (var instance in instances) {
+                    <option value="@instance.Id" disabled="@(!instance.IsEnabled)">@(instance.IsEnabled ? instance.Name : $"{instance.Name} (disabled)")</option>
+                }
+            </SelectInput>
+        </FormField>
+        @Toolbar
+        @Feedback
+    </Stack>
+}
+
+@if (editor is { } draft) {
+    <RemoteInstanceEditor @key="draft" Draft="draft" Credentials="credentials" Busy="writing" Error="@editorError"
+                          SaveBlocked="@(Blocked || needsReview || !credentialsAvailable)" Save="SaveAsync" Close="CloseEditor" />
+}
+@if (deleting is { } target) {
+    <Dialog Title="Delete remote instance?" IsOpen="true" Size="ModalSize.Compact" OnClose="CloseDelete" TestId="remote-instance-confirm">
+        <ChildContent>Remove the saved connection to @target.Name? Instances with retained provider imports must be kept.</ChildContent>
+        <Footer>
+            <Button Text="Cancel" Click="CloseDelete" Disabled="writing" />
+            <Button Text="Delete instance" Tone="ButtonTone.Danger" Disabled="Blocked" Click="@(() => DeleteAsync(target))" data-testid="remote-instance-confirm-delete" />
+        </Footer>
+    </Dialog>
+}
+
+@code {
+    private RenderFragment Toolbar => @<Cluster Gap="LayoutGap.Small">
+        <Button Text="Add instance" Icon="add_link" Size="ButtonSize.Small" Click="@(() => OpenAsync(null))" Disabled="Blocked" data-testid="remote-instance-add" />
+        <Button Text="Refresh" Icon="refresh" Size="ButtonSize.Small" Tone="ButtonTone.Default" Click="RefreshAsync" Disabled="@(loading || writing || retired)" data-testid="remote-instance-refresh" />
+    </Cluster>;
+    private RenderFragment Feedback => @<text>
+        @if (error is not null) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-instance-error">@error</Alert>
+        }
+        @if (warning is not null) {
+            <Alert AlertStyle="AlertStyle.Warning">@warning</Alert>
+        }
+    </text>;
+}

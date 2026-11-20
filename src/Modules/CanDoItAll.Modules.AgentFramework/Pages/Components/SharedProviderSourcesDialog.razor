@@ -1,3 +1,6 @@
 @using CanDoItAll.AgentFramework.SharedProviders.UI
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Workspace
+@using CanDoItAll.Modules.Workspace.Pages
 
-<SharedProviderSourcesSurface View="this" />
+<SharedProviderSourcesSurface View="this" RegistryHref="@SettingsUrlCodec.Instance.Href(SettingsUrlCodec.Path, new(WorkspaceSection.RemoteInstances))" />

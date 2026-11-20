@@ -31,7 +31,15 @@
     <WorkspaceSettingsSurface Section="section" SectionChanged="SelectAsync" Defaults="defaults" Secrets="secrets" Files="files">
         <History><WorkspaceHistorySurface State="history" /></History>
         <DeferredSection Context="deferred">
-            <EmptyState Title="Outside this sandbox" Description="@($"{deferred} remains in its original production host. This scenario does not prove that surface.")" />
+            @if (deferred == WorkspaceSection.RemoteInstances) {
+                <Button Text="Open remote instance editor" Click="OpenInstance" />
+                @if (instanceDraft is { } draft) {
+                    <RemoteInstanceEditor @key="draft" Draft="draft" Credentials="secrets.Secrets"
+                                          Save="PreviewInstance" Close="@(() => instanceDraft = null)" />
+                }
+            } else {
+                <EmptyState Title="Outside this sandbox" Description="@($"{deferred} remains in its original production host. This scenario does not prove that surface.")" />
+            }
         </DeferredSection>
     </WorkspaceSettingsSurface>
 </Stack>
@@ -41,6 +49,7 @@
     private WorkspaceOperation operation = WorkspaceOperation.SecretSave;
     private WorkspaceFault fault = WorkspaceFault.CommittedWarning;
     private WorkspaceSection section;
+    private RemoteInstanceDraft? instanceDraft;
     private WorkspaceScenarioStore store = default!;
     private WorkspaceDefaultsController defaults = default!;
     private WorkspaceSecretsController secrets = default!;
@@ -68,6 +77,7 @@
             DisposeControllers();
         }
         store = new(scenario);
+        instanceDraft = null;
         store.WriteCompleted += Changed;
         defaults = new(store);
         secrets = new(store);
@@ -82,11 +92,23 @@
     }
 
     private Task SelectAsync(WorkspaceSection selected) {
+        instanceDraft = null;
         if (section == WorkspaceSection.ProviderHistory && selected != section) {
             history.Retire();
         }
         section = selected;
         return Task.CompletedTask;
+    }
+
+    private void OpenInstance() => instanceDraft = new() {
+        Name = "Regional workspace",
+        Address = "https://regional.example.com/",
+        CredentialId = WorkspaceScenarioStore.SecretId
+    };
+
+    private void PreviewInstance(RemoteInstanceDraft submitted) {
+        controlMessage = $"The remote instance editor submitted {submitted.Name}.";
+        instanceDraft = null;
     }
 
     private void Hold() {

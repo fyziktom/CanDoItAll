@@ -32,7 +32,8 @@ public sealed class SettingsUrlCodec : IUrlStateCodec<SettingsUrlState> {
         (WorkspaceSection.ProviderHistory, "provider-history"),
         (WorkspaceSection.Secrets, "secrets"),
         (WorkspaceSection.Providers, "providers"),
-        (WorkspaceSection.ApiAccess, "api-access"));
+        (WorkspaceSection.ApiAccess, "api-access"),
+        (WorkspaceSection.RemoteInstances, "remote-instances"));
 
     public IReadOnlyList<string> Keys { get; } = [TabKey, SecretKey, ProfileKey, StorageKey, SearchKey, PageKey];
 

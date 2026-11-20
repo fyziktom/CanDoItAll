@@ -10,6 +10,9 @@
     <History><ProviderHistoryPolicyPanel /></History>
     <DeferredSection Context="activeSection">
         @switch (activeSection) {
+            case WorkspaceSection.RemoteInstances when !profileRetired:
+                <RemoteInstancePicker ManageInstances="true" />
+                break;
             case WorkspaceSection.DataSources:
                 <DatabaseSourcesSettingsPanel ProfileId="url.State.ProfileId" ProfileIdChanged="ProfileSelectionChanged" />
                 break;
