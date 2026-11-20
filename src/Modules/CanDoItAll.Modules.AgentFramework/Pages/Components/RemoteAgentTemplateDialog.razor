@@ -1,0 +1,195 @@
+@using CanDoItAll.RemoteInstances
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+@inject RemoteAgentTemplateDiscovery Discovery
+@inject IAgentFrameworkWorkspaceService Workspace
+@inject ILogger<RemoteAgentTemplateDialog> Logger
+
+<Dialog IsOpen="true" Title="Import an agent template" Size="ModalSize.Medium" CloseOnBackdrop="false"
+        OnClose="CloseAsync" TestId="remote-agent-template-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            @if (acceptedId is null) {
+                <fieldset disabled="@writing">
+                    <RemoteInstancePicker SelectedChanged="ChangeInstanceAsync" />
+                </fieldset>
+                @if (source is not null) {
+                    <FormField Text="Agent template">
+                        <SelectInput TValue="Guid?" @bind-Value:get="selectedId" @bind-Value:set="SelectTemplateAsync"
+                                     disabled="@(writing || templates.Count == 0)" data-testid="remote-agent-template-select">
+                            <option value="">Select a template</option>
+                            @foreach (var row in templates) {
+                                <option value="@row.Id">@row.Name</option>
+                            }
+                        </SelectInput>
+                    </FormField>
+                    <Button Text="Refresh templates" Icon="refresh" Size="ButtonSize.Small" Disabled="@(writing || loading)"
+                            Click="@(() => ChangeInstanceAsync(source))" />
+                }
+                @if (loading) {
+                    <TextBlock Value="Loading templates…" />
+                } else if (source is not null && templates.Count == 0 && error is null) {
+                    <TextBlock Value="This instance has no shared agent templates." />
+                }
+                @if (preview is { } item) {
+                    <TextBlock Value="@item.Summary" />
+                    @if (item.Capabilities.Count > 0) {
+                        <TextBlock TextStyle="TextStyle.EyebrowCaption" Value="Required capabilities" />
+                        @foreach (var capability in item.Capabilities) {
+                            <TextBlock Value="@($"{capability.Kind} · {capability.Key} ({(capability.InlineSkill is null ? "local" : "included")})")" />
+                        }
+                    }
+                    <TextBlock Value="Import creates a local agent. Select its provider in the agent editor." />
+                }
+            } else {
+                <Alert AlertStyle="AlertStyle.Success" data-testid="remote-agent-template-accepted">The agent is available in your local catalog.</Alert>
+            }
+            @if (error is not null) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-agent-template-error">@error</Alert>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            @if (acceptedId is { } id) {
+                <Button Text="Open local agent" Click="@(() => Imported.InvokeAsync(id))" data-testid="remote-agent-template-open" />
+            } else {
+                <Button Text="Import locally" Disabled="@(writing || loading || preview is null)" IsBusy="writing"
+                        Click="ImportAsync" data-testid="remote-agent-template-import" />
+            }
+            <Button Text="Close" Tone="ButtonTone.Default" Disabled="writing" Click="CloseAsync" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public AgentConfigurationOpening Opening { get; set; } = default!;
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback AcceptedAndClosed { get; set; }
+    [Parameter] public EventCallback<Guid> Imported { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private CancellationTokenSource? read;
+    private RemoteInstanceSelection? source;
+    private IReadOnlyList<RemoteAgentTemplateSummary> templates = [];
+    private Guid? selectedId;
+    private RemoteAgentTemplate? preview;
+    private AgentExecutionActivityWorkspaceIdentity? workspace;
+    private Guid? acceptedId;
+    private string? error;
+    private bool writing;
+    private bool loading;
+    private bool disposed;
+
+    private async Task ChangeInstanceAsync(RemoteInstanceSelection? selected) {
+        CancelRead();
+        source = selected;
+        templates = [];
+        selectedId = null;
+        preview = null;
+        workspace = null;
+        error = null;
+        if (selected is null || disposed || writing) {
+            return;
+        }
+        await ReadAsync(async token => {
+            var original = await Workspace.ReadAgentDecisionDataPolicyContextAsync(token);
+            var rows = await Discovery.ListAsync(selected.Id, selected.Version, token);
+            return () => {
+                templates = rows;
+                workspace = original;
+            };
+        });
+    }
+
+    private async Task SelectTemplateAsync(Guid? id) {
+        if (writing || disposed) {
+            return;
+        }
+        CancelRead();
+        preview = null;
+        selectedId = id;
+        error = null;
+        if (source is { } selected && templates.FirstOrDefault(row => row.Id == id) is { } row) {
+            await ReadAsync(async token => {
+                var document = await Discovery.FetchAsync(selected.Id, selected.Version, row, token);
+                return () => preview = document;
+            });
+        }
+    }
+
+    private async Task ReadAsync(Func<CancellationToken, Task<Action>> load) {
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        read = request;
+        loading = true;
+        try {
+            var publish = await Opening.ReadAsync(load, request.Token);
+            if (!request.IsCancellationRequested) {
+                publish();
+            }
+        } catch (Exception) when (request.IsCancellationRequested || disposed) {
+        } catch (Exception exception) {
+            error = Failure(exception, "Could not read the remote template catalog.");
+        } finally {
+            if (ReferenceEquals(read, request)) {
+                read = null;
+                loading = false;
+            }
+        }
+    }
+
+    private void CancelRead() {
+        var previous = read;
+        read = null;
+        loading = false;
+        previous?.Cancel();
+    }
+
+    private async Task ImportAsync() {
+        if (disposed || writing || acceptedId is not null || source is not { } selected ||
+            workspace is not { } original || preview is not { } document) {
+            return;
+        }
+        writing = true;
+        error = null;
+        try {
+            acceptedId = await Opening.WriteAsync(async token => {
+                await Discovery.RequireCurrentAsync(selected.Id, selected.Version, token);
+                if (source != selected || disposed) {
+                    throw new RemoteInstanceReadException("The selected connection changed. Review the template again.");
+                }
+                return await Workspace.ImportRemoteAgentTemplateAsync(selected.Id, document, original, token);
+            }, lifetime.Token);
+        } catch (AgentCatalogCommittedException<Guid> committed) {
+            acceptedId = committed.Accepted;
+            error = "The local definition was saved. Catalog reconciliation needs attention.";
+        } catch (AgentDirectoryProjectionSynchronizationException committed) {
+            acceptedId = committed.AgentId;
+            error = "The local definition was saved. Its directory entry could not be refreshed.";
+        } catch (Exception) when (disposed) {
+        } catch (Exception exception) {
+            error = Failure(exception, "The import could not be confirmed. Repeating it will reuse any saved local agent.");
+        } finally {
+            writing = false;
+        }
+    }
+
+    private string Failure(Exception exception, string message) {
+        Logger.LogWarning("Remote template operation for {InstanceId} failed with {FailureType}", source?.Id, exception.GetType().Name);
+        return exception switch {
+            RemoteInstanceReadException or RemoteAgentTemplateImportException => exception.Message,
+            UnauthorizedAccessException => "Access to the current workspace changed. Reopen the catalog.",
+            KeyNotFoundException => "The selected connection is no longer available.",
+            _ => message
+        };
+    }
+
+    private Task CloseAsync() => writing ? Task.CompletedTask :
+        acceptedId.HasValue ? AcceptedAndClosed.InvokeAsync() : Closed.InvokeAsync();
+
+    public void Dispose() {
+        disposed = true;
+        CancelRead();
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+}

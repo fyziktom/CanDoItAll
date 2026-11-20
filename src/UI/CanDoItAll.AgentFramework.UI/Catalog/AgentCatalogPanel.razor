@@ -20,6 +20,9 @@
                         Tone="ButtonTone.Default"
                         Click="OpenNewAgentDialogAsync"
                         data-testid="agents-catalog-new" />
+                <Button Text="Import template" Icon="download" Size="ButtonSize.Small" Tone="ButtonTone.Default"
+                        Click="@(() => Intent.InvokeAsync(new AgentCatalogIntent.ImportTemplate()))"
+                        data-testid="agents-catalog-import" />
                 <Button Text="Data policy" Size="ButtonSize.Small" Tone="ButtonTone.Default"
                         Disabled="@(selectedAgentId is null || isLoading)" data-testid="agents-catalog-policy"
                         Click="@(() => selectedAgentId is { } id ? Intent.InvokeAsync(new AgentCatalogIntent.OpenDataPolicy(id)) : Task.CompletedTask)" />

@@ -44,6 +44,17 @@ protocol with explicit dependency resolution before it can produce a local agent
 
 ## Extension points
 
+In the product, open **Settings → Remote instances** or choose **Agents → Import template
+→ Add instance**. Select a saved workspace secret containing the publisher's API token.
+On the publisher enable API authorization, grant the token `api.shared-agent-templates.read`
+and mark the desired agents as templates. Each token with this scope can read the
+templates in that publisher workspace. On the consumer, choose an instance, review a
+template's requirements and click **Import locally**. Open the local agent to select its
+provider and configure runtime permissions. Repeating an import with the same connection
+and template returns the existing local agent. An imported agent continues to use local
+capabilities if its connection is later disabled or removed. A local provider selection
+can itself point to an explicitly imported remote provider.
+
 | Consumer | Remote selection | Local owner and binding |
 | --- | --- | --- |
 | Providers | Selected published models | Existing import reconciliation, profile and relay |

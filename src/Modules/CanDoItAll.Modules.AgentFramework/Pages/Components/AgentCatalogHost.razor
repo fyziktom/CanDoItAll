@@ -30,6 +30,10 @@
                    CanRecoverPolicy="@(RendererInfo.IsInteractive && !lifetimeToken.IsCancellationRequested)"
                    OpeningManagedAgentChatId="@openingManagedAgentChatId"
                    Intent="HandleIntentAsync" />
+@if (importingTemplate) {
+    <RemoteAgentTemplateDialog Opening="@(agentsOpening!)" Closed="@(() => importingTemplate = false)"
+                               AcceptedAndClosed="CloseAcceptedImportAsync" Imported="TemplateImportedAsync" />
+}
 @if (activePolicy is { } policy) {
     <AgentDecisionPolicyDialog @key="policy" State="policy" Opening="@(agentsOpening!)" AgentName="@(agents.FirstOrDefault(agent => agent.Id == policy.AgentId)?.Name ?? $"Agent {policy.AgentId:D}")"
                                OwnerLifetime="lifetimeToken" Closed="@(() => activePolicy = null)" Saved="PolicySavedAsync" AccessRetired="RetireCatalogAsync" />
@@ -41,6 +45,7 @@
 
 @code {
     private readonly Guid catalogEditorId = Guid.NewGuid();
+    private bool importingTemplate;
     private AgentConfigurationOpening? agentsOpening;
     private AgentConfigurationOpening? teamsOpening;
     private long catalogChangeSequence;
@@ -169,6 +174,7 @@
         AgentCatalogIntent.SelectTeamMember select => SelectTeamMemberAsync(select.AgentId),
         AgentCatalogIntent.SelectTeam select => SelectTeamAsync(select.TeamId),
         AgentCatalogIntent.OpenAgent open => QueueAgentDetailsDialogAsync(open.AgentId),
+        AgentCatalogIntent.ImportTemplate => OpenTemplateImportAsync(),
         AgentCatalogIntent.OpenDataPolicy open => OpenPolicyAsync(open.AgentId),
         AgentCatalogIntent.OpenPolicyRecovery => OpenPolicyRecoveryAsync(),
         AgentCatalogIntent.OpenTeam open => QueueTeamDetailsDialogAsync(open.TeamId),
@@ -177,6 +183,29 @@
         AgentCatalogIntent.DeleteTeam delete when delete.TeamId == selectedTeamId => DeleteSelectedTeamAsync(),
         _ => throw new InvalidOperationException("The catalog intent does not match the current selection.")
     };
+
+    private Task OpenTemplateImportAsync() {
+        importingTemplate = !lifetimeToken.IsCancellationRequested;
+        return Task.CompletedTask;
+    }
+
+    private async Task CloseAcceptedImportAsync() {
+        importingTemplate = false;
+        await RefreshCatalogAsync();
+    }
+
+    private async Task TemplateImportedAsync(Guid agentId) {
+        await CloseAcceptedImportAsync();
+        if (isDisposed || lifetimeToken.IsCancellationRequested) {
+            return;
+        }
+        if (agents.Any(agent => agent.Id == agentId)) {
+            await SelectAgentAsync(agentId);
+            await QueueAgentDetailsDialogAsync(agentId);
+        } else {
+            catalogRefreshError = $"Agent {agentId:D} was imported. Refresh the catalog to open it.";
+        }
+    }
 
     private Task OpenPolicyAsync(Guid agentId) {
         if (!lifetimeToken.IsCancellationRequested && agents.Any(agent => agent.Id == agentId)) {
