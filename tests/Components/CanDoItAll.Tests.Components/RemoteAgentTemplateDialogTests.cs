@@ -88,9 +88,12 @@ public sealed class RemoteAgentTemplateDialogTests {
         var workspace = harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
         var local = await workspace.SaveAgentDefinitionAsync(new() { Name = "Local accounting agent" });
         var cut = await OpenAsync(harness);
+        void AssertLocalCardVisible() => Assert.Contains(cut.FindAll("[data-testid=agents-catalog-card-shell]"),
+            card => card.TextContent.Contains(local.Name, StringComparison.Ordinal));
+        cut.WaitForAssertion(AssertLocalCardVisible);
         cut.Find("[data-testid=remote-instance-select]").Change(offline.Id.ToString());
         cut.WaitForElement("[data-testid=remote-agent-template-error]");
-        Assert.Contains(local.Name, cut.Find("[data-testid=agents-catalog-workspace]").TextContent, StringComparison.Ordinal);
+        AssertLocalCardVisible();
         cut.Find("[data-testid=remote-instance-select]").Change(reachable.Id.ToString());
         cut.WaitForElement($"[data-testid=remote-agent-template-select] option[value='{online.Id:D}']");
         Assert.Empty(cut.FindAll("[data-testid=remote-agent-template-error]"));
@@ -115,7 +118,7 @@ public sealed class RemoteAgentTemplateDialogTests {
     }
 
     private static async Task<IRenderedComponent<AgentCatalogHost>> OpenAsync(ComponentTestHarness harness) {
-        var cut = harness.Context.Render<AgentCatalogHost>();
+        var cut = harness.Context.Render<AgentCatalogHost>(parameters => parameters.Add(host => host.SkipCatalogRepair, true));
         await cut.WaitForElement("[data-testid=agents-catalog-import]").ClickAsync();
         cut.WaitForElement("[data-testid=remote-instance-select] option:not([value=''])");
         return cut;
