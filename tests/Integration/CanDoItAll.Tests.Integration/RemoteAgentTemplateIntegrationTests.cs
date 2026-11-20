@@ -31,7 +31,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         CheckOperation(catalog, "ListRemoteAgentTemplates", ["200", "401", "403", "409"]);
         CheckOperation(catalog + "/{id}", "GetRemoteAgentTemplate", ["200", "401", "403", "404", "409"]);
         var gaps = OpenApiDescriptionCoverage.FindGaps(document, catalog);
-        Assert.True(gaps.Count == 0, string.Join(Environment.NewLine, gaps));
+        Assert.Empty(gaps);
 
         void CheckOperation(string path, string name, string[] statusCodes) {
             var operation = document["paths"]?[path]?["get"];
