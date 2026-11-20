@@ -593,6 +593,10 @@ public interface IAgentFrameworkWorkspaceService :
     Task<AgentExportResult> ExportAgentAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default);
 
+    Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("This workspace does not support remote agent templates.");
+
     Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
         Stream package,
         AgentPackageImportCommand command,

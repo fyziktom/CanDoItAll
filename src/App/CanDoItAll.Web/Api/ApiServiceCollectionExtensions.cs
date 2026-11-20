@@ -183,6 +183,7 @@ public static class ApiServiceCollectionExtensions
                         context.User,
                         ApiAccessScopeNames.ReadSharedProviderCatalog));
             });
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadSharedAgentTemplates, ApiAccessScopeNames.ReadSharedAgentTemplates);
             options.AddPolicy(ApiAuthorizationPolicies.InvokeSharedProviders, policy =>
             {
                 policy.RequireAuthenticatedUser();

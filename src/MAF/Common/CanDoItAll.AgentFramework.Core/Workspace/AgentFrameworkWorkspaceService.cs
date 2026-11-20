@@ -18,6 +18,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
     private readonly AgentFrameworkWorkspaceCatalogService catalogService;
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
     private readonly AgentPackageImportService packageImportService;
+    private readonly RemoteAgentTemplateImport remoteTemplateImport;
     private readonly AgentExternalProvisioningService externalProvisioningService;
     private readonly AgentDecisionDataPolicyOwner policyOwner;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
@@ -88,6 +89,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
+        remoteTemplateImport = new(store, resolvedProviderProfileService, activityWorkspaceIdentity, executionProfileGenerationSource);
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService, activityWorkspaceIdentity);
         var resolvedProviderRuntimeProfileSource = providerRuntimeProfileSource
             ?? resolvedProviderProfileRegistry as IProviderRuntimeProfileSource

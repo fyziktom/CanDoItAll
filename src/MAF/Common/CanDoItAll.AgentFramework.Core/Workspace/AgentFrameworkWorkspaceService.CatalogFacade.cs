@@ -143,6 +143,10 @@ public sealed partial class AgentFrameworkWorkspaceService
     public Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default)
         => catalogService.ImportAgentAsync(packagePath, cancellationToken);
 
+    public Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default)
+        => remoteTemplateImport.ImportAsync(sourceId, template, expectedWorkspace, cancellationToken);
+
     public Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
         Stream package,
         AgentPackageImportCommand command,

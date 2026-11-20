@@ -49,6 +49,7 @@ public static class ApiAccessScopeNames
     public const string RespondWorkflows = "api.workflows.respond";
 
     public const string ReadSharedProviderCatalog = "api.shared-providers.catalog.read";
+    public const string ReadSharedAgentTemplates = "api.shared-agent-templates.read";
 
     public const string InvokeSharedProviders = "api.shared-providers.invoke";
 

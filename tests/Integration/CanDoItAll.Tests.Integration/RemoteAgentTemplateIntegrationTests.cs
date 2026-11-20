@@ -1,0 +1,137 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Editing;
+using CanDoItAll.Infrastructure;
+using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.Workspace.ApiAccess;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace CanDoItAll.Tests.Integration.AgentFramework;
+
+public sealed class RemoteAgentTemplateIntegrationTests {
+    [Fact]
+    public async Task Publisher_requires_template_scope_and_discloses_only_portable_template_content() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var local = await workspace.SaveAgentAsync(new() { Name = "Ordinary agent outside the catalog" });
+        var capability = await workspace.SaveCapabilityAsync(new() {
+            Kind = CapabilityKind.Skill, Key = "publication-skill", Name = "Publication skill", Description = "Skill guidance",
+            EndpointOrPath = "inline://publication-skill",
+            ConfigurationJson = """{"secretBinding":"private-sentinel","inlineSkill":{"name":"publication-skill","description":"Help","instructions":"Portable instructions","resources":[{"name":"guide","content":"Read locally"}]}}"""
+        });
+        var agent = await workspace.SaveAgentDefinitionAsync(new() {
+            Name = "Template publication", IsTemplate = true, Instructions = "Template text",
+            SelectedCapabilityIds = [capability], ConfigurationJson = """{"privateConfiguration":"private-sentinel"}"""
+        });
+        using var anonymous = await host.Client.GetAsync(RemoteAgentTemplateRoutes.Catalog);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        using var providerOnly = await ReadAsync(RemoteAgentTemplateRoutes.Catalog, ApiAccessScopeNames.ReadSharedProviderCatalog);
+        Assert.Equal(HttpStatusCode.Forbidden, providerOnly.StatusCode);
+        using var catalogResponse = await ReadAsync(RemoteAgentTemplateRoutes.Catalog, ApiAccessScopeNames.ReadSharedAgentTemplates);
+        catalogResponse.EnsureSuccessStatusCode();
+        var catalog = await catalogResponse.Content.ReadFromJsonAsync<RemoteAgentTemplateSummary[]>();
+        Assert.NotNull(catalog);
+        Assert.Contains(catalog, item => item.Id == agent.Id && item.CapabilityCount == 1);
+        Assert.DoesNotContain(catalog, item => item.Id == local);
+        using var nativeAgent = await ReadAsync(RemoteAgentTemplateRoutes.Details(local), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        Assert.Equal(HttpStatusCode.NotFound, nativeAgent.StatusCode);
+        using var details = await ReadAsync(RemoteAgentTemplateRoutes.Details(agent.Id), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        details.EnsureSuccessStatusCode();
+        var json = await details.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("private-sentinel", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("providerProfileId", json, StringComparison.OrdinalIgnoreCase);
+        var payload = JsonSerializer.Deserialize<RemoteAgentTemplate>(json, JsonSerializerOptions.Web);
+        Assert.NotNull(payload);
+        Assert.Equal(agent.UpdatedAtUtc, payload.UpdatedAtUtc);
+        var skill = Assert.Single(payload.Capabilities).InlineSkill;
+        Assert.NotNull(skill);
+        Assert.Equal("Portable instructions", skill.Instructions);
+        Assert.Equal("Read locally", Assert.Single(skill.Resources).Content);
+
+        async Task<HttpResponseMessage> ReadAsync(string route, string permission) {
+            var token = scope.ServiceProvider.GetRequiredService<IApiTokenService>().IssueToken(new() {
+                Subject = "template-reader", Scopes = [permission]
+            });
+            using var request = new HttpRequestMessage(HttpMethod.Get, route);
+            request.Headers.Authorization = new AuthenticationHeaderValue(token.TokenType, token.Token);
+            return await host.Client.SendAsync(request);
+        }
+    }
+
+    [Fact]
+    public async Task Publisher_does_not_expose_template_endpoints_without_JWT_authorization() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        using var result = await host.Client.GetAsync(RemoteAgentTemplateRoutes.Catalog);
+        Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+    }
+
+    [Fact]
+    public async Task Import_materializes_one_local_copy_per_source_preserves_edits_and_refuses_partial_or_unauthorized_writes() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var tool = await workspace.SaveCapabilityAsync(new() { Kind = CapabilityKind.Tool, Name = "Local fixture tool", Key = "local-fixture-tool" });
+        var before = await workspace.LoadCatalogSnapshotAsync();
+        var source = Guid.NewGuid();
+        var template = new RemoteAgentTemplate(Guid.NewGuid(), "Imported local draft", "Writer", "Summary", "Compose a note", AgentWorkloadKind.General, [],
+            [new(CapabilityKind.Skill, "note-skill", new("note-skill", "Draft a note", "Review the note.", [new("format", "short", null)])),
+             new(CapabilityKind.Tool, "local-fixture-tool", null)], DateTimeOffset.UtcNow);
+        var missing = template with { Capabilities = [.. template.Capabilities, new(CapabilityKind.Tool, "uninstalled-tool", null)] };
+        var failure = await Assert.ThrowsAsync<RemoteAgentTemplateImportException>(() => workspace.ImportRemoteAgentTemplateAsync(source, missing, before.Workspace));
+        Assert.Contains("uninstalled-tool", failure.Message, StringComparison.Ordinal);
+        var writes = services.GetRequiredService<AgentConfigurationWriteContext>();
+        var editingScope = services.GetRequiredService<AgentConfigurationChanges>().Scope;
+        var operation = new EditingOperationIdentity(Guid.NewGuid(), Guid.NewGuid());
+        using (writes.Enter(editingScope, operation, _ => ValueTask.FromException(new UnauthorizedAccessException()))) {
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => workspace.ImportRemoteAgentTemplateAsync(source, template, before.Workspace));
+        }
+        var wrongWorkspace = AgentExecutionActivityWorkspaceIdentity.CreateHostLifetime(before.Workspace.WorkspaceScope);
+        await Assert.ThrowsAsync<RemoteAgentTemplateImportException>(() => workspace.ImportRemoteAgentTemplateAsync(source, template, wrongWorkspace));
+        var refused = (await workspace.LoadCatalogSnapshotAsync()).Snapshot.Catalog;
+        Assert.Equal(before.Snapshot.Catalog.Agents.Count, refused.Agents.Count);
+        Assert.Equal(before.Snapshot.Catalog.Capabilities.Count, refused.Capabilities.Count);
+        var feed = services.GetRequiredService<EditingChangeFeed>();
+        using var subscriber = feed.Subscribe(new(editingScope, EditingOwner.AgentDefinition, null));
+        Guid first;
+        using (writes.Enter(editingScope, operation, _ => ValueTask.CompletedTask)) {
+            first = await workspace.ImportRemoteAgentTemplateAsync(source, template, before.Workspace);
+        }
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var change = Assert.Single((await subscriber.ReadAsync(timeout.Token)).Changes);
+        Assert.Equal(first, change.Resource.ResourceId);
+        Assert.Equal(operation.OperationId, change.OperationId);
+        var editor = await workspace.GetAgentEditorAsync(first);
+        Assert.False(editor.IsTemplate);
+        Assert.Null(editor.ProviderProfileId);
+        Assert.Empty(editor.AllowedSecretReferences);
+        Assert.Equal(AgentLifecycleStatus.Draft, editor.Status);
+        Assert.True(editor.Permissions.RequiresApprovalForExternalCalls);
+        Assert.Contains(tool, editor.SelectedCapabilityIds);
+        var skill = (await workspace.ListCapabilitiesAsync()).Single(item => item.Id != tool && editor.SelectedCapabilityIds.Contains(item.Id));
+        Assert.False(skill.IsBuiltIn);
+        var runtime = new SkillCapabilityBuilder(host.RootPath, new PhysicalFileSystemPathPolicyFactory(),
+            new ServiceProviderRegisteredCapabilityServiceSource(services, new HashSet<Type>()), NullLoggerFactory.Instance);
+        var loaded = Assert.Single(runtime.ResolveInlineSkills([skill]));
+        Assert.Contains("Review the note.", await loaded.GetContentAsync(), StringComparison.Ordinal);
+        var format = await loaded.GetResourceAsync("format");
+        Assert.NotNull(format);
+        Assert.Equal("short", await format.ReadAsync());
+        Assert.Empty(runtime.ResolveScriptExecutionPolicies([skill]));
+        editor.Instructions = "My local changes";
+        await workspace.SaveAgentAsync(editor);
+        Assert.Equal(first, await workspace.ImportRemoteAgentTemplateAsync(source, template, before.Workspace));
+        Assert.Equal("My local changes", (await workspace.GetAgentEditorAsync(first)).Instructions);
+        var second = await workspace.ImportRemoteAgentTemplateAsync(Guid.NewGuid(), template, before.Workspace);
+        Assert.NotEqual(first, second);
+        Assert.Equal(template.Instructions, (await workspace.GetAgentEditorAsync(second)).Instructions);
+    }
+}
