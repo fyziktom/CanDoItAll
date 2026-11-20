@@ -42,8 +42,7 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
             ViewportSize = new() { Width = 1920, Height = 1080 }, DeviceScaleFactor = 1
         });
         var page = await browser.NewPageAsync();
-        await page.GotoAsync(consumer.BaseUrl + "/settings?tab=secrets");
-        await PlaywrightAppFixture.CompleteDatabaseStartupAsync(page);
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, consumer.BaseUrl + "/settings?tab=secrets");
         await page.GetByRole(AriaRole.Button, new() { Name = "New secret", Exact = true }).ClickAsync();
         await page.GetByTestId("secret-name").FillAsync(CredentialName);
         await page.GetByTestId("secret-kind").SelectOptionAsync(nameof(SecretKind.Token));
@@ -55,19 +54,23 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         await AddConnectionAsync(page, ConnectionName, publisher.HttpUrl);
         await Assertions.Expect(page.GetByText(ConnectionName, new() { Exact = true })).ToBeVisibleAsync();
 
-        await page.GotoAsync(consumer.BaseUrl + "/agents?tab=providers");
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, consumer.BaseUrl + "/agents?tab=providers");
+        await page.GetByTestId("provider-editor-tabs").WaitForAsync();
         await page.GetByTestId("providers-connections").ClickAsync();
-        var source = page.GetByTestId("shared-provider-source-card").Filter(new() { HasText = ConnectionName });
-        await Assertions.Expect(source).ToBeVisibleAsync();
+        var connections = page.GetByTestId("shared-provider-connections-dialog");
+        await connections.GetByTestId("shared-provider-source-add").WaitForAsync();
+        var source = connections.GetByTestId("shared-provider-source-card").Filter(new() { HasText = ConnectionName });
+        await source.WaitForAsync();
         var connectionId = Guid.Parse((await source.GetAttributeAsync("data-source-id"))!);
         await source.GetByTestId("shared-provider-source-edit").ClickAsync();
         await Assertions.Expect(page.GetByTestId("shared-provider-source-name")).ToHaveValueAsync(ConnectionName);
         await page.GetByTestId("shared-provider-source-cancel").ClickAsync();
         await SharedProviderTwoInstanceUiAcceptanceTests.CloseSharedConnectionsAsync(page);
 
-        await page.GotoAsync(consumer.BaseUrl + "/agents?tab=agents");
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, consumer.BaseUrl + "/agents?tab=agents");
         await page.GetByTestId("agents-catalog-import").ClickAsync();
         var dialog = page.GetByTestId("remote-agent-template-dialog");
+        await dialog.WaitForAsync();
         await AddConnectionAsync(page, DisabledConnectionName, publisher.HttpsUrl, disabled: true);
         var picker = dialog.GetByTestId("remote-instance-select");
         await Assertions.Expect(picker.Locator("option").Filter(new() { HasText = DisabledConnectionName })).ToBeDisabledAsync();
@@ -76,8 +79,9 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         await templates.SelectOptionAsync(templateId.ToString("D"));
         await Assertions.Expect(templates.Locator("option").Filter(new() { HasText = privateName })).ToHaveCountAsync(0);
         await dialog.GetByTestId("remote-agent-template-import").ClickAsync();
-        await Assertions.Expect(dialog.GetByTestId("remote-agent-template-accepted")).ToBeVisibleAsync();
+        await dialog.GetByTestId("remote-agent-template-accepted").WaitForAsync();
         await dialog.GetByTestId("remote-agent-template-open").ClickAsync();
+        await page.GetByTestId("agents-catalog-name").WaitForAsync();
         await Assertions.Expect(page.GetByTestId("agents-catalog-name")).ToHaveValueAsync(TemplateName);
 
         var localAgents = (await client.GetFromJsonAsync<AgentDefinition[]>("/api/agents?includeTemplates=true"))!;
@@ -95,7 +99,7 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "remote-instances");
         Directory.CreateDirectory(directory);
         await page.ScreenshotAsync(new() { Path = Path.Combine(directory, "imported-local-agent.png") });
-        await page.GotoAsync(consumer.BaseUrl + "/settings?tab=remote-instances");
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, consumer.BaseUrl + "/settings?tab=remote-instances");
         await Assertions.Expect(page.GetByText(DisabledConnectionName, new() { Exact = true })).ToBeVisibleAsync();
         await Assertions.Expect(page.GetByText(ConnectionName, new() { Exact = true })).ToBeVisibleAsync();
     }
