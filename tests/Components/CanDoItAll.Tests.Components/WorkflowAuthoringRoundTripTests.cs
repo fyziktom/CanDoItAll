@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
 using CanDoItAll.AgentFramework.WorkflowAuthoring.UI;
 using CanDoItAll.Modules.AgentFramework.Pages.Authoring;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -124,6 +125,61 @@ public sealed class WorkflowAuthoringRoundTripTests {
             Name = actual.Name, VersionId = actual.VersionId, UpdatedAtUtc = actual.UpdatedAtUtc,
             CreatedAtUtc = ToPostgreSqlPrecision(original.CreatedAtUtc)
         }), JsonSerializer.Serialize(actual));
+    }
+
+    [Fact]
+    public async Task Sharing_a_legacy_workflow_keeps_its_import_identity_across_a_native_edit_and_withdrawal() {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var services = harness.Context.Services;
+        var catalog = services.GetRequiredService<IWorkflowCatalogService>();
+        var sharing = services.GetRequiredService<RemoteWorkflowCatalog>();
+        var source = Guid.NewGuid();
+        var birth = DateTimeOffset.UnixEpoch.AddTicks(1234567);
+        var request = CreateRequest(nullableEndShapes: false);
+        var graph = request.Graph with {
+            Nodes = request.Graph.Nodes.Select(node => node with {
+                Settings = new(null, null, null, null, string.Empty, node.Settings.InputShape, node.Settings.ResultShape)
+            }).ToArray()
+        };
+        var legacy = new WorkflowDefinition(WorkflowId.New(), WorkflowVersionId.New(), "Shared review", request.Description,
+            WorkflowLifecycleStatus.Draft, graph, request.RuntimePolicy, birth, birth);
+        var factory = services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>();
+        await using (var database = await factory.CreateDbContextAsync()) {
+            database.Set<WorkflowDefinitionRecord>().Add(WorkflowDefinitionRecord.FromDefinition(legacy, revision: 1));
+            database.Set<WorkflowDefinitionHeadRecord>().Add(new() { WorkflowId = legacy.Id.Value, VersionId = legacy.VersionId.Value });
+            await database.SaveChangesAsync();
+        }
+
+        var original = Assert.IsType<WorkflowDefinitionDetail>(await catalog.GetDefinitionAsync(legacy.Id)).Definition;
+        Assert.Equal(birth, original.CreatedAtUtc);
+        await ToggleAsync("Publish workflow");
+        var first = Assert.IsType<RemoteWorkflowDocument>(await sharing.FindAsync(legacy.Id.Value, default));
+        var canonicalBirth = ToPostgreSqlPrecision(birth);
+        Assert.Equal(canonicalBirth, first.CreatedAtUtc);
+        var localId = RemoteWorkflowDraftWriter.Prepare(source, first, [], legacy.RuntimePolicy).Definition.Id;
+
+        var edited = await EditTitleAsync(harness, original);
+        Assert.Equal(canonicalBirth, edited.CreatedAtUtc);
+        var current = Assert.IsType<RemoteWorkflowDocument>(await sharing.FindAsync(legacy.Id.Value, default));
+        Assert.Equal(edited.VersionId.Value, current.Row.VersionId);
+        Assert.Equal(first.CreatedAtUtc, current.CreatedAtUtc);
+        Assert.Equal(localId, RemoteWorkflowDraftWriter.Prepare(source, current, [], legacy.RuntimePolicy).Definition.Id);
+        await ToggleAsync("Withdraw sharing");
+        Assert.Null(await sharing.FindAsync(legacy.Id.Value, default));
+        Assert.DoesNotContain(await sharing.ListAsync(default), row => row.Id == legacy.Id.Value);
+
+        async Task ToggleAsync(string action) {
+            var selected = Assert.Single(await catalog.ListDefinitionsAsync(), row => row.Id == legacy.Id);
+            var control = harness.Context.Render<RemoteWorkflowSharingControl>(parameters => parameters
+                .Add(component => component.Selected, selected)
+                .Add(component => component.Authorize, (_, _) => ValueTask.CompletedTask)
+                .Add(component => component.Write, (write, token) => write(token)));
+            await control.InvokeAsync(() => control.Find("[data-testid=workflows-remote-sharing]").ClickAsync());
+            var button = control.WaitForElement("[data-testid=workflows-remote-set-publication]:not([disabled])", TimeSpan.FromSeconds(10));
+            Assert.Contains(action, button.TextContent, StringComparison.Ordinal);
+            await control.InvokeAsync(() => button.ClickAsync());
+            control.WaitForAssertion(() => Assert.Empty(control.FindAll("[data-testid=workflows-remote-publication-dialog]")));
+        }
     }
 
     private static async Task<WorkflowDefinition> EditTitleAsync(ComponentTestHarness harness, WorkflowDefinition original) {

@@ -20,8 +20,8 @@ public sealed partial class PersistentWorkflowCatalogService {
         }
         await using var context = await dbContextFactory.CreateDbContextAsync(token);
         var snapshots = await LatestDefinitionQuery(context).Where(item => ids.Contains(item.WorkflowId))
-            .OrderBy(item => item.Name).ThenBy(item => item.WorkflowId).Select(item => item.DefinitionJson).ToArrayAsync(token);
-        return snapshots.Select(Deserialize<WorkflowDefinition>).ToArray();
+            .OrderBy(item => item.Name).ThenBy(item => item.WorkflowId).Select(item => new { item.DefinitionJson, item.CreatedAtUtc }).ToArrayAsync(token);
+        return snapshots.Select(item => Deserialize<WorkflowDefinition>(item.DefinitionJson) with { CreatedAtUtc = item.CreatedAtUtc }).ToArray();
     }
 
     internal async Task<IReadOnlyDictionary<WorkflowComponentId, LlmCallComponent>> ReadRemoteComponentsAsync(IReadOnlyCollection<WorkflowDefinition> definitions, CancellationToken token) {

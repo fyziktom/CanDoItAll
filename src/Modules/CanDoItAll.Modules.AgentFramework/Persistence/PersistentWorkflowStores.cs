@@ -249,7 +249,7 @@ public sealed partial class PersistentWorkflowCatalogService(
             request.Status,
             graphSnapshot,
             request.RuntimePolicy,
-            currentDefinition?.CreatedAtUtc ?? now,
+            current?.CreatedAtUtc ?? now,
             now)
         {
             InputParameters = SnapshotInputParameters(request.InputParameters),
