@@ -13,6 +13,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedProviders.Abstractions;
 using CanDoItAll.SharedProviders.Http;
@@ -58,7 +59,17 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         await fixture.Services.GetRequiredService<IProviderRuntimeProfileSnapshotInitializer>().InitializeAsync();
         await using var scope = fixture.Services.CreateAsyncScope();
         var catalog = scope.ServiceProvider.GetRequiredService<RemoteTemplateProviderCatalog>();
-        var options = await catalog.ListAsync(first.SourceId, publisher, CancellationToken.None);
+        var third = await SeedGraphAsync();
+        IReadOnlyList<RemoteTemplateModelOption> options;
+        try {
+            await CorruptGraphWithoutTokenChangeAsync(third, SharedGraphCorruption.SourceAddress);
+            options = await catalog.ListAsync(first.SourceId, publisher, CancellationToken.None);
+            Assert.DoesNotContain(options, option => option.Choice.ProviderId == third.ProfileId);
+            var invalid = await Assert.ThrowsAsync<RemoteInstanceReadException>(() => catalog.ListAsync(third.SourceId, publisher, default));
+            Assert.Contains(third.SourceId.ToString("D"), invalid.Message, StringComparison.Ordinal);
+        } finally {
+            await RemoveGraphAsync(third);
+        }
         var route = first.Publication.DefaultModelId.Value;
         var requirement = new RemoteTemplateModelRequirement("Review", CanDoItAll.AgentFramework.Models.ProviderProfilePurpose.Chat,
             ModelName: first.Publication.Models[0].DisplayName, PublishedModel: route);
@@ -873,18 +884,21 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             Assert.True(loaded.IsEnabled);
             var tokens = await ReadGraphTokensAsync(seed);
 
-            await CorruptGraphWithoutTokenChangeAsync(seed, corruption);
-
-            Assert.Equal(tokens, await ReadGraphTokensAsync(seed));
-            if (useSetLookup) {
-                Assert.DoesNotContain(await registry.ListProvidersAsync(), item => item.Id == seed.ProfileId);
-            } else {
-                Assert.Null(await registry.GetProviderAsync(seed.ProfileId));
+            try {
+                await CorruptGraphWithoutTokenChangeAsync(seed, corruption);
+                Assert.Equal(tokens, await ReadGraphTokensAsync(seed));
+                if (useSetLookup) {
+                    Assert.DoesNotContain(await registry.ListProvidersAsync(), item => item.Id == seed.ProfileId);
+                } else {
+                    Assert.Null(await registry.GetProviderAsync(seed.ProfileId));
+                }
+                var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
+                Assert.Null(await loader.LoadAsync(seed.ProfileId));
+                Assert.Null(await loader.LoadRevisionAsync(seed.ProfileId));
+                Assert.DoesNotContain(seed.ProfileId, (await loader.LoadRevisionsAsync()).Keys);
+            } finally {
+                await RemoveGraphAsync(seed);
             }
-            var loader = scope.ServiceProvider.GetRequiredService<IProviderRuntimeProfileSnapshotLoader>();
-            Assert.Null(await loader.LoadAsync(seed.ProfileId));
-            Assert.Null(await loader.LoadRevisionAsync(seed.ProfileId));
-            Assert.DoesNotContain(seed.ProfileId, (await loader.LoadRevisionsAsync()).Keys);
         }
     }
 
@@ -1460,6 +1474,16 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
             graph.Source.Id,
             graph.Secret.Id,
             graph.Publication);
+    }
+
+    private async Task RemoveGraphAsync(GraphSeed seed) {
+        await using var context = await fixture.Factory.CreateDbContextAsync();
+        await using var cleanup = await context.Database.BeginTransactionAsync();
+        await context.Set<SharedProviderImport>().Where(item => item.Id == seed.ImportId).ExecuteDeleteAsync();
+        await context.Set<PersistedProviderProfile>().Where(item => item.Id == seed.ProfileId).ExecuteDeleteAsync();
+        await context.Set<SharedProviderSource>().Where(item => item.Id == seed.SourceId).ExecuteDeleteAsync();
+        await context.Set<SecretRecord>().Where(item => item.Id == seed.SecretId).ExecuteDeleteAsync();
+        await cleanup.CommitAsync();
     }
 
     private async Task<Guid> SeedProfileWithoutImportAsync()

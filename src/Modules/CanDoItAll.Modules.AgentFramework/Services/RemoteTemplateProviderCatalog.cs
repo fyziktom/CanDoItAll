@@ -34,10 +34,10 @@ public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry provi
     }
 
     public async Task<IReadOnlyList<RemoteTemplateModelOption>> ListAsync(Guid sourceId, Guid publisherId, CancellationToken token, RemoteTemplateKind? kind = null) {
-        var source = (await sharing.ListSourcesAsync(token)).SingleOrDefault(item =>
-            item.Source.Id == sourceId && item.Source.IsEnabled && item.Source.RemoteInstanceId?.Value == publisherId);
-        var imports = source?.Imports.Where(item => item.IsEnabled && item.SelectionState == SharedProviderSelectionState.Selected &&
-            item.AvailabilityState == SharedProviderAvailabilityState.Available).ToDictionary(item => item.ProviderProfileId) ?? [];
+        var source = await sharing.FindSourceAsync(sourceId, token);
+        var imports = source is { Source.IsEnabled: true } && source.Source.RemoteInstanceId?.Value == publisherId
+            ? source.Imports.Where(item => item.IsEnabled && item.SelectionState == SharedProviderSelectionState.Selected &&
+                item.AvailabilityState == SharedProviderAvailabilityState.Available).ToDictionary(item => item.ProviderProfileId) : [];
         var options = new List<RemoteTemplateModelOption>();
         foreach (var profile in await providers.ListProvidersAsync(token)) {
             if (!profile.IsEnabled || profile.IsSourceManaged && !imports.ContainsKey(profile.Id)) {
