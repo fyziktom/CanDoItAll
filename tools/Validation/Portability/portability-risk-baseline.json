@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-20T19:39:22.991423+00:00",
+  "generated_utc": "2026-11-21T16:32:56.452034+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15838,
+  "allowance_count": 15858,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7436,6 +7436,12 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/RemoteAgentTemplatesApi.cs",
+      "category": "mcp",
+      "source_fingerprint": "f3691cc3779c13b362e39c796b0585c10d7d129cc51e5276938f5cf6559adefa",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/SharedProviderApiResponseWriter.cs",
       "category": "case-policy",
       "source_fingerprint": "0588cd90bf70d41e16dd52d47457034c9e716fb0351a0b38e55360acae123419",
@@ -14342,6 +14348,42 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a45349725dc97df5536e0f4ded7942dcc1a176b0bfc685b095e612e386391193",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "dfcebdeac8a6645d0dc84539bafe2d95359d4d7802f250a5bacd0bfcb192619f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "08b0f54b22b6671347ae2b56340714777a4777f9a7ebca2469e81aa92d9910d7",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5aa307468118ece6fee1e6ba7dadda92ed2dc1b865b9547ceafdcb04831a0140",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6ca1a95609089655603d46fd7b884706e30c637ad412d76ac8d4ddbafbf08fa0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8ee4efb30d1423573ca866c71f3b427f469ba2dfe25e3e628c3bd92b2eb93799",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a33075cb8612f67d57d247ef09617e46910b005bc5020353f51528c26c3aca30",
@@ -18239,6 +18281,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
       "category": "case-policy",
       "source_fingerprint": "dc25ffa333f6ad328731a22a37b635bee72de63fb1f2267be28500b8b2fd9671",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e27d3ac4d98454af9e2c69d3aa94e134a86f869c214efbbf6817dbda206ea246",
       "count": 1
     },
     {
@@ -33290,6 +33338,18 @@
       "count": 1
     },
     {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteTemplateModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3a9e56e54927713cb29224886ee395248ef0cfe81502ab96e6e97dedc38c1f77",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteTemplateModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "79ee9ca0342571a0428f929c52db14b491770a27c49a6681ddc31cf31f121673",
+      "count": 1
+    },
+    {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/SchedulerAgentIdentity.cs",
       "category": "case-policy",
       "source_fingerprint": "aab28be0cfdff196eb507ee4509e2a8e0411fc0aff635a40b9e70e1931022fc9",
@@ -40184,6 +40244,12 @@
       "count": 1
     },
     {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/Definitions/LlmChatDefinitionValidation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b9481e77fd05a1210fa64955fca439f5f64667957df22444082fe0281fe5d6f5",
+      "count": 1
+    },
+    {
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "4ed26fa1f192c2a7293fd8f88b64e6298a99a0a188c8b698b5f175d0a6699864",
@@ -45026,6 +45092,24 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowDraftWriter.cs",
+      "category": "mcp",
+      "source_fingerprint": "864490a99dd041891abf20df6d2d62915e12dcc33c715a06be6bdc58f68e09bc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowExecutorSettings.cs",
+      "category": "windows-path",
+      "source_fingerprint": "942fba70e8fe60993dd8a7f599e7be437513287383a4ea2f62ca5f4e9e99d5a8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowExecutorSettings.cs",
+      "category": "windows-path",
+      "source_fingerprint": "95aebb0aaae7cbee3baa99c2e1da81b7634f3c7303f95302199a7b5162867b4f",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs",
       "category": "case-policy",
       "source_fingerprint": "01d260d6e1cbfeece25e968c9ec04555a056f0af3759a9d1874feabfcbd0e5b5",
@@ -47435,6 +47519,42 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorSubmission.cs",
       "category": "case-policy",
       "source_fingerprint": "f6a905192b348bfbc175713cbff9580f0be7cbabbf0917bfb913257c5f2709cd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteAgentTemplateImportFeature.cs",
+      "category": "mcp",
+      "source_fingerprint": "b77453257b45e9258f9df4d02865e7726ac421aa806e1076b0b2772de1fdd557",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteSimpleChatImportFeature.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4d38dd1be1bfd5dffdecee8884cb1fff684d19ba72df73ad33637cd389ec5a3e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateModelParameters.cs",
+      "category": "case-policy",
+      "source_fingerprint": "92ac359bc754a00c83586fb4a46c03b126be7524811aeb6e085e89d6fe4e0743",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateModelParameters.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bb1426b5b18e44dfc3371c9f68ed343c8f921f85954544575764f24ee667ccab",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateProviderCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c421ede40a5bc530b1700db39b501736dd56200dcb8b4f1ff1510630f6f5c79f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateProviderCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f42e6cad6b7491f81ba0635deabe84878bd68849618d6ecae0efbc3e6457ad70",
       "count": 1
     },
     {

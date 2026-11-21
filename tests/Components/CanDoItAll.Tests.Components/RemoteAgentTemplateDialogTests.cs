@@ -184,7 +184,10 @@ public sealed class RemoteAgentTemplateDialogTests {
             retrySecond = false;
             await cut.Find("[data-testid=remote-template-import]").ClickAsync();
         }
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid=remote-template-accepted]").Count));
+        cut.WaitForAssertion(() => {
+            Assert.Empty(cut.FindAll("[data-testid=remote-template-item-error]").Select(message => message.TextContent));
+            Assert.Equal(2, cut.FindAll("[data-testid=remote-template-accepted]").Count);
+        });
         var agents = await workspace.ListAgentsAsync();
         foreach (var row in published) {
             var local = Assert.Single(agents, agent => agent.Name == row.Name);
@@ -229,6 +232,7 @@ public sealed class RemoteAgentTemplateDialogTests {
         cut.WaitForElement($"[data-testid=remote-instance-select] option[value='{source.Id:D}']");
         cut.Find("[data-testid=remote-instance-select]").Change(source.Id.ToString("D"));
         cut.WaitForElement(Checkbox(entry)).Change(true);
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid=remote-template-import]").HasAttribute("disabled")));
         await cut.Find("[data-testid=remote-template-import]").ClickAsync();
         cut.WaitForElement("[data-testid=remote-template-provider]").Change(provider.ToString("D"));
         cut.Find("[data-testid=remote-template-model]").Change("recovery");

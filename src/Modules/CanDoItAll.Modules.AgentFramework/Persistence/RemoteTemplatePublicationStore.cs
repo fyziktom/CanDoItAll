@@ -16,12 +16,7 @@ internal sealed class RemoteTemplatePublicationConfiguration : IEntityTypeConfig
     }
 }
 
-public sealed class RemoteTemplatePublicationDbContext(DbContextOptions<RemoteTemplatePublicationDbContext> options) : DbContext(options) {
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfiguration(new RemoteTemplatePublicationConfiguration());
-}
-
-public sealed class RemoteTemplatePublicationStore(IDbContextFactory<RemoteTemplatePublicationDbContext> factory) {
+public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbContext> factory) {
     public async Task<IReadOnlySet<Guid>> ListAsync(RemoteTemplateKind kind, CancellationToken token) {
         await using var db = await factory.CreateDbContextAsync(token);
         return await db.Set<RemoteTemplatePublication>().Where(item => item.Kind == kind)

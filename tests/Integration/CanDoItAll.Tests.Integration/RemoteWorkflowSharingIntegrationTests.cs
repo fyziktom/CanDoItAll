@@ -84,12 +84,20 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         var catalog = WorkflowCatalogConcurrencyPersistenceIntegrationTests.CreateCatalog(factory, gallery, new WorkflowDefinitionValidator());
         var component = Component();
         var workflow = WorkflowDefinitionValidator.CreateComponentValidationDefinition(component);
+        var llmNode = workflow.Graph.Nodes[1];
+        var second = llmNode with { Id = new("review-again"), Name = "Second reviewer", Settings = llmNode.Settings with { Model = "second-publisher-model" } };
+        workflow = workflow with { Graph = workflow.Graph with {
+            Nodes = [workflow.Graph.Nodes[0], llmNode, second, workflow.Graph.Nodes[^1]],
+            Edges = [workflow.Graph.Edges[0], workflow.Graph.Edges[1] with { TargetNodeId = second.Id },
+                workflow.Graph.Edges[1] with { Id = new("second-end"), SourceNodeId = second.Id }]
+        } };
         var row = new RemoteTemplateRow(workflow.Id.Value, Guid.NewGuid(), workflow.Name, workflow.Description, null, workflow.UpdatedAtUtc, VersionId: workflow.VersionId.Value);
         var document = await RemoteWorkflowProjection.ExportAsync(row, workflow, new Dictionary<WorkflowComponentId, LlmCallComponent> { [component.Id] = component },
             (requirement, _, _, _) => Task.FromResult(requirement), CancellationToken.None);
         var choice = new RemoteTemplateModelChoice(Guid.NewGuid(), "receiving-model");
+        var alternative = new RemoteTemplateModelChoice(Guid.NewGuid(), "receiving-alternative");
         var source = Guid.NewGuid();
-        var refused = RemoteWorkflowDraftWriter.Prepare(source, document, [choice], workflow.RuntimePolicy);
+        var refused = RemoteWorkflowDraftWriter.Prepare(source, document, [choice, alternative], workflow.RuntimePolicy);
         var authorizations = 0;
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => catalog.CreateRemoteDraftAsync(refused.Definition, refused.Components,
             _ => ++authorizations == 3 ? ValueTask.FromException(new UnauthorizedAccessException("Authority revoked before commit.")) : ValueTask.CompletedTask, CancellationToken.None));
@@ -101,14 +109,18 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
             Assert.Empty(await before.Set<PromptVersion>().ToArrayAsync());
         }
         async Task<Guid> ImportAsync() {
-            var draft = RemoteWorkflowDraftWriter.Prepare(source, document, [choice], workflow.RuntimePolicy);
+            var draft = RemoteWorkflowDraftWriter.Prepare(source, document, [choice, alternative], workflow.RuntimePolicy);
             return await catalog.CreateRemoteDraftAsync(draft.Definition, draft.Components, _ => ValueTask.CompletedTask, CancellationToken.None);
         }
         var accepted = await Task.WhenAll(ImportAsync(), ImportAsync());
         Assert.Equal(accepted[0], accepted[1]);
         var local = (await catalog.GetDefinitionAsync(new(accepted[0])))!.Definition;
-        var importedComponent = Assert.Single(await catalog.ListComponentsAsync());
-        var llm = Assert.Single(local.Graph.Nodes, node => node.Kind == WorkflowNodeKind.LlmCall);
+        var importedComponents = await catalog.ListComponentsAsync();
+        var importedComponent = Assert.Single(importedComponents, item => item.ProviderProfileId == choice.ProviderId);
+        var llm = Assert.Single(local.Graph.Nodes, node => node.Id == llmNode.Id);
+        var localSecond = Assert.Single(local.Graph.Nodes, node => node.Id == second.Id);
+        Assert.Equal(alternative.Model, localSecond.Settings.Model);
+        Assert.Equal(Assert.Single(importedComponents, item => item.ProviderProfileId == alternative.ProviderId).Id, localSecond.Settings.ComponentId);
         Assert.NotEqual(workflow.Id, local.Id);
         Assert.Equal(importedComponent.Id, llm.Settings.ComponentId);
         Assert.Equal(choice.ProviderId, importedComponent.ProviderProfileId);
@@ -120,8 +132,8 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         Assert.Equal(local.Id.Value, await ImportAsync());
         Assert.Equal(edited.VersionId, (await catalog.GetDefinitionAsync(local.Id))!.Definition.VersionId);
         await using var verify = factory.CreateDbContext();
-        Assert.Equal(1, await verify.Set<WorkflowComponentRecord>().CountAsync());
-        Assert.Equal(1, await verify.Set<PromptVersion>().CountAsync());
+        Assert.Equal(2, await verify.Set<WorkflowComponentRecord>().CountAsync());
+        Assert.Equal(2, await verify.Set<PromptVersion>().CountAsync());
         Assert.Equal(1, await verify.Set<WorkflowDefinitionHeadRecord>().CountAsync());
         Assert.Empty(await verify.Set<WorkflowRunRecordEntity>().ToArrayAsync());
     }
