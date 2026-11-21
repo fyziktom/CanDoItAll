@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace.ApiAccess;
@@ -12,7 +13,7 @@ namespace CanDoItAll.Tests.Playwright.Smoke;
 [Collection(WorkspaceSettingsBrowserCollection.Name)]
 [Trait("Category", "Playwright")]
 [Trait("Category", "HostPlatform")]
-public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
+public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
     private const string Instructions = "Prepare the regional report and show the underlying figures.";
 
     [Fact]
@@ -43,6 +44,11 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         await using var seed = await TestApplicationBootstrap.BuildServiceProviderAsync(profile,
             "RemoteInstances.Browser.Seed", TestSchemaBootstrapModules.Full);
         await using var scope = seed.CreateAsyncScope();
+        const string modelName = "regional-report-model";
+        var substitute = await scope.ServiceProvider.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(new() {
+            Name = $"Local report model {runId}", Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
+            BaseUrl = "http://127.0.0.1:11434", DefaultModel = modelName
+        });
         var credential = await scope.ServiceProvider.GetRequiredService<SecretService>().SaveAsync(new SecretEditorModel {
             Name = $"Regional template reader {runId}",
             Kind = SecretKind.Token,
@@ -75,18 +81,29 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
 
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(page, consumer.BaseUrl + "/agents?tab=agents");
         await page.GetByTestId("agents-catalog-import").ClickAsync();
-        var dialog = page.GetByTestId("remote-agent-template-dialog");
+        var dialog = page.GetByTestId("remote-template-import-dialog");
         await dialog.WaitForAsync();
         await AddConnectionAsync(page, disabledConnectionName, publisher.HttpsUrl, credential.Value, disabled: true);
         var picker = dialog.GetByTestId("remote-instance-select");
         await Assertions.Expect(picker.Locator("option").Filter(new() { HasText = disabledConnectionName })).ToBeDisabledAsync();
         await picker.SelectOptionAsync(connectionId.ToString("D"));
-        var templates = dialog.GetByTestId("remote-agent-template-select");
-        await templates.SelectOptionAsync(templateId.ToString("D"));
-        await Assertions.Expect(templates.Locator("option").Filter(new() { HasText = privateName })).ToHaveCountAsync(0);
-        await dialog.GetByTestId("remote-agent-template-import").ClickAsync();
-        await dialog.GetByTestId("remote-agent-template-accepted").WaitForAsync();
-        await dialog.GetByTestId("remote-agent-template-open").ClickAsync();
+        var row = dialog.GetByTestId("remote-template-row").Filter(new() { HasText = templateName });
+        await Assertions.Expect(row.GetByTestId("remote-template-avatar")).ToHaveAttributeAsync("src", AgentAvatarImageCatalog.BundledAvatarUrls[0]);
+        await Assertions.Expect(dialog.GetByTestId("remote-template-row").Filter(new() { HasText = privateName })).ToHaveCountAsync(0);
+        var checkbox = row.GetByTestId("remote-template-select");
+        await checkbox.CheckAsync();
+        await dialog.GetByTestId("remote-template-import").ClickAsync();
+        var model = page.GetByTestId("remote-template-model-dialog");
+        await Assertions.Expect(model).ToBeVisibleAsync();
+        await Assertions.Expect(dialog).ToBeVisibleAsync();
+        await model.GetByTestId("remote-template-model-cancel").ClickAsync();
+        await Assertions.Expect(checkbox).ToBeCheckedAsync();
+        await dialog.GetByTestId("remote-template-import").ClickAsync();
+        await model.GetByTestId("remote-template-provider").SelectOptionAsync(substitute.ToString("D"));
+        await model.GetByTestId("remote-template-model").SelectOptionAsync(modelName);
+        await model.GetByTestId("remote-template-model-confirm").ClickAsync();
+        await row.GetByTestId("remote-template-accepted").WaitForAsync();
+        await row.GetByTestId("remote-template-open").ClickAsync();
         await page.GetByTestId("agents-catalog-name").WaitForAsync();
         await Assertions.Expect(page.GetByTestId("agents-catalog-name")).ToHaveValueAsync(templateName);
 
@@ -96,6 +113,9 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
         Assert.False(imported.IsTemplate);
         Assert.Equal(AgentLifecycleStatus.Draft, imported.Status);
         Assert.Equal(Instructions, imported.Instructions);
+        Assert.Equal(AgentAvatarImageCatalog.BundledAvatarUrls[0], imported.AvatarImageUrl);
+        Assert.Equal(substitute, imported.ProviderProfileId);
+        Assert.Equal(modelName, imported.Model);
         Assert.Contains(localAgents, item => item.Id == localId && item.Name == localName);
         Assert.DoesNotContain(localAgents, item => item.Name == privateName);
         var publisherOriginal = (await publisher.Client.GetFromJsonAsync<AgentEditorModel>($"/api/agents/{templateId:D}"))!;
@@ -122,7 +142,8 @@ public sealed class RemoteInstanceBrowserTests(PlaywrightAppFixture consumer) {
 
     private static async Task<Guid> SaveAgentAsync(HttpClient client, string name, bool isTemplate) {
         using var response = await client.PostAsJsonAsync("/api/agents", new AgentEditorModel {
-            Name = name, Instructions = Instructions, Summary = "Prepare a report from input data.", IsTemplate = isTemplate
+            Name = name, Instructions = Instructions, Summary = "Prepare a report from input data.", IsTemplate = isTemplate,
+            AvatarImageUrl = isTemplate ? AgentAvatarImageCatalog.BundledAvatarUrls[0] : string.Empty
         });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Guid>();

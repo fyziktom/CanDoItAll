@@ -56,7 +56,14 @@
                                   DefinitionId="@simpleChatRouteState.DefinitionId"
                                   ConversationId="@simpleChatRouteState.ConversationId"
                                   RouteStateChanged="HandleSimpleChatRouteStateChangedAsync"
-                                  RetainsConversationNavigation="RetainsSimpleChatConversationNavigation" />
+                                  RetainsConversationNavigation="RetainsSimpleChatConversationNavigation">
+                <ImportDefinitions Context="actions">
+                    <RemoteSimpleChatSharingControl Imported="actions.Open" Refresh="actions.Refresh" />
+                </ImportDefinitions>
+                <DefinitionSharing Context="definition">
+                    <RemoteSimpleChatSharingControl Definition="definition" />
+                </DefinitionSharing>
+            </SimpleChatsWorkspace>
         }
         else if (route.Tab == AgentWorkspaceSection.Chat)
         {

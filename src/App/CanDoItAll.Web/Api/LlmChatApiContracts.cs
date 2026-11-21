@@ -24,8 +24,8 @@ namespace CanDoItAll.Web.Api;
 /// </param>
 /// <param name="SystemPrompt">
 /// Instructions sent to the model as the system message of every turn, stored exactly as sent. Send it on every create
-/// and update: null is rejected, an empty string means no system prompt. At most 400,000 characters. Only the
-/// manage-scoped editor read returns it.
+/// and update: null is rejected, an empty string means no system prompt. At most 400,000 characters. The editor read
+/// and explicitly shared template read return these instructions to authorized callers.
 /// </param>
 /// <param name="ProviderProfileId">
 /// Identifier of the provider profile to use, from <c>providerProfileId</c> in

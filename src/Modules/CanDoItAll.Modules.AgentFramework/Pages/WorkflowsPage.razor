@@ -5,6 +5,14 @@
 @using CanDoItAll.AgentFramework.UI.Chat
 <PageTitle>Workflows</PageTitle>
 <WorkflowShellSurface Presentation="@ShellPresentation" Catalog="@CatalogPresentation" History="@HistoryPresentation" Intent="HandleIntentAsync">
+    <SharingActions>
+        @if (!catalogObservationRetired && catalogObservation is { } sharingAuthority) {
+            <RemoteWorkflowSharingControl @key="sharingAuthority" Selected="SelectedDefinitionSummary" Disabled="isBusy"
+                                          Authorize="sharingAuthority.AuthorizeAsync"
+                                          Write="@((write, token) => ImportWorkflowAsync(sharingAuthority, write, token))"
+                                          Refresh="RefreshVisibleCatalogAsync" Imported="@(id => OpenCreatedDefinition(new WorkflowId(id)))" />
+        }
+    </SharingActions>
     <CuratorAction>
 <AgentAvatarActionButton AgentName="@WorkflowCuratorDisplayName"
                                          AvatarImageUrl="@WorkflowCuratorAvatarImageUrl"

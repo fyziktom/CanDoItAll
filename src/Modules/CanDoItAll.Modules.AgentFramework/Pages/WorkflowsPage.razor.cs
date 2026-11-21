@@ -695,6 +695,23 @@ public partial class WorkflowsPage : IDisposable, IAsyncDisposable {
         return observation.AuthorizeAsync(write, cancellationToken);
     }
 
+    private async Task<Guid> ImportWorkflowAsync(EditingObservation original, Func<CancellationToken, Task<Guid>> write, CancellationToken token) {
+        await original.AuthorizeAsync(true, token);
+        await EnsureComponentObservationAsync();
+        var componentAuthority = componentObservation ?? throw new UnauthorizedAccessException("Current workflow component access is required.");
+        async ValueTask Authorize(CancellationToken cancellation) {
+            if (disposed || catalogObservationRetired || !ReferenceEquals(catalogObservation, original)) {
+                throw new UnauthorizedAccessException("Reopen the workflow catalog with current access.");
+            }
+            await original.AuthorizeAsync(true, cancellation);
+            await componentAuthority.AuthorizeAsync(true, cancellation);
+        }
+        await Authorize(token);
+        using var admission = Changes.EnterUiWrite(Authorize);
+        using var operation = Changes.Enter(new(Guid.NewGuid(), Guid.NewGuid()));
+        return await write(token);
+    }
+
     private async Task RefreshRouteAsync(
         WorkflowRouteRequest route,
         AgentChatNavigationIdentity navigation) {

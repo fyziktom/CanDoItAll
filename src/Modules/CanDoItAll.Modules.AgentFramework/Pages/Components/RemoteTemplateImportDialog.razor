@@ -1,0 +1,94 @@
+<Dialog IsOpen="true" Title="@Title" CloseOnBackdrop="false" Size="ModalSize.Wide"
+        OnClose="CloseAsync" TestId="remote-template-import-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <fieldset disabled="@(writing || review is not null)">
+                <RemoteInstancePicker SelectedChanged="ChangeSourceAsync" />
+            </fieldset>
+            @if (source is not null) {
+                <Button Text="Refresh catalog" Icon="refresh" Tone="ButtonTone.Default" Size="ButtonSize.Small"
+                        Disabled="@(loading || writing || review is not null)" Click="@(() => ChangeSourceAsync(source))" data-testid="remote-template-refresh" />
+            }
+            @if (loading) {
+                <TextBlock Value="Loading shared definitions…" />
+            } else if (rows.Count == 0 && source is not null && error is null) {
+                <TextBlock Value="This instance has no shared definitions in this catalog." />
+            }
+            @if (error is not null) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-template-error">@error</Alert>
+            }
+            <Stack GapScale="LayoutGap.Small" data-testid="remote-template-list">
+                @foreach (var row in rows) {
+                    var item = selected.GetValueOrDefault(row.Id);
+                    var acceptedId = Accepted(row);
+                    <SurfaceCard @key="row" Soft="true" data-testid="remote-template-row" data-template-id="@row.Id">
+                        <Stack GapScale="LayoutGap.Small">
+                            <Split Breakpoint="LayoutBreakpoint.None" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                <Cluster AlignItems="AlignItems.Center" Gap="LayoutGap.Small">
+                                    <CheckBox TValue="bool" id="@($"remote-template-{row.Id:N}")" Value="@(item is not null || acceptedId.HasValue)"
+                                              ValueChanged="@(value => SelectAsync(row, value))" Disabled="@(writing || review is not null || acceptedId.HasValue)"
+                                              aria-label="@($"Select {row.Name}")" data-testid="remote-template-select" />
+                                    @if (Kind is RemoteTemplateKind.Agent or RemoteTemplateKind.SimpleChat) {
+                                        <Avatar Alt="@row.Name" ImageUrl="@row.AvatarImageUrl"
+                                                Size="AvatarSize.Small" DefaultImageSeed="@row.Name" referrerpolicy="no-referrer" data-testid="remote-template-avatar" />
+                                    }
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        <label for="@($"remote-template-{row.Id:N}")">@row.Name</label>
+                                        @if (!string.IsNullOrWhiteSpace(row.Summary)) {
+                                            <TextBlock Value="@row.Summary" TextStyle="TextStyle.Muted" />
+                                        }
+                                    </Stack>
+                                </Cluster>
+                                @if (acceptedId is { } id) {
+                                    <Cluster Gap="LayoutGap.Small">
+                                        <StatusBadge Text="Imported" Tone="success" data-testid="remote-template-accepted" />
+                                        @if (Imported.HasDelegate) {
+                                            <Button Text="Open local copy" Tone="ButtonTone.Default" Size="ButtonSize.Small" Disabled="writing"
+                                                    Click="@(() => Imported.InvokeAsync(id))" data-testid="remote-template-open" />
+                                        }
+                                    </Cluster>
+                                }
+                            </Split>
+                            @if (item is not null && item.Error is not null) {
+                                <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-template-item-error">@item.Error</Alert>
+                                @if (item.Preview is null) {
+                                    <Button Text="Reload preview" Click="@(() => SelectAsync(row, true))" Tone="ButtonTone.Default"
+                                            Disabled="writing" data-testid="remote-template-preview-retry" />
+                                }
+                            }
+                            @if (item is not null && acceptedId is null) {
+                                @if (item.Preview is null && item.Error is null) {
+                                    <TextBlock Value="Loading preview…" />
+                                } else if (item.Preview is { } preview) {
+                                    @if (preview.Dependencies.Count > 0) {
+                                        <TextBlock Value="@(string.Join(" · ", preview.Dependencies))" TextStyle="TextStyle.Muted" />
+                                    }
+                                    @foreach (var slot in item.Slots) {
+                                        <Split Breakpoint="LayoutBreakpoint.None" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                                            <TextBlock Value="@DescribeSlot(slot)" />
+                                            <Button Text="Choose provider and model" Icon="edit" Tone="ButtonTone.Default" Size="ButtonSize.Small"
+                                                    Disabled="@(writing || review is not null)" Click="@(() => OpenReview(item, slot))" data-testid="remote-template-edit-model" />
+                                        </Split>
+                                    }
+                                }
+                            }
+                        </Stack>
+                    </SurfaceCard>
+                }
+            </Stack>
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="@($"Import selected ({Pending.Count})")" Click="ImportAsync" Disabled="@(!CanImport)" IsBusy="writing" data-testid="remote-template-import" />
+            <Button Text="Close" Tone="ButtonTone.Default" Click="CloseAsync" Disabled="@(writing || review is not null)" data-testid="remote-template-close" />
+        </Cluster>
+    </Footer>
+</Dialog>
+@if (review is { } current) {
+    <RemoteTemplateModelDialog @key="current" ItemName="@current.Item.Row.Name" Requirement="@current.Slot.Requirement" Options="options"
+                               InitialChoice="current.Slot.Choice" CanApplyToAll="@(Pending.Sum(item => item.Slots.Count) > 1)"
+                               Busy="refreshingOptions" Error="@reviewError" Refresh="@(() => RefreshOptionsAsync(current))"
+                               Confirmed="@(option => ConfirmAsync(current, option, false))" AppliedToAll="@(option => ConfirmAsync(current, option, true))"
+                               Closed="@(() => CancelReview(current))" />
+}

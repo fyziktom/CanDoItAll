@@ -82,6 +82,22 @@ public sealed class DefinitionCatalogSurfaceTests {
         Assert.Equal(manageable ? 1 : 0, intents.Count);
     }
 
+    [Theory]
+    [InlineData(DefinitionCatalogScenario.ReadOnly)]
+    [InlineData(DefinitionCatalogScenario.Manageable)]
+    public void Sharing_actions_require_management_and_identify_their_own_definition(DefinitionCatalogScenario scenario) {
+        using var context = CreateContext();
+        var state = DefinitionCatalogSandboxFixture.Create(scenario);
+        var cut = context.Render<LlmChatDefinitionCatalogSurface>(parameters => parameters
+            .Add(component => component.Presentation, state)
+            .Add(component => component.Limits, DefinitionCatalogSandboxFixture.Limits)
+            .Add(component => component.ImportAction, builder => builder.AddContent(0, "Import catalog definitions"))
+            .Add(component => component.DefinitionSharing, card => builder => builder.AddContent(0, $"Publish {card.DefinitionId:D}")));
+        Assert.Equal(state.CanManage, cut.Markup.Contains("Import catalog definitions", StringComparison.Ordinal));
+        Assert.All(state.Cards, card => Assert.Equal(state.CanManage,
+            cut.Markup.Contains($"Publish {card.DefinitionId:D}", StringComparison.Ordinal)));
+    }
+
     private static BunitContext CreateContext() {
         var context = new BunitContext();
         context.Services.AddLogging();

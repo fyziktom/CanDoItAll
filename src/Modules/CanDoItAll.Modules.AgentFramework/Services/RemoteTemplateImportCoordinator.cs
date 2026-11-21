@@ -51,7 +51,7 @@ public sealed class RemoteTemplateImportCoordinator(RemoteTemplateConnectionRead
             throw new RemoteInstanceReadException("The published definition or its model requirements changed. Refresh the catalog.");
         }
         if (models.Count > 0) {
-            var options = await providers.ListAsync(source.Id, current.Row.PublisherId, token);
+            var options = await providers.ListAsync(source.Id, current.Row.PublisherId, token, feature.Kind);
             for (var i = 0; i < models.Count; i++) {
                 if (!options.Any(option => option.Choice == models[i] && option.Supports(current.Models[i]))) {
                     throw new RemoteInstanceReadException("A selected provider or model is no longer available for this definition.");

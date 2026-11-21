@@ -18,6 +18,11 @@ relax the publication protocol.
 
 Local and shared providers can coexist. Shared model selection remains constrained to the imported publication, including models intentionally omitted from suggestions. Deletion checks protect source/import/secret references; resolve reported references before deleting an entity.
 
+When importing an agent, Simple Chat or workflow, the consumer can select the matching
+model from a provider already imported from the same connection and publisher. The
+import dialog also offers compatible local substitutes and lets users confirm choices
+for a batch. See [importing shared definitions](architecture/remote-instance-connections.md#operator-steps).
+
 ## HTTP surface
 
 | Method | Path | Required scope |

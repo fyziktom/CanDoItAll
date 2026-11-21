@@ -237,7 +237,7 @@ internal static class AgentDefinitionFactory
         }
 
         if (selectedProvider is null ||
-            ProviderPricingDefaults.TryFindPrice(selectedProvider.ModelPrices, normalizedModel, out _))
+            ProviderModelSelectionPolicy.CanPinLocalAgentModel(selectedProvider, normalizedModel))
         {
             return;
         }

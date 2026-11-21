@@ -28,7 +28,7 @@ public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry provi
         return requirement with { ModelName = profile.GetModelDisplayName(name), PublishedModel = routing };
     }
 
-    public async Task<IReadOnlyList<RemoteTemplateModelOption>> ListAsync(Guid sourceId, Guid publisherId, CancellationToken token) {
+    public async Task<IReadOnlyList<RemoteTemplateModelOption>> ListAsync(Guid sourceId, Guid publisherId, CancellationToken token, RemoteTemplateKind? kind = null) {
         var source = (await sharing.ListSourcesAsync(token)).SingleOrDefault(item =>
             item.Source.Id == sourceId && item.Source.IsEnabled && item.Source.RemoteInstanceId?.Value == publisherId);
         var imports = source?.Imports.Where(item => item.IsEnabled && item.SelectionState == SharedProviderSelectionState.Selected &&
@@ -41,6 +41,9 @@ public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry provi
             var models = profile.IsSourceManaged ? imports[profile.Id].Models.Select(item => item.Id.Value) :
                 profile.SuggestedModels.Prepend(profile.DefaultModel).Concat(profile.ModelCatalog.Select(item => item.Id));
             foreach (var model in models.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.Ordinal)) {
+                if (kind == RemoteTemplateKind.Agent && !profile.IsSourceManaged && !ProviderModelSelectionPolicy.CanPinLocalAgentModel(profile, model)) {
+                    continue;
+                }
                 var matrix = features.ResolveFeatureMatrixForModel(profile, model);
                 options.Add(new(new(profile.Id, model), profile.Name, profile.GetModelDisplayName(model), profile.Purpose,
                     profile.IsSourceManaged, model == profile.DefaultModel, matrix.SupportsStructuredOutput, matrix.SupportsVision, matrix.SupportsTools));

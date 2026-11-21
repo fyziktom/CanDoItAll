@@ -5,7 +5,7 @@
             @Toolbar
             @Feedback
             @if (!loading && available && instances.Count == 0) {
-                <EmptyState Title="No remote instances" Description="Add an instance to make it available to providers and agent templates." />
+                <EmptyState Title="No remote instances" Description="Add a connection to discover shared providers, agents, Simple Chats and workflows." />
             }
             @foreach (var instance in instances) {
                 <SelectionListItem @key="instance.Id" Title="@instance.Name" Summary="@instance.BaseUri.AbsoluteUri"
