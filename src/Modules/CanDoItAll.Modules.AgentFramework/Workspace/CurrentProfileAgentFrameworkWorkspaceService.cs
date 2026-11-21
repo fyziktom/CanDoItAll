@@ -364,12 +364,12 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     }
 
     public async Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
-        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default) {
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default, RemoteTemplateModelChoice? model = null) {
         var (service, workspace) = ResolveExternalMutationWorkspace();
         if (workspace != expectedWorkspace) {
             throw new RemoteAgentTemplateImportException("The active workspace changed. Select the remote template again.");
         }
-        return await CompleteAgentCopyAsync(() => service.ImportRemoteAgentTemplateAsync(sourceId, template, expectedWorkspace, cancellationToken),
+        return await CompleteAgentCopyAsync(() => service.ImportRemoteAgentTemplateAsync(sourceId, template, expectedWorkspace, cancellationToken, model),
             cancellationToken, expectedWorkspace);
     }
 

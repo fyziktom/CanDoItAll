@@ -7,12 +7,12 @@ namespace CanDoItAll.AgentFramework.Core;
 public sealed class RemoteAgentTemplateImportException(string message) : InvalidOperationException(message);
 
 internal sealed class RemoteAgentTemplateImport(
-    ISandboxWorkspaceCatalogStore store, IProviderProfileService providers,
+    ISandboxWorkspaceCatalogStore store, IProviderProfileRegistry registry, IProviderProfileService providers,
     AgentExecutionActivityWorkspaceIdentity workspace, IAgentExecutionProfileGenerationSource generation) {
     private const int MaximumKeyLength = 200;
 
     public async Task<Guid> ImportAsync(Guid sourceId, RemoteAgentTemplate template, AgentExecutionActivityWorkspaceIdentity expectedWorkspace,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, RemoteTemplateModelChoice? model) {
         ArgumentNullException.ThrowIfNull(template);
         if (sourceId == Guid.Empty || template.PublisherId == Guid.Empty || template.Id == Guid.Empty || template.CatalogRevision <= 0 || template.UpdatedAtUtc == default ||
             !Text(template.Name, 512) || !Text(template.RoleTitle, 1024, true) || !Text(template.Summary, 64 * 1024, true) ||
@@ -24,6 +24,7 @@ internal sealed class RemoteAgentTemplateImport(
 
         var origin = new RemoteAgentTemplateBinding(sourceId, template.PublisherId, template.Id, Guid.NewGuid());
         RequireOriginalWorkspace();
+        var profile = model is null ? null : await registry.GetProviderAsync(model.ProviderId, cancellationToken);
         try {
             var accepted = await store.UpdateCatalogAsync(catalog => {
                 RequireOriginalWorkspace();
@@ -34,7 +35,7 @@ internal sealed class RemoteAgentTemplateImport(
                     }
                     return catalog;
                 }
-                return Materialize(catalog, origin, template);
+                return Materialize(catalog, origin, template, model, profile);
             }, _ => RequireOriginalWorkspace(), cancellationToken);
             return FindBinding(accepted, origin)!.AgentId;
         } catch (SandboxWorkspaceCatalogCommittedException committed) {
@@ -48,7 +49,13 @@ internal sealed class RemoteAgentTemplateImport(
         }
     }
 
-    private SandboxWorkspaceCatalog Materialize(SandboxWorkspaceCatalog catalog, RemoteAgentTemplateBinding origin, RemoteAgentTemplate template) {
+    private SandboxWorkspaceCatalog Materialize(SandboxWorkspaceCatalog catalog, RemoteAgentTemplateBinding origin, RemoteAgentTemplate template,
+        RemoteTemplateModelChoice? model, ProviderProfile? profile) {
+        if (model is not null && (profile is not { IsEnabled: true, Purpose: ProviderProfilePurpose.Chat } || string.IsNullOrWhiteSpace(model.Model) ||
+            !(profile.DefaultModel == model.Model || profile.SuggestedModels.Contains(model.Model, StringComparer.Ordinal) ||
+              profile.ModelCatalog.Any(item => item.Id == model.Model)))) {
+            throw new RemoteAgentTemplateImportException("The selected chat provider or model is no longer available.");
+        }
         var id = origin.AgentId;
         var capabilities = catalog.Capabilities.ToList();
         var selected = new List<Guid>(template.Capabilities.Count);
@@ -78,9 +85,15 @@ internal sealed class RemoteAgentTemplateImport(
             }
             selected.Add(matches[0].Id);
         }
-        var candidate = catalog with { Capabilities = capabilities };
+        var candidate = catalog with {
+            Capabilities = capabilities,
+            Providers = profile is null ? catalog.Providers : [.. catalog.Providers.Where(item => item.Id != profile.Id), profile]
+        };
         var editor = new AgentEditorModel {
             Name = template.Name,
+            AvatarImageUrl = RemoteTemplateAvatar.ForDisplay(template.AvatarImageUrl) ?? string.Empty,
+            ProviderProfileId = model?.ProviderId,
+            Model = model?.Model ?? string.Empty,
             RoleTitle = template.RoleTitle,
             Summary = template.Summary,
             Instructions = template.Instructions,

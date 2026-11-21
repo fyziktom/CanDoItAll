@@ -22,7 +22,7 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class RemoteAgentTemplateIntegrationTests {
     [Fact]
-    public async Task Secured_OpenApi_describes_both_template_routes_and_their_read_permission() {
+    public async Task Secured_OpenApi_describes_template_routes_and_their_read_permission() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
         var document = await host.Client.GetFromJsonAsync<JsonObject>("/openapi/v1.json");
         Assert.NotNull(document);
@@ -30,6 +30,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         const string catalog = "/api/shared-agent-templates/v1/templates";
         CheckOperation(catalog, "ListRemoteAgentTemplates", ["200", "401", "403", "409"]);
         CheckOperation(catalog + "/{id}", "GetRemoteAgentTemplate", ["200", "401", "403", "404", "409"]);
+        CheckOperation(catalog + "/{id}/avatar", "GetRemoteAgentTemplateAvatar", ["200", "401", "403", "404", "409"]);
         var gaps = OpenApiDescriptionCoverage.FindGaps(document, catalog);
         Assert.Empty(gaps);
 
@@ -58,8 +59,9 @@ public sealed class RemoteAgentTemplateIntegrationTests {
             EndpointOrPath = "inline://publication-skill",
             ConfigurationJson = """{"secretBinding":"private-sentinel","inlineSkill":{"name":"publication-skill","description":"Help","instructions":"Portable instructions","resources":[{"name":"guide","content":"Read locally"}]}}"""
         });
+        const string avatar = "data:image/png;base64,iVBORw0KGgo=";
         var agent = await workspace.SaveAgentDefinitionAsync(new() {
-            Name = "Template publication", IsTemplate = true, Instructions = "Template text",
+            Name = "Template publication", IsTemplate = true, Instructions = "Template text", AvatarImageUrl = avatar,
             SelectedCapabilityIds = [capability], ConfigurationJson = """{"privateConfiguration":"private-sentinel"}"""
         });
         using var anonymous = await host.Client.GetAsync(RemoteAgentTemplateRoutes.Catalog);
@@ -74,6 +76,14 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.Equal(1, offered.CapabilityCount);
         Assert.NotEqual(Guid.Empty, offered.PublisherId);
         Assert.True(offered.CatalogRevision > 0);
+        Assert.True(offered.HasEmbeddedAvatar);
+        Assert.Null(offered.AvatarImageUrl);
+        using var preview = await ReadAsync(RemoteAgentTemplateRoutes.Avatar(agent.Id), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        preview.EnsureSuccessStatusCode();
+        Assert.Equal(new RemoteTemplateEmbeddedAvatar(offered.PublisherId, agent.Id, offered.CatalogRevision, avatar),
+            await preview.Content.ReadFromJsonAsync<RemoteTemplateEmbeddedAvatar>());
+        using var hiddenAvatar = await ReadAsync(RemoteAgentTemplateRoutes.Avatar(withdrawn), ApiAccessScopeNames.ReadSharedAgentTemplates);
+        Assert.Equal(HttpStatusCode.NotFound, hiddenAvatar.StatusCode);
         Assert.DoesNotContain(catalog, item => item.Id == local);
         Assert.DoesNotContain(catalog, item => item.Id == withdrawn);
         using var archived = await ReadAsync(RemoteAgentTemplateRoutes.Details(withdrawn), ApiAccessScopeNames.ReadSharedAgentTemplates);
@@ -90,6 +100,8 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.Equal(agent.UpdatedAtUtc, payload.UpdatedAtUtc);
         Assert.Equal(offered.PublisherId, payload.PublisherId);
         Assert.Equal(offered.CatalogRevision, payload.CatalogRevision);
+        Assert.Equal(avatar, payload.AvatarImageUrl);
+        Assert.Equal(ProviderProfilePurpose.Chat, payload.PreferredModel?.Purpose);
         var skill = Assert.Single(payload.Capabilities).InlineSkill;
         Assert.NotNull(skill);
         Assert.Equal("Portable instructions", skill.Instructions);
@@ -110,6 +122,34 @@ public sealed class RemoteAgentTemplateIntegrationTests {
             request.Headers.Authorization = new AuthenticationHeaderValue(token.TokenType, token.Token);
             return await host.Client.SendAsync(request);
         }
+    }
+
+    [Fact]
+    public async Task Import_persists_the_chosen_local_model_and_avatar_and_rejects_a_missing_model() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var local = await workspace.ReadAgentDecisionDataPolicyContextAsync();
+        const string model = "local-review-model";
+        var provider = await services.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(new() {
+            Name = "Replacement provider", Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
+            BaseUrl = "http://127.0.0.1:11434", DefaultModel = model, SuggestedModels = [model], IsEnabled = true
+        });
+        var source = Guid.NewGuid();
+        var template = new RemoteAgentTemplate(Guid.NewGuid(), "Writing assistant", "Writer", "Compose text", "Edit the request",
+            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow) {
+            PublisherId = Guid.NewGuid(), CatalogRevision = 9, AvatarImageUrl = AgentAvatarImageCatalog.BundledAvatarUrls[0]
+        };
+        await Assert.ThrowsAsync<RemoteAgentTemplateImportException>(() => workspace.ImportRemoteAgentTemplateAsync(source, template, local,
+            model: new(provider, "unavailable")));
+        var id = await workspace.ImportRemoteAgentTemplateAsync(source, template, local, model: new(provider, model));
+        var saved = await workspace.GetAgentEditorAsync(id);
+        Assert.Equal(provider, saved.ProviderProfileId);
+        Assert.Equal(model, saved.Model);
+        Assert.Equal(template.AvatarImageUrl, saved.AvatarImageUrl);
+        Assert.Equal(id, await workspace.ImportRemoteAgentTemplateAsync(source, template, local));
+        Assert.Equal(provider, (await workspace.GetAgentEditorAsync(id)).ProviderProfileId);
     }
 
     [Fact]

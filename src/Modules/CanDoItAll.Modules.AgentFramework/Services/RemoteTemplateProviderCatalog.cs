@@ -1,0 +1,61 @@
+using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.ProviderManagement;
+using CanDoItAll.SharedProviders.Abstractions;
+using ProviderPurpose = CanDoItAll.AgentFramework.Models.ProviderProfilePurpose;
+
+namespace CanDoItAll.Modules.AgentFramework;
+
+public sealed record RemoteTemplateModelOption(RemoteTemplateModelChoice Choice, string ProviderName, string DisplayName,
+    ProviderPurpose Purpose, bool FromSource, bool IsDefault, bool StructuredOutput, bool Vision, bool Tools) {
+    public bool Supports(RemoteTemplateModelRequirement requirement) =>
+        Purpose == requirement.Purpose && (!requirement.StructuredOutput || StructuredOutput) &&
+        (!requirement.Vision || Vision) && (!requirement.Tools || Tools);
+}
+
+public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry providers, IProviderProfileService features,
+    ISharedProviderManagementService sharing) {
+    public async Task<RemoteTemplateModelRequirement> DescribeAsync(RemoteTemplateModelRequirement requirement,
+        Guid? providerId, string? model, CancellationToken token) {
+        if (providerId is not { } id || await providers.GetProviderAsync(id, token) is not { } profile) {
+            return requirement with { ModelName = string.IsNullOrWhiteSpace(model) ? null : model };
+        }
+        var name = string.IsNullOrWhiteSpace(model) ? profile.DefaultModel : model;
+        var state = await sharing.GetProfileSharingAsync(id, token);
+        var routing = state.Publication is { IsPublished: true } publication && state.Eligibility is { IsEligible: true } eligibility &&
+            eligibility.Models.Any(item => item.UpstreamModelId == name)
+            ? SharedProviderRoutingModelIdCodec.Create(publication.PublicId, name).Value : null;
+        return requirement with { ModelName = profile.GetModelDisplayName(name), PublishedModel = routing };
+    }
+
+    public async Task<IReadOnlyList<RemoteTemplateModelOption>> ListAsync(Guid sourceId, Guid publisherId, CancellationToken token) {
+        var source = (await sharing.ListSourcesAsync(token)).SingleOrDefault(item =>
+            item.Source.Id == sourceId && item.Source.IsEnabled && item.Source.RemoteInstanceId?.Value == publisherId);
+        var imports = source?.Imports.Where(item => item.IsEnabled && item.SelectionState == SharedProviderSelectionState.Selected &&
+            item.AvailabilityState == SharedProviderAvailabilityState.Available).ToDictionary(item => item.ProviderProfileId) ?? [];
+        var options = new List<RemoteTemplateModelOption>();
+        foreach (var profile in await providers.ListProvidersAsync(token)) {
+            if (!profile.IsEnabled || profile.IsSourceManaged && !imports.ContainsKey(profile.Id)) {
+                continue;
+            }
+            var models = profile.IsSourceManaged ? imports[profile.Id].Models.Select(item => item.Id.Value) :
+                profile.SuggestedModels.Prepend(profile.DefaultModel).Concat(profile.ModelCatalog.Select(item => item.Id));
+            foreach (var model in models.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.Ordinal)) {
+                var matrix = features.ResolveFeatureMatrixForModel(profile, model);
+                options.Add(new(new(profile.Id, model), profile.Name, profile.GetModelDisplayName(model), profile.Purpose,
+                    profile.IsSourceManaged, model == profile.DefaultModel, matrix.SupportsStructuredOutput, matrix.SupportsVision, matrix.SupportsTools));
+            }
+        }
+        return options.OrderByDescending(item => item.FromSource).ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .ThenByDescending(item => item.IsDefault).ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public static RemoteTemplateModelChoice? Preferred(RemoteTemplateModelRequirement requirement, IReadOnlyList<RemoteTemplateModelOption> options) {
+        var candidates = options.Where(option => option.FromSource && option.Supports(requirement));
+        var matches = requirement.PublishedModel is { Length: > 0 } route ? candidates.Where(option => option.Choice.Model == route) :
+            string.IsNullOrWhiteSpace(requirement.ModelName) ? candidates.Where(option => option.IsDefault) :
+            candidates.Where(option => string.Equals(option.DisplayName, requirement.ModelName, StringComparison.Ordinal));
+        var unique = matches.Take(2).ToArray();
+        return unique.Length == 1 ? unique[0].Choice : null;
+    }
+}

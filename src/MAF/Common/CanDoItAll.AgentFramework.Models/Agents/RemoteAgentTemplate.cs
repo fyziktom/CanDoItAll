@@ -6,6 +6,7 @@ public static class RemoteAgentTemplateRoutes {
     public const string Catalog = "api/shared-agent-templates/v1/templates";
 
     public static string Details(Guid id) => $"{Catalog}/{id:D}";
+    public static string Avatar(Guid id) => $"{Details(id)}/avatar";
 }
 
 [Description("One selectable agent template in the publisher workspace.")]
@@ -17,7 +18,16 @@ public sealed record RemoteAgentTemplateSummary(
     [property: Description("Number of assigned skills, tools and other capabilities.")] int CapabilityCount) {
     [Description("Public identity of the publishing instance.")] public Guid PublisherId { get; init; }
     [Description("Publisher catalog revision at selection, including capability changes.")] public long CatalogRevision { get; init; }
+    [Description("Avatar displayed when selecting a template.")] public string? AvatarImageUrl { get; init; }
+    [Description("Whether to read the embedded image from this template's authenticated avatar route.")] public bool HasEmbeddedAvatar { get; init; }
 }
+
+[Description("An embedded catalog avatar bound to its publisher and catalog revision.")]
+public sealed record RemoteTemplateEmbeddedAvatar(
+    [property: Description("Public identity of the publishing instance.")] Guid PublisherId,
+    [property: Description("Template whose avatar was read.")] Guid TemplateId,
+    [property: Description("Publisher catalog revision at the time of the read.")] long CatalogRevision,
+    [property: Description("Validated raster image data URL.")] string ImageUrl);
 
 [Description("Version-one portable definition for creating an independent local draft agent.")]
 public sealed record RemoteAgentTemplate(
@@ -32,6 +42,8 @@ public sealed record RemoteAgentTemplate(
     [property: Description("Revision timestamp of the agent definition shown in the catalog.")] DateTimeOffset UpdatedAtUtc) {
     [Description("Public identity of the publishing instance.")] public Guid PublisherId { get; init; }
     [Description("Publisher catalog revision from which the content and all dependencies were read.")] public long CatalogRevision { get; init; }
+    [Description("Avatar carried into the local agent.")] public string? AvatarImageUrl { get; init; }
+    [Description("Preferred published model and capabilities needed for the local agent.")] public RemoteTemplateModelRequirement? PreferredModel { get; init; }
 }
 
 public sealed record RemoteAgentTemplateBinding(Guid SourceId, Guid PublisherId, Guid TemplateId, Guid AgentId);

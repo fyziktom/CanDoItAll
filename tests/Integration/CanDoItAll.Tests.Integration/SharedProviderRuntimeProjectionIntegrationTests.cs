@@ -49,6 +49,34 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
     private static readonly DateTimeOffset Now =
         new(2026, 8, 25, 12, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public async Task Shared_definition_import_uses_the_publication_of_its_own_source_and_persists_its_routing_model() {
+        var first = await SeedGraphAsync();
+        var second = await SeedGraphAsync();
+        await using var db = await fixture.Factory.CreateDbContextAsync();
+        var publisher = (await db.Set<SharedProviderSource>().SingleAsync(source => source.Id == first.SourceId)).RemoteInstanceId!.Value.Value;
+        await fixture.Services.GetRequiredService<IProviderRuntimeProfileSnapshotInitializer>().InitializeAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<RemoteTemplateProviderCatalog>();
+        var options = await catalog.ListAsync(first.SourceId, publisher, CancellationToken.None);
+        var route = first.Publication.DefaultModelId.Value;
+        var requirement = new RemoteTemplateModelRequirement("Review", AgentFramework.Models.ProviderProfilePurpose.Chat,
+            ModelName: first.Publication.Models[0].DisplayName, PublishedModel: route);
+        var choice = new RemoteTemplateModelChoice(first.ProfileId, route);
+        Assert.Equal(choice, RemoteTemplateProviderCatalog.Preferred(requirement, options));
+        Assert.DoesNotContain(options, option => option.Choice.ProviderId == second.ProfileId);
+        Assert.Null(RemoteTemplateProviderCatalog.Preferred(requirement with { PublishedModel = second.Publication.DefaultModelId.Value }, options));
+        Assert.DoesNotContain(await catalog.ListAsync(first.SourceId, Guid.NewGuid(), CancellationToken.None), option => option.FromSource);
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var template = new RemoteAgentTemplate(Guid.NewGuid(), "Shared-provider agent", "", "", "Edit the request.",
+            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow) { PublisherId = publisher, CatalogRevision = 1 };
+        var imported = await workspace.ImportRemoteAgentTemplateAsync(first.SourceId, template,
+            await workspace.ReadAgentDecisionDataPolicyContextAsync(), model: choice);
+        var agent = await workspace.GetAgentEditorAsync(imported);
+        Assert.Equal(first.ProfileId, agent.ProviderProfileId);
+        Assert.Equal(route, agent.Model);
+    }
+
     [Theory]
     [InlineData("http://localhost:5032/")]
     [InlineData("http://127.0.0.1:5032/")]

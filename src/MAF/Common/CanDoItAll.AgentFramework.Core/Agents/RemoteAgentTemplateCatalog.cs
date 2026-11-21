@@ -10,10 +10,16 @@ public static class RemoteAgentTemplateCatalog {
     public static IReadOnlyList<RemoteAgentTemplateSummary> List(SandboxWorkspaceCatalog catalog, Guid publisherId) =>
         catalog.Agents.Where(IsPublished).OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(agent => agent.Id)
-            .Select(agent => new RemoteAgentTemplateSummary(agent.Id, agent.Name, agent.Summary, agent.UpdatedAtUtc, agent.Capabilities.Count) {
-                PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value
-            })
+            .Select(agent => Summary(agent, publisherId, catalog.CatalogDataRevision.Value))
             .ToArray();
+
+    private static RemoteAgentTemplateSummary Summary(AgentDefinition agent, Guid publisherId, long revision) {
+        var avatar = RemoteTemplateAvatar.ForDisplay(agent.AvatarImageUrl);
+        var embedded = IsEmbedded(avatar);
+        return new(agent.Id, agent.Name, agent.Summary, agent.UpdatedAtUtc, agent.Capabilities.Count) {
+            PublisherId = publisherId, CatalogRevision = revision, HasEmbeddedAvatar = embedded, AvatarImageUrl = embedded ? null : avatar
+        };
+    }
 
     public static RemoteAgentTemplate? Find(SandboxWorkspaceCatalog catalog, Guid publisherId, Guid id) {
         var agent = catalog.Agents.SingleOrDefault(item => item.Id == id && IsPublished(item));
@@ -29,11 +35,20 @@ public static class RemoteAgentTemplateCatalog {
             return new RemoteAgentTemplateCapability(item.Kind, item.Key, ReadInlineSkill(item));
         }).ToArray();
         return new(id, agent.Name, agent.RoleTitle, agent.Summary, agent.Instructions, agent.Workload, agent.Tags, requirements, agent.UpdatedAtUtc) {
-            PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value
+            PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value,
+            AvatarImageUrl = RemoteTemplateAvatar.ForDisplay(agent.AvatarImageUrl)
         };
     }
 
     private static bool IsPublished(AgentDefinition agent) => agent.IsTemplate && agent.Status is AgentLifecycleStatus.Draft or AgentLifecycleStatus.Active;
+
+    private static bool IsEmbedded(string? url) => url?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
+
+    public static RemoteTemplateEmbeddedAvatar? FindAvatar(SandboxWorkspaceCatalog catalog, Guid publisherId, Guid id) {
+        var agent = catalog.Agents.SingleOrDefault(item => item.Id == id && IsPublished(item));
+        return IsEmbedded(agent?.AvatarImageUrl) && RemoteTemplateAvatar.ForDisplay(agent?.AvatarImageUrl) is { } url
+            ? new(publisherId, id, catalog.CatalogDataRevision.Value, url) : null;
+    }
 
     internal static string InlineConfiguration(RemoteAgentInlineSkill skill) =>
         JsonSerializer.Serialize(new SkillConfiguration(Inline, skill), JsonOptions);
