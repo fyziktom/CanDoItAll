@@ -144,22 +144,25 @@ public sealed class WorkflowAuthoringRoundTripTests {
         var legacy = new WorkflowDefinition(WorkflowId.New(), WorkflowVersionId.New(), "Shared review", request.Description,
             WorkflowLifecycleStatus.Draft, graph, request.RuntimePolicy, birth, birth);
         var factory = services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>();
+        DateTimeOffset storedBirth;
         await using (var database = await factory.CreateDbContextAsync()) {
             database.Set<WorkflowDefinitionRecord>().Add(WorkflowDefinitionRecord.FromDefinition(legacy, revision: 1));
             database.Set<WorkflowDefinitionHeadRecord>().Add(new() { WorkflowId = legacy.Id.Value, VersionId = legacy.VersionId.Value });
             await database.SaveChangesAsync();
+            storedBirth = await database.Set<WorkflowDefinitionRecord>().Where(row => row.VersionId == legacy.VersionId.Value)
+                .Select(row => row.CreatedAtUtc).SingleAsync();
         }
 
         var original = Assert.IsType<WorkflowDefinitionDetail>(await catalog.GetDefinitionAsync(legacy.Id)).Definition;
         Assert.Equal(birth, original.CreatedAtUtc);
+        Assert.InRange(Math.Abs(storedBirth.UtcTicks - birth.UtcTicks), 1L, TimeSpan.TicksPerMicrosecond - 1);
         await ToggleAsync("Publish workflow");
         var first = Assert.IsType<RemoteWorkflowDocument>(await sharing.FindAsync(legacy.Id.Value, default));
-        var canonicalBirth = ToPostgreSqlPrecision(birth);
-        Assert.Equal(canonicalBirth, first.CreatedAtUtc);
+        Assert.Equal(storedBirth, first.CreatedAtUtc);
         var localId = RemoteWorkflowDraftWriter.Prepare(source, first, [], legacy.RuntimePolicy).Definition.Id;
 
         var edited = await EditTitleAsync(harness, original);
-        Assert.Equal(canonicalBirth, edited.CreatedAtUtc);
+        Assert.Equal(storedBirth, edited.CreatedAtUtc);
         var current = Assert.IsType<RemoteWorkflowDocument>(await sharing.FindAsync(legacy.Id.Value, default));
         Assert.Equal(edited.VersionId.Value, current.Row.VersionId);
         Assert.Equal(first.CreatedAtUtc, current.CreatedAtUtc);
