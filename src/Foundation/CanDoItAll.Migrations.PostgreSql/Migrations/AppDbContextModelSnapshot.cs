@@ -17,7 +17,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -120,8 +120,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("AvatarImageUrl")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -216,8 +215,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<string>("AvatarImageUrl")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
+                        .HasColumnType("text");
 
                     b.Property<long>("ConcurrencyToken")
                         .IsConcurrencyToken()
@@ -2501,6 +2499,22 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("IsEnabled", "Status", "UpdatedAtUtc");
 
                     b.ToTable("Workspace_SharedProviderSources", (string)null);
+                });
+
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.RemoteTemplatePublication", b =>
+                {
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CreatedUtcTicks")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Kind", "DefinitionId", "CreatedUtcTicks");
+
+                    b.ToTable("Workspace_RemoteTemplatePublications", (string)null);
                 });
 
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowArtifactRecordEntity", b =>

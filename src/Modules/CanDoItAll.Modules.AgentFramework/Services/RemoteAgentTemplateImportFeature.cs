@@ -1,6 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
-using CanDoItAll.Modules.Workspace.Pages.Components;
 using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.Modules.AgentFramework;

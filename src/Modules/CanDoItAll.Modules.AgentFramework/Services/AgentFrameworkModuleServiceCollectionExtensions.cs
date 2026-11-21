@@ -59,6 +59,13 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddPooledDbContextFactory<RemoteTemplatePublicationDbContext>((provider, options) => {
+            AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
+        });
+        services.TryAddScoped<RemoteTemplatePublicationStore>();
+        services.TryAddScoped<RemoteTemplateProviderCatalog>();
+        services.TryAddScoped<RemoteSimpleChatPublisher>();
+        services.TryAddScoped<RemoteWorkflowCatalog>();
         services.AddPooledDbContextFactory<AgentProjectAccessDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });

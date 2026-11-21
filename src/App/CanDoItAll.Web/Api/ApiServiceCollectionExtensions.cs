@@ -184,6 +184,8 @@ public static class ApiServiceCollectionExtensions
                         ApiAccessScopeNames.ReadSharedProviderCatalog));
             });
             AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadSharedAgentTemplates, ApiAccessScopeNames.ReadSharedAgentTemplates);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadSharedSimpleChats, ApiAccessScopeNames.ReadSharedSimpleChats);
+            AddExactScopePolicy(options, ApiAuthorizationPolicies.ReadSharedWorkflows, ApiAccessScopeNames.ReadSharedWorkflows);
             options.AddPolicy(ApiAuthorizationPolicies.InvokeSharedProviders, policy =>
             {
                 policy.RequireAuthenticatedUser();

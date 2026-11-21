@@ -60,7 +60,7 @@ public sealed class SharedProviderRuntimeProjectionIntegrationTests(
         var catalog = scope.ServiceProvider.GetRequiredService<RemoteTemplateProviderCatalog>();
         var options = await catalog.ListAsync(first.SourceId, publisher, CancellationToken.None);
         var route = first.Publication.DefaultModelId.Value;
-        var requirement = new RemoteTemplateModelRequirement("Review", AgentFramework.Models.ProviderProfilePurpose.Chat,
+        var requirement = new RemoteTemplateModelRequirement("Review", CanDoItAll.AgentFramework.Models.ProviderProfilePurpose.Chat,
             ModelName: first.Publication.Models[0].DisplayName, PublishedModel: route);
         var choice = new RemoteTemplateModelChoice(first.ProfileId, route);
         Assert.Equal(choice, RemoteTemplateProviderCatalog.Preferred(requirement, options));

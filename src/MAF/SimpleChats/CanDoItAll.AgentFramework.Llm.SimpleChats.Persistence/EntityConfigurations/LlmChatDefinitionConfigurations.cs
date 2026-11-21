@@ -14,7 +14,7 @@ internal sealed class LlmChatDefinitionConfiguration : IEntityTypeConfiguration<
         builder.HasKey(row => row.Id);
         builder.Property(row => row.Name).HasMaxLength(LlmChatDefinitionValidation.MaximumNameLength).IsRequired();
         builder.Property(row => row.Summary).HasMaxLength(LlmChatDefinitionValidation.MaximumSummaryLength).IsRequired();
-        builder.Property(row => row.AvatarImageUrl).HasMaxLength(LlmChatDefinitionValidation.MaximumAvatarImageUrlLength).IsRequired();
+        builder.Property(row => row.AvatarImageUrl).IsRequired();
         builder.Property(row => row.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(row => new { row.Status, row.Name });
     }
@@ -28,14 +28,14 @@ internal sealed class LlmChatDefinitionRevisionConfiguration : IEntityTypeConfig
         builder.HasKey(row => new { row.DefinitionId, row.Revision });
         builder.Property(row => row.Name).HasMaxLength(LlmChatDefinitionValidation.MaximumNameLength).IsRequired();
         builder.Property(row => row.Summary).HasMaxLength(LlmChatDefinitionValidation.MaximumSummaryLength).IsRequired();
-        builder.Property(row => row.AvatarImageUrl).HasMaxLength(LlmChatDefinitionValidation.MaximumAvatarImageUrlLength).IsRequired();
+        builder.Property(row => row.AvatarImageUrl).IsRequired();
         builder.Property(row => row.SystemPrompt).HasMaxLength(LlmMessage.MaximumTextLength).IsRequired();
         builder.Property(row => row.ProviderName).HasMaxLength(LlmChatDefinitionValidation.MaximumProviderNameLength).IsRequired();
         builder.Property(row => row.Model).HasMaxLength(LlmChatDefinitionValidation.MaximumModelLength).IsRequired();
         builder.Property(row => row.ModelParameterConfigurationJson).IsRequired();
         builder.Property(row => row.ResponseSchemaJson).IsRequired();
-        builder.Property(row => row.ResponseSchemaName).HasMaxLength(200).IsRequired();
-        builder.Property(row => row.ResponseSchemaDescription).HasMaxLength(2_000).IsRequired();
+        builder.Property(row => row.ResponseSchemaName).HasMaxLength(LlmChatDefinitionValidation.MaximumSchemaNameLength).IsRequired();
+        builder.Property(row => row.ResponseSchemaDescription).HasMaxLength(LlmChatDefinitionValidation.MaximumSchemaDescriptionLength).IsRequired();
         builder.Property(row => row.SettingsFingerprint).HasMaxLength(64).IsFixedLength().IsRequired();
         builder.Property(row => row.Reason).HasMaxLength(LlmChatDefinitionValidation.MaximumRevisionReasonLength).IsRequired();
         builder.HasOne<LlmChatDefinitionRow>()

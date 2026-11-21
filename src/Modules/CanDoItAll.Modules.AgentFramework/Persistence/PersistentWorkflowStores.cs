@@ -15,7 +15,7 @@ using Npgsql;
 
 namespace CanDoItAll.Modules.AgentFramework;
 
-public sealed class PersistentWorkflowCatalogService(
+public sealed partial class PersistentWorkflowCatalogService(
     WorkflowChanges changes,
     IDbContextFactory<WorkflowDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
@@ -249,7 +249,7 @@ public sealed class PersistentWorkflowCatalogService(
             request.Status,
             graphSnapshot,
             request.RuntimePolicy,
-            current?.CreatedAtUtc ?? now,
+            currentDefinition?.CreatedAtUtc ?? now,
             now)
         {
             InputParameters = SnapshotInputParameters(request.InputParameters),
@@ -427,8 +427,12 @@ public sealed class PersistentWorkflowCatalogService(
         var records = await dbContext.Set<WorkflowDefinitionRecord>()
             .Where(item => item.WorkflowId == workflowId.Value)
             .ToListAsync(cancellationToken);
+        var publications = await dbContext.Set<RemoteTemplatePublication>()
+            .Where(item => item.Kind == RemoteTemplateKind.Workflow && item.DefinitionId == workflowId.Value)
+            .ToListAsync(cancellationToken);
         dbContext.Remove(head);
         dbContext.RemoveRange(records);
+        dbContext.RemoveRange(publications);
         try {
             await CommitAuthoringAsync(dbContext, cancellationToken);
         } catch (DbUpdateConcurrencyException error) {
@@ -444,6 +448,11 @@ public sealed class PersistentWorkflowCatalogService(
         ArgumentNullException.ThrowIfNull(definition);
 
         var componentSnapshot = await ListReferencedComponentsAsync(definition, cancellationToken);
+        return await ValidateWithComponentsAsync(definition, componentSnapshot, creatingLocalPrompts: false, cancellationToken);
+    }
+
+    private async Task<WorkflowValidationResult> ValidateWithComponentsAsync(WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> componentSnapshot, bool creatingLocalPrompts, CancellationToken cancellationToken) {
         var result = validator.Validate(definition, componentSnapshot);
         var issues = result.Issues.ToList();
         var effectiveNodeComponents = ResolveEffectiveNodeComponents(definition, componentSnapshot);
@@ -469,27 +478,17 @@ public sealed class PersistentWorkflowCatalogService(
                 "Human-in-loop nodes are disabled by workflow settings."));
         }
 
-        var promptArtifactIds = effectiveNodeComponents
-            .Select(component => component.PromptArtifactId)
-            .OfType<Guid>()
-            .Distinct()
-            .ToArray();
-        var compatibilitySnapshotsResult = await promptGallery.GetCompatibilitySnapshotsAsync(
-            promptArtifactIds,
-            cancellationToken);
-        var loadedCompatibilitySnapshots = compatibilitySnapshotsResult.Value;
-        var compatibilitySnapshotsAvailable = compatibilitySnapshotsResult.IsSuccess &&
-            loadedCompatibilitySnapshots is not null;
-        IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot> compatibilitySnapshots =
-            loadedCompatibilitySnapshots ?? new Dictionary<Guid, PromptGalleryCompatibilitySnapshot>();
-        if (!compatibilitySnapshotsAvailable)
-        {
-            var detail = compatibilitySnapshotsResult.Errors.Count == 0
-                ? "The operation did not return compatibility metadata."
-                : string.Join(" ", compatibilitySnapshotsResult.Errors.Select(error => error.Message));
-            issues.Add(new WorkflowValidationIssue(
-                WorkflowValidationIssueCode.InvalidComponentReference,
-                $"Prompt Gallery execution validation failed closed. {detail}"));
+        IReadOnlyDictionary<Guid, PromptGalleryCompatibilitySnapshot>? compatibilitySnapshots = null;
+        if (!creatingLocalPrompts) {
+            var promptArtifactIds = effectiveNodeComponents.Select(component => component.PromptArtifactId).OfType<Guid>().Distinct().ToArray();
+            var read = await promptGallery.GetCompatibilitySnapshotsAsync(promptArtifactIds, cancellationToken);
+            if (read.IsSuccess && read.Value is { } snapshots) {
+                compatibilitySnapshots = snapshots;
+            } else {
+                var detail = read.Errors.Count == 0 ? "The operation did not return compatibility metadata."
+                    : string.Join(" ", read.Errors.Select(error => error.Message));
+                issues.Add(new(WorkflowValidationIssueCode.InvalidComponentReference, $"Prompt Gallery execution validation failed closed. {detail}"));
+            }
         }
 
         var providerSnapshot = await LoadProviderSnapshotAsync(effectiveNodeComponents, cancellationToken);
@@ -499,7 +498,7 @@ public sealed class PersistentWorkflowCatalogService(
             cancellationToken.ThrowIfCancellationRequested();
             var providerResolution = ResolveProvider(component, providerSnapshot);
             issues.AddRange(ValidateProviderCompatibility(component, providerResolution));
-            if (compatibilitySnapshotsAvailable)
+            if (compatibilitySnapshots is not null)
             {
                 issues.AddRange(ValidatePromptGalleryExecutionCompatibility(
                     component,
@@ -2745,6 +2744,9 @@ public sealed partial class PersistentWorkflowRunStore(IDbContextFactory<Workflo
 
 internal static class WorkflowDefinitionPersistenceConstraints
 {
+    public const int NameLength = 240;
+    public const int DescriptionLength = 2000;
+    public const int ComponentModelLength = 240;
     public const string HeadPrimaryKey = "PK_AgentFramework_WorkflowDefinitionHeads";
     public const string RevisionUniqueIndex = "IX_WorkflowDefinitions_WorkflowId_Revision";
     public const string ExternalIdentityUniqueIndex = "IX_WorkflowDefinitionHeads_ExternalIdentity";
@@ -3305,8 +3307,8 @@ internal sealed class WorkflowDefinitionRecordConfiguration : IEntityTypeConfigu
     {
         builder.ToTable("AgentFramework_WorkflowDefinitions");
         builder.HasKey(item => item.VersionId);
-        builder.Property(item => item.Name).HasMaxLength(240).IsRequired();
-        builder.Property(item => item.Description).HasMaxLength(2000);
+        builder.Property(item => item.Name).HasMaxLength(WorkflowDefinitionPersistenceConstraints.NameLength).IsRequired();
+        builder.Property(item => item.Description).HasMaxLength(WorkflowDefinitionPersistenceConstraints.DescriptionLength);
         builder.Property(item => item.Status).HasConversion<int>();
         builder.Property(item => item.PreferredBackend).HasConversion<int>();
         builder.Property(item => item.DefinitionJson).HasColumnType("TEXT");
@@ -3349,8 +3351,8 @@ internal sealed class WorkflowComponentRecordConfiguration : IEntityTypeConfigur
         builder.ToTable("AgentFramework_WorkflowComponents");
         builder.HasKey(item => item.Id);
         builder.Property(item => item.Revision).HasDefaultValueSql("gen_random_uuid()").IsConcurrencyToken();
-        builder.Property(item => item.Name).HasMaxLength(240).IsRequired();
-        builder.Property(item => item.Model).HasMaxLength(240).IsRequired();
+        builder.Property(item => item.Name).HasMaxLength(WorkflowDefinitionPersistenceConstraints.NameLength).IsRequired();
+        builder.Property(item => item.Model).HasMaxLength(WorkflowDefinitionPersistenceConstraints.ComponentModelLength).IsRequired();
         builder.Property(item => item.Modality).HasConversion<int>();
         builder.Property(item => item.ComponentJson).HasColumnType("TEXT");
         builder.HasIndex(item => item.Name);

@@ -19,9 +19,8 @@ namespace CanDoItAll.Web.Api;
 /// Short description of the definition. Trimmed, at most 2,000 characters; null or empty stores no summary.
 /// </param>
 /// <param name="AvatarImageUrl">
-/// Image shown for the definition: an absolute <c>http</c> or <c>https</c> URL, or a bundled avatar path such as
-/// <c>_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-01.jpg</c> (avatars 01 to 08). At most
-/// 2,048 characters; null or empty stores no image.
+/// Avatar for the definition. Accepts a bundled avatar, an absolute HTTP or HTTPS URL of up to 2,048 characters,
+/// or a base64 data URL containing a PNG, JPEG, GIF or WebP image of up to 128 KiB. Null or empty clears the image.
 /// </param>
 /// <param name="SystemPrompt">
 /// Instructions sent to the model as the system message of every turn, stored exactly as sent. Send it on every create

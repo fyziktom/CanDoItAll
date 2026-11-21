@@ -9,8 +9,28 @@ using System.Data;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 
-public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext) : ILlmChatDefinitionReadStore
+public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext) : ILlmChatDefinitionReadStore, ILlmChatTemplateSummaryReader
 {
+    public async Task<IReadOnlyList<LlmChatTemplateSummary>> ListAsync(IReadOnlySet<Guid> sharedIds, CancellationToken token) {
+        if (sharedIds.Count == 0) {
+            return [];
+        }
+        var ids = sharedIds.ToArray();
+        return await ShareableDefinitions.Where(row => ids.Contains(row.Id))
+            .OrderBy(row => row.Name).ThenBy(row => row.Id)
+            .Select(row => new LlmChatTemplateSummary(row.Id, row.Name, row.Summary,
+                row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix) ? null : row.AvatarImageUrl,
+                row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix), row.UpdatedAtUtc, row.CurrentRevision))
+            .ToArrayAsync(token);
+    }
+
+    public Task<LlmChatTemplateAvatar?> ReadAvatarAsync(Guid id, CancellationToken token) =>
+        ShareableDefinitions.Where(row => row.Id == id && row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix))
+            .Select(row => new LlmChatTemplateAvatar(row.AvatarImageUrl, row.CurrentRevision)).SingleOrDefaultAsync(token);
+
+    private IQueryable<LlmChatDefinitionRow> ShareableDefinitions => dbContext.Set<LlmChatDefinitionRow>().AsNoTracking()
+        .Where(row => row.Status == LlmChatDefinitionStatus.Active || row.Status == LlmChatDefinitionStatus.Draft);
+
     public async Task<LlmChatDefinitionReadModel?> TryGetAsync(
         LlmChatDefinitionId id,
         CancellationToken cancellationToken = default)

@@ -1,5 +1,7 @@
 namespace CanDoItAll.RemoteInstances;
 
+public sealed record RemoteInstanceSelection(Guid Id, Guid Version);
+
 public sealed record RemoteInstanceSettings(
     string Name,
     Uri BaseUri,
