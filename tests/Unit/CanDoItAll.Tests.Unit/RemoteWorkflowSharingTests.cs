@@ -35,6 +35,8 @@ public sealed class RemoteWorkflowSharingTests {
         Assert.Equal(4, received.Models.Count);
         Assert.Equal(2, received.Components.Count);
         Assert.True(received.Models[0].StructuredOutput);
+        Assert.True(received.Models[0].RequiresModelPrice);
+        Assert.False(received.Models[2].RequiresModelPrice);
         Assert.True(received.Models[3].Vision);
         Assert.Equal(ProviderProfilePurpose.ImageGeneration, received.Models[2].Purpose);
         Assert.Equal("other-model", received.Models[1].ModelName);

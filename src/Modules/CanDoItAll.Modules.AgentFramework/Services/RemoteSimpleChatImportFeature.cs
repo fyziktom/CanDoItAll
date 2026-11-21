@@ -49,6 +49,7 @@ public sealed class RemoteSimpleChatImportFeature(RemoteTemplateConnectionReader
             document.ResponseFormat?.SchemaName is { Length: > LlmChatDefinitionValidation.MaximumSchemaNameLength } ||
             document.ResponseFormat?.SchemaDescription is { Length: > LlmChatDefinitionValidation.MaximumSchemaDescriptionLength } ||
             document.Model is not { Purpose: ProviderProfilePurpose.Chat } ||
+            document.Model.ThinkingEffort is { } advertised && advertised != document.Settings.ThinkingEffort ||
             (document.ResponseFormat?.RequireJson == true || !string.IsNullOrWhiteSpace(document.ResponseFormat?.SchemaJson)) && !document.Model.StructuredOutput) {
             throw new RemoteInstanceReadException("The selected Simple Chat changed or is invalid. Refresh the remote catalog.");
         }
@@ -59,7 +60,7 @@ public sealed class RemoteSimpleChatImportFeature(RemoteTemplateConnectionReader
         } catch (ArgumentException) {
             throw new RemoteInstanceReadException("The shared Simple Chat has invalid settings, tags or avatar.");
         }
-        return new Preview(document with { Row = row });
+        return new Preview(document with { Row = row, Model = document.Model with { ThinkingEffort = document.Settings.ThinkingEffort } });
     }
 
     public async Task<Guid> ImportAsync(RemoteInstanceSelection source, RemoteTemplatePreview preview, IReadOnlyList<RemoteTemplateModelChoice> models,

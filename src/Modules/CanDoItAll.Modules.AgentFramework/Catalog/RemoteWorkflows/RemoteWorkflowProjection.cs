@@ -102,7 +102,7 @@ internal static class RemoteWorkflowProjection {
 
     private static RemoteTemplateModelRequirement ForComponent(RemoteWorkflowComponent component, string label) =>
         new(label, ProviderProfilePurpose.Chat, StructuredOutput: component.ModelSettings.RequireJsonOutput || !string.IsNullOrWhiteSpace(component.ModelSettings.ResponseFormatJsonSchema),
-            Vision: component.Modality is WorkflowModality.Vision or WorkflowModality.Multimodal);
+            Vision: component.Modality is WorkflowModality.Vision or WorkflowModality.Multimodal) { RequiresModelPrice = true };
 
     private static void RequirePortableReferences(WorkflowNode node) {
         if (node.Settings.AgentId.HasValue || node.Settings.SubworkflowId.HasValue) {

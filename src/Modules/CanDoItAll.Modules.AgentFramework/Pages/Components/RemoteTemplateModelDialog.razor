@@ -9,6 +9,12 @@
             @if (!string.IsNullOrWhiteSpace(Requirement.ModelName)) {
                 <TextBlock Value="@($"Publisher model · {Requirement.ModelName}")" TextStyle="TextStyle.Muted" />
             }
+            @if (Requirement.ThinkingEffort is { } effort) {
+                <TextBlock Value="@($"Required reasoning effort · {effort}")" TextStyle="TextStyle.Muted" />
+            }
+            @if (Requirement.RequiresModelPrice) {
+                <TextBlock Value="This workflow step needs a price or a free tariff configured for the model." TextStyle="TextStyle.Muted" />
+            }
             @if (Compatible.Count == 0) {
                 <Alert AlertStyle="AlertStyle.Warning">No enabled provider has a compatible model for this step.</Alert>
             } else {

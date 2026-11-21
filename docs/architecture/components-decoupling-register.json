@@ -11072,7 +11072,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateModelDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateModelDialog.razor",
-      "sha256_lf": "8e439ff1e442456c75d34179c233017ebb89bcaa0a4db7dc0363fae6572cbf4c",
+      "sha256_lf": "8dad0b99f1d2cab822e1c76be7f8c560c5a9c1d49b85f20353f71454845b5691",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteTemplateModelDialog",

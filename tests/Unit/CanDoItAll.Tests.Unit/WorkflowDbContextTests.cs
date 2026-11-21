@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class WorkflowDbContextTests {
     [Fact]
-    public void Runtime_model_contains_all_seventeen_owned_records_and_preserves_distinct_concurrency_protocols() {
+    public void Runtime_model_contains_the_owned_records_and_preserves_distinct_concurrency_protocols() {
         using var context = new WorkflowDbContext(new DbContextOptionsBuilder<WorkflowDbContext>()
             .UseNpgsql("Host=localhost;Database=workflow_owner_model").Options);
         Type[] owned = [typeof(WorkflowDefinitionRecord), typeof(WorkflowDefinitionHeadRecord), typeof(WorkflowComponentRecord),
@@ -16,8 +16,11 @@ public sealed class WorkflowDbContextTests {
             typeof(WorkflowLaunchIdempotencyRecordEntity), typeof(WorkflowUsageObservationRecordEntity),
             typeof(WorkflowExecutorInvocationRecordEntity), typeof(WorkflowBackendCheckpointPayloadEntity),
             typeof(WorkflowBackendCheckpointSessionEntity), typeof(WorkflowExternalRequestBoundaryEntity),
-            typeof(WorkflowExternalResponseOperationEntity), typeof(WorkflowStructureOutputRecord)];
+            typeof(WorkflowExternalResponseOperationEntity), typeof(WorkflowStructureOutputRecord), typeof(RemoteTemplatePublication)];
         Assert.Equal(owned.OrderBy(type => type.Name), context.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name));
+        var publication = context.Model.FindEntityType(typeof(RemoteTemplatePublication))!;
+        Assert.Equal([nameof(RemoteTemplatePublication.Kind), nameof(RemoteTemplatePublication.DefinitionId), nameof(RemoteTemplatePublication.CreatedUtcTicks)],
+            publication.FindPrimaryKey()!.Properties.Select(property => property.Name));
         var tokens = context.Model.GetEntityTypes().SelectMany(entity => entity.GetProperties())
             .Where(property => property.IsConcurrencyToken)
             .Select(property => (property.DeclaringType.ClrType, property.Name)).ToArray();

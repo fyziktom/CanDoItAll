@@ -27,7 +27,9 @@ public sealed class RemoteWorkflowImportFeature(RemoteTemplateConnectionReader r
                 throw RemoteWorkflowExecutorSettings.Error(node, $"Make executor '{id.Value}' available on this instance before importing.");
             }
         }
-        return new Preview(document);
+        var componentModels = document.Components.Select(component => component.ModelIndex).ToHashSet();
+        return new Preview(document with { Models = document.Models.Select((model, index) =>
+            componentModels.Contains(index) ? model with { RequiresModelPrice = true } : model).ToArray() });
     }
 
     public async Task<Guid> ImportAsync(RemoteInstanceSelection source, RemoteTemplatePreview preview, IReadOnlyList<RemoteTemplateModelChoice> models,

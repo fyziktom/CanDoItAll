@@ -30,6 +30,26 @@ public sealed class RemoteTemplateProviderTests {
         Assert.False(local.Supports(requirement with { Purpose = ProviderProfilePurpose.ImageGeneration }));
     }
 
+    [Fact]
+    public void Batch_substitutions_and_source_preferences_respect_explicit_effort_and_pricing() {
+        var source = Option("published", true) with {
+            AllowedThinkingEfforts = [AgentReasoningEffortLevel.None, AgentReasoningEffortLevel.Medium]
+        };
+        var high = Option("high", false) with { AllowedThinkingEfforts = [AgentReasoningEffortLevel.High], HasModelPrice = true };
+        var unrestricted = new RemoteTemplateModelRequirement("Template", ProviderProfilePurpose.Chat);
+        var needsHigh = unrestricted with { ThinkingEffort = AgentReasoningEffortLevel.High };
+        var needsPrice = unrestricted with { RequiresModelPrice = true };
+        Assert.True(source.Supports(unrestricted));
+        Assert.True(Option("unknown", false).Supports(unrestricted));
+        Assert.True(source.Supports(unrestricted with { ThinkingEffort = AgentReasoningEffortLevel.None }));
+        Assert.Null(RemoteTemplateProviderCatalog.Preferred(needsHigh, [source, high]));
+        Assert.False(source.Supports(needsHigh));
+        Assert.True(high.Supports(needsHigh));
+        Assert.False(source.Supports(needsPrice));
+        Assert.True(high.Supports(needsPrice with { ThinkingEffort = AgentReasoningEffortLevel.High }));
+        Assert.False(high.Supports(needsPrice with { ThinkingEffort = AgentReasoningEffortLevel.None }));
+    }
+
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("file:///etc/passwd")]

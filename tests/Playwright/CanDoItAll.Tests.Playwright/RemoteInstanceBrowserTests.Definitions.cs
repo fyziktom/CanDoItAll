@@ -23,6 +23,7 @@ public sealed partial class RemoteInstanceBrowserTests {
         var marker = Guid.NewGuid().ToString("N");
         var chatName = $"Shared reviewer {marker}";
         var workflowName = $"Review workflow {marker}";
+        var providerName = $"Regional model {marker}";
         const string model = "regional-editor";
         var avatar = AgentAvatarImageCatalog.BundledAvatarUrls[1];
         await using var publisher = new ApiAccessProductionHost();
@@ -32,29 +33,23 @@ public sealed partial class RemoteInstanceBrowserTests {
         publisher.ProtectSecrets(admin.Token);
         publisher.Client.DefaultRequestHeaders.Authorization = new("Bearer", admin.Token);
         var author = await IssueAsync(publisher, "definition-publisher", ApiAccessScopeNames.ReadLlmChats, ApiAccessScopeNames.ManageLlmChats,
-            ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows);
+            ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows, ApiAccessScopeNames.ReadAgents, ApiAccessScopeNames.WriteAgents);
         var reader = await IssueAsync(publisher, "shared-definitions-reader", ApiAccessScopeNames.ReadSharedSimpleChats,
             ApiAccessScopeNames.ReadSharedWorkflows, ApiAccessScopeNames.ReadSharedProviderCatalog);
         publisher.Client.DefaultRequestHeaders.Authorization = new("Bearer", author.Token);
-        await using var publisherServices = await TestApplicationBootstrap.BuildServiceProviderAsync(publisher.OwnedDatabaseProfile,
-            "RemoteDefinitions.Publisher", TestSchemaBootstrapModules.Full);
-        await using var publisherScope = publisherServices.CreateAsyncScope();
-        var origin = publisherScope.ServiceProvider;
-        var provider = await origin.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(new() {
-            Name = $"Regional model {marker}", Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
-            BaseUrl = "http://127.0.0.1:11434", DefaultModel = model, SuggestedModels = [model]
+        var provider = await CreateAsync<Guid>(publisher.Client, "/api/agents/providers", new ProviderProfileEditorModel {
+            Name = providerName, Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
+            BaseUrl = "http://127.0.0.1:11434", DefaultModel = model, SuggestedModels = [model],
+            ModelPrices = [new() { Model = model, TariffKind = ProviderTariffKind.ExplicitFree }]
         });
-        var sharing = origin.GetRequiredService<Sharing.ISharedProviderManagementService>();
-        var snapshot = await sharing.GetProfileSharingAsync(provider);
-        var publication = await sharing.SetPublicationAsync(provider, Sharing.SharedProviderPublicationAction.Publish, null, snapshot.ProviderConcurrencyToken!.Value);
         var chatId = await CreateChatAsync(publisher.Client, chatName, avatar, provider, model);
         var privateName = $"Private reviewer {marker}";
         await CreateChatAsync(publisher.Client, privateName, avatar, provider, model);
-        var component = await origin.GetRequiredService<IWorkflowComponentLibraryService>().SaveComponentAsync(new(null,
+        var component = await CreateAsync<LlmCallComponent>(publisher.Client, "/api/workflows/components", new LlmCallComponentSaveRequest(null,
             $"Review instructions {marker}", provider, model, WorkflowModality.Text, new(null, 150, false, ""), Instructions,
             WorkflowValueShape.Text, WorkflowValueShape.Text, AgentPermissionsPolicy.Default));
         var graph = WorkflowDefinitionValidator.CreateComponentValidationDefinition(component);
-        var definition = await origin.GetRequiredService<IWorkflowCatalogService>().SaveDefinitionAsync(new(null, null, workflowName,
+        var definition = await CreateAsync<WorkflowDefinition>(publisher.Client, "/api/workflows/definitions", new WorkflowDefinitionSaveRequest(null, null, workflowName,
             "Review a regional report.", WorkflowLifecycleStatus.Draft, graph.Graph, graph.RuntimePolicy));
 
         await using var authorBrowser = await consumer.Browser.NewContextAsync(new() { IgnoreHTTPSErrors = true });
@@ -62,6 +57,10 @@ public sealed partial class RemoteInstanceBrowserTests {
         await authorBrowser.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == host ? route.ContinueAsync() : route.AbortAsync());
         await authorBrowser.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {author.Token}" });
         var authorPage = await authorBrowser.NewPageAsync();
+        await SharedProviderMetadataUiChecks.OpenProviderAsync(authorPage, publisher.HttpsUrl, providerName);
+        await authorPage.GetByTestId("provider-editor-tab-sharing").ClickAsync();
+        await authorPage.GetByTestId("shared-provider-publish").ClickAsync();
+        await Assertions.Expect(authorPage.GetByTestId("shared-provider-publication-status")).ToHaveTextAsync("Published");
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, publisher.HttpsUrl + ChatDefinitions);
         await authorPage.GetByTestId($"llm-chat-definition-sharing-{chatId:D}").ClickAsync();
         var publicationDialog = authorPage.GetByTestId("llm-chat-definition-publication-dialog");
@@ -84,8 +83,11 @@ public sealed partial class RemoteInstanceBrowserTests {
         var source = await local.GetRequiredService<IRemoteInstanceRegistry>().CreateAsync(Guid.NewGuid(),
             new($"Regional definitions {marker}", new(publisher.HttpUrl), credential.Value, true, true));
         var remoteProviders = local.GetRequiredService<Sharing.ISharedProviderManagementService>();
+        var tested = await remoteProviders.TestSourceAsync(source.Id);
+        Assert.True(tested.IsSuccessful, $"Shared provider discovery returned {tested.Outcome}.");
+        var publication = Assert.Single(tested.Catalog!.Providers, item => item.DisplayName == providerName);
         var observed = (await remoteProviders.ListSourcesAsync()).Single(item => item.Source.Id == source.Id).Observation;
-        var sync = await remoteProviders.SynchronizeSourceAsync(source.Id, observed, new HashSet<SharedProviderPublicationId> { publication.Publication!.PublicId });
+        var sync = await remoteProviders.SynchronizeSourceAsync(source.Id, observed, new HashSet<SharedProviderPublicationId> { publication.PublicationId });
         Assert.True(sync.IsSuccessful, $"Shared provider synchronization returned {sync.Outcome}.");
         var mirror = Assert.Single((await remoteProviders.ListSourcesAsync()).Single(item => item.Source.Id == source.Id).Imports);
         await using var browser = await consumer.Browser.NewContextAsync();
@@ -130,11 +132,26 @@ public sealed partial class RemoteInstanceBrowserTests {
     }
 
     private static async Task<Guid> CreateChatAsync(HttpClient client, string name, string avatar, Guid provider, string model) {
-        using var response = await client.PostAsJsonAsync("/api/llm-chats", new {
+        var chat = await CreateAsync<JsonElement>(client, "/api/llm-chats", new {
             name, summary = "Review the regional report.", avatarImageUrl = avatar, systemPrompt = Instructions,
             providerProfileId = provider, model, tags = new[] { "regional" }, revisionReason = "Browser import fixture"
         });
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        return chat.GetProperty("id").GetGuid();
+    }
+
+    private static async Task<T> CreateAsync<T>(HttpClient client, string route, object request) {
+        using var response = await client.PostAsJsonAsync(route, request);
+        if (!response.IsSuccessStatusCode) {
+            var detail = response.ReasonPhrase;
+            if (response.Content.Headers.ContentType?.MediaType == "application/json") {
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                if (json.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array) {
+                    detail = string.Join(" ", errors.EnumerateArray().Select(error =>
+                        $"{error.GetProperty("code").GetString()} {error.GetProperty("message").GetString()}"));
+                }
+            }
+            throw new HttpRequestException($"POST {route} returned {(int)response.StatusCode}. {detail}", null, response.StatusCode);
+        }
+        return (await response.Content.ReadFromJsonAsync<T>())!;
     }
 }

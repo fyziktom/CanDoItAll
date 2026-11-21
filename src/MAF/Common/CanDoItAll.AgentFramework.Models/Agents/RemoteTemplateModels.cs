@@ -10,7 +10,9 @@ public sealed record RemoteTemplateModelRequirement(
     [property: Description("Whether this step requires image inputs.")] bool Vision = false,
     [property: Description("Whether this step requires function tools.")] bool Tools = false,
     [property: Description("Human-readable model used on the publisher, when configured.")] string? ModelName = null,
-    [property: Description("Public routing model of the publisher's shared provider, when published.")] string? PublishedModel = null);
+    [property: Description("Public routing model of the publisher's shared provider, when published.")] string? PublishedModel = null,
+    [property: Description("Explicit thinking effort required by the definition, 0 None, 1 Low, 2 Medium, 3 High, 4 ExtraHigh, 5 Max or 6 Minimal. An omitted value allows the model default.")] AgentReasoningEffortLevel? ThinkingEffort = null,
+    [property: Description("Whether the local model must have a configured price or an explicit free tariff.")] bool RequiresModelPrice = false);
 
 public sealed record RemoteTemplateModelChoice(Guid ProviderId, string Model);
 

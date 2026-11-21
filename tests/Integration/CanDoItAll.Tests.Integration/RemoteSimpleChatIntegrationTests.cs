@@ -98,9 +98,13 @@ public sealed class RemoteSimpleChatIntegrationTests {
         var services = scope.ServiceProvider;
         var definitions = services.GetRequiredService<ILlmChatDefinitionApplicationService>();
         var publisher = services.GetRequiredService<RemoteSimpleChatPublisher>();
-        var origin = await AddProviderAsync(services, "Publisher");
-        var substitute = await AddProviderAsync(services, "Consumer");
-        var command = CreateDefinition(origin, "Publisher") with { AvatarImageUrl = EmbeddedGif() };
+        const string publisherModel = "gpt-oss:publisher";
+        const string compatibleModel = "gpt-oss:consumer";
+        const string toggleOnlyModel = "qwen3:consumer";
+        var origin = await AddProviderAsync(services, publisherModel);
+        var substitute = await AddProviderAsync(services, compatibleModel, toggleOnlyModel);
+        var original = CreateDefinition(origin, publisherModel);
+        var command = original with { AvatarImageUrl = EmbeddedGif(), Settings = original.Settings with { ThinkingEffort = AgentReasoningEffortLevel.High } };
         Assert.True(command.AvatarImageUrl.Length > LlmChatDefinitionValidation.MaximumAvatarImageUrlLength);
         var created = await definitions.CreateAsync(command);
         Assert.True(created.IsSuccess);
@@ -123,13 +127,20 @@ public sealed class RemoteSimpleChatIntegrationTests {
         var row = Assert.Single(await feature.ListAsync(source, default));
         Assert.Equal(command.AvatarImageUrl, row.AvatarImageUrl);
         var preview = await feature.PreviewAsync(source, row, default);
-        var choice = new RemoteTemplateModelChoice(substitute, "Consumer");
+        Assert.Equal(command.Settings.ThinkingEffort, Assert.Single(preview.Models).ThinkingEffort);
+        Assert.Equal(command.Settings.ThinkingEffort, (await publisher.FindAsync(definition.Id.Value, default))!.Model.ThinkingEffort);
+        var choice = new RemoteTemplateModelChoice(substitute, compatibleModel);
         var edited = await definitions.UpdateAsync(new(definition.Id, command.Name, command.Summary, command.AvatarImageUrl, "Revised source instructions",
             origin, command.Model, command.Settings, command.Timeout, command.ResponseFormat, "New revision", definition.ConcurrencyToken, command.Tags));
         Assert.True(edited.IsSuccess);
         await Assert.ThrowsAsync<RemoteInstanceReadException>(() => coordinator.ImportAsync(feature, source, preview, [choice], workspace, default));
         row = Assert.Single(await feature.ListAsync(source, default));
         preview = await feature.PreviewAsync(source, row, default);
+        var alternatives = await services.GetRequiredService<RemoteTemplateProviderCatalog>().ListAsync(source.Id, row.PublisherId, default, feature.Kind);
+        var incompatible = Assert.Single(alternatives, option => option.Choice == new RemoteTemplateModelChoice(substitute, toggleOnlyModel));
+        Assert.True(incompatible.Supports(preview.Models[0] with { ThinkingEffort = null }));
+        Assert.False(incompatible.Supports(preview.Models[0]));
+        await Assert.ThrowsAsync<RemoteInstanceReadException>(() => coordinator.ImportAsync(feature, source, preview, [incompatible.Choice], workspace, default));
         await Assert.ThrowsAsync<RemoteInstanceReadException>(() => coordinator.ImportAsync(feature, source, preview,
             [new(substitute, "unavailable")], workspace, default));
         var localId = await coordinator.ImportAsync(feature, source, preview, [choice], workspace, default);
@@ -191,10 +202,10 @@ public sealed class RemoteSimpleChatIntegrationTests {
 
     private static ValueTask Allow(CancellationToken token) => ValueTask.CompletedTask;
 
-    private static Task<Guid> AddProviderAsync(IServiceProvider services, string model) =>
+    private static Task<Guid> AddProviderAsync(IServiceProvider services, string model, params string[] additionalModels) =>
         services.GetRequiredService<IProviderProfileRegistry>().SaveProviderAsync(new() {
             Name = $"{model} Simple Chat provider", Kind = ProviderKind.Ollama, Transport = ProviderTransportKind.ChatCompletions,
-            BaseUrl = "https://provider.example.invalid", DefaultModel = model, SuggestedModels = [model], IsEnabled = true
+            BaseUrl = "https://provider.example.invalid", DefaultModel = model, SuggestedModels = [model, .. additionalModels], IsEnabled = true
         });
 
     private static CreateLlmChatDefinitionCommand CreateDefinition(Guid provider, string model) => new("Reusable chat", "Draft a response",

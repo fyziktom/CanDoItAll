@@ -78,7 +78,8 @@ public sealed class RemoteSimpleChatPublisher(ILlmChatDefinitionApplicationServi
         var publisherId = await identities.GetOrCreateAsync(token);
         var revision = details.Revision;
         var model = await providers.DescribeAsync(new(revision.Name, CanDoItAll.AgentFramework.Models.ProviderProfilePurpose.Chat,
-                StructuredOutput: revision.ResponseFormat?.RequireJson == true || !string.IsNullOrWhiteSpace(revision.ResponseFormat?.SchemaJson)),
+                StructuredOutput: revision.ResponseFormat?.RequireJson == true || !string.IsNullOrWhiteSpace(revision.ResponseFormat?.SchemaJson),
+                ThinkingEffort: revision.Settings.ThinkingEffort),
             revision.ProviderProfileId, revision.Model, token);
         if (!await publications.IsPublishedAsync(RemoteTemplateKind.SimpleChat, id, token)) {
             return null;

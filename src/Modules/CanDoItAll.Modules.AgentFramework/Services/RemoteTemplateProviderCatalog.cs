@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.SharedProviders.Abstractions;
 using ProviderPurpose = CanDoItAll.AgentFramework.Models.ProviderProfilePurpose;
@@ -8,13 +9,17 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed record RemoteTemplateModelOption(RemoteTemplateModelChoice Choice, string ProviderName, string DisplayName,
     ProviderPurpose Purpose, bool FromSource, bool IsDefault, bool StructuredOutput, bool Vision, bool Tools) {
+    public IReadOnlyList<AgentReasoningEffortLevel> AllowedThinkingEfforts { get; init; } = [];
+    public bool HasModelPrice { get; init; }
+
     public bool Supports(RemoteTemplateModelRequirement requirement) =>
         Purpose == requirement.Purpose && (!requirement.StructuredOutput || StructuredOutput) &&
-        (!requirement.Vision || Vision) && (!requirement.Tools || Tools);
+        (!requirement.Vision || Vision) && (!requirement.Tools || Tools) && (!requirement.RequiresModelPrice || HasModelPrice) &&
+        (requirement.ThinkingEffort is not { } effort || AllowedThinkingEfforts.Contains(effort));
 }
 
 public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry providers, IProviderProfileService features,
-    ISharedProviderManagementService sharing) {
+    ISharedProviderManagementService sharing, IProviderModelCapabilityResolver capabilities) {
     public async Task<RemoteTemplateModelRequirement> DescribeAsync(RemoteTemplateModelRequirement requirement,
         Guid? providerId, string? model, CancellationToken token) {
         if (providerId is not { } id || await providers.GetProviderAsync(id, token) is not { } profile) {
@@ -45,8 +50,15 @@ public sealed class RemoteTemplateProviderCatalog(IProviderProfileRegistry provi
                     continue;
                 }
                 var matrix = features.ResolveFeatureMatrixForModel(profile, model);
-                options.Add(new(new(profile.Id, model), profile.Name, profile.GetModelDisplayName(model), profile.Purpose,
-                    profile.IsSourceManaged, model == profile.DefaultModel, matrix.SupportsStructuredOutput, matrix.SupportsVision, matrix.SupportsTools));
+                var option = new RemoteTemplateModelOption(new(profile.Id, model), profile.Name, profile.GetModelDisplayName(model), profile.Purpose,
+                    profile.IsSourceManaged, model == profile.DefaultModel, matrix.SupportsStructuredOutput, matrix.SupportsVision, matrix.SupportsTools) {
+                    HasModelPrice = ProviderPricingDefaults.TryFindPrice(profile.ModelPrices, model, out _)
+                };
+                if (kind == RemoteTemplateKind.SimpleChat && profile.Purpose == ProviderPurpose.Chat &&
+                    capabilities.ResolveThinkingEffort(profile, model) is { Status: AgentThinkingEffortSupportStatus.Supported } capability) {
+                    option = option with { AllowedThinkingEfforts = capability.AllowedEfforts };
+                }
+                options.Add(option);
             }
         }
         return options.OrderByDescending(item => item.FromSource).ThenBy(item => item.ProviderName, StringComparer.OrdinalIgnoreCase)
