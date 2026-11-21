@@ -1,4 +1,38 @@
-# Remote instance connections and agent templates
+# Remote instance connections and shared definitions
+
+## Importing agents, Simple Chats and workflows
+
+Each feature publishes a definition and materializes a local draft through its own
+application writer. The shared connection owns the authenticated HTTP read. The import
+dialog owns the selected rows and an optional child dialog for choosing a provider
+and model. A database switch or a changed source invalidates that opening.
+
+The provider that authored a template can describe a preferred model using its public
+publication identity and routing model. The consumer matches these against enabled
+imports from the selected connection and publisher. A label shared by two companies
+cannot identify a provider. The consumer stores its own provider profile ID and model
+in the draft. Each model-dependent workflow step retains its own requirement, including
+whether it needs image generation or structured output.
+
+The parent dialog retains the catalog and selection when a user opens, cancels or
+confirms a model choice. A batch records choices and import results per definition.
+Applying one choice to several definitions requires compatibility with each affected
+requirement. An accepted item is never resubmitted because a later item failed.
+The local writer validates the binding again before saving. Imported definitions have
+independent local identities and lifecycles. Discovery and import perform no inference.
+
+The publisher exposes each resource through its own read scope. The definition contract
+omits conversations, execution history, API keys, grants and local database references.
+Avatar previews belong to the read contract for agents and chats. A missing avatar uses
+the same placeholder as the local list. The consumer must validate image references
+before rendering them.
+
+Acceptance covers two publishers with identical provider names, unavailable models,
+an explicitly selected local substitute, stale catalog data, permission checks and
+retry after a partial batch. Component and browser proof exercise pre-import avatars,
+stacked dialogs, cancellation, individual choices and applying a compatible choice to
+the rest of a batch. Persistence tests read back the provider and model from the saved
+agent, chat revision and workflow graph.
 
 ## Current ownership
 
