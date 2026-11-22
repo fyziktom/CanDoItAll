@@ -7601,7 +7601,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
-      "sha256_lf": "930dd13d555f29033dc6e8b326e1e56c5e232f2cbfa08b5f864c3955f9f01d14",
+      "sha256_lf": "c0945ec0eeef7e128114ccc0d74909937e52897b610144b5b2dc5d938d009536",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ContextualAgentWorkspaceWindows",
@@ -8300,7 +8300,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
-      "sha256_lf": "8a53d69aa7e5aec2d76dc0df194bd89e2090b570e3a792a480d7681e70ef1aa0",
+      "sha256_lf": "b526a1ed67a65547e102e882071a8151cf3aafa51740ec01b8b2c9ec63907dac",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionCatalogPanel",
@@ -8323,7 +8323,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
-      "sha256_lf": "6c376da936212946d320d0882da63774d130e7429cede763c63fd23188518ac0",
+      "sha256_lf": "6771af65fbf8ea95f75d9f95fe2e32df728651e17badc4d5e14dddc546c9a013",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionEditorDialog",
@@ -8776,7 +8776,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
-      "sha256_lf": "b43a6ff44789ae6cf8b211da1c553df6125d4edd93d67a3a7a940b1a3cffddd9",
+      "sha256_lf": "81e9c566f225264a1647147a5fb6bec74a78e48ac6ed4ca234856bcf89ae8594",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.UI.LlmChatDefinitionEditorSurface",
@@ -9386,7 +9386,7 @@
     {
       "identity": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
-      "sha256_lf": "de7c1cc4e5b6fa4a47842cf9a131b4eb6d355a718b9c945691ca4bf6b45082f9",
+      "sha256_lf": "c95d149834c447946c883d36559de33f290345612ed0047d1767f43ccc4f54a2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Workflows.UI.WorkflowCatalogSurface",
@@ -9532,7 +9532,7 @@
     {
       "identity": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
-      "sha256_lf": "e3b85cb3f55fc92fce1ac86105e9c0945129469943bd3873fd6abbdf19c2c653",
+      "sha256_lf": "6440a9ebf231aba8b0b349521020898e5f59edf51adad8fbb9810020da4a558e",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -10232,7 +10232,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "sha256_lf": "71c104010315073b464b753be7672beb766f4d0b8bf7a26e4f7d2d7439417864",
+      "sha256_lf": "b5f64feb010d017f3ef7d51742d07839b22beb0ac757ab5d9681ba53efef437d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentWorkspaceRiskRequest",
@@ -11123,7 +11123,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor",
-      "sha256_lf": "295e0f0097b42cebe898af9d7b847244fcc90d2427d078b83351a4a08c594d66",
+      "sha256_lf": "86a810e2183cf17675c1f5248a6c8ea8be187d3c3ca4040ff9dae0ae376c200f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteWorkflowSharingControl",
@@ -11296,7 +11296,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SimpleChatEditorSharing.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SimpleChatEditorSharing.razor",
-      "sha256_lf": "25b6a2db7ec29c84177276bb76200ff36ac38cfbce1de2fa8ba1eeae5808d140",
+      "sha256_lf": "c329dca89deddfbee5ab5add7db2e4ce9894943147acf45640b9b8d845908699",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.SimpleChatEditorSharing",
@@ -11430,7 +11430,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
-      "sha256_lf": "c2ccea62c79dcdb0ec58cf80fce308b09e8f662503217b0999e475777c830118",
+      "sha256_lf": "b67af2e4cc9f9c3f291b33d414d91c4e63d8c2f5ec90aa91e913f190fa8034e0",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowCanvasEditor",
@@ -11456,7 +11456,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "sha256_lf": "be76bcfe315c7045ca9a4b7a549ee9dc26ca95ef4d24f4a6f243f675d22bcea6",
+      "sha256_lf": "25efc098b02e0b2e1590ceffe824a018d1cec6d6a7cb5bb1da2359fb5c906b6d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowCanvasEditor",
@@ -11657,7 +11657,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
-      "sha256_lf": "033ae2868df05d8bb14d8c445728c120c32455cd90c084a6cd75811ab195a67f",
+      "sha256_lf": "5914fb751958044c8080a33291784e64959b4e7f4cb0f502a74b9ed65242c8aa",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage",
@@ -11692,7 +11692,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "sha256_lf": "4a42c7572d25f92513154e308670a93e58663bd02f7d5e07674e9dd745230558",
+      "sha256_lf": "510a7beb90d255ddb980dde7dd725caeff1a034725b2375c977b24759b187652",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage, CanDoItAll.Modules.AgentFramework.Pages.WorkflowRouteRequest, CanDoItAll.Modules.AgentFramework.Pages.ProjectWorkflowRouteValidation, CanDoItAll.Modules.AgentFramework.Pages.PageOwner",
@@ -11734,7 +11734,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
-      "sha256_lf": "d209d6dc1bb983c8314912a78dbb5b26cb67cc0aaebe6abe32cb991d105fa17d",
+      "sha256_lf": "2cc1512988a7da36d0df8211aaeca9bd4ef70b32d1cc0a3e8b3ea37e59ce9854",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions, CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleAssemblyMarker",
@@ -25260,7 +25260,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor",
-      "sha256_lf": "5e5cb534b746bad49520929283d1bacf4178a51546f50d45ddbb7594bf4ec928",
+      "sha256_lf": "93a7f2ee79be2f3f46720a3a54f7852dbdfd3aeeaf9c32b2a9fb56bbc291358f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Editor.UI.AgentEditorCoreSurface",
@@ -26284,7 +26284,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
-      "sha256_lf": "8940a26bcfbee26ce7b70f5b4e309887107bedce8fb2c8b6551a87c328e2b065",
+      "sha256_lf": "56e56241ae205ffbdc815597d64bb2844ed126c85444ab1ccd42e9b419fd2093",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -27309,7 +27309,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
-      "sha256_lf": "f684b5ad3169ffe1151e694c2b2dc2b352f36bc2be3524eea2fe4b3c0ed408ce",
+      "sha256_lf": "98ccca4d5ab604882226471a78ba83f04323f5ca321fcb1d3cc512b5afcf575e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Teams.TeamMembersSelector",
@@ -30025,7 +30025,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
-      "sha256_lf": "068fdc8b909ece3acce4e14f2570f5fd1dc07d4c1c6c1497796684f23cd165ad",
+      "sha256_lf": "1087fe1feba296633def6d6d90cd4ee2e1522ed3ef0cdaf225c820737d954c09",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Agents.CrmHrAgentRecordDialog",

@@ -62,6 +62,9 @@ public sealed partial class RemoteInstanceBrowserTests {
         await authorPage.GetByTestId("shared-provider-publish").ClickAsync();
         await Assertions.Expect(authorPage.GetByTestId("shared-provider-publication-status")).ToHaveTextAsync("Published");
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, publisher.HttpsUrl + ChatDefinitions);
+        var chatCard = authorPage.GetByTestId($"llm-chat-definition-{chatId:D}");
+        await Assertions.Expect(chatCard.GetByText("api", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(chatCard.GetByText("shared", new() { Exact = true })).ToHaveCountAsync(0);
         await authorPage.GetByTestId($"llm-chat-definition-select-{chatId:D}").ClickAsync();
         var chatEditor = authorPage.GetByTestId("llm-chat-definition-editor-dialog");
         await chatEditor.GetByTestId("llm-chat-definition-tab-sharing").ClickAsync();
@@ -71,10 +74,16 @@ public sealed partial class RemoteInstanceBrowserTests {
         await chatEditor.GetByTestId("definition-sharing-template").CheckAsync();
         await chatEditor.GetByTestId("llm-chat-definition-save-sharing").ClickAsync();
         await Assertions.Expect(chatEditor.GetByTestId("llm-chat-definition-sharing-saved")).ToBeVisibleAsync();
+        await chatEditor.GetByTestId("llm-chat-definition-tab-identity").ClickAsync();
+        var managedChatTags = chatEditor.GetByTestId("llm-chat-definition-managed-tags");
+        await Assertions.Expect(managedChatTags.GetByText("shared", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(managedChatTags.GetByText("api", new() { Exact = true })).ToHaveCountAsync(0);
         using (var hidden = await publisher.Client.GetAsync($"/api/llm-chats/{chatId:D}")) {
             Assert.Equal(System.Net.HttpStatusCode.NotFound, hidden.StatusCode);
         }
         await chatEditor.GetByTestId("llm-chat-definition-editor-cancel").ClickAsync();
+        await Assertions.Expect(chatCard.GetByText("shared", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(chatCard.GetByText("api", new() { Exact = true })).ToHaveCountAsync(0);
         await authorPage.GetByTestId($"llm-chat-definition-sharing-{chatId:D}").ClickAsync();
         await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-api")).Not.ToBeCheckedAsync();
         await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-template")).ToBeCheckedAsync();
@@ -86,6 +95,10 @@ public sealed partial class RemoteInstanceBrowserTests {
         await Assertions.Expect(authorPage.GetByText("Sharing settings saved.", new() { Exact = true })).ToBeVisibleAsync();
         using var hiddenWorkflow = await publisher.Client.GetAsync($"/api/workflows/definitions/{definition.Id.Value:D}");
         Assert.Equal(System.Net.HttpStatusCode.NotFound, hiddenWorkflow.StatusCode);
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, $"{publisher.HttpsUrl}{WorkflowCatalog}&workflowId={definition.Id.Value:D}");
+        var workflowTags = authorPage.GetByTestId("workflows-detail-tags");
+        await Assertions.Expect(workflowTags.GetByText("shared", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(workflowTags.GetByText("api", new() { Exact = true })).ToHaveCountAsync(0);
 
         await using var consumerServices = await TestApplicationBootstrap.BuildServiceProviderAsync(consumer.OwnedDatabaseProfile,
             "RemoteDefinitions.Consumer", TestSchemaBootstrapModules.Full);
@@ -119,9 +132,15 @@ public sealed partial class RemoteInstanceBrowserTests {
         await chat.GetByTestId("remote-template-accepted").WaitForAsync();
         await chat.GetByTestId("remote-template-open").ClickAsync();
         await Assertions.Expect(page.GetByTestId("llm-chat-definition-name")).ToHaveValueAsync(chatName);
+        var localChatTags = page.GetByTestId("llm-chat-definition-managed-tags");
+        await Assertions.Expect(localChatTags.GetByText("api", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(localChatTags.GetByText("shared", new() { Exact = true })).ToHaveCountAsync(0);
         using var client = new HttpClient { BaseAddress = new(consumer.BaseUrl) };
         var chats = await client.GetFromJsonAsync<JsonElement>($"/api/llm-chats?search={Uri.EscapeDataString(chatName)}");
         var imported = Assert.Single(chats.GetProperty("items").EnumerateArray(), row => row.GetProperty("name").GetString() == chatName);
+        var importedTags = imported.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ToArray();
+        Assert.Contains("api", importedTags);
+        Assert.DoesNotContain("shared", importedTags);
         Assert.NotEqual(chatId, imported.GetProperty("id").GetGuid());
         Assert.Equal(mirror.ProviderProfileId, imported.GetProperty("providerProfileId").GetGuid());
         Assert.Equal(mirror.DefaultModelId.Value, imported.GetProperty("model").GetString());
@@ -137,6 +156,7 @@ public sealed partial class RemoteInstanceBrowserTests {
         await dialog.GetByTestId("remote-template-close").ClickAsync();
         var localCatalog = local.GetRequiredService<IWorkflowCatalogService>();
         var copied = Assert.Single(await localCatalog.ListDefinitionsAsync(), entry => entry.Name == workflowName);
+        Assert.Equal(["api"], copied.Tags);
         Assert.NotEqual(definition.Id, copied.Id);
         Assert.Equal(WorkflowLifecycleStatus.Draft, copied.Status);
         var workflowDetails = await localCatalog.GetDefinitionAsync(copied.Id);

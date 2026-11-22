@@ -94,6 +94,10 @@ protocol with explicit dependency resolution before it can produce a local agent
    You can enable either option, both, or neither. Use **Save sharing** for a saved
    chat or workflow and **Save agent** for an agent. Clear the template option on the
    same tab to withdraw it from the remote catalog. Previously imported copies stay local.
+   Catalog tags follow the saved settings. `shared` marks a published template and
+   `api` marks a definition available through the API. Clearing either option removes
+   its tag. Existing definitions and imported copies show the tags for their local
+   settings. Agents and chats keep their custom tags alongside these read-only tags.
 3. On the consumer, open **Settings → Remote instances**, add the publisher and select the
    saved workspace secret containing its token. Each import page can also add a connection
    to this list. To use the publisher for inference, synchronize its provider catalog and
