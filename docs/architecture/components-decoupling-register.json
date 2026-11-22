@@ -9849,7 +9849,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
-      "sha256_lf": "03a9ac6cbca29f302ecbe4f902a4694b51cb6e2d9d44f07d2c127fb3faadb3c7",
+      "sha256_lf": "783a949a1b91af199214f62a8839d3a69189ee028f1a2190cc8c9c13bca84cdd",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9858,7 +9858,7 @@
       "caller": [
         "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
       ],
-      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "native_owner": "The route host owns the selected definition and carries runnable agents into runtime sections. Local templates stay in authoring.",
       "visual_owner": "AgentUsageDialog, ModelUsageDialog, ProviderUsageDialog",
       "descendants": [
         "AgentUsageDialog",
@@ -9957,7 +9957,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "66d0b0fca01870a7cd5095a12ba5142ea693583f5b081950a1c92b65d5da5bfc",
+      "sha256_lf": "938c64dd9dab15ddc151631adf7714345cc1254888997d9c44ead9d27a468963",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9966,7 +9966,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
-      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime. Owns the template dialog lifetime, catalog refresh and local editor opening after an accepted import.",
+      "native_owner": "The native catalog authorizes editing for saved agents and local templates. It admits runnable agents to team membership and quick chat.",
       "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog; AgentDecisionPolicyRecoveryDialog, RemoteAgentTemplateDialog",
       "descendants": [
         "AgentCatalogPanel",
@@ -26261,7 +26261,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
-      "sha256_lf": "4e0b680361099e2fe10e73707f8826f066ba4f69259b0c29d7e36b0ba705cfdf",
+      "sha256_lf": "9547683c4d3356b05bc7fcf55b1c11c105c66806ba1984bfed241ae4afea3055",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -26271,7 +26271,7 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The authoring catalog supplies agents and local templates. The panel labels templates and exposes the applicable actions.",
       "visual_owner": "CanDoItAll.AgentFramework.UI",
       "descendants": [
         "AgentSelectionCard"

@@ -114,8 +114,9 @@ public sealed class AgentCatalogBoundaryTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
             services.AddSingleton<IAgentCatalogOperations>(operations));
         var agent = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Team member", "");
+        var template = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Local authoring template", "") with { IsTemplate = true };
         var team = new AgentTeamDefinition(Guid.NewGuid(), "Team result", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
-        operations.Snapshot = new([agent], [team], new Dictionary<Guid, bool>());
+        operations.Snapshot = new([agent, template], [team], new Dictionary<Guid, bool>());
         var selected = new List<AgentTeamDefinition?>();
         var cut = harness.Context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.SkipCatalogRepair, true)
@@ -126,6 +127,10 @@ public sealed class AgentCatalogBoundaryTests {
         cut.Find(selector).Click();
         cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
         Assert.Equal(members ? typeof(AgentTeamMembersDialog) : typeof(AgentTeamDetailsDialog), dialogs.Dialogs[0].ComponentType);
+        if (members) {
+            var candidates = Assert.IsAssignableFrom<IReadOnlyList<AgentDefinition>>(dialogs.Dialogs[0].Parameters[nameof(AgentTeamMembersDialog.Agents)]);
+            Assert.Equal(agent.Id, Assert.Single(candidates).Id);
+        }
         await cut.InvokeAsync(() => dialogs.CloseAsync());
         Assert.Equal(1, operations.Loads);
         Assert.Equal(0, operations.MemberWrites);

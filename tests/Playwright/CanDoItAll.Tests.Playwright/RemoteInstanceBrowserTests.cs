@@ -43,15 +43,23 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         await authorBrowser.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == publisherAuthority ? route.ContinueAsync() : route.AbortAsync());
         await authorBrowser.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {author.Token}" });
         var authorPage = await authorBrowser.NewPageAsync();
-        var sharingUrl = $"{publisher.HttpsUrl}/agents?tab=agents&agentId={templateId:D}&agentSection=sharing";
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, sharingUrl);
-        var publication = authorPage.GetByTestId("definition-sharing-template");
-        var apiAvailability = authorPage.GetByTestId("definition-sharing-api");
+        var catalogUrl = $"{publisher.HttpsUrl}/agents?tab=agents";
+        var sharingUrl = $"{catalogUrl}&agentId={templateId:D}&agentSection=sharing";
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, catalogUrl);
+        var templateCard = authorPage.GetByRole(AriaRole.Button, new() { Name = $"Select {templateName}", Exact = true });
+        await Assertions.Expect(templateCard).ToContainTextAsync("Local template", new() { Timeout = 60_000 });
+        await templateCard.DblClickAsync();
+        var authorEditor = authorPage.GetByTestId("agents-details-dialog");
+        await authorEditor.GetByRole(AriaRole.Tab, new() { Name = "Sharing", Exact = true }).ClickAsync();
+        await Assertions.Expect(authorPage).ToHaveURLAsync(sharingUrl);
+        var publication = authorEditor.GetByTestId("definition-sharing-template");
+        var apiAvailability = authorEditor.GetByTestId("definition-sharing-api");
         await Assertions.Expect(apiAvailability).ToBeCheckedAsync();
         await Assertions.Expect(publication).Not.ToBeCheckedAsync();
         await apiAvailability.UncheckAsync();
         await publication.CheckAsync();
-        await authorPage.GetByTestId("agents-catalog-save").ClickAsync();
+        await authorEditor.GetByTestId("agents-catalog-save").ClickAsync();
+        await authorPage.GetByText("Agent saved", new() { Exact = true }).First.WaitForAsync(new() { Timeout = 60_000 });
         Assert.Equal(ApiAccessScopeNames.ReadSharedAgentTemplates, Assert.Single(reader.Scopes));
         await ApiAccessSettingsBrowserTests.AssertStatusAsync(publisher.Client, reader.Token, "/api/shared-providers/v1/catalog", HttpStatusCode.Forbidden);
 
@@ -141,6 +149,11 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, sharingUrl);
         await Assertions.Expect(apiAvailability).Not.ToBeCheckedAsync();
         await Assertions.Expect(publication).ToBeCheckedAsync();
+        await publication.UncheckAsync();
+        await authorEditor.GetByTestId("agents-catalog-save").ClickAsync();
+        await authorPage.GetByText("Agent saved", new() { Exact = true }).First.WaitForAsync(new() { Timeout = 60_000 });
+        await ApiAccessSettingsBrowserTests.AssertStatusAsync(publisher.Client, reader.Token,
+            RemoteAgentTemplateRoutes.Details(templateId), HttpStatusCode.NotFound);
 
         var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "remote-instances");
         Directory.CreateDirectory(directory);

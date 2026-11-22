@@ -86,8 +86,9 @@ protocol with explicit dependency resolution before it can produce a local agent
    each catalog the consumer needs. Use `api.shared-agent-templates.read` for agents,
    `api.shared-simple-chats.read` for chats and `api.shared-workflows.read` for workflows.
 2. Open the definition on the publisher and select **Sharing**. For a Simple Chat,
-   click its card under **Agents → Simple Chats → Definitions**. For an agent open
-   its editor, and for a workflow open **Sharing** in the canvas inspector.
+   click its card under **Agents → Simple Chats → Definitions**. In **Agents**,
+   double-click the agent or **Local template** card. For a workflow, open **Sharing**
+   in the canvas inspector.
    **Available through the API** lets authorized clients discover the definition and
    start work with it. **Share as a template** lets a connected instance import a copy.
    You can enable either option, both, or neither. Use **Save sharing** for a saved

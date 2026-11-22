@@ -36,7 +36,7 @@ public sealed class AgentCatalogOperations(
             await repair.EnsureCurrentOrganizationCatalogAsync(cancellationToken);
         }
         var agentsTask = request.Agents is null
-            ? workspace.ListAgentsAsync(includeTemplates: false, cancellationToken)
+            ? workspace.ListAgentsAsync(includeTemplates: true, cancellationToken)
             : Task.FromResult(request.Agents);
         var providersTask = request.Providers is null
             ? providers.ListProvidersAsync(cancellationToken)

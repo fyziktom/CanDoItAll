@@ -310,7 +310,7 @@ public partial class AgentsHomePage : IDisposable {
         if (tab == route.Tab) {
             return Task.CompletedTask;
         }
-        var carriedAgent = tab.UsesAgentSelection() && tab != AgentWorkspaceSection.Agents
+        var carriedAgent = tab.UsesAgentSelection() && tab != AgentWorkspaceSection.Agents && selectedContextAgent?.IsTemplate != true
             ? route.Tab == AgentWorkspaceSection.Agents ? selectedContextAgent?.Id : route.AgentId
             : null;
         Go(new AgentsUrlState {
