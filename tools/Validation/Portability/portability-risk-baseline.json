@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-21T16:32:56.452034+00:00",
+  "generated_utc": "2026-11-22T15:52:21.026260+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15858,
+  "allowance_count": 15863,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -14384,6 +14384,42 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "4c53d6837534f6ac0c8b9ceceaf53c73ca376d7155874ed2d2ff2b4927695326",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "abcaa03ecc24ce425c3a9350a7273984881996747be5c11255d8de192edd21ee",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "08af0e73ef76c74dc2474c07e8f4c3e721c10a7a454e9305eae4e0e869408a17",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "452c22dda854c4679c14921e53a6be2eb13f7ee5494e736ea4e03254645b0fd4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "815fa35002bd3edd90001a0f13f166a56eeb74db97d66536ec8556d3eedb13cc",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "b4ef7775617629a18cfc5ba07070bb8201d8ef844751acedb2fb03336b0dff2e",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a33075cb8612f67d57d247ef09617e46910b005bc5020353f51528c26c3aca30",
@@ -18197,7 +18233,7 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
       "category": "case-policy",
       "source_fingerprint": "158079ac10eb2460fa72f3e2b1aa8ab8c0f5cdca30c96d6d69ef00d5178f951c",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
