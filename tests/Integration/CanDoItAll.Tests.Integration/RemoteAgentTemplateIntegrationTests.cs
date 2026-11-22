@@ -26,13 +26,30 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
         await using var scope = host.App.Services.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var available = await workspace.SaveAgentDefinitionAsync(new() { Name = "API visible agent" });
+        var available = await workspace.SaveAgentDefinitionAsync(new() {
+            Name = "API visible agent", Tags = ["client", " API ", "SHARED", "Client"]
+        });
         var hidden = await workspace.SaveAgentDefinitionAsync(new() { Name = "API private agent", ApiAvailable = false });
         var team = await workspace.SaveAgentTeamAsync(new() { Name = "Mixed exposure team", AgentIds = [available.Id, hidden.Id] });
         var note = await workspace.SaveMemoryAsync(new() { AgentId = hidden.Id, Title = "Private note" });
         await workspace.GetOrCreateChatSessionAsync(hidden.Id);
         var path = $"/api/agents/{hidden.Id:D}";
         var teamPath = $"/api/agents/teams/{team:D}";
+
+        Assert.Equal(["client"], available.Tags);
+        foreach (var list in new[] { "/api/agents?includeTemplates=true", teamPath + "/agents" }) {
+            var agents = await host.Client.GetFromJsonAsync<AgentDefinition[]>(list);
+            Assert.Equal(["api", "client"], Assert.Single(agents!, item => item.Id == available.Id).Tags);
+        }
+        var publicForm = await host.Client.GetFromJsonAsync<AgentEditorModel>($"/api/agents/{available.Id:D}");
+        Assert.NotNull(publicForm);
+        Assert.Equal(["api", "client"], publicForm.Tags);
+        publicForm.Tags.Add(" sHaReD ");
+        using var ordinarySave = await host.Client.PostAsJsonAsync("/api/agents", publicForm);
+        ordinarySave.EnsureSuccessStatusCode();
+        var reread = await workspace.GetAgentEditorAsync(available.Id);
+        Assert.False(reread.SharedTemplate);
+        Assert.Equal(["client"], reread.Tags);
 
         foreach (var list in new[] { "/api/agents?includeTemplates=true", teamPath + "/agents", "/api/agents/teams", teamPath, teamPath + "/editor", "/api/agents/bootstrap" }) {
             var json = await host.Client.GetStringAsync(list);
@@ -91,12 +108,17 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var agent = await workspace.SaveAgentDefinitionAsync(new() { Name = "Legacy sharing preference", IsTemplate = true });
         Assert.False(agent.SharesRemoteTemplate);
         var legacy = await store.UpdateCatalogAsync(catalog => catalog with {
-            Agents = catalog.Agents.Select(item => item.Id == agent.Id ? item with { SharedTemplate = null } : item).ToList()
+            Agents = catalog.Agents.Select(item => item.Id == agent.Id ? item with {
+                SharedTemplate = null, Tags = [" Shared ", "API", "review"]
+            } : item).ToList()
         });
         var publisher = Guid.NewGuid();
         Assert.Contains(RemoteAgentTemplateCatalog.List(legacy, publisher), item => item.Id == agent.Id);
+        Assert.Equal(["shared", "api", "review"], legacy.Agents.Single(item => item.Id == agent.Id).EffectiveTags);
+        Assert.Equal(["review"], RemoteAgentTemplateCatalog.Find(legacy, publisher, agent.Id)!.Tags);
         var form = await workspace.GetAgentEditorAsync(agent.Id);
         Assert.True(form.SharedTemplate);
+        Assert.Equal(["review"], form.Tags);
         form.SharedTemplate = null;
         form.IsTemplate = false;
         var saved = await workspace.SaveAgentDefinitionAsync(form);
@@ -104,12 +126,17 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.False(saved.IsTemplate);
         var copied = await workspace.CloneAgentAsync(saved.Id, "Cloned private definition");
         var converted = await workspace.ConvertToTemplateAsync(saved.Id, "converted-private-definition");
-        Assert.False((await workspace.GetAgentEditorAsync(copied)).SharedTemplate);
-        Assert.False((await workspace.GetAgentEditorAsync(converted)).SharedTemplate);
+        var copies = (await store.LoadCatalogAsync()).Agents;
+        foreach (var id in new[] { copied, converted }) {
+            var copy = Assert.Single(copies, item => item.Id == id);
+            Assert.False(copy.SharedTemplate);
+            Assert.Equal(["api", "review"], copy.EffectiveTags);
+        }
         var withdrawn = await workspace.GetAgentEditorAsync(saved.Id);
         withdrawn.SharedTemplate = false;
         withdrawn.IsTemplate = true;
-        await workspace.SaveAgentAsync(withdrawn);
+        var privateTemplate = await workspace.SaveAgentDefinitionAsync(withdrawn);
+        Assert.Equal(["api", "review"], privateTemplate.EffectiveTags);
         Assert.Null(RemoteAgentTemplateCatalog.Find(await store.LoadCatalogAsync(), publisher, agent.Id));
     }
 
@@ -241,13 +268,15 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         });
         var source = Guid.NewGuid();
         var template = new RemoteAgentTemplate(Guid.NewGuid(), "Writing assistant", "Writer", "Compose text", "Edit the request",
-            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow) {
+            AgentWorkloadKind.General, [" Shared ", "api", "editorial"], [], DateTimeOffset.UtcNow) {
             PublisherId = Guid.NewGuid(), CatalogRevision = 9, AvatarImageUrl = AgentAvatarImageCatalog.BundledAvatarUrls[0]
         };
         await Assert.ThrowsAsync<RemoteAgentTemplateImportException>(() => workspace.ImportRemoteAgentTemplateAsync(source, template, local,
             model: new(provider, "unavailable")));
         var id = await workspace.ImportRemoteAgentTemplateAsync(source, template, local, model: new(provider, model));
         var saved = await workspace.GetAgentEditorAsync(id);
+        Assert.Equal(["editorial"], saved.Tags);
+        Assert.Equal(["api", "editorial"], (await host.Client.GetFromJsonAsync<AgentEditorModel>($"/api/agents/{id:D}"))!.Tags);
         Assert.Equal(provider, saved.ProviderProfileId);
         Assert.Equal(model, saved.Model);
         Assert.Equal(template.AvatarImageUrl, saved.AvatarImageUrl);

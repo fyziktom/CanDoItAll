@@ -185,13 +185,9 @@ public partial class AgentDetailsDialog : IAsyncDisposable {
         => AgentProviderPresentationMapper.ToPresentationKey(
             editorModel.ImageGenerationAccess.PreferredProviderProfileId);
 
-    private IReadOnlyList<string> VisibleTagSuggestions => agents
+    private IReadOnlyList<string> VisibleTagSuggestions => NormalizeVisibleTags(agents
         .Where(agent => !agent.IsTemplate)
-        .SelectMany(agent => agent.Tags)
-        .Where(tag => !AgentSpecialTags.IsFavorite(tag))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+        .SelectMany(agent => agent.Tags));
 
     private IReadOnlyList<string> AvailableCapabilityTags => capabilities
         .SelectMany(item => item.Tags)
@@ -1494,11 +1490,8 @@ public partial class AgentDetailsDialog : IAsyncDisposable {
 
     private static IReadOnlyList<string> NormalizeVisibleTags(IEnumerable<string> tags)
     {
-        return tags
-            .Select(tag => tag.Trim())
-            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+        return AgentSpecialTags.NormalizeCustom(tags)
             .Where(tag => !AgentSpecialTags.IsFavorite(tag))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

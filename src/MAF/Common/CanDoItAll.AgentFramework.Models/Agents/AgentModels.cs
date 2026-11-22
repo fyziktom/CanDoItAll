@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -219,6 +220,9 @@ DateTimeOffset UpdatedAtUtc)
 
     [JsonIgnore]
     public bool SharesRemoteTemplate => SharedTemplate ?? IsTemplate;
+
+    [JsonIgnore]
+    public IReadOnlyList<string> EffectiveTags => DefinitionSharingTags.Project(Tags, ApiAvailable, SharesRemoteTemplate);
 }
 
 public static class AgentAvatarImageCatalog

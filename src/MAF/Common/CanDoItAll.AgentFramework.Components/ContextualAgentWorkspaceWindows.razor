@@ -1887,7 +1887,7 @@ Use these workspace artifacts as input:
                item.Agent.Model.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                item.ScopeLabel.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                ResolveAccessLabel(item).Contains(search, StringComparison.OrdinalIgnoreCase) ||
-               item.Agent.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
+               item.Agent.EffectiveTags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase));
     }
 
     private bool MatchesTags(ContextualAgentAccessSummary item)
@@ -1998,10 +1998,7 @@ Use these workspace artifacts as input:
     }
 
     private static IReadOnlyList<string> VisibleTags(AgentDefinition agent)
-        => agent.Tags
-            .Where(tag => !AgentSpecialTags.IsFavorite(tag))
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        => AgentSpecialTags.Visible(agent);
 
     private static string ResolveAgentName(AgentDefinition agent)
         => string.IsNullOrWhiteSpace(agent.Name) ? ResolveAgentRole(agent) : agent.Name;

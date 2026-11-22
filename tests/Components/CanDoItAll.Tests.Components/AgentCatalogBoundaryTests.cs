@@ -34,8 +34,11 @@ public sealed class AgentCatalogBoundaryTests {
     }
     [Fact]
     public void Controlled_panel_search_and_selection_emit_intents_without_services() {
-        var first = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog first", "");
-        var agents = new[] { first, AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog second", "") };
+        var first = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog first", "") with {
+            ApiAvailable = false, SharedTemplate = true, Tags = [" api "]
+        };
+        var second = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog second", "") with { Tags = [" Shared "] };
+        var agents = new[] { first, second };
         using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -45,6 +48,10 @@ public sealed class AgentCatalogBoundaryTests {
             .Add(component => component.Selection, new AgentCatalogSelection(null, null))
             .Add(component => component.Intent, EventCallback.Factory.Create<AgentCatalogIntent>(this, intents.Add)));
 
+        cut.Find("[data-testid='agents-catalog-search']").Input("API");
+        Assert.Contains(second.Name, Assert.Single(cut.FindAll("[data-testid='agents-catalog-card']")).TextContent);
+        cut.Find("[data-testid='agents-catalog-search']").Input("shared");
+        Assert.Contains(first.Name, Assert.Single(cut.FindAll("[data-testid='agents-catalog-card']")).TextContent);
         cut.Find("[data-testid='agents-catalog-search']").Input(first.Name);
         Assert.All(cut.FindAll("[data-testid='agents-catalog-card-shell']"), card => Assert.Contains(first.Name, card.TextContent));
         cut.Find("[data-testid='agents-catalog-card']").Click();

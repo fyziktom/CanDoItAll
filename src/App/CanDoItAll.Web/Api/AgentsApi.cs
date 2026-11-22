@@ -1,4 +1,5 @@
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.RemoteInstances;
 using System.ComponentModel;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
@@ -488,7 +489,8 @@ internal static class AgentsApi
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken,
         bool includeTemplates = false) =>
-        Results.Ok((await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken)).Where(agent => agent.ApiAvailable).ToArray());
+        Results.Ok((await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken)).Where(agent => agent.ApiAvailable)
+            .Select(AgentApiResponseMapper.WithSharingTags).ToArray());
 
     /// <summary>
     /// Read the data needed to open the agent chat page: the agent list and the workspace of the initially selected
@@ -537,8 +539,11 @@ internal static class AgentsApi
     internal static async Task<IResult> GetAgentEditorAsync(
         Guid agentId,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.GetAgentEditorAsync(agentId, cancellationToken));
+        CancellationToken cancellationToken) {
+        var editor = await workspaceService.GetAgentEditorAsync(agentId, cancellationToken);
+        editor.Tags = [.. DefinitionSharingTags.Project(editor.Tags, editor.ApiAvailable, editor.SharedTemplate ?? editor.IsTemplate)];
+        return Results.Ok(editor);
+    }
 
     /// <summary>
     /// Create an agent definition, or replace an existing one using the revision the caller last read.
@@ -893,6 +898,7 @@ internal static class AgentsApi
         var teamAgentIds = team.AgentIds.ToHashSet();
         var teamAgents = (await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken))
             .Where(agent => agent.ApiAvailable && teamAgentIds.Contains(agent.Id))
+            .Select(AgentApiResponseMapper.WithSharingTags)
             .ToList();
         return Results.Ok(teamAgents);
     }

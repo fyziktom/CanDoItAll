@@ -47,6 +47,7 @@ public sealed class EditorRendererTests {
         Assert.Equal("Summary Ž", draft.Summary);
         Assert.Equal("Instructions 東京", draft.Instructions);
         Assert.Contains("Favorite", draft.Tags);
+        Assert.Equal("api", cut.Find("[data-testid='agents-managed-tags']").TextContent.Trim());
         await Tab(cut, AgentEditorSection.Sharing);
         Assert.True(draft.ApiAvailable);
         Assert.False(draft.SharedTemplate ?? false);
@@ -55,6 +56,13 @@ public sealed class EditorRendererTests {
         cut.Find("[data-testid='definition-sharing-api']").Change(false);
         Assert.False(draft.ApiAvailable);
         Assert.True(draft.SharedTemplate);
+        await Tab(cut, AgentEditorSection.Identity);
+        Assert.Equal("shared", cut.Find("[data-testid='agents-managed-tags']").TextContent.Trim());
+        var tagEditor = cut.FindComponent<TagEditor>().Instance;
+        await cut.InvokeAsync(() => tagEditor.ValueChanged.InvokeAsync([" SHARED ", "Api", "design"]));
+        Assert.Equal(["design", "Favorite"], draft.Tags);
+        Assert.Equal(["design"], cut.FindComponent<TagEditor>().Instance.Value);
+        Assert.Empty(cut.FindAll("[data-testid='agents-managed-tags'] button"));
         await Tab(cut, AgentEditorSection.Images);
         cut.Find("[data-testid='agents-catalog-image-generation-enabled']").Change(true);
         cut.Find("[data-testid='agents-catalog-image-generation-project-assets']").Change(true);

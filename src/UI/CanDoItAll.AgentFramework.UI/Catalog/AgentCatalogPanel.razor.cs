@@ -221,7 +221,7 @@ public partial class AgentCatalogPanel
                agent.RoleTitle.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
                agent.Summary.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
                agent.Model.Contains(agentSearch, StringComparison.OrdinalIgnoreCase) ||
-               agent.Tags.Any(tag => tag.Contains(agentSearch, StringComparison.OrdinalIgnoreCase));
+               agent.EffectiveTags.Any(tag => tag.Contains(agentSearch, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string BuildTeamTreeNodeId(Guid teamId)

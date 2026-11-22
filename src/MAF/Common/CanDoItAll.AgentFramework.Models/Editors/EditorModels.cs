@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -214,7 +215,7 @@ public sealed class AgentEditorModel
             VoiceAccess = AgentVoiceAccessMetadata.Read(definition.ConfigurationJson),
             MemoryAccess = AgentMemoryAccessMetadata.Read(definition.ConfigurationJson),
             SelectedCapabilityIds = definition.Capabilities.Select(item => item.CapabilityId).ToList(),
-            Tags = definition.Tags.ToList()
+            Tags = [.. DefinitionSharingTags.Custom(definition.Tags)]
         };
     }
 }

@@ -48,6 +48,8 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, catalogUrl);
         var templateCard = authorPage.GetByRole(AriaRole.Button, new() { Name = $"Select {templateName}", Exact = true });
         await Assertions.Expect(templateCard).ToContainTextAsync("Local template", new() { Timeout = 60_000 });
+        await Assertions.Expect(templateCard.GetByText("api", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(templateCard.GetByText("shared", new() { Exact = true })).ToHaveCountAsync(0);
         await templateCard.DblClickAsync();
         var authorEditor = authorPage.GetByTestId("agents-details-dialog");
         await authorEditor.GetByRole(AriaRole.Tab, new() { Name = "Sharing", Exact = true }).ClickAsync();
@@ -130,6 +132,7 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         await row.GetByTestId("remote-template-open").ClickAsync();
         await page.GetByTestId("agents-catalog-name").WaitForAsync();
         await Assertions.Expect(page.GetByTestId("agents-catalog-name")).ToHaveValueAsync(templateName);
+        await Assertions.Expect(page.GetByTestId("agents-managed-tags")).ToHaveTextAsync("api");
 
         var localAgents = (await client.GetFromJsonAsync<AgentDefinition[]>("/api/agents?includeTemplates=true"))!;
         var imported = Assert.Single(localAgents, item => item.Name == templateName);
@@ -137,6 +140,7 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         Assert.False(imported.IsTemplate);
         Assert.False(imported.SharedTemplate);
         Assert.True(imported.ApiAvailable);
+        Assert.Equal(["api"], imported.Tags);
         Assert.Equal(AgentLifecycleStatus.Draft, imported.Status);
         Assert.Equal(Instructions, imported.Instructions);
         Assert.Equal(AgentAvatarImageCatalog.BundledAvatarUrls[0], imported.AvatarImageUrl);
@@ -149,6 +153,9 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, sharingUrl);
         await Assertions.Expect(apiAvailability).Not.ToBeCheckedAsync();
         await Assertions.Expect(publication).ToBeCheckedAsync();
+        await authorEditor.GetByRole(AriaRole.Tab, new() { Name = "Identity", Exact = true }).ClickAsync();
+        await Assertions.Expect(authorEditor.GetByTestId("agents-managed-tags")).ToHaveTextAsync("shared");
+        await authorEditor.GetByRole(AriaRole.Tab, new() { Name = "Sharing", Exact = true }).ClickAsync();
         await publication.UncheckAsync();
         await authorEditor.GetByTestId("agents-catalog-save").ClickAsync();
         await authorPage.GetByText("Agent saved", new() { Exact = true }).First.WaitForAsync(new() { Timeout = 60_000 });

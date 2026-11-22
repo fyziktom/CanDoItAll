@@ -98,11 +98,7 @@ internal static class AgentDefinitionFactory
                 AllowedSecrets = NormalizeAllowedSecretReferences(model.AllowedSecretReferences)
             },
             Capabilities: capabilities,
-            Tags: model.Tags
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList(),
+            Tags: AgentSpecialTags.NormalizeCustom(model.Tags),
             CreatedAtUtc: existingAgent?.CreatedAtUtc ?? now,
             UpdatedAtUtc: AgentConfigurationVersion.NextRevision(existingAgent?.UpdatedAtUtc, now))
         {

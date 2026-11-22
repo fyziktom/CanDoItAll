@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -34,7 +35,8 @@ public static class RemoteAgentTemplateCatalog {
             }
             return new RemoteAgentTemplateCapability(item.Kind, item.Key, ReadInlineSkill(item));
         }).ToArray();
-        return new(id, agent.Name, agent.RoleTitle, agent.Summary, agent.Instructions, agent.Workload, agent.Tags, requirements, agent.UpdatedAtUtc) {
+        return new(id, agent.Name, agent.RoleTitle, agent.Summary, agent.Instructions, agent.Workload,
+            DefinitionSharingTags.Custom(agent.Tags), requirements, agent.UpdatedAtUtc) {
             PublisherId = publisherId, CatalogRevision = catalog.CatalogDataRevision.Value,
             AvatarImageUrl = RemoteTemplateAvatar.ForDisplay(agent.AvatarImageUrl)
         };

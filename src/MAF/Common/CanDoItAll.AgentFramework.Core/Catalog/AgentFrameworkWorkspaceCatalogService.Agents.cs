@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -214,6 +215,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 IsTemplate = false,
                 ApiAvailable = true,
                 SharedTemplate = false,
+                Tags = DefinitionSharingTags.Custom(source.Tags),
                 TemplateKey = cloneTemplateKey,
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
                     source.ConfigurationJson),
@@ -250,6 +252,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 IsTemplate = true,
                 ApiAvailable = true,
                 SharedTemplate = false,
+                Tags = DefinitionSharingTags.Custom(source.Tags),
                 TemplateKey = normalizedTemplateKey,
                 Name = $"{source.Name} template",
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
@@ -575,11 +578,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             Model = agent.Model.Trim(),
             ConfigurationJson = agent.ConfigurationJson.Trim(),
             TemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(agent.TemplateKey, agent.Name),
-            Tags = agent.Tags
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()
+            Tags = AgentSpecialTags.NormalizeCustom(agent.Tags)
         };
     }
 

@@ -372,11 +372,7 @@ internal sealed class AgentPackageImportService(
             ConfigurationJson = agent.ConfigurationJson.Trim(),
             TemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(agent.TemplateKey, agent.Name),
             Capabilities = agent.Capabilities ?? [],
-            Tags = (agent.Tags ?? [])
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()
+            Tags = AgentSpecialTags.NormalizeCustom(agent.Tags)
         };
     }
 
