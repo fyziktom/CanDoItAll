@@ -35,7 +35,7 @@ public sealed class AgentEditorSandboxBrowserTests {
             await page.GotoAsync(host.BaseUrl);
             await Assertions.Expect(page.GetByTestId("editor-sandbox")).ToHaveAttributeAsync("data-interactive", "true");
             var editor = page.GetByTestId("editor-a");
-            await Assertions.Expect(editor.GetByRole(AriaRole.Tab)).ToHaveCountAsync(10);
+            await Assertions.Expect(editor.GetByRole(AriaRole.Tab)).ToHaveCountAsync(11);
             var name = editor.GetByTestId("agents-catalog-name");
             await name.FillAsync("Žluťoučký 東京 🧭 before blur");
             await name.PressAsync("Enter");

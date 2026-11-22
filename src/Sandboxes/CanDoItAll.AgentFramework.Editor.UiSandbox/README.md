@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Independent scenario host for all ten real Agent editor sections and shared controls at
+Independent scenario host for the Agent editor sections and shared controls at
 1920×1080. It composes Editor.UI, the existing capability list, StorageSelection, and
 BaseLib registration. It requires no product
 database, provider credentials, runtime owner or API connection.

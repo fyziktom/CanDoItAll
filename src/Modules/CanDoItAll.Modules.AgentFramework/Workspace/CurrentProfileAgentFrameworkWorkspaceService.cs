@@ -162,6 +162,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         }
     }
 
+    public Task<bool?> FindAgentApiAvailabilityAsync(Guid agentId, CancellationToken cancellationToken)
+        => ResolveService().FindAgentApiAvailabilityAsync(agentId, cancellationToken);
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
@@ -537,6 +540,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     {
         return ResolveService().GetChatPageBootstrapAsync(includeTemplates, cancellationToken);
     }
+
+    public Task<ChatPageBootstrapSnapshot> GetApiChatPageBootstrapAsync(bool includeTemplates, CancellationToken cancellationToken) =>
+        ResolveService().GetApiChatPageBootstrapAsync(includeTemplates, cancellationToken);
 
     public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default)
     {

@@ -2,8 +2,9 @@
 
 ## Purpose
 
-The complete technical Agent editor renders the shared form, all ten sections, loading
-and failure states, mutation feedback, footer and small confirmations.
+The technical Agent editor renders the shared form, loading and failure states,
+mutation feedback, footer and confirmations. Its Sharing tab controls ordinary API
+availability and remote template publication independently.
 It receives one host-owned `AgentEditorModel` and `EditContext`; it never rebuilds a
 partial whole-agent request.
 

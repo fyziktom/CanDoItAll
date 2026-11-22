@@ -40,7 +40,11 @@ public static class AgentConfigurationVersion
                 .ToList(),
             Tags = agent.Tags.OrderBy(item => item, StringComparer.OrdinalIgnoreCase).ToList()
         };
-        return Convert.ToHexString(SHA256.HashData(
-            JsonSerializer.SerializeToUtf8Bytes(material, SerializerOptions)));
+        var previousFormat = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(material, SerializerOptions)));
+        if (agent.ApiAvailable && agent.SharesRemoteTemplate == agent.IsTemplate) {
+            return previousFormat;
+        }
+        return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(
+            new { Configuration = previousFormat, agent.ApiAvailable, agent.SharesRemoteTemplate }, SerializerOptions)));
     }
 }

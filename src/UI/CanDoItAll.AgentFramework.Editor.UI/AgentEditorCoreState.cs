@@ -77,4 +77,6 @@ public abstract record AgentEditorCoreIntent {
     public sealed record ImageProvider(ConversationPresentationKey? Value) : AgentEditorCoreIntent;
     public sealed record ImageModel(string? Value) : AgentEditorCoreIntent;
     public sealed record Voice(bool Value) : AgentEditorCoreIntent;
+    public sealed record ApiAvailability(bool Value) : AgentEditorCoreIntent;
+    public sealed record TemplatePublication(bool Value) : AgentEditorCoreIntent;
 }

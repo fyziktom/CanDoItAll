@@ -24,7 +24,7 @@ internal static class AgentEditorCoreUiJourney {
         await page.WaitForFunctionAsync("() => typeof databaseSwitchListeners !== 'undefined' && databaseSwitchListeners.size === 1");
         var dialog = page.GetByTestId("agents-details-dialog").Last;
         await Assertions.Expect(dialog.GetByTestId("agents-catalog-name")).ToHaveValueAsync(baseline.Before.Name);
-        await Assertions.Expect(dialog.GetByRole(AriaRole.Tab)).ToHaveCountAsync(10);
+        await Assertions.Expect(dialog.GetByRole(AriaRole.Tab)).ToHaveCountAsync(11);
         await dialog.GetByTestId("agents-catalog-name").FillAsync(" ");
         await dialog.GetByTestId("agents-catalog-name").PressAsync("Enter");
         await page.GetByText("Agent save failed", new() { Exact = true }).First.WaitForAsync();

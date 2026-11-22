@@ -340,6 +340,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 now,
                 now)
             {
+                SharedTemplate = false,
                 AvatarImageUrl = AgentAvatarImageCatalog.RequireBundledAvatarUrl(
                     settings.AvatarImageUrl,
                     member.Key)

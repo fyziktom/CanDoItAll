@@ -71,6 +71,9 @@ public sealed class CapabilityVerificationApiIntegrationTests {
 public class CapabilityApiWorkspace : DispatchProxy {
     public CapabilityVerificationOutcome? Outcome { get; set; }
     protected override object? Invoke(MethodInfo? method, object?[]? args) {
+        if (method?.Name == nameof(IAgentFrameworkWorkspaceService.FindAgentApiAvailabilityAsync)) {
+            return Task.FromResult<bool?>(true);
+        }
         if (method!.Name == nameof(IAgentFrameworkWorkspaceService.VerifyCapabilityAsync)) {
             return Outcome is null ? Task.FromResult(new CapabilityVerificationOutcome(CapabilityVerificationDisposition.Committed))
                 : Task.FromException<CapabilityVerificationOutcome>(new CapabilityVerificationException(Outcome));

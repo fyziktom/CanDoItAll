@@ -179,6 +179,12 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
             case AgentEditorCoreIntent.Voice value:
                 Draft.VoiceAccess.CanUseVoiceMode = value.Value;
                 break;
+            case AgentEditorCoreIntent.ApiAvailability value:
+                Draft.ApiAvailable = value.Value;
+                break;
+            case AgentEditorCoreIntent.TemplatePublication value:
+                Draft.SharedTemplate = value.Value;
+                break;
             default: throw new ArgumentOutOfRangeException(nameof(intent));
         }
     }

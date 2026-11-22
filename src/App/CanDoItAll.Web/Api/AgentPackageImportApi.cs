@@ -20,6 +20,7 @@ internal static class AgentPackageImportApi
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
             .Produces<ApiErrorResponse>(StatusCodes.Status412PreconditionFailed)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .ProducesApiErrors(
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden)
@@ -182,6 +183,7 @@ internal static class AgentPackageImportApi
         {
             var statusCode = exception.Kind switch
             {
+                AgentPackageImportFailureKind.NotFound => StatusCodes.Status404NotFound,
                 AgentPackageImportFailureKind.Conflict => StatusCodes.Status409Conflict,
                 AgentPackageImportFailureKind.PreconditionFailed => StatusCodes.Status412PreconditionFailed,
                 _ => StatusCodes.Status400BadRequest

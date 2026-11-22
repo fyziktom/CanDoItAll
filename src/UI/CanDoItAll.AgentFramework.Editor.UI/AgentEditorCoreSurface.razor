@@ -1,3 +1,4 @@
+@using CanDoItAll.Editing.UI
 @{
     var state = State;
 }
@@ -224,6 +225,12 @@ else {
                                             </Stack>
                                         </SurfaceCard>
                                     </FormSection>
+                                    break;
+                                case AgentEditorSection.Sharing:
+                                    <DefinitionSharingFields ApiAvailable="sectionDraft.ApiAvailable" SharedTemplate="@(sectionDraft.SharedTemplate ?? false)"
+                                        ApiAvailableChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ApiAvailability(value))"
+                                        SharedTemplateChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.TemplatePublication(value))"
+                                        Disabled="sectionState.IsMutationBlocked" />
                                     break;
                                 case AgentEditorSection.Memory:
                                     @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))

@@ -65,7 +65,8 @@ public sealed class AgentsUrlCodec : IUrlStateCodec<AgentsUrlState> {
         (AgentEditorSection.Secrets, "secrets"),
         (AgentEditorSection.ProcessAccess, "process-access"),
         (AgentEditorSection.Capabilities, "capabilities"),
-        (AgentEditorSection.Voice, "voice"));
+        (AgentEditorSection.Voice, "voice"),
+        (AgentEditorSection.Sharing, "sharing"));
 
     public static UrlTokenMap<ProviderEditorSection> ProviderSections { get; } = new(
         ProviderEditorSections.All.Select(definition => (definition.Section, ProviderEditorSections.Token(definition.Section))).ToArray());

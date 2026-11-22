@@ -110,6 +110,12 @@ public sealed class AgentEditorModel
     /// <summary>True to store the agent as a template used to create working agents.</summary>
     public bool IsTemplate { get; set; }
 
+    [Description("Whether the agent can be discovered and used through the ordinary HTTP API. Defaults to true.")]
+    public bool ApiAvailable { get; set; } = true;
+
+    [Description("Whether to publish this definition as a remote template. Omission preserves existing consent. A new definition is private by default.")]
+    public bool? SharedTemplate { get; set; }
+
     /// <summary>
     /// Canonical key of the agent; blank derives it from <c>name</c>. It is normalized to lower-case letters and digits
     /// separated by hyphens, must contain a letter or digit and must be unique among all agents and templates, so two
@@ -196,6 +202,8 @@ public sealed class AgentEditorModel
             EnableBackgroundResponses = definition.EnableBackgroundResponses,
             ConfigurationJson = definition.ConfigurationJson,
             IsTemplate = definition.IsTemplate,
+            ApiAvailable = definition.ApiAvailable,
+            SharedTemplate = definition.SharesRemoteTemplate,
             TemplateKey = definition.TemplateKey,
             Permissions = definition.Permissions,
             AllowedSecretReferences = definition.Permissions.NormalizedAllowedSecrets.ToList(),

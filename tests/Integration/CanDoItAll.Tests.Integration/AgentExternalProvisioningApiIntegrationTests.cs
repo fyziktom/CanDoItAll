@@ -15,6 +15,28 @@ public sealed class AgentExternalProvisioningApiIntegrationTests
     private const string ExternalNamespace = "partner-system";
     private const string ExternalKey = "review-agent";
 
+    [Fact]
+    public async Task Unavailable_agent_cannot_be_rediscovered_rewritten_or_replayed_through_its_external_key() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var edit = CreateEditor();
+        const string key = "create-private-candidate";
+        using var create = await PutAsync(host.Client, ExternalNamespace, ExternalKey, edit, key);
+        create.EnsureSuccessStatusCode();
+        var created = Deserialize<AgentExternalProvisioningReceipt>(await create.Content.ReadAsStringAsync());
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var factory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var owner = factory.GetWorkspaceService(factory.GetOrganizationScope());
+        var native = await owner.GetAgentEditorAsync(created.AgentId);
+        native.ApiAvailable = false;
+        await owner.SaveAgentAsync(native);
+        using var read = await host.Client.GetAsync($"/api/agents/by-external-key/{ExternalNamespace}/{ExternalKey}");
+        using var replay = await PutAsync(host.Client, ExternalNamespace, ExternalKey, edit, key);
+        using var rewrite = await PutAsync(host.Client, ExternalNamespace, ExternalKey, edit, "rewrite-private", created.ConfigurationVersion);
+        using var archive = await DeleteAsync(host.Client, ExternalNamespace, ExternalKey, "archive-private", created.ConfigurationVersion);
+        Assert.All(new[] { read, replay, rewrite, archive }, response => Assert.Equal(HttpStatusCode.NotFound, response.StatusCode));
+        Assert.False((await owner.GetAgentEditorAsync(created.AgentId)).ApiAvailable);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

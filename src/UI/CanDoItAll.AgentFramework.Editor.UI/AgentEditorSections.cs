@@ -14,6 +14,7 @@ public static class AgentEditorSections {
         new(AgentEditorSection.ProcessAccess, "Process Access"),
         new(AgentEditorSection.Capabilities, "Capabilities"),
         new(AgentEditorSection.Voice, "Voice"),
+        new(AgentEditorSection.Sharing, "Sharing"),
     ]);
 
     public static int IndexOf(AgentEditorSection section) {

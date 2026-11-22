@@ -106,6 +106,8 @@ internal static class AgentDefinitionFactory
             CreatedAtUtc: existingAgent?.CreatedAtUtc ?? now,
             UpdatedAtUtc: AgentConfigurationVersion.NextRevision(existingAgent?.UpdatedAtUtc, now))
         {
+            ApiAvailable = model.ApiAvailable,
+            SharedTemplate = model.SharedTemplate ?? existingAgent?.SharesRemoteTemplate ?? false,
             AvatarImageUrl = string.IsNullOrWhiteSpace(model.AvatarImageUrl)
                 ? null
                 : model.AvatarImageUrl.Trim()
@@ -118,20 +120,9 @@ internal static class AgentDefinitionFactory
         string templateKey,
         string operationLabel)
     {
-        var collisions = agents
-            .Where(item => item.Id != currentAgentId)
-            .Where(item => string.Equals(
-                WorkspaceCatalogIdentityNormalizer.GetAgentTemplateIdentity(item),
-                templateKey,
-                StringComparison.Ordinal))
-            .Select(item => item.Name)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        if (collisions.Count > 0)
-        {
-            throw new InvalidOperationException(
-                $"{operationLabel} would reuse canonical template key '{templateKey}', which already belongs to: {string.Join(", ", collisions)}.");
+        if (agents.Any(item => item.Id != currentAgentId && string.Equals(
+                WorkspaceCatalogIdentityNormalizer.GetAgentTemplateIdentity(item), templateKey, StringComparison.Ordinal))) {
+            throw new InvalidOperationException($"{operationLabel} requires a unique template key. Choose another key.");
         }
     }
 

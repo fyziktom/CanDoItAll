@@ -35,7 +35,23 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         var reader = await IssueAsync(publisher, "regional-template-reader", ApiAccessScopeNames.ReadSharedAgentTemplates);
         publisher.Client.DefaultRequestHeaders.Authorization = new("Bearer", author.Token);
         var templateId = await SaveAgentAsync(publisher.Client, templateName, isTemplate: true);
-        await SaveAgentAsync(publisher.Client, privateName, isTemplate: false);
+        await SaveAgentAsync(publisher.Client, privateName, isTemplate: true);
+        await using var authorBrowser = await consumer.Browser.NewContextAsync(new() {
+            IgnoreHTTPSErrors = true, ViewportSize = new() { Width = 1920, Height = 1080 }
+        });
+        var publisherAuthority = new Uri(publisher.HttpsUrl).Authority;
+        await authorBrowser.RouteAsync("**/*", route => new Uri(route.Request.Url).Authority == publisherAuthority ? route.ContinueAsync() : route.AbortAsync());
+        await authorBrowser.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Authorization"] = $"Bearer {author.Token}" });
+        var authorPage = await authorBrowser.NewPageAsync();
+        var sharingUrl = $"{publisher.HttpsUrl}/agents?tab=agents&agentId={templateId:D}&agentSection=sharing";
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, sharingUrl);
+        var publication = authorPage.GetByTestId("definition-sharing-template");
+        var apiAvailability = authorPage.GetByTestId("definition-sharing-api");
+        await Assertions.Expect(apiAvailability).ToBeCheckedAsync();
+        await Assertions.Expect(publication).Not.ToBeCheckedAsync();
+        await apiAvailability.UncheckAsync();
+        await publication.CheckAsync();
+        await authorPage.GetByTestId("agents-catalog-save").ClickAsync();
         Assert.Equal(ApiAccessScopeNames.ReadSharedAgentTemplates, Assert.Single(reader.Scopes));
         await ApiAccessSettingsBrowserTests.AssertStatusAsync(publisher.Client, reader.Token, "/api/shared-providers/v1/catalog", HttpStatusCode.Forbidden);
 
@@ -111,6 +127,8 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         var imported = Assert.Single(localAgents, item => item.Name == templateName);
         Assert.NotEqual(templateId, imported.Id);
         Assert.False(imported.IsTemplate);
+        Assert.False(imported.SharedTemplate);
+        Assert.True(imported.ApiAvailable);
         Assert.Equal(AgentLifecycleStatus.Draft, imported.Status);
         Assert.Equal(Instructions, imported.Instructions);
         Assert.Equal(AgentAvatarImageCatalog.BundledAvatarUrls[0], imported.AvatarImageUrl);
@@ -118,9 +136,11 @@ public sealed partial class RemoteInstanceBrowserTests(PlaywrightAppFixture cons
         Assert.Equal(modelName, imported.Model);
         Assert.Contains(localAgents, item => item.Id == localId && item.Name == localName);
         Assert.DoesNotContain(localAgents, item => item.Name == privateName);
-        var publisherOriginal = (await publisher.Client.GetFromJsonAsync<AgentEditorModel>($"/api/agents/{templateId:D}"))!;
-        Assert.True(publisherOriginal.IsTemplate);
-        Assert.Equal(Instructions, publisherOriginal.Instructions);
+        using var publisherOriginal = await publisher.Client.GetAsync($"/api/agents/{templateId:D}");
+        Assert.Equal(HttpStatusCode.NotFound, publisherOriginal.StatusCode);
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, sharingUrl);
+        await Assertions.Expect(apiAvailability).Not.ToBeCheckedAsync();
+        await Assertions.Expect(publication).ToBeCheckedAsync();
 
         var directory = Path.Combine(PlaywrightTestHostPaths.RepositoryRoot, "output", "playwright", "remote-instances");
         Directory.CreateDirectory(directory);

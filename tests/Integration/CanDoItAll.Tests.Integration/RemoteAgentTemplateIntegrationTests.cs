@@ -22,6 +22,98 @@ namespace CanDoItAll.Tests.Integration.AgentFramework;
 
 public sealed class RemoteAgentTemplateIntegrationTests {
     [Fact]
+    public async Task Ordinary_API_hides_unavailable_agents_from_discovery_writes_and_new_JSON_and_SSE_calls() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var available = await workspace.SaveAgentDefinitionAsync(new() { Name = "API visible agent" });
+        var hidden = await workspace.SaveAgentDefinitionAsync(new() { Name = "API private agent", ApiAvailable = false });
+        var team = await workspace.SaveAgentTeamAsync(new() { Name = "Mixed exposure team", AgentIds = [available.Id, hidden.Id] });
+        var note = await workspace.SaveMemoryAsync(new() { AgentId = hidden.Id, Title = "Private note" });
+        await workspace.GetOrCreateChatSessionAsync(hidden.Id);
+        var path = $"/api/agents/{hidden.Id:D}";
+        var teamPath = $"/api/agents/teams/{team:D}";
+
+        foreach (var list in new[] { "/api/agents?includeTemplates=true", teamPath + "/agents", "/api/agents/teams", teamPath, teamPath + "/editor", "/api/agents/bootstrap" }) {
+            var json = await host.Client.GetStringAsync(list);
+            Assert.DoesNotContain(hidden.Id.ToString("D"), json, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(available.Id.ToString("D"), json, StringComparison.OrdinalIgnoreCase);
+        }
+        var teamEditor = await host.Client.GetFromJsonAsync<AgentTeamEditorModel>(teamPath + "/editor");
+        Assert.NotNull(teamEditor);
+        teamEditor.Description = "Updated without losing private members";
+        using var updateTeam = await host.Client.PutAsJsonAsync(teamPath, teamEditor);
+        updateTeam.EnsureSuccessStatusCode();
+        Assert.Contains(hidden.Id, (await workspace.GetAgentTeamEditorAsync(team)).AgentIds);
+
+        foreach (var route in new[] { path, path + "/export", path + "/chat-workspace", path + "/chat-sessions", path + "/memory", path + "/decision-data-policy" }) {
+            using var read = await host.Client.GetAsync(route);
+            Assert.Equal(HttpStatusCode.NotFound, read.StatusCode);
+        }
+        var edit = await workspace.GetAgentEditorAsync(hidden.Id);
+        edit.ApiAvailable = true;
+        await RefuseAsync("/api/agents", edit);
+        await RefuseAsync(path + "/clone", new { cloneName = "Copy private agent" });
+        await RefuseAsync(path + "/convert-to-template", new { templateKey = "copy-private-agent" });
+        await RefuseAsync(path + "/chat", new { prompt = "Private" });
+        await RefuseAsync(path + "/chat/stream", new { prompt = "Private" });
+        await RefuseAsync(path + "/execution-runs", new { prompt = "Private" });
+        await RefuseAsync(path + "/execution-runs/stream", new { prompt = "Private" });
+        await RefuseAsync("/api/agents/execution-runs", new { agentId = hidden.Id, prompt = "Private" });
+        await RefuseAsync("/api/agents/execution-runs/stream", new { agentId = hidden.Id, prompt = "Private" });
+        await RefuseAsync("/api/agents/voice/speech", new { agentId = hidden.Id, text = "Private" });
+        await RefuseAsync("/api/agents/memory", new MemoryEditorModel { AgentId = available.Id, Id = note, Title = "Reassigned" });
+        using var deleteNote = await host.Client.DeleteAsync($"/api/agents/memory/{note:D}");
+        Assert.Equal(HttpStatusCode.NotFound, deleteNote.StatusCode);
+        using var deleteAgent = await host.Client.DeleteAsync(path);
+        Assert.Equal(HttpStatusCode.NotFound, deleteAgent.StatusCode);
+        Assert.False((await workspace.GetAgentEditorAsync(hidden.Id)).ApiAvailable);
+        Assert.Single(await workspace.ListMemoryAsync(hidden.Id));
+        Assert.Empty(await workspace.ListExecutionRunsAsync(new(AgentId: hidden.Id)));
+
+        await workspace.SaveAgentAsync(edit);
+        using var visible = await host.Client.GetAsync(path);
+        visible.EnsureSuccessStatusCode();
+
+        async Task RefuseAsync(string route, object body) {
+            using var response = await host.Client.PostAsJsonAsync(route, body);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
+    [Fact]
+    public async Task Legacy_template_publication_survives_edits_until_withdrawn_and_new_copies_are_private() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var store = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceCatalogStore>();
+        var agent = await workspace.SaveAgentDefinitionAsync(new() { Name = "Legacy sharing preference", IsTemplate = true });
+        Assert.False(agent.SharesRemoteTemplate);
+        var legacy = await store.UpdateCatalogAsync(catalog => catalog with {
+            Agents = catalog.Agents.Select(item => item.Id == agent.Id ? item with { SharedTemplate = null } : item).ToList()
+        });
+        var publisher = Guid.NewGuid();
+        Assert.Contains(RemoteAgentTemplateCatalog.List(legacy, publisher), item => item.Id == agent.Id);
+        var form = await workspace.GetAgentEditorAsync(agent.Id);
+        Assert.True(form.SharedTemplate);
+        form.SharedTemplate = null;
+        form.IsTemplate = false;
+        var saved = await workspace.SaveAgentDefinitionAsync(form);
+        Assert.True(saved.SharedTemplate);
+        Assert.False(saved.IsTemplate);
+        var copied = await workspace.CloneAgentAsync(saved.Id, "Cloned private definition");
+        var converted = await workspace.ConvertToTemplateAsync(saved.Id, "converted-private-definition");
+        Assert.False((await workspace.GetAgentEditorAsync(copied)).SharedTemplate);
+        Assert.False((await workspace.GetAgentEditorAsync(converted)).SharedTemplate);
+        var withdrawn = await workspace.GetAgentEditorAsync(saved.Id);
+        withdrawn.SharedTemplate = false;
+        withdrawn.IsTemplate = true;
+        await workspace.SaveAgentAsync(withdrawn);
+        Assert.Null(RemoteAgentTemplateCatalog.Find(await store.LoadCatalogAsync(), publisher, agent.Id));
+    }
+
+    [Fact]
     public async Task Secured_OpenApi_describes_template_routes_and_their_read_permission() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
         var document = await host.Client.GetFromJsonAsync<JsonObject>("/openapi/v1.json");
@@ -52,8 +144,8 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true, useInMemoryDatabase: true);
         await using var scope = host.App.Services.CreateAsyncScope();
         var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        var local = await workspace.SaveAgentAsync(new() { Name = "Ordinary agent outside the catalog" });
-        var withdrawn = await workspace.SaveAgentAsync(new() { Name = "Archived template", IsTemplate = true, Status = AgentLifecycleStatus.Archived });
+        var local = await workspace.SaveAgentAsync(new() { Name = "Private local template", IsTemplate = true });
+        var withdrawn = await workspace.SaveAgentAsync(new() { Name = "Archived template", SharedTemplate = true, Status = AgentLifecycleStatus.Archived });
         var capability = await workspace.SaveCapabilityAsync(new() {
             Kind = CapabilityKind.Skill, Key = "publication-skill", Name = "Publication skill", Description = "Skill guidance",
             EndpointOrPath = "inline://publication-skill",
@@ -61,7 +153,7 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         });
         const string avatar = "data:image/png;base64,iVBORw0KGgo=";
         var agent = await workspace.SaveAgentDefinitionAsync(new() {
-            Name = "Template publication", IsTemplate = true, Instructions = "Template text", AvatarImageUrl = avatar,
+            Name = "Template publication", SharedTemplate = true, ApiAvailable = false, Instructions = "Template text", AvatarImageUrl = avatar,
             SelectedCapabilityIds = [capability], ConfigurationJson = """{"privateConfiguration":"private-sentinel"}"""
         });
         using var anonymous = await host.Client.GetAsync(RemoteAgentTemplateRoutes.Catalog);
@@ -101,6 +193,9 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.Equal(offered.PublisherId, payload.PublisherId);
         Assert.Equal(offered.CatalogRevision, payload.CatalogRevision);
         Assert.Equal(avatar, payload.AvatarImageUrl);
+        Assert.False(agent.IsTemplate);
+        using var ordinary = await ReadAsync($"/api/agents/{agent.Id:D}", ApiAccessScopeNames.ReadAgents);
+        Assert.Equal(HttpStatusCode.NotFound, ordinary.StatusCode);
         Assert.Equal(ProviderProfilePurpose.Chat, payload.PreferredModel?.Purpose);
         var skill = Assert.Single(payload.Capabilities).InlineSkill;
         Assert.NotNull(skill);
@@ -113,6 +208,14 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         var changedTemplate = await changed.Content.ReadFromJsonAsync<RemoteAgentTemplate>();
         Assert.NotNull(changedTemplate);
         Assert.True(changedTemplate.CatalogRevision > offered.CatalogRevision);
+
+        var editor = await workspace.GetAgentEditorAsync(agent.Id);
+        editor.SharedTemplate = false;
+        await workspace.SaveAgentAsync(editor);
+        foreach (var route in new[] { RemoteAgentTemplateRoutes.Details(agent.Id), RemoteAgentTemplateRoutes.Avatar(agent.Id) }) {
+            using var removed = await ReadAsync(route, ApiAccessScopeNames.ReadSharedAgentTemplates);
+            Assert.Equal(HttpStatusCode.NotFound, removed.StatusCode);
+        }
 
         async Task<HttpResponseMessage> ReadAsync(string route, string permission) {
             var token = scope.ServiceProvider.GetRequiredService<IApiTokenService>().IssueToken(new() {
@@ -200,6 +303,8 @@ public sealed class RemoteAgentTemplateIntegrationTests {
         Assert.NotEqual(external.AgentId, first);
         var editor = await workspace.GetAgentEditorAsync(first);
         Assert.False(editor.IsTemplate);
+        Assert.False(editor.SharedTemplate);
+        Assert.True(editor.ApiAvailable);
         Assert.Null(editor.ProviderProfileId);
         Assert.Empty(editor.AllowedSecretReferences);
         Assert.Equal(AgentLifecycleStatus.Draft, editor.Status);

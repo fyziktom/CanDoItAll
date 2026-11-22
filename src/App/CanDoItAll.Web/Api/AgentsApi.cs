@@ -44,11 +44,11 @@ internal static class AgentsApi
             .Produces<AgentChatPageBootstrapApiResponse>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}", GetAgentEditorAsync)
-            .WithName("GetAgentEditor")
+            .WithName("GetAgentEditor").RequireAvailableAgent()
             .Produces<AgentEditorModel>(StatusCodes.Status200OK);
 
         agents.MapPost("/", SaveAgentAsync)
-            .WithName("SaveAgent")
+            .WithName("SaveAgent").RequireAvailableAgent<AgentEditorModel>(request => request.Id, allowNew: true)
             .WithDescription("Creates a new agent or conditionally replaces its complete configuration. Existing agents require the original expectedUpdatedAtUtc from GET; missing, changed or deleted originals return 409 without saving.")
             .Accepts<AgentEditorModel>("application/json")
             .Produces<Guid>(StatusCodes.Status200OK)
@@ -60,7 +60,7 @@ internal static class AgentsApi
             .DescribeApiResponse(StatusCodes.Status409Conflict, "The original agent revision is missing or no longer matches. Read the current agent before saving.");
 
         agents.MapDelete("/{agentId:guid}", DeleteAgentAsync)
-            .WithName("DeleteAgent")
+            .WithName("DeleteAgent").RequireAvailableAgent()
             .Produces<ApiAck>(StatusCodes.Status200OK)
             .ProducesApiErrors(
                 StatusCodes.Status401Unauthorized,
@@ -68,19 +68,20 @@ internal static class AgentsApi
                 StatusCodes.Status409Conflict);
 
         agents.MapPost("/{agentId:guid}/clone", CloneAgentAsync)
-            .WithName("CloneAgent")
+            .WithName("CloneAgent").RequireAvailableAgent()
             .Produces<Guid>(StatusCodes.Status200OK);
 
         agents.MapPost("/{agentId:guid}/convert-to-template", ConvertAgentToTemplateAsync)
-            .WithName("ConvertAgentToTemplate")
+            .WithName("ConvertAgentToTemplate").RequireAvailableAgent()
             .Produces<Guid>(StatusCodes.Status200OK);
 
         agents.MapGet("/{agentId:guid}/export", ExportAgentAsync)
-            .WithName("ExportAgent")
+            .WithName("ExportAgent").RequireAvailableAgent()
             .Produces<AgentExportResult>(StatusCodes.Status200OK);
 
         agents.MapPost("/import", ImportAgentAsync)
             .WithName("ImportAgent")
+            .ProducesApiErrors(StatusCodes.Status404NotFound)
             .Produces<Guid>(StatusCodes.Status200OK);
 
         agents.MapAgentPackageImportApi();
@@ -227,7 +228,7 @@ internal static class AgentsApi
             .DescribeApiResponse(StatusCodes.Status409Conflict, CapabilityEditConflict);
 
         agents.MapPost("/{agentId:guid}/capabilities/{capabilityId:guid}/verify", VerifyAgentCapabilityAsync)
-            .WithName("VerifyAgentCapability").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
+            .WithName("VerifyAgentCapability").RequireAvailableAgent().WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<ApiAck>()
             .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status400BadRequest)
             .Produces<CapabilityVerificationApiResponse>(StatusCodes.Status409Conflict);
@@ -248,10 +249,10 @@ internal static class AgentsApi
     private static void MapMemoryEndpoints(RouteGroupBuilder agents)
     {
         agents.MapGet("/{agentId:guid}/memory", ListAgentMemoryAsync)
-            .WithName("ListAgentMemory")
+            .WithName("ListAgentMemory").RequireAvailableAgent()
             .Produces<AgentMemoryRecord[]>(StatusCodes.Status200OK);
 
-        agents.MapPost("/memory", SaveAgentMemoryAsync)
+        agents.MapPost("/memory", SaveAgentMemoryAsync).RequireAvailableAgent<MemoryEditorModel>(request => request.AgentId)
             .WithName("SaveAgentMemory")
             .Produces<Guid>(StatusCodes.Status200OK);
 
@@ -262,15 +263,15 @@ internal static class AgentsApi
 
     private static void MapChatEndpoints(RouteGroupBuilder agents)
     {
-        agents.MapGet("/{agentId:guid}/chat-sessions", ListAgentChatSessionsAsync)
+        agents.MapGet("/{agentId:guid}/chat-sessions", ListAgentChatSessionsAsync).RequireAvailableAgent()
             .WithName("ListAgentChatSessions")
             .Produces<AgentChatSessionApiResponse[]>(StatusCodes.Status200OK);
 
-        agents.MapPost("/{agentId:guid}/chat-sessions", CreateAgentChatSessionAsync)
+        agents.MapPost("/{agentId:guid}/chat-sessions", CreateAgentChatSessionAsync).RequireAvailableAgent()
             .WithName("CreateAgentChatSession")
             .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK);
 
-        agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync)
+        agents.MapPost("/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename", RenameAgentChatSessionAsync).RequireAvailableAgent()
             .WithName("RenameAgentChatSession")
             .WithMetadata(new ApiEndpointDocumentation("Chat session with its accepted title.", "Desired nonblank title and the exact original displayed title."))
             .WithSummary("Conditionally rename the selected chat session.")
@@ -278,11 +279,11 @@ internal static class AgentsApi
             .Produces<AgentChatSessionApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict, StatusCodes.Status428PreconditionRequired);
 
-        agents.MapGet("/{agentId:guid}/chat-workspace", GetAgentChatWorkspaceAsync)
+        agents.MapGet("/{agentId:guid}/chat-workspace", GetAgentChatWorkspaceAsync).RequireAvailableAgent()
             .WithName("GetAgentChatWorkspace")
             .Produces<AgentChatWorkspaceApiResponse>(StatusCodes.Status200OK);
 
-        agents.MapPost("/{agentId:guid}/chat", SendAgentChatMessageAsync)
+        agents.MapPost("/{agentId:guid}/chat", SendAgentChatMessageAsync).DescribeAgentAvailability()
             .WithName("SendAgentChatMessage").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Produces<AgentChatRunApiResponse>(StatusCodes.Status200OK)
             .ProducesApiErrors(
@@ -337,7 +338,7 @@ internal static class AgentsApi
 
     private static void MapExecutionEndpoints(RouteGroupBuilder agents)
     {
-        agents.MapPost("/execution-runs", StartAgentExecutionRunAsync)
+        agents.MapPost("/execution-runs", StartAgentExecutionRunAsync).DescribeAgentAvailability()
             .WithName("StartAgentExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunApiRequest>("application/json")
             .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
@@ -351,7 +352,7 @@ internal static class AgentsApi
                 StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
-        agents.MapPost("/{agentId:guid}/execution-runs", StartAgentScopedExecutionRunAsync)
+        agents.MapPost("/{agentId:guid}/execution-runs", StartAgentScopedExecutionRunAsync).DescribeAgentAvailability()
             .WithName("StartAgentScopedExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
             .Produces<AgentExecutionRunResultApiResponse>(StatusCodes.Status200OK)
@@ -487,7 +488,7 @@ internal static class AgentsApi
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken,
         bool includeTemplates = false) =>
-        Results.Ok(await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken));
+        Results.Ok((await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken)).Where(agent => agent.ApiAvailable).ToArray());
 
     /// <summary>
     /// Read the data needed to open the agent chat page: the agent list and the workspace of the initially selected
@@ -514,7 +515,7 @@ internal static class AgentsApi
         CancellationToken cancellationToken,
         bool includeTemplates = false) =>
         Results.Ok(AgentApiResponseMapper.ToChatPageBootstrap(
-            await workspaceService.GetChatPageBootstrapAsync(includeTemplates, cancellationToken)));
+            await workspaceService.GetApiChatPageBootstrapAsync(includeTemplates, cancellationToken)));
 
     /// <summary>
     /// Read an agent definition as the editable form accepted by <c>POST /api/agents</c>.
@@ -777,8 +778,13 @@ internal static class AgentsApi
     internal static async Task<IResult> ImportAgentAsync(
         AgentImportApiRequest request,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.ImportAgentAsync(request.PackagePath, cancellationToken));
+        CancellationToken cancellationToken) {
+        try {
+            return Results.Ok(await workspaceService.ImportAgentAsync(request.PackagePath, cancellationToken));
+        } catch (AgentPackageImportException exception) when (exception.Kind == AgentPackageImportFailureKind.NotFound) {
+            return AgentApiAvailability.NotFound();
+        }
+    }
 
     /// <summary>
     /// List all agent teams of the current workspace, ordered by name.
@@ -795,8 +801,11 @@ internal static class AgentsApi
     /// <response code="200">Every team of the workspace; an empty array when none exist.</response>
     internal static async Task<IResult> ListAgentTeamsAsync(
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.ListAgentTeamsAsync(cancellationToken));
+        CancellationToken cancellationToken) {
+        var hidden = await AgentApiAvailability.HiddenIdsAsync(workspaceService, cancellationToken);
+        var teams = await workspaceService.ListAgentTeamsAsync(cancellationToken);
+        return Results.Ok(teams.Select(team => AgentApiAvailability.Project(team, hidden)).ToArray());
+    }
 
     /// <summary>
     /// Read one agent team with its member agent identifiers.
@@ -821,7 +830,7 @@ internal static class AgentsApi
             .FirstOrDefault(item => item.Id == teamId);
         return team is null
             ? ApiEndpointResults.NotFound("Agent team was not found.", "agents.team-not-found")
-            : Results.Ok(team);
+            : Results.Ok(AgentApiAvailability.Project(team, await AgentApiAvailability.HiddenIdsAsync(workspaceService, cancellationToken)));
     }
 
     /// <summary>
@@ -843,8 +852,12 @@ internal static class AgentsApi
     internal static async Task<IResult> GetAgentTeamEditorAsync(
         Guid teamId,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.GetAgentTeamEditorAsync(teamId, cancellationToken));
+        CancellationToken cancellationToken) {
+        var editor = await workspaceService.GetAgentTeamEditorAsync(teamId, cancellationToken);
+        var hidden = await AgentApiAvailability.HiddenIdsAsync(workspaceService, cancellationToken);
+        editor.AgentIds.RemoveAll(hidden.Contains);
+        return Results.Ok(editor);
+    }
 
     /// <summary>
     /// List the agent definitions that are members of an agent team.
@@ -879,7 +892,7 @@ internal static class AgentsApi
 
         var teamAgentIds = team.AgentIds.ToHashSet();
         var teamAgents = (await workspaceService.ListAgentsAsync(includeTemplates, cancellationToken))
-            .Where(agent => teamAgentIds.Contains(agent.Id))
+            .Where(agent => agent.ApiAvailable && teamAgentIds.Contains(agent.Id))
             .ToList();
         return Results.Ok(teamAgents);
     }
@@ -915,9 +928,15 @@ internal static class AgentsApi
     internal static async Task<IResult> SaveAgentTeamAsync(
         AgentTeamEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
-        CancellationToken cancellationToken) =>
-        await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
+        CancellationToken cancellationToken) {
+        var (_, members) = await AgentApiAvailability.PrepareTeamMembersAsync(request.Id, request.AgentIds, workspaceService, cancellationToken);
+        if (members is null) {
+            return AgentApiAvailability.NotFound();
+        }
+        request.AgentIds = members;
+        return await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
             accepted => Results.Ok(accepted.Id));
+    }
 
     /// <summary>
     /// Replace an agent team's name, description, icon and members.
@@ -950,8 +969,7 @@ internal static class AgentsApi
         CancellationToken cancellationToken)
     {
         request.Id = teamId;
-        return await TeamWriteAsync(async () => Results.Ok(await workspaceService.SaveAgentTeamAsync(request, cancellationToken)),
-            accepted => Results.Ok(accepted.Id));
+        return await SaveAgentTeamAsync(request, workspaceService, cancellationToken);
     }
 
     /// <summary>
@@ -1747,7 +1765,8 @@ internal static class AgentsApi
         MemoryEditorModel request,
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken) =>
-        Results.Ok(await workspaceService.SaveMemoryAsync(request, cancellationToken));
+        await AgentApiAvailability.IsHiddenNoteAsync(request.Id, workspaceService, cancellationToken)
+            ? AgentApiAvailability.NotFound() : Results.Ok(await workspaceService.SaveMemoryAsync(request, cancellationToken));
 
     /// <summary>
     /// Delete a workspace memory note.
@@ -1770,6 +1789,9 @@ internal static class AgentsApi
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
+        if (await AgentApiAvailability.IsHiddenNoteAsync(memoryId, workspaceService, cancellationToken)) {
+            return AgentApiAvailability.NotFound();
+        }
         await workspaceService.DeleteMemoryAsync(memoryId, cancellationToken);
         return Results.Ok(new ApiAck(true));
     }
@@ -1940,7 +1962,7 @@ internal static class AgentsApi
         IAgentFrameworkWorkspaceService workspaceService,
         CancellationToken cancellationToken)
     {
-        var validation = AgentApiRequestValidation.ValidateCommand(
+        var validation = await AgentApiRequestValidation.ValidateCommandAsync(workspaceService,
             context,
             agentId,
             request.ChatSessionId,
@@ -2963,7 +2985,7 @@ internal static class AgentsApi
         HttpContext context,
         CancellationToken cancellationToken)
     {
-        var validation = AgentApiRequestValidation.ValidateCommand(
+        var validation = await AgentApiRequestValidation.ValidateCommandAsync(workspaceService,
             context,
             request.AgentId,
             request.ChatSessionId,
@@ -3036,12 +3058,17 @@ internal static class AgentsApi
         }
     }
 
-    private static Task<IResult> ReplaceTeamMembersAsync(Guid teamId, AgentTeamMembersApiRequest request,
-        IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken)
-        => TeamWriteAsync(async () => Results.Ok(request.ExpectedUpdatedAtUtc is { } expected
-            ? await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, expected, cancellationToken)
-            : await workspace.UpdateAgentTeamMembersAsync(teamId, request.AgentIds, cancellationToken)),
-            accepted => Results.Ok(accepted));
+    private static async Task<IResult> ReplaceTeamMembersAsync(Guid teamId, AgentTeamMembersApiRequest request,
+        IAgentFrameworkWorkspaceService workspace, CancellationToken cancellationToken) {
+        var (hidden, members) = await AgentApiAvailability.PrepareTeamMembersAsync(teamId, request.AgentIds, workspace, cancellationToken);
+        if (members is null) {
+            return AgentApiAvailability.NotFound();
+        }
+        return await TeamWriteAsync(async () => Results.Ok(AgentApiAvailability.Project(request.ExpectedUpdatedAtUtc is { } expected
+            ? await workspace.UpdateAgentTeamMembersAsync(teamId, members, expected, cancellationToken)
+            : await workspace.UpdateAgentTeamMembersAsync(teamId, members, cancellationToken), hidden)),
+            accepted => Results.Ok(AgentApiAvailability.Project(accepted, hidden)));
+    }
 
     private static async Task<IResult> TeamWriteAsync(Func<Task<IResult>> write,
         Func<AgentTeamDefinition, IResult>? committedResponse = null) {

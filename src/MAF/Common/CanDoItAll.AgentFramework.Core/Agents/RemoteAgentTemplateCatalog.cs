@@ -40,7 +40,7 @@ public static class RemoteAgentTemplateCatalog {
         };
     }
 
-    private static bool IsPublished(AgentDefinition agent) => agent.IsTemplate && agent.Status is AgentLifecycleStatus.Draft or AgentLifecycleStatus.Active;
+    private static bool IsPublished(AgentDefinition agent) => agent.SharesRemoteTemplate && agent.Status is AgentLifecycleStatus.Draft or AgentLifecycleStatus.Active;
 
     private static bool IsEmbedded(string? url) => url?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 

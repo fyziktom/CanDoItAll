@@ -404,6 +404,8 @@ public partial class AgentDetailsDialog : IAsyncDisposable {
             AgentEditorCoreIntent.ImageProvider value => HandleImageGenerationProviderPresentationChangedAsync(value.Value),
             AgentEditorCoreIntent.ImageModel value => HandleImageGenerationModelChangedAsync(value.Value),
             AgentEditorCoreIntent.Voice value => ChangeFor(owner, () => ToggleVoiceModeAccess(value.Value)),
+            AgentEditorCoreIntent.ApiAvailability value => ChangeFor(owner, () => owner.Draft.ApiAvailable = value.Value),
+            AgentEditorCoreIntent.TemplatePublication value => ChangeFor(owner, () => owner.Draft.SharedTemplate = value.Value),
             _ => throw new ArgumentOutOfRangeException(nameof(intent), intent, "Unknown agent core intent.")
         };
     }

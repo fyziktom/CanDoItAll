@@ -212,6 +212,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Id = cloneId,
                 Name = cloneName.Trim(),
                 IsTemplate = false,
+                ApiAvailable = true,
+                SharedTemplate = false,
                 TemplateKey = cloneTemplateKey,
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
                     source.ConfigurationJson),
@@ -246,6 +248,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             {
                 Id = templateId,
                 IsTemplate = true,
+                ApiAvailable = true,
+                SharedTemplate = false,
                 TemplateKey = normalizedTemplateKey,
                 Name = $"{source.Name} template",
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
@@ -285,11 +289,14 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var normalizedImportedAgent = NormalizeImportedAgent(imported.Agent);
         await store.UpdateWorkspaceAsync(document =>
         {
+            AgentPackageImportService.RequireAvailable(document.Agents, normalizedImportedAgent.Id);
             var providerIdMap = BuildProviderIdMap(document.Providers, normalizedImportedProviders);
             var capabilityIdMap = BuildCapabilityIdMap(document.Capabilities, normalizedImportedCapabilities);
             var importedAgent = RemapImportedAgent(normalizedImportedAgent, providerIdMap, capabilityIdMap, document.Capabilities, normalizedImportedCapabilities);
             if (document.Agents.FirstOrDefault(agent => agent.Id == importedAgent.Id) is { } previousAgent) {
                 importedAgent = importedAgent with {
+                    ApiAvailable = previousAgent.ApiAvailable,
+                    SharedTemplate = previousAgent.SharesRemoteTemplate,
                     UpdatedAtUtc = AgentConfigurationVersion.NextRevision(previousAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
                 };
             }
@@ -559,6 +566,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     {
         return agent with
         {
+            ApiAvailable = true,
+            SharedTemplate = false,
             Name = agent.Name.Trim(),
             RoleTitle = agent.RoleTitle.Trim(),
             Summary = agent.Summary.Trim(),

@@ -5,6 +5,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class AgentFrameworkWorkspaceService
 {
+    public async Task<bool?> FindAgentApiAvailabilityAsync(Guid agentId, CancellationToken cancellationToken) {
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        return catalog.Agents.FirstOrDefault(agent => agent.Id == agentId)?.ApiAvailable;
+    }
+
     public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
         var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
         return new(activityWorkspaceIdentity, snapshot);

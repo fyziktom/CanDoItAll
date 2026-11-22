@@ -26,7 +26,16 @@ internal static class AgentApiRequestValidation
         }
     }
 
-    public static IResult? ValidateCommand(
+    public static async Task<IResult?> ValidateCommandAsync(IAgentFrameworkWorkspaceService workspace, HttpContext context,
+        Guid agentId, Guid? chatSessionId, string? prompt, ExecutionInvocationContext? invocationContext = null) {
+        var invalid = ValidateCommand(context, agentId, chatSessionId, prompt, invocationContext);
+        if (invalid is not null) {
+            return invalid;
+        }
+        return await workspace.FindAgentApiAvailabilityAsync(agentId, context.RequestAborted) == true ? null : AgentApiAvailability.NotFound();
+    }
+
+    private static IResult? ValidateCommand(
         HttpContext context,
         Guid agentId,
         Guid? chatSessionId,

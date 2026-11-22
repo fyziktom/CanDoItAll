@@ -10,7 +10,8 @@ public enum AgentEditorSection {
     Secrets,
     ProcessAccess,
     Capabilities,
-    Voice
+    Voice,
+    Sharing
 }
 
 public enum AgentEditorLoadState { Loading, Ready, Failed }
