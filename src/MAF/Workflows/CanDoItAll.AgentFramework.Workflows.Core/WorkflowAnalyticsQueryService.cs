@@ -22,9 +22,9 @@ public sealed class WorkflowAnalyticsQueryService(
         cancellationToken.ThrowIfCancellationRequested();
         var asOfUtc = timeProvider.GetUtcNow();
         var definitions = await catalog.ListDefinitionsAsync(cancellationToken).ConfigureAwait(false);
-        var filteredDefinitions = query.WorkflowId is { } workflowId
-            ? definitions.Where(definition => definition.Id == workflowId).ToArray()
-            : definitions;
+        var filteredDefinitions = definitions.Where(definition =>
+            (query.WorkflowId is null || definition.Id == query.WorkflowId) &&
+            query.ExcludedDefinitionIds?.Contains(definition.Id) != true).ToArray();
         var runs = await runStore.ListRunsAsync(query.WorkflowId, cancellationToken).ConfigureAwait(false);
         var filteredRuns = FilterRuns(runs, query);
         var usageProjection = await usageStore.AggregateAsync(
@@ -40,7 +40,7 @@ public sealed class WorkflowAnalyticsQueryService(
 
         return new WorkflowAnalyticsSnapshot(
             asOfUtc,
-            filteredDefinitions.Count,
+            filteredDefinitions.Length,
             filteredDefinitions.Count(definition => definition.Status == WorkflowLifecycleStatus.Active),
             CountBy(filteredDefinitions, definition => definition.Status),
             filteredRuns.Count,

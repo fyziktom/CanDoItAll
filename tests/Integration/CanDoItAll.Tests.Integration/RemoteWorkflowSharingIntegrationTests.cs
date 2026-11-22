@@ -10,6 +10,7 @@ using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.Tests.Integration.Api;
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Web.Api;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,19 +27,15 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         var openApi = await host.Client.GetFromJsonAsync<JsonObject>("/openapi/v1.json");
         Assert.NotNull(openApi);
         Assert.Empty(OpenApiDescriptionCoverage.FindGaps(openApi, "/" + RemoteWorkflowRoutes.Catalog));
-        var seed = WorkflowDefinitionValidator.CreateComponentValidationDefinition(Component());
-        var graph = seed.Graph with {
-            Nodes = [seed.Graph.Nodes[0], seed.Graph.Nodes[^1]],
-            Edges = [seed.Graph.Edges[0] with { TargetNodeId = seed.Graph.Nodes[^1].Id }]
-        };
-        var saved = await catalog.SaveDefinitionAsync(new(null, null, "Budget review", "Saved workflow", WorkflowLifecycleStatus.Draft, graph, seed.RuntimePolicy));
-        var hidden = await catalog.SaveDefinitionAsync(new(null, null, "Private budget", "Local only", WorkflowLifecycleStatus.Draft, graph, seed.RuntimePolicy));
+        var request = PortableWorkflow();
+        var saved = await catalog.SaveDefinitionAsync(request);
+        var hidden = await catalog.SaveDefinitionAsync(request with { Name = "Private budget" });
         using var anonymous = await host.Client.GetAsync(RemoteWorkflowRoutes.Catalog);
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         using var denied = await ReadAsync(RemoteWorkflowRoutes.Catalog, ApiAccessScopeNames.ReadSharedProviderCatalog);
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
-        var summary = (await catalog.ListDefinitionsAsync()).Single(item => item.Id == saved.Id);
-        await sharing.SetPublishedAsync(summary, true, _ => ValueTask.CompletedTask, CancellationToken.None);
+        var published = DefinitionSharingSettings.Default with { SharedTemplate = true };
+        await sharing.SetSharingAsync(saved.Id, saved.VersionId, DefinitionSharingSettings.Default, published, _ => ValueTask.CompletedTask, default);
         using var listed = await ReadAsync(RemoteWorkflowRoutes.Catalog);
         listed.EnsureSuccessStatusCode();
         var row = Assert.Single((await listed.Content.ReadFromJsonAsync<RemoteTemplateRow[]>())!);
@@ -48,15 +45,15 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         var payload = await details.Content.ReadFromJsonAsync<RemoteWorkflowDocument>();
         Assert.NotNull(payload);
         Assert.Equal(row, payload.Row);
-        Assert.Equal(graph.Edges, payload.Graph.Edges);
+        Assert.Equal(request.Graph.Edges, payload.Graph.Edges);
         Assert.Empty(payload.Models);
         Assert.Empty(payload.Components);
         using var privateItem = await ReadAsync(RemoteWorkflowRoutes.Details(hidden.Id.Value));
         Assert.Equal(HttpStatusCode.NotFound, privateItem.StatusCode);
-        await sharing.SetPublishedAsync(summary, false, _ => ValueTask.CompletedTask, CancellationToken.None);
+        await sharing.SetSharingAsync(saved.Id, saved.VersionId, published, DefinitionSharingSettings.Default, _ => ValueTask.CompletedTask, default);
         using var withdrawn = await ReadAsync(RemoteWorkflowRoutes.Details(saved.Id.Value));
         Assert.Equal(HttpStatusCode.NotFound, withdrawn.StatusCode);
-        await sharing.SetPublishedAsync(summary, true, _ => ValueTask.CompletedTask, CancellationToken.None);
+        await sharing.SetSharingAsync(saved.Id, saved.VersionId, DefinitionSharingSettings.Default, published, _ => ValueTask.CompletedTask, default);
         var active = await catalog.ChangeDefinitionStatusAsync(new(saved.Id, saved.VersionId, WorkflowLifecycleStatus.Active));
         using var activeResponse = await ReadAsync(RemoteWorkflowRoutes.Details(saved.Id.Value));
         Assert.Equal(HttpStatusCode.OK, activeResponse.StatusCode);
@@ -64,15 +61,99 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         using var archived = await ReadAsync(RemoteWorkflowRoutes.Details(saved.Id.Value));
         Assert.Equal(HttpStatusCode.NotFound, archived.StatusCode);
         await catalog.DeleteDefinitionAsync(new(saved.Id, archivedVersion.VersionId));
-        var recreated = await catalog.SaveDefinitionAsync(new(saved.Id, null, "New private workflow", "", WorkflowLifecycleStatus.Draft, graph, seed.RuntimePolicy));
+        var recreated = await catalog.SaveDefinitionAsync(request with { Id = saved.Id, Name = "New private workflow" });
         using var recreatedResponse = await ReadAsync(RemoteWorkflowRoutes.Details(recreated.Id.Value));
         Assert.Equal(HttpStatusCode.NotFound, recreatedResponse.StatusCode);
 
         async Task<HttpResponseMessage> ReadAsync(string route, string permission = ApiAccessScopeNames.ReadSharedWorkflows) {
             var token = services.GetRequiredService<IApiTokenService>().IssueToken(new() { Subject = "workflow-reader", Scopes = [permission] });
-            using var request = new HttpRequestMessage(HttpMethod.Get, route);
-            request.Headers.Authorization = new AuthenticationHeaderValue(token.TokenType, token.Token);
-            return await host.Client.SendAsync(request);
+            using var message = new HttpRequestMessage(HttpMethod.Get, route);
+            message.Headers.Authorization = new AuthenticationHeaderValue(token.TokenType, token.Token);
+            return await host.Client.SendAsync(message);
+        }
+    }
+
+    [Fact]
+    public async Task Workflow_API_availability_controls_direct_discovery_reads_writes_and_launches_independently_of_template_sharing() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var catalog = services.GetRequiredService<IWorkflowCatalogService>();
+        var sharing = services.GetRequiredService<RemoteWorkflowCatalog>();
+        var token = services.GetRequiredService<IApiTokenService>().IssueToken(new() {
+            Subject = "workflow-api-operator",
+            Scopes = [ApiAccessScopeNames.ReadWorkflows, ApiAccessScopeNames.WriteWorkflows, ApiAccessScopeNames.ExecuteWorkflows,
+                ApiAccessScopeNames.ReadSharedWorkflows]
+        });
+        var client = host.Client;
+        client.DefaultRequestHeaders.Authorization = new(token.TokenType, token.Token);
+        const string template = "review-budget";
+        var draft = PortableWorkflow() with {
+            Status = WorkflowLifecycleStatus.Active, TemplateProvenance = new(template, "finance", "1", new string('a', 64))
+        };
+        var visible = await catalog.SaveDefinitionAsync(draft with { Name = "API review" });
+        var saved = await catalog.SaveDefinitionAsync(draft with { Name = "Shared review", ExternalNamespace = "finance", ExternalKey = "review" });
+        var definitionPath = $"/api/workflows/definitions/{saved.Id.Value:D}";
+        var versionQuery = $"?expectedVersionId={saved.VersionId.Value:D}";
+        const string externalPath = "/api/workflows/definitions/by-external-key/finance/review";
+        var automatic = await sharing.GetSharingAsync(saved.Id, saved.VersionId, default);
+        Assert.Equal(DefinitionSharingSettings.Default, automatic);
+        var envelope = await client.GetFromJsonAsync<WorkflowDefinitionExportEnvelope>($"{definitionPath}/export");
+        Assert.NotNull(envelope);
+        var launch = new WorkflowRunStartApiRequest { WorkflowId = saved.Id.Value, VersionId = saved.VersionId.Value, InputJson = "{}" };
+        using var admitted = await client.PostAsJsonAsync("/api/workflows/runs/start", launch);
+        admitted.EnsureSuccessStatusCode();
+        var run = await admitted.Content.ReadFromJsonAsync<WorkflowRunStartApiResponse>();
+        Assert.NotNull(run);
+        var templateOnly = new DefinitionSharingSettings(false, true);
+        await sharing.SetSharingAsync(saved.Id, saved.VersionId, automatic, templateOnly, _ => ValueTask.CompletedTask, default);
+
+        Assert.Contains(await catalog.ListDefinitionsAsync(), item => item.Id == saved.Id);
+        var listed = await client.GetFromJsonAsync<WorkflowCatalogItem[]>("/api/workflows/definitions");
+        Assert.NotNull(listed);
+        Assert.Contains(listed, item => item.Id == visible.Id);
+        Assert.DoesNotContain(listed, item => item.Id == saved.Id);
+        Assert.Empty((await client.GetFromJsonAsync<WorkflowCatalogItem[]>("/api/workflows/definitions?externalNamespace=finance&externalKey=review"))!);
+        var external = await client.GetFromJsonAsync<WorkflowStableIdentityResolution>(externalPath);
+        Assert.Equal(WorkflowStableIdentityResolutionStatus.NotFound, external!.Status);
+        Assert.Empty(external.Materializations);
+        var resolution = await client.GetFromJsonAsync<WorkflowStableIdentityResolution>($"/api/workflows/definitions/by-template-key/{template}");
+        Assert.Equal(WorkflowStableIdentityResolutionStatus.Resolved, resolution!.Status);
+        Assert.Equal(visible.Id, resolution.WorkflowId);
+        Assert.Equal(visible.Id, Assert.Single(resolution.Materializations).Id);
+        await AssertHiddenAsync(client.GetAsync(definitionPath));
+        await AssertHiddenAsync(client.GetAsync($"{definitionPath}/versions/{saved.VersionId.Value:D}"));
+        await AssertHiddenAsync(client.GetAsync($"{definitionPath}/export"));
+        await AssertHiddenAsync(client.PostAsync($"{definitionPath}/validate", null));
+        await AssertHiddenAsync(client.PostAsJsonAsync("/api/workflows/definitions", draft with { Id = saved.Id, ExpectedVersionId = saved.VersionId }));
+        await AssertHiddenAsync(client.PostAsJsonAsync("/api/workflows/definitions/import",
+            new WorkflowDefinitionImportRequest(envelope, null, null, true) { ExpectedVersionId = saved.VersionId }));
+        foreach (var change in new[] { "publish", "suspend", "archive" }) {
+            await AssertHiddenAsync(client.PostAsync($"{definitionPath}/{change}{versionQuery}", null));
+        }
+        await AssertHiddenAsync(client.DeleteAsync(definitionPath + versionQuery));
+        await AssertHiddenAsync(client.PostAsJsonAsync($"{definitionPath}/runs/start", launch));
+        await AssertHiddenAsync(client.PostAsJsonAsync("/api/workflows/runs/start", launch));
+        var preview = new WorkflowTestRunRequest(saved.Id, saved.VersionId, null, "{}", null, ValidateOnly: false);
+        await AssertHiddenAsync(client.PostAsJsonAsync("/api/workflows/test-runs", preview));
+        await AssertHiddenAsync(client.PostAsJsonAsync("/api/workflows/test-runs", preview with { WorkflowId = null, DraftDefinition = saved }));
+        using var observed = await client.GetAsync($"/api/workflows/runs/{run.Run.RunId:D}");
+        Assert.Equal(HttpStatusCode.OK, observed.StatusCode);
+        var analytics = await client.GetFromJsonAsync<WorkflowAnalyticsSnapshot>($"/api/workflows/analytics?WorkflowId={saved.Id.Value:D}");
+        Assert.NotNull(analytics);
+        Assert.Equal(0, analytics.DefinitionCount);
+        Assert.Equal(1, analytics.RunCount);
+        using var shared = await client.GetAsync(RemoteWorkflowRoutes.Details(saved.Id.Value));
+        Assert.Equal(HttpStatusCode.OK, shared.StatusCode);
+
+        await sharing.SetSharingAsync(saved.Id, saved.VersionId, templateOnly, automatic, _ => ValueTask.CompletedTask, default);
+        var restored = await client.GetFromJsonAsync<WorkflowDefinitionDetail>(definitionPath);
+        Assert.Equal(saved.VersionId, restored!.Definition.VersionId);
+        await AssertHiddenAsync(client.GetAsync(RemoteWorkflowRoutes.Details(saved.Id.Value)));
+
+        static async Task AssertHiddenAsync(Task<HttpResponseMessage> pending) {
+            using var response = await pending;
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
     }
 
@@ -141,4 +222,13 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
     private static LlmCallComponent Component() => new(WorkflowComponentId.New(), "Review", Guid.NewGuid(), "publisher-model",
         WorkflowModality.Text, new(0.2, 120, false, string.Empty), "Review a budget", WorkflowValueShape.Text, WorkflowValueShape.Text,
         AgentPermissionsPolicy.Default, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+
+    private static WorkflowDefinitionSaveRequest PortableWorkflow() {
+        var seed = WorkflowDefinitionValidator.CreateComponentValidationDefinition(Component());
+        var graph = seed.Graph with {
+            Nodes = [seed.Graph.Nodes[0], seed.Graph.Nodes[^1]],
+            Edges = [seed.Graph.Edges[0] with { TargetNodeId = seed.Graph.Nodes[^1].Id }]
+        };
+        return new(null, null, "Budget review", "Saved workflow", WorkflowLifecycleStatus.Draft, graph, seed.RuntimePolicy);
+    }
 }

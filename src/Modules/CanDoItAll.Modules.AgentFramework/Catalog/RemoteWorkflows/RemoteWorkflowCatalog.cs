@@ -41,16 +41,17 @@ public sealed class RemoteWorkflowCatalog(PersistentWorkflowCatalogService workf
         return result;
     }
 
-    public async Task<bool> IsPublishedAsync(WorkflowCatalogItem selected, CancellationToken token) {
-        var definition = await ReadSelectedAsync(selected, token);
-        return await publications.IsPublishedAsync(RemoteTemplateKind.Workflow, selected.Id.Value, token, definition.CreatedAtUtc);
+    public async Task<DefinitionSharingSettings> GetSharingAsync(WorkflowId id, WorkflowVersionId version, CancellationToken token) {
+        var definition = await ReadSelectedAsync(id, version, token);
+        return await publications.GetSharingAsync(RemoteTemplateKind.Workflow, id.Value, token, definition.CreatedAtUtc);
     }
 
-    public async Task SetPublishedAsync(WorkflowCatalogItem selected, bool publish, Func<CancellationToken, ValueTask> authorize, CancellationToken token) {
+    public async Task SetSharingAsync(WorkflowId id, WorkflowVersionId version, DefinitionSharingSettings expected,
+        DefinitionSharingSettings desired, Func<CancellationToken, ValueTask> authorize, CancellationToken token) {
         await authorize(token);
         var opening = await workspace.ReadAgentDecisionDataPolicyContextAsync(token);
-        var definition = await ReadSelectedAsync(selected, token);
-        if (publish) {
+        var definition = await ReadSelectedAsync(id, version, token);
+        if (desired.SharedTemplate && !expected.SharedTemplate) {
             if (!CanShare(definition.Status)) {
                 throw new RemoteInstanceReadException("Choose an active or draft workflow to share.");
             }
@@ -58,15 +59,15 @@ public sealed class RemoteWorkflowCatalog(PersistentWorkflowCatalogService workf
         }
         async ValueTask Recheck(CancellationToken current) {
             await RequireWorkspaceAsync(opening, current);
-            await ReadSelectedAsync(selected, current);
+            await ReadSelectedAsync(id, version, current);
             await authorize(current);
         }
-        await publications.SetAsync(RemoteTemplateKind.Workflow, selected.Id.Value, publish, token, Recheck, definition.CreatedAtUtc);
+        await publications.SetSharingAsync(RemoteTemplateKind.Workflow, id.Value, expected, desired, Recheck, token, definition.CreatedAtUtc);
     }
 
-    private async Task<WorkflowDefinition> ReadSelectedAsync(WorkflowCatalogItem selected, CancellationToken token) {
-        var definition = (await workflows.ReadRemoteDefinitionsAsync([selected.Id.Value], token)).SingleOrDefault();
-        return definition?.VersionId == selected.VersionId ? definition : throw new RemoteInstanceReadException("The selected workflow changed. Refresh it and reopen sharing.");
+    private async Task<WorkflowDefinition> ReadSelectedAsync(WorkflowId id, WorkflowVersionId version, CancellationToken token) {
+        var definition = (await workflows.ReadRemoteDefinitionsAsync([id.Value], token)).SingleOrDefault();
+        return definition?.VersionId == version ? definition : throw new RemoteInstanceReadException("The selected workflow changed. Refresh it and reopen sharing.");
     }
 
     private async Task<RemoteWorkflowDocument> CreateAsync(WorkflowDefinition definition, CancellationToken token) {

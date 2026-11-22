@@ -19,5 +19,9 @@
         <SettingsRenderer Context="settings">
             <WorkflowNativeSettingsSlot Context="settings" Executors="@ExecutorCatalog.ListExecutors()" Secrets="secrets" />
         </SettingsRenderer>
+        <SharingRenderer Context="saved">
+            <WorkflowSharingSettings @key="saved?.VersionId" Id="saved?.Id" Version="saved?.VersionId"
+                                     OwnerToken="lifetime.Token" Authorize="Authorize" />
+        </SharingRenderer>
     </WorkflowCanvasSurface>
 }

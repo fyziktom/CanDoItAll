@@ -43,6 +43,7 @@ public partial class WorkflowCanvasSurface : IHandleEvent, IDisposable {
     [Parameter] public CancellationToken OwnerToken { get; set; }
     [Parameter] public RenderFragment<WorkflowPromptPickerContext>? PromptPicker { get; set; }
     [Parameter] public RenderFragment<WorkflowExecutorSettingsContext>? SettingsRenderer { get; set; }
+    [Parameter] public RenderFragment<WorkflowDefinition?>? SharingRenderer { get; set; }
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
