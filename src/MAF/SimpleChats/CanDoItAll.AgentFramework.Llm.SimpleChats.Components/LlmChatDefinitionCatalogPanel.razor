@@ -21,6 +21,7 @@
     var ownedEditor = editorGeneration;
     <LlmChatDefinitionEditorDialog @key="ownedEditor" DefinitionId="selectedDefinitionId"
                                    InitialSection="initialSection" DefinitionSharing="DefinitionSharing"
+                                   SharingChanged="session.ReloadAsync"
                                    CreatedForSharing="@(id => ContinueToSharingAsync(ownedEditor, id))"
                                    Saved="@((LlmChatDefinitionListItem value) => HandleSavedAsync(ownedEditor))"
                                    Cancelled="@(() => CloseEditorAsync(ownedEditor))" />

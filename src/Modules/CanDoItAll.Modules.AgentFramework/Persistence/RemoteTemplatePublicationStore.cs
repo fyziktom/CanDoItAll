@@ -27,11 +27,14 @@ public sealed record DefinitionSharingSettings(bool ApiAvailable, bool SharedTem
 }
 
 public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbContext> factory) : ILlmChatSharingReader {
-    async Task<LlmChatSharingSnapshot> ILlmChatSharingReader.ReadAsync(CancellationToken token) {
+    async Task<LlmChatSharingSnapshot> ILlmChatSharingReader.ReadAsync(Guid? definitionId, CancellationToken token) {
         await using var db = await factory.CreateDbContextAsync(token);
-        var rows = await db.Set<RemoteTemplatePublication>().AsNoTracking()
-            .Where(row => row.Kind == RemoteTemplateKind.SimpleChat && row.CreatedUtcTicks == 0)
-            .Select(row => new { row.DefinitionId, row.ApiAvailable, row.SharedTemplate }).ToListAsync(token);
+        var query = db.Set<RemoteTemplatePublication>().AsNoTracking()
+            .Where(row => row.Kind == RemoteTemplateKind.SimpleChat && row.CreatedUtcTicks == 0);
+        if (definitionId is { } id) {
+            query = query.Where(row => row.DefinitionId == id);
+        }
+        var rows = await query.Select(row => new { row.DefinitionId, row.ApiAvailable, row.SharedTemplate }).ToListAsync(token);
         return rows.Count == 0 ? LlmChatSharingSnapshot.Default : new(
             rows.Where(row => row.SharedTemplate).Select(row => row.DefinitionId).ToHashSet(),
             rows.Where(row => !row.ApiAvailable).Select(row => row.DefinitionId).ToHashSet());

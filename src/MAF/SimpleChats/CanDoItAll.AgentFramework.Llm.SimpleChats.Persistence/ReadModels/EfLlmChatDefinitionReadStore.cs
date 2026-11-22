@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.RemoteInstances;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -60,7 +61,8 @@ public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext)
         string? searchText = null,
         IReadOnlyList<string>? tagFilters = null,
         CancellationToken cancellationToken = default,
-        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null,
+        LlmChatSharingSnapshot? sharing = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
         var query = dbContext.Set<LlmChatDefinitionRow>().AsNoTracking();
@@ -74,23 +76,33 @@ public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext)
         }
 
         var normalizedSearchText = searchText?.Trim() ?? string.Empty;
+        sharing ??= LlmChatSharingSnapshot.Default;
+        var shared = sharing.Published.ToArray();
+        var apiUnavailable = sharing.ApiUnavailable.ToArray();
         if (normalizedSearchText.Length > 0)
         {
             var searchPattern = $"%{EscapeLikePattern(normalizedSearchText)}%";
+            var matchesShared = DefinitionSharingTags.Shared.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase);
+            var matchesApi = DefinitionSharingTags.Api.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase);
             query = query.Where(item =>
+                matchesShared && shared.Contains(item.Id) ||
+                matchesApi && !apiUnavailable.Contains(item.Id) ||
                 EF.Functions.ILike(item.Name, searchPattern, "\\") ||
                 EF.Functions.ILike(item.Summary, searchPattern, "\\") ||
                 dbContext.Set<LlmChatDefinitionTagRow>().Any(tag =>
                     tag.DefinitionId == item.Id &&
+                    tag.Tag.Trim().ToLower() != DefinitionSharingTags.Api && tag.Tag.Trim().ToLower() != DefinitionSharingTags.Shared &&
                     EF.Functions.ILike(tag.Tag, searchPattern, "\\")));
         }
 
         foreach (var tag in tagFilters ?? [])
         {
-            var normalizedTag = tag;
-            query = query.Where(item => dbContext.Set<LlmChatDefinitionTagRow>().Any(candidate =>
-                candidate.DefinitionId == item.Id &&
-                candidate.Tag == normalizedTag));
+            query = tag.Trim().ToLowerInvariant() switch {
+                DefinitionSharingTags.Shared => query.Where(item => shared.Contains(item.Id)),
+                DefinitionSharingTags.Api => query.Where(item => !apiUnavailable.Contains(item.Id)),
+                var custom => query.Where(item => dbContext.Set<LlmChatDefinitionTagRow>().Any(candidate =>
+                    candidate.DefinitionId == item.Id && candidate.Tag == custom))
+            };
         }
 
         if (cursor is { } position)

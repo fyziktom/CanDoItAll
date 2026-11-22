@@ -7,5 +7,5 @@ public sealed record LlmChatSharingSnapshot(IReadOnlySet<Guid> Published, IReadO
 }
 
 public interface ILlmChatSharingReader {
-    Task<LlmChatSharingSnapshot> ReadAsync(CancellationToken token);
+    Task<LlmChatSharingSnapshot> ReadAsync(Guid? definitionId, CancellationToken token);
 }

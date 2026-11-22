@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.Components.BaseLib;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
 
@@ -25,7 +26,8 @@ internal static class LlmChatDefinitionEditorForm {
             SchemaName = editor.SchemaName,
             SchemaDescription = editor.SchemaDescription,
             RevisionReason = string.Empty,
-            Tags = TagTextValueNormalizer.NormalizeTags(editor.Definition.Tags, 12).ToImmutableArray()
+            Tags = TagTextValueNormalizer.NormalizeTags(DefinitionSharingTags.Custom(editor.Definition.Tags),
+                Definitions.LlmChatDefinitionValidation.MaximumTags).ToImmutableArray()
         };
     }
 
@@ -63,7 +65,8 @@ internal static class LlmChatDefinitionEditorForm {
             return Invalid("JSON schema output requires a schema name and valid JSON schema.", out mutation, out validationMessage);
         }
 
-        var tags = TagTextValueNormalizer.NormalizeTags(values.Tags, 12);
+        var tags = TagTextValueNormalizer.NormalizeTags(DefinitionSharingTags.Custom(values.Tags),
+            Definitions.LlmChatDefinitionValidation.MaximumTags);
         mutation = new(
             values.Name,
             values.Summary,

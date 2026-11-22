@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 
 namespace CanDoItAll.Tests.Unit.LlmChats;
 
@@ -25,6 +26,45 @@ public sealed class LlmChatDefinitionServiceTests
             tags: Enumerable.Range(0, LlmChatDefinitionQuery.MaximumTagFilters + 1)
                 .Select(index => $"tag-{index}")
                 .ToArray()));
+    }
+
+    [Fact]
+    public void Requested_sharing_names_do_not_use_the_custom_tag_capacity_in_a_create_receipt() {
+        var custom = Enumerable.Range(1, LlmChatDefinitionValidation.MaximumTags).Select(index => $"tag-{index:D2}").ToArray();
+        var request = new CreateLlmChatDefinitionCommand("Support", "", "", "Instructions", Guid.NewGuid(), "model", new LlmModelSettings(),
+            null, null, "Initial", ["SHARED", .. custom, " Api "]);
+        var prepared = LlmChatDefinitionCreatePreparation.Prepare(request);
+        Assert.Equal(["api", "shared", .. custom], prepared.Definition.Tags);
+        Assert.Throws<ArgumentException>(() => LlmChatDefinitionCreatePreparation.Prepare(request with { Tags = [.. custom, "another"] }));
+    }
+
+    [Fact]
+    public async Task Api_catalog_requires_its_sharing_reader_and_combines_requested_exclusions_before_paging() {
+        var repo = new InMemoryLlmChatDefinitionRepository();
+        var resolver = new StubLlmChatProviderResolver();
+        var standalone = CreateService(repo, resolver);
+        var first = await CreateDefinitionAsync(standalone);
+        var second = await CreateDefinitionAsync(standalone);
+        var third = await CreateDefinitionAsync(standalone);
+        var query = new LlmChatDefinitionQuery(take: 1) { OnlyApiAvailable = true, UnavailableDefinitionIds = new HashSet<Guid> { first.Definition.Id.Value } };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => standalone.ListPageAsync(query));
+        var sharing = new SharingReader(new(new HashSet<Guid> { second.Definition.Id.Value }, new HashSet<Guid> { second.Definition.Id.Value }));
+        var service = new LlmChatDefinitionApplicationService(repo, repo, new InlineLlmChatUnitOfWork(), resolver, new FixedTimeProvider(Now), repo, sharingReader: sharing);
+        var result = (await service.ListPageAsync(query)).Value!;
+        Assert.Equal(third.Definition.Id, Assert.Single(result.Items).Definition.Id);
+        Assert.Null(result.NextCursor);
+        var detail = (await service.GetAsync(second.Definition.Id)).Value!;
+        Assert.Equal(["shared"], detail.EffectiveTags);
+        Assert.Equal([null, second.Definition.Id.Value], sharing.Requests);
+    }
+
+    private sealed class SharingReader(LlmChatSharingSnapshot sharing) : ILlmChatSharingReader {
+        public List<Guid?> Requests { get; } = [];
+
+        public Task<LlmChatSharingSnapshot> ReadAsync(Guid? definitionId, CancellationToken token) {
+            Requests.Add(definitionId);
+            return Task.FromResult(sharing);
+        }
     }
 
     [Fact]
@@ -85,7 +125,7 @@ public sealed class LlmChatDefinitionServiceTests
             null,
             null,
             "Initial",
-            ["general", "shared"]));
+            ["general", "common"]));
         await service.CreateAsync(new CreateLlmChatDefinitionCommand(
             "Operations assistant",
             "Handles incidents",
@@ -97,15 +137,17 @@ public sealed class LlmChatDefinitionServiceTests
             null,
             null,
             "Initial",
-            ["incident-response", "shared"]));
+            ["incident-response", "common", " SHARED "]));
 
         var result = await service.ListPageAsync(new LlmChatDefinitionQuery(
             take: 1,
-            tags: [" SHARED ", "Incident-Response"]));
+            tags: [" COMMON ", "Incident-Response", " API "]));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Operations assistant", Assert.Single(result.Value!.Items).Definition.Name);
         Assert.Null(result.Value.NextCursor);
+        Assert.Equal(["api", "common", "incident-response"], result.Value.Items[0].EffectiveTags);
+        Assert.Empty((await service.ListPageAsync(new(tags: ["shared"]))).Value!.Items);
     }
 
     [Fact]

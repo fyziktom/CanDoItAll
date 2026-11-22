@@ -109,13 +109,20 @@
                                         </AvatarActions>
                                         <AdditionalFields>
                                             <FormField Text="Tags">
+                                                @if (ManagedTags.Count > 0) {
+                                                    <Cluster Gap="LayoutGap.Small" data-testid="llm-chat-definition-managed-tags">
+                                                        @foreach (var tag in ManagedTags) {
+                                                            <StatusBadge Text="@tag" />
+                                                        }
+                                                    </Cluster>
+                                                }
                                                 <TagEditor Value="@form.Tags"
                                                            PendingInput="@form.PendingTagInput"
                                                            PendingInputChanged="HandlePendingTagChanged"
                                                            ValueChanged="HandleTagsChanged"
                                                            Placeholder="Add Simple Chat tag"
                                                            Hint="Use Enter or comma to add tags."
-                                                           MaxTags="12"
+                                                           MaxTags="@Math.Max(12, (current?.Tags.Length ?? 0) - ManagedTags.Count)"
                                                            Disabled="@fieldsBlocked"
                                                            TestId="llm-chat-definition-tags"
                                                            InputTestId="llm-chat-definition-tags-input" />
@@ -287,6 +294,7 @@
     [Parameter] public EventCallback<DefinitionEditorIntent> Intent { get; set; }
     [Parameter] public RenderFragment<DefinitionEditorAvatarContext>? AvatarActions { get; set; }
     [Parameter] public RenderFragment? Sharing { get; set; }
+    [Parameter] public IReadOnlyList<string> ManagedTags { get; set; } = [];
     [Parameter] public DefinitionEditorSection InitialSection { get; set; }
     [Parameter] public System.Collections.Immutable.ImmutableArray<string> BundledAvatars { get; set; } = [];
 

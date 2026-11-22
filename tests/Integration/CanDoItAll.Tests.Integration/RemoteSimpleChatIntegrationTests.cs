@@ -44,9 +44,15 @@ public sealed class RemoteSimpleChatIntegrationTests {
         var conversationPath = $"/api/llm-conversations/{ongoing.Id.Value:D}";
         using (var before = await host.Client.GetAsync(definitionPath)) {
             Assert.Equal(HttpStatusCode.OK, before.StatusCode);
+            var initial = await before.Content.ReadFromJsonAsync<JsonObject>();
+            Assert.Equal(["api", "review"], initial!["tags"]!.AsArray().Select(node => node!.GetValue<string>()));
         }
         var templateOnly = new DefinitionSharingSettings(false, true);
         await publisher.SetSharingAsync(hidden.Id.Value, 1, DefinitionSharingSettings.Default, templateOnly, Allow, default);
+        var templateTags = (await definitions.ListPageAsync(new(take: 1, tags: ["shared", "review"]))).Value!;
+        Assert.Equal(hidden.Id, Assert.Single(templateTags.Items).Definition.Id);
+        Assert.Equal(["shared", "review"], templateTags.Items[0].EffectiveTags);
+        Assert.Empty((await definitions.ListPageAsync(new(tags: ["shared", "api"]))).Value!.Items);
 
         var page = await host.Client.GetFromJsonAsync<JsonObject>("/api/llm-chats?take=1");
         Assert.Equal(visible.Id.Value, Assert.Single(page!["items"]!.AsArray())!["id"]!.GetValue<Guid>());
@@ -211,6 +217,7 @@ public sealed class RemoteSimpleChatIntegrationTests {
         Assert.Equal(command.Settings, local.Revision.Settings);
         Assert.Equal(command.ResponseFormat, local.Revision.ResponseFormat);
         Assert.Equal(command.Tags, local.NormalizedTags);
+        Assert.Equal(["api", .. command.Tags!], local.EffectiveTags);
         Assert.False(await services.GetRequiredService<RemoteTemplatePublicationStore>().IsPublishedAsync(RemoteTemplateKind.SimpleChat, localId, default));
         var change = await definitions.UpdateAsync(new(new(localId), "Human title", local.Revision.Summary, local.Revision.AvatarImageUrl, "Local instructions",
             choice.ProviderId, choice.Model, command.Settings, command.Timeout, command.ResponseFormat, "Edit after import", local.Definition.ConcurrencyToken));

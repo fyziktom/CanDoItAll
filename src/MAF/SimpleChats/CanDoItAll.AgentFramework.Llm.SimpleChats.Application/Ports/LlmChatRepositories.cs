@@ -74,7 +74,8 @@ public interface ILlmChatDefinitionReadStore
         string? searchText = null,
         IReadOnlyList<string>? tags = null,
         CancellationToken cancellationToken = default,
-        IReadOnlySet<Guid>? unavailableDefinitionIds = null);
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null,
+        LlmChatSharingSnapshot? sharing = null);
 }
 
 public interface ILlmChatConversationRepository

@@ -279,7 +279,7 @@ public sealed class LlmChatDefinitionUiGateway(
             details.Definition.CurrentRevision.Value,
             details.Definition.ConcurrencyToken,
             details.Definition.UpdatedAtUtc,
-            details.NormalizedTags.ToArray());
+            details.EffectiveTags);
 
     private static LlmChatDefinitionEditor ToEditor(LlmChatDefinitionDetails details)
     {

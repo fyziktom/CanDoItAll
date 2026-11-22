@@ -105,7 +105,7 @@ public sealed class RemoteSimpleChatPublisher(ILlmChatDefinitionApplicationServi
             details.Definition.UpdatedAtUtc, revision.Revision.Value) {
             HasEmbeddedAvatar = revision.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix, StringComparison.Ordinal)
         };
-        return new(row, revision.SystemPrompt, details.NormalizedTags, RemoteSimpleChatSettings.From(revision.Settings), revision.Timeout,
+        return new(row, revision.SystemPrompt, DefinitionSharingTags.Custom(details.NormalizedTags), RemoteSimpleChatSettings.From(revision.Settings), revision.Timeout,
             revision.ResponseFormat is { } format ? new(format.RequireJson, format.SchemaJson, format.SchemaName, format.SchemaDescription) : null, model);
     }
 

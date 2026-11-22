@@ -55,7 +55,7 @@ public sealed class RemoteSimpleChatImportFeature(RemoteTemplateConnectionReader
         }
         try {
             LlmChatDefinitionValidation.ValidateSettings(document.Settings.ToLocal(), document.Timeout);
-            LlmChatDefinitionValidation.NormalizeTags(document.Tags);
+            LlmChatDefinitionValidation.NormalizeTags(DefinitionSharingTags.Custom(document.Tags));
             LlmChatDefinitionValidation.NormalizeAvatarImageUrl(row.AvatarImageUrl);
         } catch (ArgumentException) {
             throw new RemoteInstanceReadException("The shared Simple Chat has invalid settings, tags or avatar.");
@@ -86,7 +86,8 @@ public sealed class RemoteSimpleChatImportFeature(RemoteTemplateConnectionReader
         await RequireWorkspaceAsync(original, token);
         var template = fresh.Document;
         var create = new CreateLlmChatDefinitionCommand(row.Name, row.Summary, row.AvatarImageUrl ?? string.Empty, template.SystemPrompt,
-            choice.ProviderId, choice.Model, template.Settings.ToLocal(), template.Timeout, template.ResponseFormat?.ToLocal(), "Imported shared Simple Chat", template.Tags);
+            choice.ProviderId, choice.Model, template.Settings.ToLocal(), template.Timeout, template.ResponseFormat?.ToLocal(),
+            "Imported shared Simple Chat", DefinitionSharingTags.Custom(template.Tags));
         Result<LlmChatDefinitionCreateResponse> result;
         try {
             result = await receipts.CreateOnceAsync(new(key, create), token);

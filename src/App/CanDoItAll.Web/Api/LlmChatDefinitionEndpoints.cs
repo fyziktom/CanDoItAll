@@ -3,7 +3,6 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
-using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
@@ -163,7 +162,6 @@ internal static class LlmChatDefinitionEndpoints
         string? cursor,
         string? status,
         ILlmChatDefinitionApplicationService service,
-        RemoteTemplatePublicationStore publications,
         CancellationToken cancellationToken)
     {
         if (!TryCreateDefinitionQuery(take ?? 50, cursor, status, out var query, out var error))
@@ -171,8 +169,7 @@ internal static class LlmChatDefinitionEndpoints
             return error!;
         }
 
-        var unavailable = await publications.ListApiUnavailableIdsAsync(RemoteTemplateKind.SimpleChat, cancellationToken);
-        var result = await service.ListPageAsync(query! with { UnavailableDefinitionIds = unavailable }, cancellationToken);
+        var result = await service.ListPageAsync(query! with { OnlyApiAvailable = true }, cancellationToken);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors);

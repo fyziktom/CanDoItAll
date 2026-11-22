@@ -1656,15 +1656,24 @@ public sealed class LlmChatBoundedReadModelIntegrationTests
         Assert.Equal(2, interceptor.Commands.Count);
 
         interceptor.Clear();
+        var legacyTags = await definitionStore.ListPageAsync(1, null, null, null, ["tag-19", "shared"]);
+        Assert.Empty(legacyTags.Items);
+        Assert.Empty((await definitionStore.ListPageAsync(1, null, null, "share")).Items);
+
+        var id = Assert.Single(tagMatch.Items).Definition.Id.Value;
+        var sharing = new LlmChatSharingSnapshot(new HashSet<Guid> { id }, new HashSet<Guid> { id });
+        interceptor.Clear();
         var exactTagMatch = await definitionStore.ListPageAsync(
             10,
             null,
             null,
             null,
-            ["tag-19", "shared"]);
+            ["tag-19", "shared"], sharing: sharing);
 
         Assert.Equal("Definition 19", Assert.Single(exactTagMatch.Items).Definition.Name);
         Assert.Equal(2, interceptor.Commands.Count);
+        Assert.Equal(id, Assert.Single((await definitionStore.ListPageAsync(1, null, null, " SHARE ", sharing: sharing)).Items).Definition.Id.Value);
+        Assert.Empty((await definitionStore.ListPageAsync(1, null, null, null, ["shared", "api"], sharing: sharing)).Items);
 
         interceptor.Clear();
         var conversationStore = new EfLlmChatConversationReadStore(dbContext);
