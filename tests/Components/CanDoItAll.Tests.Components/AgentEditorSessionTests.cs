@@ -20,14 +20,20 @@ public sealed class AgentEditorSessionTests {
         var memory = new EmptyMemoryProfiles();
         await using var harness = await CreateHarnessAsync(reads, memory);
         var cut = harness.Context.Render<AgentDetailsDialog>();
-        var context = cut.FindComponent<EditForm>().Instance.EditContext;
+        var context = cut.FindComponent<EditForm>().Instance.EditContext!;
+        var draft = Assert.IsType<AgentEditorModel>(context.Model);
         cut.Find("[data-testid='agents-catalog-name']").Input("Retained draft");
-        Assert.Equal(new[] { "Identity", "Runtime", "Memory", "Images", "Project Structure Access", "Workspace Tools", "Secrets", "Process Access", "Capabilities", "Voice" },
+        Assert.Equal(new[] { "Identity", "Runtime", "Memory", "Images", "Project Structure Access", "Workspace Tools", "Secrets", "Process Access", "Capabilities", "Voice", "Sharing" },
             cut.FindAll("[data-testid='agents-details-tabs'] button[role='tab']").Select(tab => tab.TextContent.Trim()));
+        cut.Render(parameters => parameters.Add(component => component.Section, AgentEditorSection.Sharing));
+        cut.Find("[data-testid='definition-sharing-template']").Change(true);
+        cut.Find("[data-testid='definition-sharing-api']").Change(false);
         foreach (var section in Enum.GetValues<AgentEditorSection>()) {
             cut.Render(parameters => parameters.Add(component => component.Section, section));
             Assert.Same(context, cut.FindComponent<EditForm>().Instance.EditContext);
-            Assert.Equal("Retained draft", ((AgentEditorModel)context!.Model).Name);
+            Assert.Equal("Retained draft", draft.Name);
+            Assert.True(draft.SharedTemplate);
+            Assert.False(draft.ApiAvailable);
         }
         Assert.Equal(1, memory.Reads);
         Assert.Equal(0, reads.ProjectReads);
