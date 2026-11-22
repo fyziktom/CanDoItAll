@@ -59,10 +59,15 @@ public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext)
         LlmChatDefinitionStatus? status,
         string? searchText = null,
         IReadOnlyList<string>? tagFilters = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
         var query = dbContext.Set<LlmChatDefinitionRow>().AsNoTracking();
+        if (unavailableDefinitionIds is { Count: > 0 }) {
+            var excluded = unavailableDefinitionIds.ToArray();
+            query = query.Where(item => !excluded.Contains(item.Id));
+        }
         if (status is { } value)
         {
             query = query.Where(item => item.Status == value);

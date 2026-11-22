@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
 
-public enum DefinitionEditorSection { Identity, Runtime, Output }
+public enum DefinitionEditorSection { Identity, Runtime, Output, Sharing }
 public enum DefinitionEditorFormat { Text, Json, JsonSchema }
 public enum DefinitionEditorEffort { None, Minimal, Low, Medium, High, ExtraHigh, Max }
 public enum DefinitionEditorEffortSupport { Supported, Unsupported, Unknown }
@@ -40,7 +40,8 @@ public sealed record DefinitionEditorModel(string Model, DefinitionEditorEffortS
     ImmutableArray<DefinitionEditorEffort> AllowedEfforts);
 public sealed record DefinitionEditorProvider(ConversationProviderOption Option, ImmutableArray<DefinitionEditorModel> Models);
 public sealed record DefinitionEditorIntent(long Generation, DefinitionEditorAction Action,
-    DefinitionEditorValues? Submission = null, LlmChatDefinitionStatusFilter? Status = null, bool AcknowledgeUnconfirmed = false);
+    DefinitionEditorValues? Submission = null, LlmChatDefinitionStatusFilter? Status = null, bool AcknowledgeUnconfirmed = false,
+    bool ContinueToSharing = false);
 public sealed record DefinitionEditorAvatarContext(DefinitionEditorValues Values, ConversationAvatarPresentation Avatar,
     EventCallback<string> Changed, bool IsBusy);
 

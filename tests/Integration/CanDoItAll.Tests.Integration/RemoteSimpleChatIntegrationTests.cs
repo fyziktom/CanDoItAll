@@ -20,6 +20,63 @@ namespace CanDoItAll.Tests.Integration.LlmChats;
 [Trait("Category", "HostPlatform")]
 public sealed class RemoteSimpleChatIntegrationTests {
     [Fact]
+    public async Task Api_availability_filters_before_paging_and_rejects_new_work_independently_of_template_sharing() {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var definitions = services.GetRequiredService<ILlmChatDefinitionApplicationService>();
+        var conversations = services.GetRequiredService<ILlmChatConversationApplicationService>();
+        var publisher = services.GetRequiredService<RemoteSimpleChatPublisher>();
+        var provider = await AddProviderAsync(services, "Visibility");
+        var command = CreateDefinition(provider, "Visibility");
+        var visible = (await definitions.CreateAsync(command with { Name = "API selection" })).Value!.Definition;
+        var hidden = (await definitions.CreateAsync(command with { Name = "Template only" })).Value!.Definition;
+        var active = (await definitions.ChangeStatusAsync(new(hidden.Id, LlmChatDefinitionStatus.Active, hidden.ConcurrencyToken))).Value!.Definition;
+        var archived = (await conversations.CreateAsync(new(hidden.Id, "Archived transcript", LlmChatConversationOrigin.Api))).Value!.Conversation;
+        Assert.True((await conversations.ArchiveAsync(new(archived.Id, archived.ConcurrencyToken))).IsSuccess);
+        var ongoing = (await conversations.CreateAsync(new(hidden.Id, "Local discussion", LlmChatConversationOrigin.Api))).Value!.Conversation;
+        var token = services.GetRequiredService<IApiTokenService>().IssueToken(new() {
+            Subject = "simple-chat-sharing", Scopes = [ApiAccessScopeNames.ReadLlmChats, ApiAccessScopeNames.ManageLlmChats,
+                ApiAccessScopeNames.ExecuteLlmChats, ApiAccessScopeNames.ReadSharedSimpleChats]
+        }).Token;
+        host.Client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+        var definitionPath = $"/api/llm-chats/{hidden.Id.Value:D}";
+        var conversationPath = $"/api/llm-conversations/{ongoing.Id.Value:D}";
+        using (var before = await host.Client.GetAsync(definitionPath)) {
+            Assert.Equal(HttpStatusCode.OK, before.StatusCode);
+        }
+        var templateOnly = new DefinitionSharingSettings(false, true);
+        await publisher.SetSharingAsync(hidden.Id.Value, 1, DefinitionSharingSettings.Default, templateOnly, Allow, default);
+
+        var page = await host.Client.GetFromJsonAsync<JsonObject>("/api/llm-chats?take=1");
+        Assert.Equal(visible.Id.Value, Assert.Single(page!["items"]!.AsArray())!["id"]!.GetValue<Guid>());
+        Assert.Null(page["nextCursor"]);
+        var conversationPage = await host.Client.GetFromJsonAsync<JsonObject>($"/api/llm-conversations?take=1&definitionId={hidden.Id.Value:D}");
+        Assert.Equal(archived.Id.Value, Assert.Single(conversationPage!["items"]!.AsArray())!["id"]!.GetValue<Guid>());
+        Assert.Null(conversationPage["nextCursor"]);
+        using var detail = await host.Client.GetAsync(definitionPath);
+        using var editor = await host.Client.GetAsync(definitionPath + "/editor");
+        using var edit = await host.Client.PutAsJsonAsync(definitionPath, new { });
+        using var suspend = await host.Client.PostAsJsonAsync(definitionPath + "/suspend", new { expectedConcurrencyToken = active.ConcurrencyToken });
+        using var create = await host.Client.PostAsJsonAsync(definitionPath + "/conversations", new { title = "Rejected" });
+        var operationId = Guid.NewGuid();
+        using var send = await host.Client.PostAsJsonAsync(conversationPath + "/turns", new { operationId, expectedTranscriptRevision = 1, message = "Rejected" });
+        using var operation = await host.Client.GetAsync($"/api/llm-chat-operations/{operationId:D}");
+        Assert.All(new[] { detail, editor, edit, suspend, create, send, operation }, response => Assert.Equal(HttpStatusCode.NotFound, response.StatusCode));
+        using var history = await host.Client.GetAsync(conversationPath);
+        Assert.Equal(HttpStatusCode.OK, history.StatusCode);
+        Assert.Equal(LlmChatDefinitionStatus.Active, (await definitions.GetAsync(hidden.Id)).Value!.Definition.Status);
+        using var template = await host.Client.GetAsync(RemoteSimpleChatRoutes.Details(hidden.Id.Value));
+        Assert.Equal(HttpStatusCode.OK, template.StatusCode);
+
+        await publisher.SetSharingAsync(hidden.Id.Value, 1, templateOnly, DefinitionSharingSettings.Default, Allow, default);
+        using var restored = await host.Client.GetAsync(definitionPath);
+        using var withdrawn = await host.Client.GetAsync(RemoteSimpleChatRoutes.Details(hidden.Id.Value));
+        Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, withdrawn.StatusCode);
+    }
+
+    [Fact]
     public async Task Only_explicitly_shared_current_definitions_are_visible_with_a_scoped_token() {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: true);
         await using var scope = host.App.Services.CreateAsyncScope();

@@ -1,56 +1,27 @@
-@using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
 @using CanDoItAll.RemoteInstances
 @using Microsoft.Extensions.Logging
 @inject ILlmChatDefinitionEditorAccess EditorAccess
-@inject RemoteSimpleChatPublisher Publisher
-@inject RemoteTemplatePublicationStore Publications
 @inject ILogger<RemoteSimpleChatSharingControl> Logger
 @implements IAsyncDisposable
 
-@if (Definition is null) {
-    <Button Text="Import shared Simple Chats" Icon="cloud_download" Click="OpenAsync" Disabled="busy"
-            Variant="Variant.Outlined" data-testid="llm-chat-definition-import" />
-} else {
-    <Button Text="Sharing" Icon="share" Size="ButtonSize.Small" Click="OpenAsync" Disabled="busy"
-            Variant="Variant.Outlined" data-testid="@($"llm-chat-definition-sharing-{Definition.DefinitionId:D}")" />
-}
-@if (opening is { IsCurrent: true } owner && Definition is null) {
+<Button Text="Import shared Simple Chats" Icon="cloud_download" Click="OpenAsync" Disabled="busy"
+        Variant="Variant.Outlined" data-testid="llm-chat-definition-import" />
+@if (opening is { IsCurrent: true } owner) {
     <RemoteTemplateImportDialog @key="owner" Kind="RemoteTemplateKind.SimpleChat" Authorize="owner.AuthorizeAsync"
                                 Write="@((write, token) => WriteAsync(owner, write, token))" Closed="CloseAsync"
                                 AcceptedAndClosed="CloseAndRefreshAsync" Imported="OpenImportedAsync" />
-} else if (opening is { IsCurrent: true } && publication is { } definition) {
-    <Dialog IsOpen="true" Title="@($"Share {definition.Name}")" OnClose="CloseWhenIdleAsync" CloseOnBackdrop="false" TestId="llm-chat-definition-publication-dialog">
-        <ChildContent>
-            <TextBlock Value="@(published ? "Other authorized instances can import the current revision of this definition." :
-                "Share the current revision and future edits, including system instructions, avatar and model settings. Conversations stay private.")" />
-            @if (error is not null) {
-                <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
-            }
-        </ChildContent>
-        <Footer>
-            <Cluster Gap="LayoutGap.Small">
-                <Button Text="@(published ? "Withdraw sharing" : "Publish definition")" Click="SetPublicationAsync" IsBusy="busy"
-                        Disabled="@(busy || !published && definition.Status is not (LlmChatDefinitionStatusFilter.Active or LlmChatDefinitionStatusFilter.Draft))"
-                        data-testid="llm-chat-definition-set-publication" />
-                <Button Text="Close" Tone="ButtonTone.Default" Click="CloseAsync" Disabled="busy" />
-            </Cluster>
-        </Footer>
-    </Dialog>
 }
 @if (error is not null && opening is not { IsCurrent: true }) {
     <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
 }
 
 @code {
-    [Parameter] public DefinitionCatalogCard? Definition { get; set; }
     [Parameter] public EventCallback<Guid> Imported { get; set; }
     [Parameter] public EventCallback Refresh { get; set; }
     private readonly CancellationTokenSource lifetime = new();
     private LlmChatEditorOpening? opening;
-    private DefinitionCatalogCard? publication;
     private Guid openingId;
     private bool busy;
-    private bool published;
     private string? error;
 
     private async Task OpenAsync() {
@@ -63,24 +34,18 @@
         busy = true;
         error = null;
         var token = lifetime.Token;
-        var selected = Definition;
         var generation = Guid.NewGuid();
         openingId = generation;
         LlmChatEditorOpening? access = null;
         try {
-            access = await EditorAccess.OpenAsync(selected?.DefinitionId, generation, () => Task.CompletedTask,
+            access = await EditorAccess.OpenAsync(null, generation, () => Task.CompletedTask,
                 () => RetireAsync(generation), token);
             await access.AuthorizeAsync(true, token);
-            if (selected is { } definition) {
-                published = await Publications.IsPublishedAsync(RemoteTemplateKind.SimpleChat, definition.DefinitionId, token);
-                await access.AuthorizeAsync(true, token);
-            }
             token.ThrowIfCancellationRequested();
             if (openingId != generation) {
                 return;
             }
             opening = access;
-            publication = selected;
             access = null;
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
         } catch (Exception failure) {
@@ -109,31 +74,12 @@
         return await write(linked.Token);
     }
 
-    private async Task SetPublicationAsync() {
-        if (busy || opening is not { } owner || publication is not { } definition) {
-            return;
-        }
-        busy = true;
-        error = null;
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token, owner.Lifetime);
-        try {
-            await Publisher.SetPublicationAsync(definition.DefinitionId, definition.Revision, !published,
-                token => owner.AuthorizeAsync(true, token), linked.Token);
-            await CloseAsync();
-        } catch (OperationCanceledException) when (linked.IsCancellationRequested) {
-        } catch (Exception failure) {
-            Report(failure);
-        } finally {
-            busy = false;
-        }
-    }
-
     private void Report(Exception failure) {
-        Logger.LogWarning("Simple Chat sharing failed for definition {DefinitionId} ({ExceptionType}).", Definition?.DefinitionId, failure.GetType().Name);
+        Logger.LogWarning("Could not open the shared Simple Chat import ({ExceptionType}).", failure.GetType().Name);
         error = failure switch {
             RemoteInstanceReadException invalid => invalid.Message,
             UnauthorizedAccessException => "Simple Chat management access changed. Reopen the definition catalog.",
-            _ => "Simple Chat sharing could not be updated. Reopen sharing to check its current state."
+            _ => "Could not open the shared Simple Chat import. Refresh the catalog and try again."
         };
     }
 
@@ -141,14 +87,11 @@
         var owner = opening;
         openingId = Guid.Empty;
         opening = null;
-        publication = null;
         error = null;
         if (owner is not null) {
             await owner.DisposeAsync();
         }
     }
-
-    private Task CloseWhenIdleAsync() => busy ? Task.CompletedTask : CloseAsync();
 
     private async Task CloseAndRefreshAsync() {
         await CloseAsync();

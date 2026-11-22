@@ -49,14 +49,30 @@ public sealed class RemoteSimpleChatPublisher(ILlmChatDefinitionApplicationServi
     public async Task SetPublicationAsync(Guid id, int expectedRevision, bool publish, Func<CancellationToken, ValueTask> authorize, CancellationToken token) {
         await authorize(token);
         if (publish) {
-            var result = await definitions.GetAsync(new(id), token);
-            if (!result.IsSuccess || result.Value!.Definition.CurrentRevision.Value != expectedRevision ||
-                result.Value.Definition.Status is not (LlmChatDefinitionStatus.Draft or LlmChatDefinitionStatus.Active)) {
-                throw new RemoteInstanceReadException("Refresh the catalog and select a current draft or active definition to share.");
+            await RequireRevisionAsync(id, expectedRevision, true, token);
+        }
+        await publications.SetAsync(RemoteTemplateKind.SimpleChat, id, publish, token, authorize);
+    }
+
+    public Task SetSharingAsync(Guid id, int revision, DefinitionSharingSettings expected, DefinitionSharingSettings desired,
+        Func<CancellationToken, ValueTask> authorize, CancellationToken token) =>
+        publications.SetSharingAsync(RemoteTemplateKind.SimpleChat, id, expected, desired, async ct => {
+            await authorize(ct);
+            await RequireRevisionAsync(id, revision, !expected.SharedTemplate && desired.SharedTemplate, ct);
+            await authorize(ct);
+        }, token);
+
+    private async Task RequireRevisionAsync(Guid id, int revision, bool publishing, CancellationToken token) {
+        var result = await definitions.GetAsync(new(id), token);
+        if (result.IsFailure || result.Value!.Definition.CurrentRevision.Value != revision) {
+            throw new RemoteInstanceReadException("The Simple Chat revision changed. Reopen the definition to change sharing.");
+        }
+        if (publishing) {
+            if (result.Value.Definition.Status is not (LlmChatDefinitionStatus.Draft or LlmChatDefinitionStatus.Active)) {
+                throw new RemoteInstanceReadException("Only a draft or active Simple Chat can be shared as a template.");
             }
             RemoteSimpleChatSettings.From(result.Value.Revision.Settings);
         }
-        await publications.SetAsync(RemoteTemplateKind.SimpleChat, id, publish, token, authorize);
     }
 
     public async Task<RemoteSimpleChatTemplate?> FindAsync(Guid id, CancellationToken token) {

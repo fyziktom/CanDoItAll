@@ -47,7 +47,7 @@
 
     [Parameter] public Func<string, Guid?, bool>? RetainsConversationNavigation { get; set; }
     [Parameter] public RenderFragment<LlmChatDefinitionImportActions>? ImportDefinitions { get; set; }
-    [Parameter] public RenderFragment<DefinitionCatalogCard>? DefinitionSharing { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionSharingContext>? DefinitionSharing { get; set; }
 
     private int selectedTabIndex;
     private bool definitionsVisited;

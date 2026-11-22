@@ -86,6 +86,8 @@ public sealed record LlmChatDefinitionQuery
 
     public IReadOnlyList<string> Tags { get; }
 
+    public IReadOnlySet<Guid>? UnavailableDefinitionIds { get; init; }
+
     private static IReadOnlyList<string> NormalizeTagFilters(IReadOnlyList<string>? tags)
     {
         if (tags is null || tags.Count == 0)

@@ -315,7 +315,7 @@ public sealed class LlmChatDefinitionApplicationService(
     {
         ArgumentNullException.ThrowIfNull(query);
         var page = await readStore
-            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken)
+            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken, query.UnavailableDefinitionIds)
             .ConfigureAwait(false);
         return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success([.. page.Items.Select(Map)]);
     }
@@ -326,7 +326,7 @@ public sealed class LlmChatDefinitionApplicationService(
     {
         ArgumentNullException.ThrowIfNull(query);
         var page = await readStore
-            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken)
+            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken, query.UnavailableDefinitionIds)
             .ConfigureAwait(false);
         return Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(
             new LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>(

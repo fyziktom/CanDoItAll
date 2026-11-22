@@ -73,7 +73,8 @@ public interface ILlmChatDefinitionReadStore
         LlmChatDefinitionStatus? status,
         string? searchText = null,
         IReadOnlyList<string>? tags = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null);
 }
 
 public interface ILlmChatConversationRepository
@@ -111,7 +112,8 @@ public interface ILlmChatConversationReadStore
         int take,
         LlmChatConversationCursor? cursor,
         LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null);
 
     Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(
         LlmChatConversationId id,

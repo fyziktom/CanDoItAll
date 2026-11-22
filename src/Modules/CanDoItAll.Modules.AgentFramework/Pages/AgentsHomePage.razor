@@ -60,8 +60,8 @@
                 <ImportDefinitions Context="actions">
                     <RemoteSimpleChatSharingControl Imported="actions.Open" Refresh="actions.Refresh" />
                 </ImportDefinitions>
-                <DefinitionSharing Context="definition">
-                    <RemoteSimpleChatSharingControl Definition="definition" />
+                <DefinitionSharing Context="editor">
+                    <SimpleChatEditorSharing @key="editor.Access" Context="editor" />
                 </DefinitionSharing>
             </SimpleChatsWorkspace>
         }

@@ -132,10 +132,12 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         LlmChatDefinitionStatus? status,
         string? searchText = null,
         IReadOnlyList<string>? tagFilters = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
     {
         var normalizedSearchText = searchText?.Trim() ?? string.Empty;
         var ordered = definitions.Values
+            .Where(item => unavailableDefinitionIds?.Contains(item.Id.Value) != true)
             .Where(item => status is null || item.Status == status)
             .Where(item => MatchesSearch(item, normalizedSearchText))
             .Where(item => MatchesTags(item, tagFilters))
@@ -250,7 +252,8 @@ internal sealed class StubLlmChatConversationReadStore(
         int take,
         LlmChatConversationCursor? cursor,
         LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
         => throw new NotSupportedException();
 
     public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(

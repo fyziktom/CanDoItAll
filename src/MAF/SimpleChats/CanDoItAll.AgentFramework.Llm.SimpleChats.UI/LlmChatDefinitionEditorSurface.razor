@@ -235,13 +235,20 @@
                                     </Stack>
                                 </FormSection>
                             </TabsItem>
+                            @if (Sharing is not null) {
+                                <TabsItem Text="Sharing" Icon="share" data-testid="llm-chat-definition-tab-sharing">
+                                    @if (visitedSharing) {
+                                        @Sharing
+                                    }
+                                </TabsItem>
+                            }
                         </TabItems>
                     </Tabs>
                 </Sections>
                 <Actions>
                     <StickyActionFooter StatusLabel="Simple Chat definitions">
                         <SecondaryActions>
-                            @if (current is not null) {
+                            @if (current is not null && !EditingSharing) {
                                 @foreach (var status in DefinitionEditorTransitions.From(current.Status)) {
                                     <Button Text="@DefinitionEditorTransitions.Label(status)"
                                             Variant="Variant.Outlined"
@@ -258,13 +265,15 @@
                                     Click="CancelAsync"
                                     Disabled="@isBusy"
                                     data-testid="llm-chat-definition-editor-cancel" />
-                            <Button Text="Save definition"
-                                    Icon="save"
-                                    Tone="ButtonTone.Primary"
-                                    Click="SaveAsync"
-                                    Disabled="@writesBlocked"
-                                    IsBusy="@isBusy"
-                                    data-testid="llm-chat-definition-editor-save" />
+                            @if (!EditingSharing) {
+                                <Button Text="@(ContinueToSharing ? "Save and open Sharing" : "Save definition")"
+                                        Icon="save"
+                                        Tone="ButtonTone.Primary"
+                                        Click="SaveAsync"
+                                        Disabled="@writesBlocked"
+                                        IsBusy="@isBusy"
+                                        data-testid="llm-chat-definition-editor-save" />
+                            }
                         </PrimaryActions>
                     </StickyActionFooter>
                 </Actions>
@@ -277,11 +286,16 @@
     [Parameter, EditorRequired] public DefinitionEditorPresentation Presentation { get; set; } = DefinitionEditorPresentation.Initial;
     [Parameter] public EventCallback<DefinitionEditorIntent> Intent { get; set; }
     [Parameter] public RenderFragment<DefinitionEditorAvatarContext>? AvatarActions { get; set; }
+    [Parameter] public RenderFragment? Sharing { get; set; }
+    [Parameter] public DefinitionEditorSection InitialSection { get; set; }
     [Parameter] public System.Collections.Immutable.ImmutableArray<string> BundledAvatars { get; set; } = [];
 
     private DefinitionEditorValues? form;
     private DefinitionEditorValues? acceptedSource;
     private DefinitionEditorSection section;
+    private bool visitedSharing;
+    private bool EditingSharing => section == DefinitionEditorSection.Sharing && current is not null;
+    private bool ContinueToSharing => section == DefinitionEditorSection.Sharing && current is null;
     private long acceptedGeneration;
     private bool fieldsBlocked => Presentation.Phase != DefinitionEditorPhase.Ready;
     private bool writesBlocked => fieldsBlocked || isBusy || Presentation.IsComparing || Presentation.Unconfirmed || Presentation.NeedsReview || Presentation.Saved || Presentation.Comparison is not null;
@@ -324,7 +338,8 @@
         acceptedSource = Presentation.Source;
         form = acceptedSource;
         if (acceptedGeneration != Presentation.Generation) {
-            section = DefinitionEditorSection.Identity;
+            section = InitialSection;
+            visitedSharing = section == DefinitionEditorSection.Sharing;
             acceptedGeneration = Presentation.Generation;
         }
     }
@@ -338,11 +353,12 @@
     private Task ApplyComparisonAsync(bool acknowledge) => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ApplyComparison, AcknowledgeUnconfirmed: acknowledge));
     private Task ConfirmDiscardAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ConfirmDiscard));
     private Task HandlePendingTagChanged(string value) => ChangeDraftAsync(form! with { PendingTagInput = value });
-    private Task SaveAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Save, form));
+    private Task SaveAsync() => EditingSharing ? Task.CompletedTask
+        : Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Save, form, ContinueToSharing: ContinueToSharing));
     private Task CancelAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Cancel));
     private Task ReloadAsync() => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.Reload));
     private Task ChangeStatusAsync(LlmChatDefinitionStatusFilter status)
-        => Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ChangeStatus, Status: status));
+        => EditingSharing ? Task.CompletedTask : Intent.InvokeAsync(new(Presentation.Generation, DefinitionEditorAction.ChangeStatus, Status: status));
 
     private Task HandleProviderChangedAsync(ConversationPresentationKey? key) {
         if (form is null) {
@@ -371,8 +387,10 @@
             0 => DefinitionEditorSection.Identity,
             1 => DefinitionEditorSection.Runtime,
             2 => DefinitionEditorSection.Output,
+            3 when Sharing is not null => DefinitionEditorSection.Sharing,
             _ => throw new ArgumentOutOfRangeException(nameof(value))
         };
+        visitedSharing |= section == DefinitionEditorSection.Sharing;
         return Task.CompletedTask;
     }
     private Task HandleNameChanged(string? value) => ChangeDraftAsync(form! with { Name = value ?? string.Empty });

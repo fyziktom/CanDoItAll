@@ -29,6 +29,7 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
     private bool disposed;
 
     public DefinitionEditorPresentation Presentation { get; private set; } = DefinitionEditorPresentation.Initial;
+    public LlmChatEditorOpening? SharingAccess => opening is { IsCurrent: true } && !completed ? opening : null;
     public event Action? Changed;
     public bool IsCurrent(long expected) => !disposed && expected == generation;
     public bool HasUnfinishedDraft => !completed && (mutation is not null || Presentation.Unconfirmed || draft is not null &&

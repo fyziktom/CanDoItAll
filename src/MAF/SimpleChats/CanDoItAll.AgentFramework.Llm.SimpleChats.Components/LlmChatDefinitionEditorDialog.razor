@@ -11,7 +11,8 @@
 
 @if (session is not null) {
     <NavigationLock ConfirmExternalNavigation="@session.HasUnfinishedDraft" OnBeforeInternalNavigation="GuardNavigation" />
-    <LlmChatDefinitionEditorSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" BundledAvatars="@BundledAvatars">
+    <LlmChatDefinitionEditorSurface Presentation="@session.Presentation" Intent="HandleIntentAsync" BundledAvatars="@BundledAvatars"
+                                    InitialSection="InitialSection" Sharing="@SharingContent">
         <AvatarActions Context="avatar">
             <AvatarPicker @key="session.Presentation.Generation"
                           Value="@avatar.Values.AvatarImageUrl"
@@ -28,11 +29,18 @@
 
 @code {
     [Parameter] public Guid? DefinitionId { get; set; }
+    [Parameter] public DefinitionEditorSection InitialSection { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionSharingContext>? DefinitionSharing { get; set; }
+    [Parameter] public EventCallback<Guid> CreatedForSharing { get; set; }
     [Parameter] public EventCallback<LlmChatDefinitionListItem> Saved { get; set; }
     [Parameter] public EventCallback Cancelled { get; set; }
     private static readonly ImmutableArray<string> BundledAvatars = AgentAvatarImageCatalog.BundledAvatarUrls.ToImmutableArray();
     private LlmChatDefinitionEditorSession? session;
     private bool disposed;
+    private RenderFragment? SharingContent => DefinitionSharing is not null && session?.SharingAccess is { } access
+        ? DefinitionSharing(new(session.Presentation.Definition, access, session.Presentation.IsSaving || session.Presentation.NeedsReview ||
+            session.Presentation.IsComparing || session.Presentation.Unconfirmed || session.Presentation.Comparison is not null))
+        : null;
 
     protected override void OnInitialized() {
         session = new(Definitions, Providers, Authorization, Logger, EditorAccess, work => InvokeAsync(work));
@@ -85,7 +93,11 @@
         var captured = intent with { Submission = intent.Submission is { } values ? values with { Tags = values.Tags.ToImmutableArray() } : null };
         var saved = await session.SubmitAsync(captured);
         if (saved is not null && session.IsCurrent(intent.Generation)) {
-            await Saved.InvokeAsync(saved);
+            if (captured.ContinueToSharing && CreatedForSharing.HasDelegate) {
+                await CreatedForSharing.InvokeAsync(saved.DefinitionId);
+            } else {
+                await Saved.InvokeAsync(saved);
+            }
         }
     }
     public async ValueTask DisposeAsync() {
