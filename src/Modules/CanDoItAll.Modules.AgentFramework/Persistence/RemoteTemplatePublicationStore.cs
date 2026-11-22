@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.RemoteInstances;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -25,7 +26,17 @@ public sealed record DefinitionSharingSettings(bool ApiAvailable, bool SharedTem
     public static DefinitionSharingSettings Default { get; } = new(true, false);
 }
 
-public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbContext> factory) {
+public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbContext> factory) : ILlmChatSharingReader {
+    async Task<LlmChatSharingSnapshot> ILlmChatSharingReader.ReadAsync(CancellationToken token) {
+        await using var db = await factory.CreateDbContextAsync(token);
+        var rows = await db.Set<RemoteTemplatePublication>().AsNoTracking()
+            .Where(row => row.Kind == RemoteTemplateKind.SimpleChat && row.CreatedUtcTicks == 0)
+            .Select(row => new { row.DefinitionId, row.ApiAvailable, row.SharedTemplate }).ToListAsync(token);
+        return rows.Count == 0 ? LlmChatSharingSnapshot.Default : new(
+            rows.Where(row => row.SharedTemplate).Select(row => row.DefinitionId).ToHashSet(),
+            rows.Where(row => !row.ApiAvailable).Select(row => row.DefinitionId).ToHashSet());
+    }
+
     public async Task<IReadOnlySet<Guid>> ListAsync(RemoteTemplateKind kind, CancellationToken token) {
         await using var db = await factory.CreateDbContextAsync(token);
         return await db.Set<RemoteTemplatePublication>().Where(item => item.Kind == kind && item.SharedTemplate)
@@ -58,7 +69,7 @@ public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbC
         await using var db = await factory.CreateDbContextAsync(token);
         var disabled = db.Set<RemoteTemplatePublication>().Where(row => row.Kind == kind && row.DefinitionId == id && !row.ApiAvailable);
         if (kind == RemoteTemplateKind.Workflow && definitionCreatedAtUtc is null) {
-            return (await CurrentWorkflowIdsAsync(db, disabled, token)).Count == 0;
+            return (await ReadWorkflowOverridesAsync(db, disabled, token)).Count == 0;
         }
         var generation = definitionCreatedAtUtc?.UtcTicks ?? 0;
         return !await disabled.AnyAsync(row => row.CreatedUtcTicks == generation, token);
@@ -68,16 +79,21 @@ public sealed class RemoteTemplatePublicationStore(IDbContextFactory<WorkflowDbC
         await using var db = await factory.CreateDbContextAsync(token);
         var disabled = db.Set<RemoteTemplatePublication>().Where(row => row.Kind == kind && !row.ApiAvailable);
         return kind == RemoteTemplateKind.Workflow
-            ? await CurrentWorkflowIdsAsync(db, disabled, token)
+            ? (await ReadWorkflowOverridesAsync(db, disabled, token)).Keys.ToHashSet()
             : await disabled.Select(row => row.DefinitionId).ToHashSetAsync(token);
     }
 
-    private static async Task<HashSet<Guid>> CurrentWorkflowIdsAsync(WorkflowDbContext db, IQueryable<RemoteTemplatePublication> disabled, CancellationToken token) {
-        var lifetimes = await (from row in disabled
+    internal static Task<IReadOnlyDictionary<Guid, DefinitionSharingSettings>> ReadCurrentWorkflowOverridesAsync(WorkflowDbContext db, CancellationToken token) =>
+        ReadWorkflowOverridesAsync(db, db.Set<RemoteTemplatePublication>().Where(row => row.Kind == RemoteTemplateKind.Workflow), token);
+
+    private static async Task<IReadOnlyDictionary<Guid, DefinitionSharingSettings>> ReadWorkflowOverridesAsync(
+        WorkflowDbContext db, IQueryable<RemoteTemplatePublication> rows, CancellationToken token) {
+        var lifetimes = await (from row in rows
             join head in db.Set<WorkflowDefinitionHeadRecord>() on row.DefinitionId equals head.WorkflowId
             join version in db.Set<WorkflowDefinitionRecord>() on new { head.WorkflowId, head.VersionId } equals new { version.WorkflowId, version.VersionId }
-            select new { row.DefinitionId, row.CreatedUtcTicks, version.CreatedAtUtc }).ToListAsync(token);
-        return lifetimes.Where(row => row.CreatedUtcTicks == row.CreatedAtUtc.UtcTicks).Select(row => row.DefinitionId).ToHashSet();
+            select new { row.DefinitionId, row.CreatedUtcTicks, version.CreatedAtUtc, row.ApiAvailable, row.SharedTemplate }).ToListAsync(token);
+        return lifetimes.Where(row => row.CreatedUtcTicks == row.CreatedAtUtc.UtcTicks)
+            .ToDictionary(row => row.DefinitionId, row => new DefinitionSharingSettings(row.ApiAvailable, row.SharedTemplate));
     }
 
     public async Task SetAsync(RemoteTemplateKind kind, Guid id, bool publish, CancellationToken token,
