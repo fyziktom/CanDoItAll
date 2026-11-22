@@ -382,10 +382,10 @@ public partial class WorkflowsPage : IDisposable, IAsyncDisposable {
         Definition = selectedDefinition is { } definition
             ? new(definition.Id.Value, definition.Name, definition.Description, definition.Status.ToString(),
                 definition.RuntimePolicy.PreferredBackend.ToString(), definition.Graph.Nodes.Count,
-                definition.Graph.Edges.Count, definition.Status == WorkflowLifecycleStatus.Draft)
+                definition.Graph.Edges.Count, definition.Status == WorkflowLifecycleStatus.Draft) { Tags = SelectedDefinitionSummary?.Tags.ToImmutableArray() ?? [] }
             : SelectedDefinitionSummary is { } summary
                 ? new(summary.Id.Value, summary.Name, summary.Description, summary.Status.ToString(),
-                    summary.PreferredBackend.ToString(), 0, 0, false)
+                    summary.PreferredBackend.ToString(), 0, 0, false) { Tags = summary.Tags.ToImmutableArray() }
                 : null,
         DetailLoading = IsSelectedDefinitionDetailPending,
         DetailUnavailable = hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable,

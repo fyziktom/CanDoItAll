@@ -1,5 +1,4 @@
 using System.Data;
-using System.Linq.Expressions;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -8,6 +7,7 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Editing;
 using CanDoItAll.Modules.Prompts;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -37,21 +37,23 @@ public sealed partial class PersistentWorkflowCatalogService(
 
     private const string DefaultSettingsId = "default";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly Expression<Func<WorkflowDefinitionRecord, WorkflowCatalogItem>> CatalogProjection = item => new(
-        new WorkflowId(item.WorkflowId),
-        new WorkflowVersionId(item.VersionId),
-        item.Name,
-        item.Description,
-        item.Status,
-        item.PreferredBackend,
-        item.UpdatedAtUtc) {
-        TemplateKey = item.TemplateKey,
-        TemplatePackKey = item.TemplatePackKey,
-        TemplatePackVersion = item.TemplatePackVersion,
-        SourceHash = item.SourceHash,
-        ExternalNamespace = item.ExternalNamespace,
-        ExternalKey = item.ExternalKey
-    };
+    private static IQueryable<WorkflowCatalogItem> ProjectCatalog(WorkflowDbContext db, IQueryable<WorkflowDefinitionRecord> definitions) {
+        var overrides = WorkflowSharingOverrides(db);
+        return definitions.Select(item => new WorkflowCatalogItem(new WorkflowId(item.WorkflowId), new WorkflowVersionId(item.VersionId),
+            item.Name, item.Description, item.Status, item.PreferredBackend, item.UpdatedAtUtc) {
+            TemplateKey = item.TemplateKey, TemplatePackKey = item.TemplatePackKey, TemplatePackVersion = item.TemplatePackVersion,
+            SourceHash = item.SourceHash, ExternalNamespace = item.ExternalNamespace, ExternalKey = item.ExternalKey,
+            Tags = ProjectTags(item.CreatedAtUtc, overrides.Where(row => row.DefinitionId == item.WorkflowId).ToList())
+        });
+    }
+
+    private static IQueryable<RemoteTemplatePublication> WorkflowSharingOverrides(WorkflowDbContext db)
+        => db.Set<RemoteTemplatePublication>().AsNoTracking().Where(row => row.Kind == RemoteTemplateKind.Workflow);
+
+    private static IReadOnlyList<string> ProjectTags(DateTimeOffset createdAt, List<RemoteTemplatePublication> overrides) {
+        var sharing = overrides.SingleOrDefault(row => row.CreatedUtcTicks == createdAt.UtcTicks);
+        return DefinitionSharingTags.Project(null, sharing?.ApiAvailable ?? true, sharing?.SharedTemplate ?? false);
+    }
     private readonly IProviderRuntimeProfileSource? runtimeProviderSource =
         providerSource ?? providerRegistry as IProviderRuntimeProfileSource;
     private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
@@ -62,11 +64,10 @@ public sealed partial class PersistentWorkflowCatalogService(
         CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await LatestDefinitionQuery(dbContext)
+        var definitions = LatestDefinitionQuery(dbContext)
             .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenBy(item => item.WorkflowId)
-            .Select(CatalogProjection)
-            .ToListAsync(cancellationToken);
+            .ThenBy(item => item.WorkflowId);
+        return await ProjectCatalog(dbContext, definitions).ToListAsync(cancellationToken);
     }
 
     public async Task<WorkflowCatalogSearchPage> SearchDefinitionsAsync(
@@ -85,21 +86,26 @@ public sealed partial class PersistentWorkflowCatalogService(
         if (query.Text is not null)
         {
             var normalizedText = query.Text.ToUpperInvariant();
-            filtered = filtered.Where(item =>
-                item.Name.ToUpper().Contains(normalizedText) ||
-                item.Description.ToUpper().Contains(normalizedText));
+            if (DefinitionSharingTags.IsManaged(query.Text)) {
+                var overrides = await RemoteTemplatePublicationStore.ReadCurrentWorkflowOverridesAsync(dbContext, cancellationToken);
+                var api = string.Equals(query.Text, DefinitionSharingTags.Api, StringComparison.OrdinalIgnoreCase);
+                var ids = overrides.Where(row => api ? !row.Value.ApiAvailable : row.Value.SharedTemplate).Select(row => row.Key).ToArray();
+                filtered = filtered.Where(item => item.Name.ToUpper().Contains(normalizedText) || item.Description.ToUpper().Contains(normalizedText) ||
+                    (api ? !ids.Contains(item.WorkflowId) : ids.Contains(item.WorkflowId)));
+            } else {
+                filtered = filtered.Where(item => item.Name.ToUpper().Contains(normalizedText) || item.Description.ToUpper().Contains(normalizedText));
+            }
         }
 
         var totalCount = await filtered.CountAsync(cancellationToken);
-        var records = await filtered
+        var page = filtered
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ThenBy(item => item.Name.ToUpper())
             .ThenBy(item => item.Name)
             .ThenBy(item => item.WorkflowId)
             .Skip(query.Offset)
-            .Take(query.PageSize)
-            .Select(CatalogProjection)
-            .ToArrayAsync(cancellationToken);
+            .Take(query.PageSize);
+        var records = await ProjectCatalog(dbContext, page).ToArrayAsync(cancellationToken);
 
         return new WorkflowCatalogSearchPage(
             records,
@@ -122,10 +128,8 @@ public sealed partial class PersistentWorkflowCatalogService(
             .Select(workflowId => workflowId.Value)
             .ToArray();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await LatestDefinitionQuery(dbContext)
-            .Where(item => workflowIds.Contains(item.WorkflowId))
-            .Select(CatalogProjection)
-            .ToArrayAsync(cancellationToken);
+        var definitions = LatestDefinitionQuery(dbContext).Where(item => workflowIds.Contains(item.WorkflowId));
+        return await ProjectCatalog(dbContext, definitions).ToArrayAsync(cancellationToken);
     }
 
     public async Task<WorkflowDefinitionDetail?> GetDefinitionAsync(
@@ -133,12 +137,11 @@ public sealed partial class PersistentWorkflowCatalogService(
         WorkflowVersionId? versionId = null,
         CancellationToken cancellationToken = default)
     {
-        var definition = await LoadDefinitionAsync(workflowId, versionId, cancellationToken);
-        return definition is null
-            ? null
-            : new WorkflowDefinitionDetail(
-                definition,
-                await ValidateDefinitionAsync(definition, cancellationToken));
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var records = versionId is { } version
+            ? db.Set<WorkflowDefinitionRecord>().AsNoTracking().Where(row => row.WorkflowId == workflowId.Value && row.VersionId == version.Value)
+            : LatestDefinitionQuery(db).Where(row => row.WorkflowId == workflowId.Value);
+        return await ReadDetailAsync(db, records, cancellationToken);
     }
 
     public async Task<WorkflowDefinitionDetail?> GetLatestDefinitionByStatusAsync(
@@ -148,7 +151,7 @@ public sealed partial class PersistentWorkflowCatalogService(
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var definitions = dbContext.Set<WorkflowDefinitionRecord>().AsNoTracking();
-        var record = await (
+        var records = (
                 from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
                 join current in definitions
                     on new { head.WorkflowId, head.VersionId }
@@ -161,17 +164,8 @@ public sealed partial class PersistentWorkflowCatalogService(
                        current.Status == WorkflowLifecycleStatus.Draft ||
                        current.Status == WorkflowLifecycleStatus.Active)
                 select candidate)
-            .OrderByDescending(item => item.Revision)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (record is null)
-        {
-            return null;
-        }
-
-        var definition = Deserialize<WorkflowDefinition>(record.DefinitionJson);
-        return new WorkflowDefinitionDetail(
-            definition,
-            await ValidateDefinitionAsync(definition, cancellationToken));
+            .OrderByDescending(item => item.Revision);
+        return await ReadDetailAsync(dbContext, records, cancellationToken);
     }
 
     public async Task<WorkflowDefinition> SaveDefinitionAsync(
@@ -1021,29 +1015,17 @@ public sealed partial class PersistentWorkflowCatalogService(
         }
     }
 
-    private async Task<WorkflowDefinition?> LoadDefinitionAsync(
-        WorkflowId workflowId,
-        WorkflowVersionId? versionId,
-        CancellationToken cancellationToken)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var query = dbContext.Set<WorkflowDefinitionRecord>()
-            .AsNoTracking()
-            .Where(item => item.WorkflowId == workflowId.Value);
-        var record = versionId.HasValue
-            ? await query.SingleOrDefaultAsync(item => item.VersionId == versionId.Value.Value, cancellationToken)
-            : await (
-                    from head in dbContext.Set<WorkflowDefinitionHeadRecord>().AsNoTracking()
-                    join current in query
-                        on new { head.WorkflowId, head.VersionId }
-                        equals new { current.WorkflowId, current.VersionId }
-                    where head.WorkflowId == workflowId.Value
-                    select current)
-                .SingleOrDefaultAsync(cancellationToken);
-
-        return record is null
-            ? null
-            : Deserialize<WorkflowDefinition>(record.DefinitionJson);
+    private async Task<WorkflowDefinitionDetail?> ReadDetailAsync(WorkflowDbContext db, IQueryable<WorkflowDefinitionRecord> records,
+        CancellationToken token) {
+        var overrides = WorkflowSharingOverrides(db);
+        var snapshot = await records.Select(item => new {
+            item.DefinitionJson, Tags = ProjectTags(item.CreatedAtUtc, overrides.Where(row => row.DefinitionId == item.WorkflowId).ToList())
+        }).FirstOrDefaultAsync(token);
+        if (snapshot is null) {
+            return null;
+        }
+        var definition = Deserialize<WorkflowDefinition>(snapshot.DefinitionJson);
+        return new WorkflowDefinitionDetail(definition, await ValidateDefinitionAsync(definition, token)) { Tags = snapshot.Tags };
     }
 
     private async Task<ProviderResolution> ResolveProviderAsync(

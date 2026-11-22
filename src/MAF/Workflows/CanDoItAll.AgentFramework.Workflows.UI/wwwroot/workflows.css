@@ -12,6 +12,15 @@
     min-width: 0;
 }
 
+.workflow-definition-tree .cda-treeview__badge-full {
+    display: block;
+    white-space: normal;
+}
+
+.workflow-definition-tree .cda-treeview__badge-compact {
+    display: none;
+}
+
 .workflows-history-layout {
     align-items: stretch;
 }

@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Editing;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.RemoteInstances;
 
@@ -9,7 +10,7 @@ namespace CanDoItAll.Modules.AgentFramework;
 
 public sealed class RemoteWorkflowCatalog(PersistentWorkflowCatalogService workflows,
     RemoteTemplatePublicationStore publications, SharedProviderServiceIdentityStore identities, RemoteTemplateProviderCatalog providers,
-    IAgentFrameworkWorkspaceService workspace) {
+    IAgentFrameworkWorkspaceService workspace, WorkflowChanges changes) {
     public async Task<IReadOnlyList<RemoteTemplateRow>> ListAsync(CancellationToken token) {
         var opening = await workspace.ReadAgentDecisionDataPolicyContextAsync(token);
         var published = await publications.ListLifetimesAsync(RemoteTemplateKind.Workflow, token);
@@ -63,6 +64,7 @@ public sealed class RemoteWorkflowCatalog(PersistentWorkflowCatalogService workf
             await authorize(current);
         }
         await publications.SetSharingAsync(RemoteTemplateKind.Workflow, id.Value, expected, desired, Recheck, token, definition.CreatedAtUtc);
+        changes.Publish(id, EditingChangeKind.MetadataChanged);
     }
 
     private async Task<WorkflowDefinition> ReadSelectedAsync(WorkflowId id, WorkflowVersionId version, CancellationToken token) {

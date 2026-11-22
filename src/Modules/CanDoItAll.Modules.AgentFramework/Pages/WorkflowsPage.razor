@@ -42,6 +42,7 @@
                                               ProviderOptions="providerOptions"
                                               LibraryRefreshRequired="componentLibraryRefreshRequired"
                                               LibraryRefreshRequested="RefreshComponentLibraryAsync"
+                                              SharingSaved="@(() => Owns(editorOwner) ? RefreshVisibleCatalogAsync() : Task.CompletedTask)"
                                               DefinitionSaved="@(definition => Owns(editorOwner) ? HandleCanvasDefinitionAcceptedAsync(definition) : Task.CompletedTask)"
                                               DefinitionPulled="@(definition => Owns(editorOwner) ? HandleCanvasDefinitionAcceptedAsync(definition) : Task.CompletedTask)"
                                               PreviewRunCompleted="@(run => Owns(editorOwner) ? HandleCanvasPreviewRunCompletedAsync(run) : Task.CompletedTask)"

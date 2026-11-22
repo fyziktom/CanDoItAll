@@ -12,7 +12,7 @@
     <Dialog IsOpen="true" Title="@($"Sharing for {opening.Name}")" OnClose="@(() => publication = null)"
             CloseOnBackdrop="false" TestId="workflows-remote-publication-dialog">
         <WorkflowSharingSettings @key="opening.VersionId" Id="opening.Id" Version="opening.VersionId"
-                                 Authorize="Authorize" Saved="@(() => publication = null)" />
+                                 Authorize="Authorize" Saved="ClosePublicationAsync" />
     </Dialog>
 }
 
@@ -41,5 +41,10 @@
     private async Task OpenLocalAsync(Guid id) {
         await CloseAndRefreshAsync();
         await Imported.InvokeAsync(id);
+    }
+
+    private async Task ClosePublicationAsync() {
+        publication = null;
+        await Refresh.InvokeAsync();
     }
 }

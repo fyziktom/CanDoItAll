@@ -8,6 +8,7 @@ using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
 using CanDoItAll.Modules.Workspace.ApiAccess;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.Tests.Integration.Api;
 using CanDoItAll.Tests.Support;
 using CanDoItAll.Web.Api;
@@ -108,10 +109,10 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         var templateOnly = new DefinitionSharingSettings(false, true);
         await sharing.SetSharingAsync(saved.Id, saved.VersionId, automatic, templateOnly, _ => ValueTask.CompletedTask, default);
 
-        Assert.Contains(await catalog.ListDefinitionsAsync(), item => item.Id == saved.Id);
+        Assert.Equal([DefinitionSharingTags.Shared], Assert.Single(await catalog.ListDefinitionsAsync(), item => item.Id == saved.Id).Tags);
         var listed = await client.GetFromJsonAsync<WorkflowCatalogItem[]>("/api/workflows/definitions");
         Assert.NotNull(listed);
-        Assert.Contains(listed, item => item.Id == visible.Id);
+        Assert.Equal([DefinitionSharingTags.Api], Assert.Single(listed, item => item.Id == visible.Id).Tags);
         Assert.DoesNotContain(listed, item => item.Id == saved.Id);
         Assert.Empty((await client.GetFromJsonAsync<WorkflowCatalogItem[]>("/api/workflows/definitions?externalNamespace=finance&externalKey=review"))!);
         var external = await client.GetFromJsonAsync<WorkflowStableIdentityResolution>(externalPath);
@@ -149,6 +150,7 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         await sharing.SetSharingAsync(saved.Id, saved.VersionId, templateOnly, automatic, _ => ValueTask.CompletedTask, default);
         var restored = await client.GetFromJsonAsync<WorkflowDefinitionDetail>(definitionPath);
         Assert.Equal(saved.VersionId, restored!.Definition.VersionId);
+        Assert.Equal([DefinitionSharingTags.Api], restored.Tags);
         await AssertHiddenAsync(client.GetAsync(RemoteWorkflowRoutes.Details(saved.Id.Value)));
 
         static async Task AssertHiddenAsync(Task<HttpResponseMessage> pending) {
@@ -195,7 +197,9 @@ public sealed class RemoteWorkflowSharingIntegrationTests {
         }
         var accepted = await Task.WhenAll(ImportAsync(), ImportAsync());
         Assert.Equal(accepted[0], accepted[1]);
-        var local = (await catalog.GetDefinitionAsync(new(accepted[0])))!.Definition;
+        var imported = (await catalog.GetDefinitionAsync(new(accepted[0])))!;
+        Assert.Equal([DefinitionSharingTags.Api], imported.Tags);
+        var local = imported.Definition;
         var importedComponents = await catalog.ListComponentsAsync();
         var importedComponent = Assert.Single(importedComponents, item => item.ProviderProfileId == choice.ProviderId);
         var llm = Assert.Single(local.Graph.Nodes, node => node.Id == llmNode.Id);

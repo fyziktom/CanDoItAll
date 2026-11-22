@@ -20,7 +20,9 @@ public sealed record WorkflowTreeEntry(WorkflowTreeKey Key, string Text, string 
     ImmutableArray<WorkflowTreeEntry> Children, string Tooltip = "", bool Disabled = false, bool Selectable = true,
     string Badge = "", string TestId = "", string ChildrenTestId = "");
 public sealed record WorkflowDefinitionView(Guid Id, string Name, string Description, string Status, string Backend,
-    int NodeCount, int EdgeCount, bool CanPublish);
+    int NodeCount, int EdgeCount, bool CanPublish) {
+    public ImmutableArray<string> Tags { get; init; } = [];
+}
 public sealed record WorkflowValidationView(string Code, string Message);
 public sealed record WorkflowRunView(Guid Id, string State, string Tone, string Backend, string UpdatedAt,
     string Summary, bool IsSelected = false, bool CanCancel = false, string Duration = "");

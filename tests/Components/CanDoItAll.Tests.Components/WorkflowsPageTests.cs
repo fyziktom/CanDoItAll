@@ -173,6 +173,36 @@ public sealed class WorkflowsPageTests
         Assert.Equal("Peer current description", accepted.Description);
     }
 
+    [Fact]
+    public async Task Saving_workflow_sharing_updates_the_catalog_and_keeps_the_unsaved_canvas() {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-sharing-catalog");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment, services =>
+            services.AddSingleton<IEditingUiAccess, EditingUiTestAccess>());
+        var catalog = harness.Context.Services.GetRequiredService<IWorkflowCatalogService>();
+        var saved = await CreateCanvasLoadDefinitionAsync(catalog);
+        harness.Context.Services.GetRequiredService<NavigationManager>().NavigateTo($"/agents/workflows?tab=editor&workflowId={saved.Id.Value:D}");
+        var page = harness.Context.Render<WorkflowsPage>();
+        page.WaitForElement("[data-testid=workflow-canvas-name]");
+        await page.InvokeAsync(() => page.Find("[data-testid=workflow-canvas-name]").Change("Pending canvas title"));
+        await page.InvokeAsync(() => page.Find("[data-testid=workflow-canvas-tab-sharing]").ClickAsync());
+        var api = page.WaitForElement("[data-testid=definition-sharing-api]:not([disabled])");
+        await page.InvokeAsync(() => api.Change(false));
+        await page.InvokeAsync(() => page.Find("[data-testid=definition-sharing-template]").Change(true));
+        await page.InvokeAsync(() => page.Find("[data-testid=workflow-sharing-save]").ClickAsync());
+        page.WaitForAssertion(() => {
+            Assert.Equal("shared", page.Find("[data-testid=workflows-detail-tags]").TextContent.Trim());
+            var row = Assert.Single(page.FindAll("[data-testid=workflows-catalog-item]"), item => item.TextContent.Contains(saved.Name, StringComparison.Ordinal));
+            Assert.Contains("shared", row.TextContent, StringComparison.Ordinal);
+        });
+        await page.InvokeAsync(() => page.Find("[data-testid=workflows-catalog-search]").Change("api"));
+        page.WaitForAssertion(() => Assert.DoesNotContain(page.FindAll("[data-testid=workflows-catalog-item]"),
+            item => item.TextContent.Contains(saved.Name, StringComparison.Ordinal)));
+        Assert.Equal("shared", page.Find("[data-testid=workflows-detail-tags]").TextContent.Trim());
+        await page.InvokeAsync(() => page.Find("[data-testid=workflow-canvas-tab-definition]").ClickAsync());
+        Assert.Equal("Pending canvas title", page.Find("[data-testid=workflow-canvas-name]").GetAttribute("value"));
+        Assert.Equal(saved.VersionId, (await catalog.GetDefinitionAsync(saved.Id))!.Definition.VersionId);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
