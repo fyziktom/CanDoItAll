@@ -262,8 +262,7 @@ public sealed class AgentEventsApiIntegrationTests
         var generation = scope.ServiceProvider
             .GetRequiredService<IAgentExecutionProfileGenerationSource>()
             .GetGeneration();
-        var agentId = Guid.NewGuid();
-        var chatSessionId = Guid.NewGuid();
+        var (agentId, chatSessionId) = await GetAvailableAgentSessionAsync(scope.ServiceProvider);
         var operationId = AgentExecutionOperationId.New();
         var streamId = new AgentExecutionActivityStreamId(
             profile.Profile.Id,
@@ -346,8 +345,7 @@ public sealed class AgentEventsApiIntegrationTests
                 chatSessionId: null,
                 "Keep the only activity partition occupied."));
         using var occupiedOperation = occupiedAdmission.Operation;
-        var agentId = Guid.NewGuid();
-        var chatSessionId = Guid.NewGuid();
+        var (agentId, chatSessionId) = await GetAvailableAgentSessionAsync(scope.ServiceProvider);
         var rejectedOperationId = AgentExecutionOperationId.New();
 
         using var response = await host.Client.PostAsJsonAsync(
@@ -488,6 +486,13 @@ public sealed class AgentEventsApiIntegrationTests
             $"\"code\":\"{ApiEndpointResults.RunFailedCode}\"",
             failed,
             StringComparison.Ordinal);
+    }
+
+    private static async Task<(Guid AgentId, Guid SessionId)> GetAvailableAgentSessionAsync(IServiceProvider services) {
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var agent = (await workspace.ListAgentsAsync(includeTemplates: false)).First(candidate => candidate.ApiAvailable);
+        var session = await workspace.GetOrCreateChatSessionAsync(agent.Id);
+        return (agent.Id, session.Id);
     }
 
     private static void AssertSsePost(JsonElement paths, string path)
