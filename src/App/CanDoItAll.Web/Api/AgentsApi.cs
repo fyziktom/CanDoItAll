@@ -81,7 +81,7 @@ internal static class AgentsApi
 
         agents.MapPost("/import", ImportAgentAsync)
             .WithName("ImportAgent")
-            .ProducesApiErrors(StatusCodes.Status404NotFound)
+            .DescribeAgentAvailability()
             .Produces<Guid>(StatusCodes.Status200OK);
 
         agents.MapAgentPackageImportApi();

@@ -20,7 +20,7 @@ internal static class AgentPackageImportApi
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
             .Produces<ApiErrorResponse>(StatusCodes.Status412PreconditionFailed)
-            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
+            .DescribeAgentAvailability()
             .ProducesApiErrors(
                 StatusCodes.Status401Unauthorized,
                 StatusCodes.Status403Forbidden)
