@@ -17,8 +17,9 @@ public sealed class DefinitionSharingPersistenceTests {
     [Fact]
     public async Task Upgrade_preserves_the_old_catalog_and_downgrade_refuses_to_expose_a_private_definition() {
         await using var application = await TestApplication.CreateAsync();
-        var store = application.Services.GetRequiredService<RemoteTemplatePublicationStore>();
-        await using var db = await application.Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var store = scope.ServiceProvider.GetRequiredService<RemoteTemplatePublicationStore>();
+        await using var db = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync();
         var migrations = db.GetService<IMigrator>();
         await migrations.MigrateAsync(PreviousMigration);
         var id = Guid.NewGuid();
@@ -49,7 +50,8 @@ public sealed class DefinitionSharingPersistenceTests {
     [Fact]
     public async Task Concurrent_editors_preserve_the_accepted_settings_and_legacy_template_writes_preserve_api_access() {
         await using var application = await TestApplication.CreateAsync();
-        var store = application.Services.GetRequiredService<RemoteTemplatePublicationStore>();
+        await using var scope = application.Services.CreateAsyncScope();
+        var store = scope.ServiceProvider.GetRequiredService<RemoteTemplatePublicationStore>();
         var id = Guid.NewGuid();
         var original = DefinitionSharingSettings.Default;
         var onlyTemplate = new DefinitionSharingSettings(false, true);
