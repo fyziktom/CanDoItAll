@@ -109,8 +109,13 @@ a dispatched unresolved record remains blocked. See [native recovery proof and l
 ## Shared definitions
 
 Enable API authorization on the publisher and grant each catalog's read scope separately.
-Agents marked as templates and explicitly published Simple Chats and workflows are eligible.
-Archiving or withdrawing a definition removes it from discovery and direct reads.
+Each agent, Simple Chat and workflow editor has two independent settings under **Sharing**.
+**Available through the API** governs ordinary API discovery, definition reads and new
+operations. Turning it off takes effect for authorized clients as well. Existing
+admitted operations keep their status and recovery paths. **Share as a template**
+publishes the eligible definition through the scoped read-only endpoints below.
+Withdrawing publication removes the template from discovery and direct template reads.
+Existing definitions retain their previous API availability and publication on upgrade.
 
 | Method | Route | Result |
 | --- | --- | --- |

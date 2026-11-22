@@ -62,15 +62,30 @@ public sealed partial class RemoteInstanceBrowserTests {
         await authorPage.GetByTestId("shared-provider-publish").ClickAsync();
         await Assertions.Expect(authorPage.GetByTestId("shared-provider-publication-status")).ToHaveTextAsync("Published");
         await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, publisher.HttpsUrl + ChatDefinitions);
+        await authorPage.GetByTestId($"llm-chat-definition-select-{chatId:D}").ClickAsync();
+        var chatEditor = authorPage.GetByTestId("llm-chat-definition-editor-dialog");
+        await chatEditor.GetByTestId("llm-chat-definition-tab-sharing").ClickAsync();
+        await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-api")).ToBeCheckedAsync();
+        await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-template")).Not.ToBeCheckedAsync();
+        await chatEditor.GetByTestId("definition-sharing-api").UncheckAsync();
+        await chatEditor.GetByTestId("definition-sharing-template").CheckAsync();
+        await chatEditor.GetByTestId("llm-chat-definition-save-sharing").ClickAsync();
+        await Assertions.Expect(chatEditor.GetByTestId("llm-chat-definition-sharing-saved")).ToBeVisibleAsync();
+        using (var hidden = await publisher.Client.GetAsync($"/api/llm-chats/{chatId:D}")) {
+            Assert.Equal(System.Net.HttpStatusCode.NotFound, hidden.StatusCode);
+        }
+        await chatEditor.GetByTestId("llm-chat-definition-editor-cancel").ClickAsync();
         await authorPage.GetByTestId($"llm-chat-definition-sharing-{chatId:D}").ClickAsync();
-        var publicationDialog = authorPage.GetByTestId("llm-chat-definition-publication-dialog");
-        await publicationDialog.GetByTestId("llm-chat-definition-set-publication").ClickAsync();
-        await Assertions.Expect(publicationDialog).ToHaveCountAsync(0);
-        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, $"{publisher.HttpsUrl}{WorkflowCatalog}&workflowId={definition.Id.Value:D}");
-        await authorPage.GetByTestId("workflows-remote-sharing").ClickAsync();
-        publicationDialog = authorPage.GetByTestId("workflows-remote-publication-dialog");
-        await publicationDialog.GetByTestId("workflows-remote-set-publication").ClickAsync();
-        await Assertions.Expect(publicationDialog).ToHaveCountAsync(0);
+        await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-api")).Not.ToBeCheckedAsync();
+        await Assertions.Expect(chatEditor.GetByTestId("definition-sharing-template")).ToBeCheckedAsync();
+        await SharedProviderTwoInstanceUiAcceptanceTests.NavigateAsync(authorPage, $"{publisher.HttpsUrl}/agents/workflows?tab=editor&workflowId={definition.Id.Value:D}");
+        await authorPage.GetByTestId("workflow-canvas-tab-sharing").ClickAsync();
+        await authorPage.GetByTestId("definition-sharing-api").UncheckAsync();
+        await authorPage.GetByTestId("definition-sharing-template").CheckAsync();
+        await authorPage.GetByTestId("workflow-sharing-save").ClickAsync();
+        await Assertions.Expect(authorPage.GetByText("Sharing settings saved.", new() { Exact = true })).ToBeVisibleAsync();
+        using var hiddenWorkflow = await publisher.Client.GetAsync($"/api/workflows/definitions/{definition.Id.Value:D}");
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, hiddenWorkflow.StatusCode);
 
         await using var consumerServices = await TestApplicationBootstrap.BuildServiceProviderAsync(consumer.OwnedDatabaseProfile,
             "RemoteDefinitions.Consumer", TestSchemaBootstrapModules.Full);

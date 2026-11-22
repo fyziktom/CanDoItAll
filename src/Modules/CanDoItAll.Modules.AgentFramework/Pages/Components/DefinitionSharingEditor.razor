@@ -58,6 +58,9 @@
     }
 
     private void Change(DefinitionSharingSettings value) {
+        if (Blocked || original is null) {
+            return;
+        }
         draft = value;
         confirmed = false;
     }
@@ -93,8 +96,9 @@
         busy = true;
         try {
             await Write(expected, desired, token);
+            token.ThrowIfCancellationRequested();
             original = desired;
-            confirmed = true;
+            confirmed = draft == desired;
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {
             return;
         } catch (Exception failure) {

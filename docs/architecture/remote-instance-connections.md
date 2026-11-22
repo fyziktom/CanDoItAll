@@ -85,9 +85,14 @@ protocol with explicit dependency resolution before it can produce a local agent
 1. Enable API authorization on the publishing instance. Grant the token the read scope for
    each catalog the consumer needs. Use `api.shared-agent-templates.read` for agents,
    `api.shared-simple-chats.read` for chats and `api.shared-workflows.read` for workflows.
-2. Mark an agent as a template. For a Simple Chat, open **Sharing** on its catalog card
-   and publish the definition. For a workflow, select it in the catalog, open **Share
-   workflow** and publish it. Use the same control to withdraw sharing.
+2. Open the definition on the publisher and select **Sharing**. For a Simple Chat,
+   click its card under **Agents → Simple Chats → Definitions**. For an agent open
+   its editor, and for a workflow open **Sharing** in the canvas inspector.
+   **Available through the API** lets authorized clients discover the definition and
+   start work with it. **Share as a template** lets a connected instance import a copy.
+   You can enable either option, both, or neither. Use **Save sharing** for a saved
+   chat or workflow and **Save agent** for an agent. Clear the template option on the
+   same tab to withdraw it from the remote catalog. Previously imported copies stay local.
 3. On the consumer, open **Settings → Remote instances**, add the publisher and select the
    saved workspace secret containing its token. Each import page can also add a connection
    to this list. To use the publisher for inference, synchronize its provider catalog and
