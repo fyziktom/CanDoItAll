@@ -2512,6 +2512,18 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<long>("CreatedUtcTicks")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("ApiAvailable")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("SharedTemplate")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.HasKey("Kind", "DefinitionId", "CreatedUtcTicks");
 
                     b.ToTable("Workspace_RemoteTemplatePublications", (string)null);
