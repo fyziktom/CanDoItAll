@@ -17,6 +17,23 @@ namespace CanDoItAll.Tests.Unit.LlmChats;
 public sealed class LlmChatOperationIdempotencyTests
 {
     [Fact]
+    public async Task Withdrawing_api_availability_blocks_new_admissions_and_preserves_identical_replays() {
+        var harness = await LlmChatOperationHarness.CreateAsync();
+        var accepted = harness.CreateSendCommand(LlmChatOperationId.New(), "First message");
+        Assert.True((await harness.SendAndDispatchAsync(accepted)).IsSuccess);
+
+        var closed = accepted with { CanStartNewTurn = (_, _) => Task.FromResult(false) };
+        var replay = await harness.Service.SendAsync(closed);
+        Assert.True(replay.IsSuccess);
+        Assert.True(replay.Value!.Replayed);
+        var newId = LlmChatOperationId.New();
+        var fresh = await harness.Service.SendAsync(closed with { OperationId = newId });
+        Assert.Equal(LlmChatErrorCodes.ConversationNotFound, Assert.Single(fresh.Errors).Code);
+        Assert.Null(await harness.Operations.TryGetAsync(newId));
+        Assert.Equal(1, harness.Engine.SendCount);
+    }
+
+    [Fact]
     public async Task Known_admission_commit_preserves_its_operation_and_replay_never_dispatches_a_second_turn() {
         var harness = await LlmChatOperationHarness.CreateAsync(suppliedUnitOfWork: new CommittedAdmissionWarningUnit());
         var command = harness.CreateSendCommand(LlmChatOperationId.New(), "Committed message");

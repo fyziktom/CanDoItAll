@@ -13,16 +13,19 @@ namespace CanDoItAll.Tests.Components.AgentEditorUi;
 
 public sealed class EditorRendererTests {
     [Fact]
-    public async Task All_ten_sections_share_one_form_and_draft_with_real_section_renderers() {
+    public async Task All_sections_share_one_form_and_draft_with_real_section_renderers() {
         using var context = Context();
         var cut = context.Render<ScenarioEditor>();
         var form = cut.FindComponent<EditForm>().Instance.EditContext;
-        Assert.Equal(10, cut.FindAll("[role='tab']").Count);
+        Assert.Equal(AgentEditorSections.All.Count, cut.FindAll("[role='tab']").Count);
         foreach (var section in AgentEditorSections.All) {
             await cut.FindAll("[role='tab']")[AgentEditorSections.IndexOf(section.Section)].ClickAsync();
             Assert.Same(form, cut.FindComponent<EditForm>().Instance.EditContext);
             Assert.Single(cut.FindAll("form"));
-            if (section.Section is not (AgentEditorSection.Identity or AgentEditorSection.Runtime or AgentEditorSection.Images or AgentEditorSection.Voice)) {
+            if (section.Section is AgentEditorSection.Sharing) {
+                Assert.Single(cut.FindAll("[data-testid='definition-sharing-api']"));
+                Assert.Single(cut.FindAll("[data-testid='definition-sharing-template']"));
+            } else if (section.Section is not (AgentEditorSection.Identity or AgentEditorSection.Runtime or AgentEditorSection.Images or AgentEditorSection.Voice)) {
                 Assert.Single(cut.FindComponents<AgentEditorAccessSurface>());
                 Assert.DoesNotContain("retained production section", cut.Markup);
             }
@@ -44,6 +47,22 @@ public sealed class EditorRendererTests {
         Assert.Equal("Summary Ž", draft.Summary);
         Assert.Equal("Instructions 東京", draft.Instructions);
         Assert.Contains("Favorite", draft.Tags);
+        Assert.Equal("api", cut.Find("[data-testid='agents-managed-tags']").TextContent.Trim());
+        await Tab(cut, AgentEditorSection.Sharing);
+        Assert.True(draft.ApiAvailable);
+        Assert.False(draft.SharedTemplate ?? false);
+        cut.Find("[data-testid='definition-sharing-template']").Change(true);
+        Assert.True(draft.ApiAvailable);
+        cut.Find("[data-testid='definition-sharing-api']").Change(false);
+        Assert.False(draft.ApiAvailable);
+        Assert.True(draft.SharedTemplate);
+        await Tab(cut, AgentEditorSection.Identity);
+        Assert.Equal("shared", cut.Find("[data-testid='agents-managed-tags']").TextContent.Trim());
+        var tagEditor = cut.FindComponent<TagEditor>().Instance;
+        await cut.InvokeAsync(() => tagEditor.ValueChanged.InvokeAsync([" SHARED ", "Api", "design"]));
+        Assert.Equal(["design", "Favorite"], draft.Tags);
+        Assert.Equal(["design"], cut.FindComponent<TagEditor>().Instance.Value);
+        Assert.Empty(cut.FindAll("[data-testid='agents-managed-tags'] button"));
         await Tab(cut, AgentEditorSection.Images);
         cut.Find("[data-testid='agents-catalog-image-generation-enabled']").Change(true);
         cut.Find("[data-testid='agents-catalog-image-generation-project-assets']").Change(true);

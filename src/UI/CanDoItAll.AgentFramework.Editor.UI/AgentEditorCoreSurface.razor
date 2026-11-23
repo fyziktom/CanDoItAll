@@ -1,3 +1,5 @@
+@using CanDoItAll.Editing.UI
+@using CanDoItAll.RemoteInstances
 @{
     var state = State;
 }
@@ -111,13 +113,20 @@ else {
                                             <AdditionalFields>
                                                 <FormField Text="Tags"
                                                            data-testid="agents-catalog-tags-section">
+                                                    @if (sectionDraft.ApiAvailable || sectionDraft.SharedTemplate == true) {
+                                                        <Cluster Gap="LayoutGap.XSmall" data-testid="agents-managed-tags">
+                                                            @foreach (var tag in DefinitionSharingTags.Project([], sectionDraft.ApiAvailable, sectionDraft.SharedTemplate == true)) {
+                                                                <StatusBadge Tone="info" Text="@tag" />
+                                                            }
+                                                        </Cluster>
+                                                    }
                                                     <TagEditor Value="@sectionState.Tags"
                                                                PendingInput="@sectionState.PendingTagInput"
                                                                PendingInputChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.PendingTags(value))"
                                                                ValueChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.Tags(value))"
                                                                Suggestions="@sectionState.TagSuggestions"
                                                                Placeholder="Add agent tag"
-                                                               Hint="Use Enter or comma to add tags. Favorites are managed with the star action in Switch Agent."
+                                                               Hint="Use Enter or comma to add tags. Set shared and api on the Sharing tab. Manage favorites with the star in Switch Agent."
                                                                MaxTags="12"
                                                                TestId="agents-catalog-tags"
                                                                InputTestId="agents-catalog-tags-input" />
@@ -224,6 +233,12 @@ else {
                                             </Stack>
                                         </SurfaceCard>
                                     </FormSection>
+                                    break;
+                                case AgentEditorSection.Sharing:
+                                    <DefinitionSharingFields ApiAvailable="sectionDraft.ApiAvailable" SharedTemplate="@(sectionDraft.SharedTemplate ?? false)"
+                                        ApiAvailableChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.ApiAvailability(value))"
+                                        SharedTemplateChanged="value => sectionState.Changed.InvokeAsync(new AgentEditorCoreIntent.TemplatePublication(value))"
+                                        Disabled="sectionState.IsMutationBlocked" />
                                     break;
                                 case AgentEditorSection.Memory:
                                     @DeferredSection?.Invoke(new(sectionState.Origin, sectionDraft, definition.Section))

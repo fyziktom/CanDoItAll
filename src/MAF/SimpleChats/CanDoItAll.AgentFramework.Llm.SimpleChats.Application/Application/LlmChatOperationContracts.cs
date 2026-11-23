@@ -14,6 +14,9 @@ public sealed record SendLlmChatTurnCommand(
     WorkspaceScopeDescriptor? AttributionScope = null) {
     [System.Text.Json.Serialization.JsonIgnore]
     public CanDoItAll.AgentFramework.ProviderHistory.HistoryCaller? HistoryCaller { get; init; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Func<LlmChatDefinitionId, CancellationToken, Task<bool>>? CanStartNewTurn { get; init; }
 }
 
 public sealed record AbandonLlmChatActiveTurnCommand(

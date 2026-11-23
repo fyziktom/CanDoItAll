@@ -683,9 +683,12 @@ public sealed class AgentApiFailureContractIntegrationTests
     [Fact]
     public async Task Agent_validation_result_includes_correlation_without_fake_run_identity()
     {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true);
+        await using var scope = host.App.Services.CreateAsyncScope();
         var agentId = Guid.NewGuid();
         var context = CreateHttpContext("agent-validation-correlation");
-        var result = AgentApiRequestValidation.ValidateCommand(
+        var result = await AgentApiRequestValidation.ValidateCommandAsync(
+            scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>(),
             context,
             agentId,
             chatSessionId: null,

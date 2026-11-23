@@ -106,20 +106,33 @@ Historical acceptance preserves later draft edits and requires an explicit curre
 and reconciliation before another save. An unsent Prepared record can be discarded;
 a dispatched unresolved record remains blocked. See [native recovery proof and limits](../codex/bundles/concurrent-mutations/validation/2026-10-19-agent-policy-native-recovery.md).
 
-## Shared agent templates
+## Shared definitions
 
-When API authorization is enabled, an access token with the
-`api.shared-agent-templates.read` scope can read the publisher's active and draft
-agent templates through two endpoints.
+Enable API authorization on the publisher and grant each catalog's read scope separately.
+Each agent, Simple Chat and workflow editor has two independent settings under **Sharing**.
+**Available through the API** governs ordinary API discovery, definition reads and new
+operations. Turning it off takes effect for authorized clients as well. Existing
+admitted operations keep their status and recovery paths. **Share as a template**
+publishes the eligible definition through the scoped read-only endpoints below.
+Withdrawing publication removes the template from discovery and direct template reads.
+Existing definitions retain their previous API availability and publication on upgrade.
 
 | Method | Route | Result |
 | --- | --- | --- |
 | GET | `/api/shared-agent-templates/v1/templates` | Selectable summaries with public publisher identity and catalog revision |
 | GET | `/api/shared-agent-templates/v1/templates/{id}` | Definition, inline skill content and local capability requirements |
+| GET | `/api/shared-agent-templates/v1/templates/{id}/avatar` | Embedded raster for the listed revision |
+| GET | `/api/shared-simple-chats/v1/templates` | Published Simple Chat summaries and revision identities |
+| GET | `/api/shared-simple-chats/v1/templates/{id}` | Instructions, tags, avatar, output format and portable model settings |
+| GET | `/api/shared-simple-chats/v1/templates/{id}/avatar` | Embedded raster for the listed revision |
+| GET | `/api/shared-workflows/v1/templates` | Published workflow summaries and graph revisions |
+| GET | `/api/shared-workflows/v1/templates/{id}` | Portable graph, inputs, component definitions and model requirements |
 
-The consumer previews the selected document and imports it into its own workspace.
-The agent's execution, provider selection, permissions and history belong to that workspace.
-See [remote instance connections and agent templates](architecture/remote-instance-connections.md).
+The respective scopes are `api.shared-agent-templates.read`, `api.shared-simple-chats.read`
+and `api.shared-workflows.read`. A model hint may contain a public routing ID for a
+published provider. The consumer resolves it against providers it imported from that
+publisher, then creates a draft with its own configuration. For the operator steps,
+see [remote instance connections and shared definitions](architecture/remote-instance-connections.md).
 
 ## Shared providers and history
 

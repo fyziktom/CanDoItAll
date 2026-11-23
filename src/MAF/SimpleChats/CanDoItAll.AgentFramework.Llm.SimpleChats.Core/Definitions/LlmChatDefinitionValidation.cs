@@ -10,9 +10,12 @@ public static class LlmChatDefinitionValidation
     public const int MaximumNameLength = 200;
     public const int MaximumSummaryLength = 2_000;
     public const int MaximumAvatarImageUrlLength = 2_048;
+    public const string EmbeddedAvatarPrefix = "data:";
     public const int MaximumProviderNameLength = 200;
     public const int MaximumModelLength = 200;
     public const int MaximumRevisionReasonLength = 500;
+    public const int MaximumSchemaNameLength = 200;
+    public const int MaximumSchemaDescriptionLength = 2_000;
     public static readonly TimeSpan MaximumTimeout = LlmInvocationRequest.MaximumTimeout;
 
     public static string NormalizeRequired(string value, int maximumLength, string parameterName)
@@ -40,6 +43,11 @@ public static class LlmChatDefinitionValidation
 
     public static string NormalizeAvatarImageUrl(string? value)
     {
+        var candidate = value?.Trim();
+        if (candidate?.StartsWith(EmbeddedAvatarPrefix, StringComparison.OrdinalIgnoreCase) == true) {
+            return RemoteTemplateAvatar.ForDisplay(candidate)
+                ?? throw new ArgumentException("An embedded avatar must be a supported raster image of at most 128 KiB.", nameof(value));
+        }
         var normalized = NormalizeOptional(value, MaximumAvatarImageUrlLength, nameof(value));
         if (normalized.Length == 0)
         {

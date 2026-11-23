@@ -8,6 +8,7 @@ public sealed class WorkflowDbContext(DbContextOptions<WorkflowDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.ApplyConfiguration(new WorkflowDefinitionRecordConfiguration());
         modelBuilder.ApplyConfiguration(new WorkflowDefinitionHeadRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new RemoteTemplatePublicationConfiguration());
         modelBuilder.ApplyConfiguration(new WorkflowComponentRecordConfiguration());
         modelBuilder.ApplyConfiguration(new WorkflowSettingsRecordConfiguration());
         modelBuilder.ApplyConfiguration(new WorkflowRunRecordEntityConfiguration());

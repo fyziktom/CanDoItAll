@@ -261,7 +261,7 @@ public sealed class WorkflowUsageAnalyticsRedGateTests
         var endpoint = Slice(
             apiSource,
             "internal static async Task<IResult> GetAnalyticsAsync(",
-            "GetWorkflowAnalyticsResultAsync(query, analyticsQueryService, cancellationToken);");
+            "/// <summary>");
 
         Assert.Contains("IWorkflowAnalyticsQueryService", endpoint, StringComparison.Ordinal);
         Assert.DoesNotContain("IWorkflowRunStore", endpoint, StringComparison.Ordinal);

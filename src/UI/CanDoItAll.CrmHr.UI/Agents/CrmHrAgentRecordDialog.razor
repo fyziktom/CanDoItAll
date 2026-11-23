@@ -274,12 +274,7 @@
         }
 
         renderedItem = Item;
-        visibleTags = Item?.Agent.Tags
-            .Where(tag => !AgentSpecialTags.IsFavorite(tag))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .ToArray()
-            ?? [];
+        visibleTags = Item is { } item ? AgentSpecialTags.Visible(item.Agent) : [];
     }
 
     private Task HandleTabChangedAsync(int index)

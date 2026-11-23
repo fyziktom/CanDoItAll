@@ -307,7 +307,7 @@ public sealed partial class MigrationAuthorityIntegrationTests {
         Assert.Equal(PostgreSqlMigrationBaseline.CurrentMigrationId, known[0]);
         Assert.Equal(known, await context.Database.GetAppliedMigrationsAsync());
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(186, context.Model.GetEntityTypes().Count());
+        CurrentDatabaseModelAssertions.Canonical(context.Model);
     }
 
     private static async Task<FixtureIds> SeedRecordsAsync(AppDbContext context, RetainedGraph graph) {

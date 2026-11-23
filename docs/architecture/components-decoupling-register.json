@@ -3,7 +3,7 @@
   "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "entry_commit": "663fb1391e4acb12439173f1cb1d287fb1f24685",
   "implementation_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-  "coverage": "1282 current rendering inputs. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
+  "coverage": "1288 current rendering inputs. Remote definition publishing, multi-selection and nested provider review are covered by native component and two-instance browser tests. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
   "limitations": [
     "Route declarations and reviewed source activations are complemented by evaluated consumer closure and actual compiled/native/browser proof. Excluded generic-type/name matches are retained explicitly; arbitrary reflection cannot be inferred from lexical callers.",
     "Assets/scenario/evidence fields refer to family entries; execution outcomes are recorded by dimension in the closure document.",
@@ -7601,7 +7601,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
-      "sha256_lf": "930dd13d555f29033dc6e8b326e1e56c5e232f2cbfa08b5f864c3955f9f01d14",
+      "sha256_lf": "c0945ec0eeef7e128114ccc0d74909937e52897b610144b5b2dc5d938d009536",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ContextualAgentWorkspaceWindows",
@@ -8300,7 +8300,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
-      "sha256_lf": "29950df2adaff20bb9771d425cf0e44838b89a324db9996879ddb98c3add5eff",
+      "sha256_lf": "b526a1ed67a65547e102e882071a8151cf3aafa51740ec01b8b2c9ec63907dac",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionCatalogPanel",
@@ -8309,7 +8309,7 @@
       "caller": [
         "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/SimpleChatsWorkspace.razor"
       ],
-      "native_owner": "Native catalog/definition session, route selection and editor opening; LlmChatDefinitionCatalogSurface renders",
+      "native_owner": "The native catalog owns the opening, selected definition and requested initial editor tab.",
       "visual_owner": "LlmChatDefinitionCatalogSurface; LlmChatDefinitionEditorDialog",
       "descendants": [
         "LlmChatDefinitionCatalogSurface",
@@ -8323,7 +8323,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
-      "sha256_lf": "398e0017705ec882dc0637bd371284ceff8328f2d1a3c746ff18a14886148c15",
+      "sha256_lf": "6771af65fbf8ea95f75d9f95fe2e32df728651e17badc4d5e14dddc546c9a013",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.LlmChatDefinitionEditorDialog",
@@ -8332,7 +8332,7 @@
       "caller": [
         "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor"
       ],
-      "native_owner": "Native definition/provider/authorization gateways and save session; LlmChatDefinitionEditorSurface with native avatar operations renders",
+      "native_owner": "The dialog binds the native revision, editor lifetime and sharing slot to the local draft.",
       "visual_owner": "AvatarActions; AvatarPicker; LlmChatDefinitionEditorSurface",
       "descendants": [
         "AvatarPicker",
@@ -8470,7 +8470,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/SimpleChatsWorkspace.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/SimpleChatsWorkspace.razor",
-      "sha256_lf": "4f6b2916cfdeedfa8105b2131b4a72f1da428cdf56d86aa594a2e972d216e531",
+      "sha256_lf": "3089ebcb0f0a79a62eb5e0805ce9d526c45a72f72b30de5b777ff4c72f69ca35",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.Components.SimpleChatsWorkspace",
@@ -8479,7 +8479,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
-      "native_owner": "Native definition/conversation route target and workspace composition; existing catalog/conversation adapters render",
+      "native_owner": "The route host owns sharing authority. The workspace passes the sharing renderer into the definitions catalog.",
       "visual_owner": "LlmChatConversationWorkspace; LlmChatDefinitionCatalogPanel; Tabs; TabsItem",
       "descendants": [
         "LlmChatConversationWorkspace",
@@ -8733,7 +8733,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionCatalogSurface.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionCatalogSurface.razor",
-      "sha256_lf": "fd38a01ff55d9b3ea596c9b055fc7a529155c8cab2f373d6caff628347eacfa5",
+      "sha256_lf": "e45eff8cce7ce5b1eb5dbeb35d93429df3d0735d8983d3e4b7ec9df7587eb774",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.UI.LlmChatDefinitionCatalogSurface",
@@ -8743,7 +8743,7 @@
         "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionCatalogPanel.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/DefinitionCatalogSpecimen.razor"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The caller owns catalog reads, publication and import effects. The renderer places an optional catalog action and a sharing action for each card.",
       "visual_owner": "CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
       "descendants": [
         "ConversationParticipantCard"
@@ -8776,7 +8776,7 @@
     {
       "identity": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.UI/LlmChatDefinitionEditorSurface.razor",
-      "sha256_lf": "f7743ff5016362c44ba792ee382e4eed7b730e39c85b28fd5a862be2c6928061",
+      "sha256_lf": "81e9c566f225264a1647147a5fb6bec74a78e48ac6ed4ca234856bcf89ae8594",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Llm.SimpleChats.UI.LlmChatDefinitionEditorSurface",
@@ -8786,7 +8786,7 @@
         "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Components/LlmChatDefinitionEditorDialog.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/DefinitionEditorSpecimen.razor"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The caller owns reads and writes. The surface selects the requested editor tab and renders the supplied sharing content.",
       "visual_owner": "CanDoItAll.AgentFramework.Llm.SimpleChats.UI",
       "descendants": [
         "ConversationDefinitionEditorShell",
@@ -9386,7 +9386,7 @@
     {
       "identity": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowCatalogSurface.razor",
-      "sha256_lf": "de7c1cc4e5b6fa4a47842cf9a131b4eb6d355a718b9c945691ca4bf6b45082f9",
+      "sha256_lf": "c95d149834c447946c883d36559de33f290345612ed0047d1767f43ccc4f54a2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Workflows.UI.WorkflowCatalogSurface",
@@ -9467,7 +9467,7 @@
     {
       "identity": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowShellSurface.razor",
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/WorkflowShellSurface.razor",
-      "sha256_lf": "9b383994ea860fd53e056d805ba607c9d1912f3f627d8cb6c133020a9c9a96b1",
+      "sha256_lf": "b0da2bbe4ceb727015bfea2bc7395bcb3caaab154a03565a44e34143b72d6ffb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Workflows.UI.WorkflowShellSurface",
@@ -9477,7 +9477,7 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/WorkflowSpecimen.razor"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The workflow page owns routing, definition writes and publication. The shell renders the page-supplied sharing actions.",
       "visual_owner": "CanDoItAll.AgentFramework.Workflows.UI",
       "descendants": [
         "WorkflowCatalogSurface",
@@ -9532,7 +9532,7 @@
     {
       "identity": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.UI/wwwroot/workflows.css",
-      "sha256_lf": "e3b85cb3f55fc92fce1ac86105e9c0945129469943bd3873fd6abbdf19c2c653",
+      "sha256_lf": "6440a9ebf231aba8b0b349521020898e5f59edf51adad8fbb9810020da4a558e",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -9812,7 +9812,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor",
-      "sha256_lf": "353eeebf0c8f0ad5f6d13cbca8719efb6669a0deee4a6899fa38e60acbec5582",
+      "sha256_lf": "389ab295cdac0edaa2bdfbafa5d2a73b70445763c13978e4c2eda6aeb727aec9",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9837,6 +9837,8 @@
         "AgentsShellSurface",
         "CanDoItAll.Modules.AgentFramework.Pages.Components.History.ProviderRequestHistoryPanel",
         "FloatingAgentChatSettingsPanel",
+        "RemoteSimpleChatSharingControl",
+        "SimpleChatEditorSharing",
         "SimpleChatsWorkspace"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
@@ -9847,7 +9849,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor.cs",
-      "sha256_lf": "03a9ac6cbca29f302ecbe4f902a4694b51cb6e2d9d44f07d2c127fb3faadb3c7",
+      "sha256_lf": "783a949a1b91af199214f62a8839d3a69189ee028f1a2190cc8c9c13bca84cdd",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.AgentsHomePage",
@@ -9856,7 +9858,7 @@
       "caller": [
         "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
       ],
-      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "native_owner": "The route host owns the selected definition and carries runnable agents into runtime sections. Local templates stay in authoring.",
       "visual_owner": "AgentUsageDialog, ModelUsageDialog, ProviderUsageDialog",
       "descendants": [
         "AgentUsageDialog",
@@ -9955,7 +9957,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
-      "sha256_lf": "66d0b0fca01870a7cd5095a12ba5142ea693583f5b081950a1c92b65d5da5bfc",
+      "sha256_lf": "938c64dd9dab15ddc151631adf7714345cc1254888997d9c44ead9d27a468963",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentCatalogHost",
@@ -9964,7 +9966,7 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
       ],
-      "native_owner": "Native catalog reads, agent/team CRUD, member updates, selection and context readiness; AgentCatalogPanel renders; original policy dialog state retained for this catalog lifetime. Owns the template dialog lifetime, catalog refresh and local editor opening after an accepted import.",
+      "native_owner": "The native catalog authorizes editing for saved agents and local templates. It admits runnable agents to team membership and quick chat.",
       "visual_owner": "AgentCatalogPanel; Alert; Button; AgentDecisionPolicyDialog; AgentDecisionPolicyRecoveryDialog, RemoteAgentTemplateDialog",
       "descendants": [
         "AgentCatalogPanel",
@@ -10230,7 +10232,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
-      "sha256_lf": "d86609427bd641284fb2785db8e8961741475a91c20a1415db022764370f0536",
+      "sha256_lf": "b5f64feb010d017f3ef7d51742d07839b22beb0ac757ab5d9681ba53efef437d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialogResult, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentDetailsDialog, CanDoItAll.Modules.AgentFramework.Pages.Components.AgentWorkspaceRiskRequest",
@@ -10239,7 +10241,7 @@
       "caller": [
         "Partial/compile dependency of CanDoItAll.Modules.AgentFramework"
       ],
-      "native_owner": "CanDoItAll.Modules.AgentFramework",
+      "native_owner": "The native agent editor owns the authorized draft and maps the sharing section to route state.",
       "visual_owner": "No reusable rendering body",
       "descendants": [],
       "assets": "CanDoItAll.Modules.AgentFramework",
@@ -10665,6 +10667,32 @@
       "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/DefinitionSharingEditor.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/DefinitionSharingEditor.razor",
+      "sha256_lf": "55e2cc961d7fe494c531d01496c25ec33ab8d0e41ca5186c89071082d5ec880b",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.DefinitionSharingEditor",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SimpleChatEditorSharing.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowSharingSettings.razor"
+      ],
+      "native_owner": "The opening owns permission and read/write effects. This editor tracks the loaded settings, local choices, explicit confirmation and cancellation.",
+      "visual_owner": "DefinitionSharingFields, Alert and Button",
+      "descendants": [
+        "Alert",
+        "Button",
+        "DefinitionSharingFields",
+        "TextBlock"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "A shared form saves the exact pair of choices the user reviewed for this saved definition."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ExternalWorkspaceRootSelectionField.razor",
       "sha256_lf": "eb6953e0e8ea4b4f8c7cef55fdecd414fe8bc5a2e5d66ffcea1b20a52db13d2a",
@@ -10978,7 +11006,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor",
-      "sha256_lf": "bb92a53036ce3279b48eb227fc6a8505d506be72a933c56661013d82e08db55a",
+      "sha256_lf": "905329d4eba8afc9b90ebee938e845cd297824a2e985cdf9965cd00f11b23e5f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteAgentTemplateDialog",
@@ -10987,17 +11015,135 @@
       "caller": [
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor"
       ],
-      "native_owner": "Agent catalog opening binds discovery and local import to its original authority. The dialog owns source selection, cancellable reads, template preview and accepted local identity.",
-      "visual_owner": "RemoteInstancePicker, BaseLib Dialog and template controls",
+      "native_owner": "The agent catalog opening authorizes reads and writes, refreshes the local catalog and opens the accepted agent.",
+      "visual_owner": "RemoteTemplateImportDialog",
       "descendants": [
-        "Dialog",
-        "RemoteInstancePicker",
-        "SelectInput"
+        "RemoteTemplateImportDialog"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Composes the reusable instance picker with an agent-specific preview and explicit local creation. Direct callers receive the accepted agent identity."
+      "rationale": "Adapts the native agent editing and navigation callbacks for the shared definition picker."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteSimpleChatSharingControl.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteSimpleChatSharingControl.razor",
+      "sha256_lf": "421655ac6c03014a29a899ab96e571dc82e9b6bb0874f58785a2587a7f25b6d0",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteSimpleChatSharingControl",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
+      ],
+      "native_owner": "The Simple Chat workspace authorizes the import opening, local write and native catalog refresh.",
+      "visual_owner": "Button, Alert and RemoteTemplateImportDialog",
+      "descendants": [
+        "Alert",
+        "Button",
+        "RemoteTemplateImportDialog"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "The catalog action opens the shared definition picker with native Simple Chat permissions."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor",
+      "sha256_lf": "b6d31c770ef9f2764c454924cad3e9fae0be9171733c3392754ea543bec5276f",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteTemplateImportDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteSimpleChatSharingControl.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor"
+      ],
+      "native_owner": "The original feature host authorizes native writes. The shared dialog owns catalog selection, preview lifetimes, model decisions and per-item outcomes.",
+      "visual_owner": "BaseLib Dialog, remote instance picker, avatar and nested provider selector",
+      "descendants": [
+        "Dialog",
+        "RemoteInstancePicker",
+        "Avatar",
+        "RemoteTemplateModelDialog"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Keeps the source catalog mounted while editing per-item or batch model choices."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor.cs",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor.cs",
+      "sha256_lf": "02535ba0e45a983a8f81fa4fb1bbd6c0adc7de6f74c03866c166c89748ebdbe1",
+      "kind": "CS_RENDER_OR_ACTIVATION",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteTemplateImportDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor"
+      ],
+      "native_owner": "The shared dialog coordinates cancellable discovery, model selection and import while each feature writes its own definition.",
+      "visual_owner": "RemoteTemplateImportDialog markup",
+      "descendants": [],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Code-behind owns the selection lifetime, per-item outcomes and continuation after a model choice."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateModelDialog.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateModelDialog.razor",
+      "sha256_lf": "8dad0b99f1d2cab822e1c76be7f8c560c5a9c1d49b85f20353f71454845b5691",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteTemplateModelDialog",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor"
+      ],
+      "native_owner": "Parent retains the selected definitions. The child owns the in-progress choice and reports confirm, cancel or apply-to-all.",
+      "visual_owner": "BaseLib Dialog, SelectInput and Button",
+      "descendants": [
+        "Dialog",
+        "SelectInput",
+        "Button"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Offers compatible provider/model pairs and can refresh locally after configuring a connection."
+    },
+    {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor",
+      "sha256_lf": "86a810e2183cf17675c1f5248a6c8ea8be187d3c3ca4040ff9dae0ae376c200f",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.RemoteWorkflowSharingControl",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor"
+      ],
+      "native_owner": "Workflow page owns access, draft selection and refresh. The control owns its chosen publication or import opening.",
+      "visual_owner": "PageHeaderActionButton, Dialog and the workflow sharing and import editors",
+      "descendants": [
+        "Dialog",
+        "PageHeaderActionButton",
+        "RemoteTemplateImportDialog",
+        "WorkflowSharingSettings"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Offers entry from the workflow catalog to the same version-specific settings presented by the canvas inspector."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/ScenarioHarnessPanel.razor",
@@ -11148,6 +11294,28 @@
       "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SimpleChatEditorSharing.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/SimpleChatEditorSharing.razor",
+      "sha256_lf": "c329dca89deddfbee5ab5add7db2e4ce9894943147acf45640b9b8d845908699",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.SimpleChatEditorSharing",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/AgentsHomePage.razor"
+      ],
+      "native_owner": "The Simple Chat opening owns read permission, write admission and the observed definition revision.",
+      "visual_owner": "DefinitionSharingEditor",
+      "descendants": [
+        "DefinitionSharingEditor"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Connects the definition editor tab to the scoped publication service and preserves the editing session."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/UsageDetailHost.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/UsageDetailHost.razor",
       "sha256_lf": "3934eed5347a40f2c3dbf87745bcb9687713641ce4940c43624602da7a94027f",
@@ -11262,7 +11430,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor",
-      "sha256_lf": "b804bab0171d03599efa54dcd7975ac41e9fba50a69d0b21945dde5ddd60d61f",
+      "sha256_lf": "b67af2e4cc9f9c3f291b33d414d91c4e63d8c2f5ec90aa91e913f190fa8034e0",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowCanvasEditor",
@@ -11272,12 +11440,13 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor"
       ],
-      "native_owner": "Native document/preview/Gallery authority and exact accepted identities; WF1 surface",
+      "native_owner": "The workflow editor owns authorization, the saved workflow version and the inspector slot.",
       "visual_owner": "PromptGalleryPickerButton; PromptPicker; SettingsRenderer; WorkflowCanvasSurface; WorkflowNativeSettingsSlot",
       "descendants": [
         "PromptGalleryPickerButton",
         "WorkflowCanvasSurface",
-        "WorkflowNativeSettingsSlot"
+        "WorkflowNativeSettingsSlot",
+        "WorkflowSharingSettings"
       ],
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
@@ -11287,7 +11456,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs",
-      "sha256_lf": "be76bcfe315c7045ca9a4b7a549ee9dc26ca95ef4d24f4a6f243f675d22bcea6",
+      "sha256_lf": "25efc098b02e0b2e1590ceffe824a018d1cec6d6a7cb5bb1da2359fb5c906b6d",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowCanvasEditor",
@@ -11423,6 +11592,29 @@
       "rationale": "Reviewed native route, read/write admission, context publication or dialog-result adapter. Composes the listed extracted descendants; no reusable form remains in this host."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowSharingSettings.razor",
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowSharingSettings.razor",
+      "sha256_lf": "cf9b6f4beaed8d33706cff95363783bfbca39433042c65a07976df5fbe7c3715",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.WorkflowSharingSettings",
+      "project": "src/Modules/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteWorkflowSharingControl.razor",
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor"
+      ],
+      "native_owner": "The selected workflow and version bind the permission check and publication write to their opening.",
+      "visual_owner": "DefinitionSharingEditor",
+      "descendants": [
+        "DefinitionSharingEditor"
+      ],
+      "assets": "CanDoItAll.Modules.AgentFramework",
+      "scenario": "CanDoItAll.Modules.AgentFramework",
+      "evidence": "CanDoItAll.Modules.AgentFramework",
+      "rationale": "Uses the same saved workflow settings from the canvas inspector and the catalog shortcut."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/LlmChatsCompatibilityRedirect.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/LlmChatsCompatibilityRedirect.razor",
       "sha256_lf": "e9e9c3aae79dd77fcbc9e844ddf875ff42248d2980304f4a2d0d0945a20f0763",
@@ -11465,7 +11657,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor",
-      "sha256_lf": "4c604a050e991c60339ace88c25c9e9af45ec7fc4468fddc507582a5ade289c6",
+      "sha256_lf": "5914fb751958044c8080a33291784e64959b4e7f4cb0f502a74b9ed65242c8aa",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage",
@@ -11480,6 +11672,7 @@
       "descendants": [
         "AgentAvatarActionButton",
         "Editor",
+        "RemoteWorkflowSharingControl",
         "WorkflowAgentChatContextProvider",
         "WorkflowAnalyticsPanel",
         "WorkflowCanvasEditor",
@@ -11499,7 +11692,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/WorkflowsPage.razor.cs",
-      "sha256_lf": "b53a5d616b32baa7f7abf12c5f69ebcb175ba2e641535f6127cd24a0e733a106",
+      "sha256_lf": "510a7beb90d255ddb980dde7dd725caeff1a034725b2375c977b24759b187652",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.WorkflowsPage, CanDoItAll.Modules.AgentFramework.Pages.WorkflowRouteRequest, CanDoItAll.Modules.AgentFramework.Pages.ProjectWorkflowRouteValidation, CanDoItAll.Modules.AgentFramework.Pages.PageOwner",
@@ -11541,7 +11734,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
-      "sha256_lf": "9e9b55e46288f4645013589d64f1d3c3ecb1697a4f2c53c8b75e4c7a10424eb2",
+      "sha256_lf": "2cc1512988a7da36d0df8211aaeca9bd4ef70b32d1cc0a3e8b3ea37e59ce9854",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleServiceCollectionExtensions, CanDoItAll.Modules.AgentFramework.AgentFrameworkModuleAssemblyMarker",
@@ -15262,7 +15455,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor",
-      "sha256_lf": "4f68226d5ec3c2e9ec4f59d3a6359a444620683a898e1f591611565bb01380cd",
+      "sha256_lf": "94732432d86381c3b5ed62f5d4a9c168111c2aa7e342f67a152317912b05c82f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.Components.RemoteInstancePicker",
@@ -15270,7 +15463,7 @@
       "classification": "NATIVE_HOST",
       "caller": [
         "src/Modules/CanDoItAll.Modules.Workspace/Pages/SettingsPage.razor",
-        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteAgentTemplateDialog.razor"
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/RemoteTemplateImportDialog.razor"
       ],
       "native_owner": "Workspace owns the connection edit opening, list observer, credential metadata reads, create, update and deletion. The feature caller receives an enabled source and its revision.",
       "visual_owner": "RemoteInstanceEditor, BaseLib list, selector and confirmation dialog",
@@ -15289,7 +15482,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workspace/Pages/Components/RemoteInstancePicker.razor.cs",
-      "sha256_lf": "1b587aa2f90c1f30f723503a187c0b0fee24dbea5d78eaca2521169f002f314f",
+      "sha256_lf": "06dcacf6b6b46f54bef0f3c07ec425b54451934d4dce680e7ccd536a670bd590",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workspace.Pages.Components.RemoteInstancePicker",
@@ -25067,7 +25260,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor",
-      "sha256_lf": "2d660f555cec4911e686d37a1084f804fcc6364bb62cb5de8f9d06af038c0757",
+      "sha256_lf": "93a7f2ee79be2f3f46720a3a54f7852dbdfd3aeeaf9c32b2a9fb56bbc291358f",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Editor.UI.AgentEditorCoreSurface",
@@ -25084,7 +25277,8 @@
         "ConversationIdentityFields",
         "ConversationProviderModelSelector",
         "ConversationProviderSelector",
-        "ConversationThinkingEffortSettings"
+        "ConversationThinkingEffortSettings",
+        "DefinitionSharingFields"
       ],
       "assets": "CanDoItAll.AgentFramework.Editor.UI",
       "scenario": "CanDoItAll.AgentFramework.Editor.UI",
@@ -26067,7 +26261,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor",
-      "sha256_lf": "4e0b680361099e2fe10e73707f8826f066ba4f69259b0c29d7e36b0ba705cfdf",
+      "sha256_lf": "9547683c4d3356b05bc7fcf55b1c11c105c66806ba1984bfed241ae4afea3055",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -26077,7 +26271,7 @@
         "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCatalogHost.razor",
         "src/Sandboxes/CanDoItAll.AgentFramework.UiSandbox/Components/CatalogSpecimen.razor"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The authoring catalog supplies agents and local templates. The panel labels templates and exposes the applicable actions.",
       "visual_owner": "CanDoItAll.AgentFramework.UI",
       "descendants": [
         "AgentSelectionCard"
@@ -26090,7 +26284,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
-      "sha256_lf": "8940a26bcfbee26ce7b70f5b4e309887107bedce8fb2c8b6551a87c328e2b065",
+      "sha256_lf": "56e56241ae205ffbdc815597d64bb2844ed126c85444ab1ccd42e9b419fd2093",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Catalog.AgentCatalogPanel",
@@ -27115,7 +27309,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
-      "sha256_lf": "f684b5ad3169ffe1151e694c2b2dc2b352f36bc2be3524eea2fe4b3c0ed408ce",
+      "sha256_lf": "98ccca4d5ab604882226471a78ba83f04323f5ca321fcb1d3cc512b5afcf575e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Teams.TeamMembersSelector",
@@ -27339,7 +27533,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor",
-      "sha256_lf": "1e49e1eb731e4348c114f45568f34a2fd87e668d9183126909279f7c38bca1c8",
+      "sha256_lf": "c8b2ec849995b801eb2c36e78d2690d15d556819bbb3e555ca287be5386f4ec7",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI.WorkflowCanvasSurface",
@@ -27350,7 +27544,7 @@
         "src/Sandboxes/CanDoItAll.AgentFramework.WorkflowAuthoring.UiSandbox/Components/ScenarioCanvas.razor",
         "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs"
       ],
-      "native_owner": "Callers above own effects and authority",
+      "native_owner": "The caller owns domain writes. The canvas renders the optional Sharing tab for the current document.",
       "visual_owner": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI",
       "descendants": [
         "CanvasWorkbench",
@@ -27369,7 +27563,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
       "path": "src/UI/CanDoItAll.AgentFramework.WorkflowAuthoring.UI/WorkflowCanvasSurface.razor.cs",
-      "sha256_lf": "878905677e1dea0b81b977f27ceb32486ae0394a6a092177a61498501b9e2d01",
+      "sha256_lf": "475bfa14c937109feb54fc7f182895b578d83132ae4e991a5be7985bc30df44b",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.WorkflowAuthoring.UI.WorkflowCanvasSurface, CanDoItAll.AgentFramework.WorkflowAuthoring.UI.RemovalBridge, CanDoItAll.AgentFramework.WorkflowAuthoring.UI.DecisionBranchSpec, CanDoItAll.AgentFramework.WorkflowAuthoring.UI.PromptBindingExecutionPair",
@@ -29831,7 +30025,7 @@
     {
       "identity": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
       "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
-      "sha256_lf": "068fdc8b909ece3acce4e14f2570f5fd1dc07d4c1c6c1497796684f23cd165ad",
+      "sha256_lf": "1087fe1feba296633def6d6d90cd4ee2e1522ed3ef0cdaf225c820737d954c09",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.CrmHr.UI.Agents.CrmHrAgentRecordDialog",
@@ -31667,6 +31861,30 @@
       "scenario": "CanDoItAll.Editing.UI",
       "evidence": "CanDoItAll.Editing.UI",
       "rationale": "Concurrent-editing pilot: pure merge or lightweight typed rendering only; no owner injection, reflection property grid or persistence dependency."
+    },
+    {
+      "identity": "src/UI/CanDoItAll.Editing.UI/DefinitionSharingFields.razor",
+      "path": "src/UI/CanDoItAll.Editing.UI/DefinitionSharingFields.razor",
+      "sha256_lf": "e0ec9022da54383e76945e61715eb8c4605999fb851226992faf9a6504a7594b",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Editing.UI.DefinitionSharingFields",
+      "project": "src/UI/CanDoItAll.Editing.UI/CanDoItAll.Editing.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/DefinitionSharingEditor.razor",
+        "src/UI/CanDoItAll.AgentFramework.Editor.UI/AgentEditorCoreSurface.razor"
+      ],
+      "native_owner": "The calling editor owns the two values, validation, authorization and persistence.",
+      "visual_owner": "CheckboxOption and TextBlock",
+      "descendants": [
+        "CheckboxOption",
+        "TextBlock"
+      ],
+      "assets": "CanDoItAll.Editing.UI",
+      "scenario": "CanDoItAll.Editing.UI",
+      "evidence": "CanDoItAll.Editing.UI",
+      "rationale": "Renders labeled API availability and template publication choices and reports explicit changes to the editor."
     },
     {
       "identity": "src/UI/CanDoItAll.Editing.UI/DraftNavigationGuard.razor",

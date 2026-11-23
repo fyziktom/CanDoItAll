@@ -6,6 +6,7 @@ using CanDoItAll.Memory.Abstractions;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Conversations.Components.Presentation;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.RemoteInstances;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
@@ -128,7 +129,7 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
                 Draft.Instructions = value.Value ?? string.Empty;
                 break;
             case AgentEditorCoreIntent.Tags value:
-                Draft.Tags = value.Value.Concat(["Favorite"]).Distinct().ToList();
+                Draft.Tags = [.. DefinitionSharingTags.Custom(value.Value).Where(tag => !AgentSpecialTags.IsFavorite(tag)), "Favorite"];
                 break;
             case AgentEditorCoreIntent.PendingTags value:
                 pendingTagInput = value.Value;
@@ -178,6 +179,12 @@ public sealed class AgentEditorScenarioSession(object receiver, AgentEditorScena
                 break;
             case AgentEditorCoreIntent.Voice value:
                 Draft.VoiceAccess.CanUseVoiceMode = value.Value;
+                break;
+            case AgentEditorCoreIntent.ApiAvailability value:
+                Draft.ApiAvailable = value.Value;
+                break;
+            case AgentEditorCoreIntent.TemplatePublication value:
+                Draft.SharedTemplate = value.Value;
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(intent));
         }

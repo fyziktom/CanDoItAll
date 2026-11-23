@@ -43,7 +43,7 @@ public sealed partial class WorkspaceSettingsMigrationTests {
                 Assert.Equal(new PolicyColumn(nameof(WorkspaceSettings.DecisionDataPolicyJson), "text", false, null),
                     Assert.Single(await PolicyColumnsAsync(context), column => column.Name == nameof(WorkspaceSettings.DecisionDataPolicyJson)));
                 Assert.False(context.Database.HasPendingModelChanges());
-                Assert.Equal(186, context.Model.GetEntityTypes().Count());
+                CurrentDatabaseModelAssertions.Canonical(context.Model);
                 await using var owner = fixture.Owner();
                 foreach (var model in new[] { context.GetService<IDesignTimeModel>().Model, owner.GetService<IDesignTimeModel>().Model }) {
                     var entity = model.FindEntityType(typeof(WorkspaceSettings))!;

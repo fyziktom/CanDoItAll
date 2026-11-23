@@ -21,6 +21,7 @@ internal static class LlmChatDefinitionEndpoints
     {
         var definitions = api.MapGroup("/llm-chats")
             .WithTags("LLM Chats")
+            .AddEndpointFilter(LlmChatApiAvailability.RequireAvailableDefinitionAsync)
             .DisableAntiforgery();
         definitions.MapGet("/provider-options", ListProviderOptionsAsync)
             .WithName("ListLlmChatProviderOptions")
@@ -168,7 +169,7 @@ internal static class LlmChatDefinitionEndpoints
             return error!;
         }
 
-        var result = await service.ListPageAsync(query!, cancellationToken).ConfigureAwait(false);
+        var result = await service.ListPageAsync(query! with { OnlyApiAvailable = true }, cancellationToken);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors);

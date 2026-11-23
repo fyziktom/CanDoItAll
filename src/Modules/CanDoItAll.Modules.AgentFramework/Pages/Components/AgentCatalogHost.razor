@@ -494,10 +494,10 @@
     }
 
     private static bool IsManagedQuickChatAgent(AgentDefinition agent) {
-        return HrAgentIdentity.Matches(agent) ||
+        return !agent.IsTemplate && (HrAgentIdentity.Matches(agent) ||
                PromptsCuratorAgentIdentity.Matches(agent) ||
                WorkflowCuratorAgentIdentity.Matches(agent) ||
-               SchedulerAgentIdentity.Matches(agent);
+               SchedulerAgentIdentity.Matches(agent));
     }
 
     private Task OpenSelectedTeamMembersDialogAsync() {
@@ -700,7 +700,7 @@
             var result = await DialogService.OpenAsync<AgentTeamMembersDialog>($"Add agents to {team.Name}",
                 new Dictionary<string, object?> {
                     [nameof(AgentTeamMembersDialog.Team)] = team with { AgentIds = team.AgentIds.ToArray() },
-                    [nameof(AgentTeamMembersDialog.Agents)] = agents.ToArray(),
+                    [nameof(AgentTeamMembersDialog.Agents)] = agents.Where(agent => !agent.IsTemplate).ToArray(),
                     [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds(),
                     [nameof(AgentTeamMembersDialog.OwnerCancellationToken)] = request.Token
                 }, new DialogOptions {

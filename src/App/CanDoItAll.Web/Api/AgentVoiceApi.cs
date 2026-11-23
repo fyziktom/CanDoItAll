@@ -56,7 +56,7 @@ internal static class AgentVoiceApi {
                 "The trimmed transcript and configured transcription model.",
                 "Exactly one file or ordered chunks; other form fields are rejected.");
 
-        voice.MapPost("/speech", SynthesizeAsync)
+        voice.MapPost("/speech", SynthesizeAsync).RequireAvailableAgent<AgentVoiceSpeechApiRequest>(request => request.AgentId)
             .WithName("SynthesizeAgentVoice")
             .WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .WithMetadata(new RequestSizeLimitAttribute(64 * 1024))

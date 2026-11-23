@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -12,7 +13,8 @@ public sealed class LlmChatDefinitionApplicationService(
     ILlmChatProviderResolver providerResolver,
     TimeProvider timeProvider,
     ILlmChatDefinitionCreateReceiptRepository createReceipts,
-    IEnumerable<ILlmChatDefinitionCommitObserver>? observers = null)
+    IEnumerable<ILlmChatDefinitionCommitObserver>? observers = null,
+    ILlmChatSharingReader? sharingReader = null)
     : ILlmChatDefinitionApplicationService, ILlmChatDefinitionCreateReceiptService
 {
     public async Task<Result<LlmChatDefinitionDetails>> CreateAsync(
@@ -35,7 +37,7 @@ public sealed class LlmChatDefinitionApplicationService(
             return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
             {
                 var now = timeProvider.GetUtcNow();
-                var tags = LlmChatDefinitionValidation.NormalizeTags(command.Tags);
+                var tags = NormalizeCustomTags(command.Tags);
                 var id = LlmChatDefinitionId.New();
                 var details = await CreateCoreAsync(command, resolved.Value!, id, now, tags,
                     transactionCancellationToken).ConfigureAwait(false);
@@ -89,7 +91,7 @@ public sealed class LlmChatDefinitionApplicationService(
                         throw new DefinitionCreateRejectedException(resolved.Errors);
                     }
 
-                    await CreateCoreAsync(snapshot, resolved.Value!, id, receipt.CreatedAtUtc, snapshot.Tags!, token)
+                    await CreateCoreAsync(snapshot, resolved.Value!, id, receipt.CreatedAtUtc, DefinitionSharingTags.Custom(snapshot.Tags), token)
                         .ConfigureAwait(false);
                 } catch (ArgumentException exception) {
                     throw new DefinitionCreateRejectedException([LlmChatErrors.InvalidRequest(exception.Message)]);
@@ -182,7 +184,7 @@ public sealed class LlmChatDefinitionApplicationService(
             return await unitOfWork.ExecuteAsync(async transactionCancellationToken =>
             {
                 var now = timeProvider.GetUtcNow();
-                var tags = LlmChatDefinitionValidation.NormalizeTags(command.Tags);
+                var tags = NormalizeCustomTags(command.Tags);
                 var nextRevision = current.CurrentRevision.Next();
                 var revision = CreateRevision(command, nextRevision, resolved.Value!, now);
                 var updated = new LlmChatDefinition(
@@ -202,7 +204,8 @@ public sealed class LlmChatDefinitionApplicationService(
                     transactionCancellationToken).ConfigureAwait(false);
                 await repository.ReplaceTagsAsync(updated.Id, tags, transactionCancellationToken).ConfigureAwait(false);
                 NotifyAfterCommit(updated.Id.Value);
-                return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
+                return Result<LlmChatDefinitionDetails>.Success(WithSharing(new(updated, revision, tags),
+                    await ReadSharingAsync(updated.Id.Value, transactionCancellationToken)));
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (ArgumentException exception)
@@ -273,7 +276,8 @@ public sealed class LlmChatDefinitionApplicationService(
                     cancellationToken: transactionCancellationToken).ConfigureAwait(false);
                 var tags = await repository.ListTagsAsync(updated.Id, transactionCancellationToken).ConfigureAwait(false);
                 NotifyAfterCommit(updated.Id.Value, lifecycle: true);
-                return Result<LlmChatDefinitionDetails>.Success(new LlmChatDefinitionDetails(updated, revision, tags));
+                return Result<LlmChatDefinitionDetails>.Success(WithSharing(new(updated, revision, tags),
+                    await ReadSharingAsync(updated.Id.Value, transactionCancellationToken)));
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (LlmChatPersistenceConcurrencyException exception)
@@ -290,7 +294,7 @@ public sealed class LlmChatDefinitionApplicationService(
         var definition = await readStore.TryGetAsync(definitionId, cancellationToken).ConfigureAwait(false);
         return definition is null
             ? Result<LlmChatDefinitionDetails>.Failure(LlmChatErrors.DefinitionNotFound())
-            : Result<LlmChatDefinitionDetails>.Success(Map(definition));
+            : Result<LlmChatDefinitionDetails>.Success(Map(definition, await ReadSharingAsync(definitionId.Value, cancellationToken)));
     }
 
     public async Task<Result<LlmChatDefinitionRevision>> GetRevisionAsync(
@@ -313,29 +317,42 @@ public sealed class LlmChatDefinitionApplicationService(
         LlmChatDefinitionQuery query,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        var page = await readStore
-            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken)
-            .ConfigureAwait(false);
-        return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success([.. page.Items.Select(Map)]);
+        return Result<IReadOnlyList<LlmChatDefinitionDetails>>.Success((await ReadPageAsync(query, cancellationToken)).Items);
     }
 
     public async Task<Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>> ListPageAsync(
         LlmChatDefinitionQuery query,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) =>
+        Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(await ReadPageAsync(query, cancellationToken));
+
+    private async Task<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>> ReadPageAsync(
+        LlmChatDefinitionQuery query, CancellationToken token) {
         ArgumentNullException.ThrowIfNull(query);
-        var page = await readStore
-            .ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags, cancellationToken)
-            .ConfigureAwait(false);
-        return Result<LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>>.Success(
-            new LlmChatPage<LlmChatDefinitionDetails, LlmChatDefinitionCursor>(
-                [.. page.Items.Select(Map)],
-                page.NextCursor));
+        if (query.OnlyApiAvailable && sharingReader is null) {
+            throw new InvalidOperationException("The Simple Chat API catalog requires a sharing reader to check definition availability.");
+        }
+        var sharing = await ReadSharingAsync(null, token);
+        var excluded = query.UnavailableDefinitionIds;
+        if (query.OnlyApiAvailable) {
+            excluded = excluded is { Count: > 0 } ? excluded.Union(sharing.ApiUnavailable).ToHashSet() : sharing.ApiUnavailable;
+        }
+        var page = await readStore.ListPageAsync(query.Take, query.Cursor, query.Status, query.SearchText, query.Tags,
+            token, excluded, sharing);
+        return new([.. page.Items.Select(item => Map(item, sharing))], page.NextCursor);
     }
 
-    private static LlmChatDefinitionDetails Map(LlmChatDefinitionReadModel model)
-        => new(model.Definition, model.Revision, model.Tags);
+    private Task<LlmChatSharingSnapshot> ReadSharingAsync(Guid? definitionId, CancellationToken token) =>
+        sharingReader?.ReadAsync(definitionId, token) ?? Task.FromResult(LlmChatSharingSnapshot.Default);
+
+    private static IReadOnlyList<string> NormalizeCustomTags(IReadOnlyList<string>? tags) =>
+        LlmChatDefinitionValidation.NormalizeTags(DefinitionSharingTags.Custom(tags));
+
+    private static LlmChatDefinitionDetails Map(LlmChatDefinitionReadModel model, LlmChatSharingSnapshot sharing) =>
+        WithSharing(new(model.Definition, model.Revision, model.Tags), sharing);
+
+    private static LlmChatDefinitionDetails WithSharing(LlmChatDefinitionDetails details, LlmChatSharingSnapshot sharing) =>
+        details with { ApiAvailable = !sharing.ApiUnavailable.Contains(details.Definition.Id.Value),
+            SharedTemplate = sharing.Published.Contains(details.Definition.Id.Value) };
 
     private void NotifyAfterCommit(Guid id, bool lifecycle = false) {
         var subscribers = observers?.ToArray() ?? [];

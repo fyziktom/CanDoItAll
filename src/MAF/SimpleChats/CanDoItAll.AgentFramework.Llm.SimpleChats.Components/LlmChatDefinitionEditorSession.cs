@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.UI;
+using CanDoItAll.RemoteInstances;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
@@ -29,6 +30,7 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
     private bool disposed;
 
     public DefinitionEditorPresentation Presentation { get; private set; } = DefinitionEditorPresentation.Initial;
+    public LlmChatEditorOpening? SharingAccess => opening is { IsCurrent: true } && !completed ? opening : null;
     public event Action? Changed;
     public bool IsCurrent(long expected) => !disposed && expected == generation;
     public bool HasUnfinishedDraft => !completed && (mutation is not null || Presentation.Unconfirmed || draft is not null &&
@@ -50,7 +52,7 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
         if (!IsCurrent(intent.Generation) || completed || intent.Submission is null) {
             return;
         }
-        draft = intent.Submission with { Tags = intent.Submission.Tags.ToImmutableArray() };
+        draft = intent.Submission with { Tags = DefinitionSharingTags.Custom(intent.Submission.Tags).ToImmutableArray() };
         inputRevision++;
         reviewed = null;
         Presentation = Presentation with { Source = draft, Comparison = null, ConfirmDiscard = false, Saved = false, CanUndoComparison = false };
@@ -72,6 +74,17 @@ public sealed class LlmChatDefinitionEditorSession(ILlmChatDefinitionUiGateway d
             Definition = LlmChatDefinitionPresentationMapper.ToCatalogCard(accepted.Definition),
             Notice = Presentation.Unconfirmed ? "The earlier save remains unconfirmed. This draft uses the reviewed current version for a separate new save." : "Comparison applied to your draft. Save separately." };
         Publish();
+    }
+
+    public bool AcceptSharing(LlmChatEditorOpening opening, bool apiAvailable, bool sharedTemplate) {
+        if (!ReferenceEquals(SharingAccess, opening) || accepted is null) {
+            return false;
+        }
+        var tags = DefinitionSharingTags.Project(accepted.Definition.Tags, apiAvailable, sharedTemplate);
+        accepted = accepted with { Definition = accepted.Definition with { Tags = tags } };
+        Presentation = Presentation with { Definition = LlmChatDefinitionPresentationMapper.ToCatalogCard(accepted.Definition) };
+        Publish();
+        return true;
     }
 
     public void UndoComparison(long expected) {

@@ -76,6 +76,8 @@ public static class ApiEndpointRouteBuilderExtensions
         endpoints.MapSharedProviderCatalogApi();
         if (options.Authorization.Enabled) {
             endpoints.MapRemoteAgentTemplates();
+            endpoints.MapRemoteSimpleChats();
+            endpoints.MapRemoteWorkflows();
         }
         endpoints.MapSharedProviderInferenceApi();
 

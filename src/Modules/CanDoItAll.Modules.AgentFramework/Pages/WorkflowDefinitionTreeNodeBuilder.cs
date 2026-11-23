@@ -86,7 +86,7 @@ public static class WorkflowDefinitionTreeNodeBuilder
             Text = definition.Name,
             Icon = "account_tree",
             Tooltip = BuildDefinitionTooltip(definition),
-            BadgeText = definition.PreferredBackend.ToString(),
+            BadgeText = string.Join(" · ", definition.Tags.Append(definition.PreferredBackend.ToString())),
             IsSelected = selectedDefinitionId == definition.Id,
             DataTestId = "workflows-catalog-item"
         };
@@ -98,7 +98,8 @@ public static class WorkflowDefinitionTreeNodeBuilder
             ? "No description"
             : definition.Description;
 
-        return $"{definition.Name} - {definition.Status}, {definition.PreferredBackend}, {description}";
+        return string.Join(", ", new[] { $"{definition.Name} - {definition.Status}", definition.PreferredBackend.ToString() }
+            .Concat(definition.Tags).Append(description));
     }
 
     private static string ResolveStatusIcon(WorkflowLifecycleStatus status)

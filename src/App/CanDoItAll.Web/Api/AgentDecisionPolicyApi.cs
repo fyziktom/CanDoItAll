@@ -23,11 +23,11 @@ internal static class AgentDecisionPolicyApi {
             .ProducesApiErrors(400, 401, 403, 413, 415)
             .DescribeApi("Look up the original Agent policy save", "Read-only historical receipt lookup under current Agent read permission. Requires the complete original submission. A missing receipt remains unresolved and never authorizes another PUT. Receipts are retained for 30 days; policy writes refuse when 1024 unexpired receipts occupy the log.",
                 "The exact historical snapshot and acceptance time, or an explicit unresolved/context/conflict/unavailable result.", "Complete original policy submission, retained unchanged; maximum 8192 UTF-8 bytes.");
-        agents.MapGet("/{agentId:guid}/decision-data-policy", ReadAsync)
+        agents.MapGet("/{agentId:guid}/decision-data-policy", ReadAsync).RequireAvailableAgent()
             .WithName("GetAgentDecisionDataPolicy")
             .Produces<AgentDecisionPolicyApiSnapshot>().ProducesApiErrors(400, 401, 403, 404, 409, 503)
             .DescribeApi("Read the Agent decision data policy", "Returns the original workspace, Agent and catalog expectation with lossless decimal-string revisions. Null policy means no Agent override. Invalid stored metadata is an error, never inheritance. A current read cannot resolve a prior uncertain write.", "The configured override and original expectation.");
-        agents.MapPut("/{agentId:guid}/decision-data-policy", ReplaceAsync)
+        agents.MapPut("/{agentId:guid}/decision-data-policy", ReplaceAsync).DescribeAgentAvailability()
             .WithName("ReplaceAgentDecisionDataPolicy").WithApiPermission(ApiAccessScopeNames.WriteAgents)
             .Accepts<AgentDecisionPolicyApiSubmission>("application/json")
             .Produces<AgentDecisionPolicyApiResult>().Produces<AgentDecisionPolicyApiResult>(409)
@@ -69,6 +69,9 @@ internal static class AgentDecisionPolicyApi {
         var command = parsed.Command!;
         try {
             var workspace = context.RequestServices.GetRequiredService<IAgentFrameworkWorkspaceService>();
+            if (await workspace.FindAgentApiAvailabilityAsync(agentId, cancellationToken) != true) {
+                return AgentApiAvailability.NotFound();
+            }
             var outcome = await workspace.ReplaceAgentDecisionDataPolicyAsync(command, cancellationToken);
             if (outcome.Failure is { } failure) {
                 logs.CreateLogger(typeof(AgentDecisionPolicyApi).FullName!).LogWarning(

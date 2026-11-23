@@ -89,8 +89,8 @@ public sealed partial class AgentFrameworkWorkspaceService :
         executionUpdatedDispatcher = CreateExecutionUpdatedDispatcher(logger);
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
-        remoteTemplateImport = new(store, resolvedProviderProfileService, activityWorkspaceIdentity, executionProfileGenerationSource);
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService, activityWorkspaceIdentity);
+        remoteTemplateImport = new(store, resolvedProviderProfileRegistry, resolvedProviderProfileService, activityWorkspaceIdentity, executionProfileGenerationSource);
         var resolvedProviderRuntimeProfileSource = providerRuntimeProfileSource
             ?? resolvedProviderProfileRegistry as IProviderRuntimeProfileSource
             ?? throw new InvalidOperationException(

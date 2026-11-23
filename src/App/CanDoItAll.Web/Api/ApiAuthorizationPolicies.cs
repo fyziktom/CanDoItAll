@@ -29,6 +29,8 @@ internal static class ApiAuthorizationPolicies
 
     public const string ReadSharedProviderCatalog = "Api.SharedProviders.Catalog.Read";
     public const string ReadSharedAgentTemplates = "Api.SharedAgentTemplates.Read";
+    public const string ReadSharedSimpleChats = "Api.SharedSimpleChats.Read";
+    public const string ReadSharedWorkflows = "Api.SharedWorkflows.Read";
 
     public const string InvokeSharedProviders = "Api.SharedProviders.Invoke";
 

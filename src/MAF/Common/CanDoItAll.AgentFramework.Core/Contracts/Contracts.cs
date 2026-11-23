@@ -534,6 +534,8 @@ public interface IAgentFrameworkWorkspaceService :
         => throw new NotSupportedException("This workspace does not support dedicated Agent policy replacement.");
 
     Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default);
+    async Task<bool?> FindAgentApiAvailabilityAsync(Guid agentId, CancellationToken cancellationToken)
+        => (await ListAgentsAsync(true, cancellationToken)).FirstOrDefault(agent => agent.Id == agentId)?.ApiAvailable;
     Task<AgentEditorModel> GetAgentEditorAsync(Guid? agentId = null, CancellationToken cancellationToken = default);
     Task<Guid> SaveAgentAsync(AgentEditorModel model, CancellationToken cancellationToken = default);
     Task<AgentDefinition> SaveAgentDefinitionAsync(AgentEditorModel model, CancellationToken cancellationToken = default)
@@ -594,7 +596,7 @@ public interface IAgentFrameworkWorkspaceService :
     Task<Guid> ImportAgentAsync(string packagePath, CancellationToken cancellationToken = default);
 
     Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
-        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default)
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default, RemoteTemplateModelChoice? model = null)
         => throw new NotSupportedException("This workspace does not support remote agent templates.");
 
     Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
@@ -635,6 +637,8 @@ public interface IAgentFrameworkWorkspaceService :
     Task<CapabilityVerificationOutcome> VerifyCapabilityAsync(Guid agentId, Guid capabilityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChatSessionRecord>> ListChatSessionsAsync(Guid agentId, CancellationToken cancellationToken = default);
     Task<ChatPageBootstrapSnapshot> GetChatPageBootstrapAsync(bool includeTemplates = false, CancellationToken cancellationToken = default);
+    Task<ChatPageBootstrapSnapshot> GetApiChatPageBootstrapAsync(bool includeTemplates, CancellationToken cancellationToken)
+        => throw new NotSupportedException("This workspace does not support the HTTP agent catalog.");
     Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default);
     Task<ChatSessionRecord> GetOrCreateChatSessionAsync(Guid agentId, Guid? chatSessionId = null, CancellationToken cancellationToken = default, string? initialTitle = null);
     Task<ChatSessionRecord> RenameChatSessionAsync(Guid agentId, Guid chatSessionId, string title, string expectedTitle, CancellationToken cancellationToken = default);

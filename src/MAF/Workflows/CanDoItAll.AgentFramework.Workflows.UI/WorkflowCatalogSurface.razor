@@ -20,7 +20,7 @@
 
                             <FormField Text="Search workflows">
                                 <TextInput Value="@Presentation.Search" ValueChanged="SearchAsync"
-                                         Placeholder="Name or description" Disabled="Presentation.IsBusy"
+                                         Placeholder="Name, description or tag" Disabled="Presentation.IsBusy"
                                          data-testid="workflows-catalog-search" />
                             </FormField>
                             <Cluster Gap="LayoutGap.Small">
@@ -41,7 +41,7 @@
                                             Title="Create a starter workflow"
                                             Description="The workflow catalog is empty. Create the starter definition to validate the page and runtime wiring." />
                             } else {
-                                <div class="mt-4 max-h-[34rem] overflow-y-auto pr-1"
+                                <div class="workflow-definition-tree mt-4 max-h-[34rem] overflow-y-auto pr-1"
                                      style="scrollbar-gutter:stable;"
                                      data-testid="workflows-tree-scroll">
                                     <TreeView Items="@TreeNodes"
@@ -62,6 +62,13 @@
                                 </div>
                                 <StatusBadge Tone="@Presentation.ValidationTone" Text="@Presentation.ValidationText" />
                             </Split>
+                            @if (Presentation.Definition is { Tags.Length: > 0 } tagged) {
+                                <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" data-testid="workflows-detail-tags">
+                                    @foreach (var tag in tagged.Tags) {
+                                        <StatusBadge Tone="neutral" Text="@tag" />
+                                    }
+                                </Cluster>
+                            }
 
                             @if (selectedDefinition is null) {
                                 @if (Presentation.Definition is { } summary) {

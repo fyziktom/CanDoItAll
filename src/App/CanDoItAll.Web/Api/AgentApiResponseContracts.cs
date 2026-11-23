@@ -723,6 +723,8 @@ internal static class AgentApiResponseMapper
                 : ToChatWorkspace(source.SelectedAgentWorkspace));
     }
 
+    public static AgentDefinition WithSharingTags(AgentDefinition source) => source with { Tags = source.EffectiveTags };
+
     public static AgentChatWorkspaceApiResponse ToChatWorkspace(ChatAgentWorkspaceSnapshot source)
     {
         ArgumentNullException.ThrowIfNull(source);

@@ -50,10 +50,8 @@ public static class AgentEditorDraftPolicy {
     }
 
     public static List<string> BuildTags(IEnumerable<string> storedTags, IEnumerable<string> visibleTags)
-        => visibleTags.Select(tag => tag.Trim())
-            .Where(tag => !string.IsNullOrWhiteSpace(tag) && !AgentSpecialTags.IsFavorite(tag))
+        => AgentSpecialTags.NormalizeCustom(visibleTags).Where(tag => !AgentSpecialTags.IsFavorite(tag))
             .Concat(storedTags.Any(AgentSpecialTags.IsFavorite) ? [AgentSpecialTags.Favorite] : [])
-            .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
             .ToList();
 

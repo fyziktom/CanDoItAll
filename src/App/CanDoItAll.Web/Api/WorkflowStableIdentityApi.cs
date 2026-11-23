@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Modules.AgentFramework;
 namespace CanDoItAll.Web.Api;
 
 internal static class WorkflowStableIdentityApi
@@ -78,13 +79,24 @@ internal static class WorkflowStableIdentityApi
         string? externalKey,
         IWorkflowCatalogService catalogService,
         IWorkflowStableIdentityLookupService stableIdentityLookup,
-        CancellationToken cancellationToken)
-        => await ListWorkflowDefinitionsAsync(
-            externalNamespace,
-            externalKey,
-            catalogService,
-            stableIdentityLookup,
-            cancellationToken);
+        RemoteTemplatePublicationStore sharing,
+        CancellationToken cancellationToken) {
+        var hasNamespace = !string.IsNullOrWhiteSpace(externalNamespace);
+        var hasKey = !string.IsNullOrWhiteSpace(externalKey);
+        if (hasNamespace != hasKey) {
+            return ApiEndpointResults.BadRequest(
+                "externalNamespace and externalKey must be supplied together.", "workflows.external-identity-incomplete");
+        }
+        var hidden = await sharing.ListApiUnavailableIdsAsync(RemoteTemplateKind.Workflow, cancellationToken);
+        bool IsVisible(WorkflowCatalogItem item) => !hidden.Contains(item.Id.Value);
+        if (!hasNamespace) {
+            var definitions = await catalogService.ListDefinitionsAsync(cancellationToken);
+            return Results.Ok(definitions.Where(IsVisible).ToArray());
+        }
+        return await ResolveStableIdentityAsync(
+            () => stableIdentityLookup.ResolveByExternalKeyAsync(externalNamespace!, externalKey!, cancellationToken, IsVisible),
+            materializationsOnly: true);
+    }
 
     /// <summary>
     /// Resolve the workflow installed from a template key to the version that would run.
@@ -124,11 +136,12 @@ internal static class WorkflowStableIdentityApi
     internal static async Task<IResult> GetDefinitionByTemplateKeyAsync(
         string templateKey,
         IWorkflowStableIdentityLookupService stableIdentityLookup,
-        CancellationToken cancellationToken)
-        => await ResolveStableIdentityAsync(
-            () => stableIdentityLookup.ResolveByTemplateKeyAsync(
-                templateKey,
-                cancellationToken));
+        RemoteTemplatePublicationStore sharing,
+        CancellationToken cancellationToken) {
+        var hidden = await sharing.ListApiUnavailableIdsAsync(RemoteTemplateKind.Workflow, cancellationToken);
+        return await ResolveStableIdentityAsync(
+            () => stableIdentityLookup.ResolveByTemplateKeyAsync(templateKey, cancellationToken, item => !hidden.Contains(item.Id.Value)));
+    }
 
     /// <summary>
     /// Resolve the workflow bound to an external identity to the version that would run.
@@ -173,40 +186,12 @@ internal static class WorkflowStableIdentityApi
         string externalNamespace,
         string externalKey,
         IWorkflowStableIdentityLookupService stableIdentityLookup,
-        CancellationToken cancellationToken)
-        => await ResolveStableIdentityAsync(
-            () => stableIdentityLookup.ResolveByExternalKeyAsync(
-                externalNamespace,
-                externalKey,
-                cancellationToken));
-
-    private static async Task<IResult> ListWorkflowDefinitionsAsync(
-        string? externalNamespace,
-        string? externalKey,
-        IWorkflowCatalogService catalogService,
-        IWorkflowStableIdentityLookupService stableIdentityLookup,
-        CancellationToken cancellationToken)
-    {
-        var hasExternalNamespace = !string.IsNullOrWhiteSpace(externalNamespace);
-        var hasExternalKey = !string.IsNullOrWhiteSpace(externalKey);
-        if (hasExternalNamespace != hasExternalKey)
-        {
-            return ApiEndpointResults.BadRequest(
-                "externalNamespace and externalKey must be supplied together.",
-                "workflows.external-identity-incomplete");
-        }
-
-        if (!hasExternalNamespace)
-        {
-            return Results.Ok(await catalogService.ListDefinitionsAsync(cancellationToken));
-        }
-
+        RemoteTemplatePublicationStore sharing,
+        CancellationToken cancellationToken) {
+        var hidden = await sharing.ListApiUnavailableIdsAsync(RemoteTemplateKind.Workflow, cancellationToken);
         return await ResolveStableIdentityAsync(
-            () => stableIdentityLookup.ResolveByExternalKeyAsync(
-                externalNamespace!,
-                externalKey!,
-                cancellationToken),
-            materializationsOnly: true);
+            () => stableIdentityLookup.ResolveByExternalKeyAsync(externalNamespace, externalKey, cancellationToken,
+                item => !hidden.Contains(item.Id.Value)));
     }
 
     private static async Task<IResult> ResolveStableIdentityAsync(

@@ -1,0 +1,26 @@
+@inject RemoteWorkflowCatalog Catalog
+
+<DefinitionSharingEditor @key="(Id, Version, OwnerToken)" DefinitionId="@(Version is null ? null : Id?.Value)" OwnerToken="@OwnerToken"
+                         SaveFirstHint="Save the workflow before changing its sharing settings." SaveTestId="workflow-sharing-save"
+                         Read="ReadAsync" Write="WriteAsync" Saved="@Saved" />
+
+@code {
+    [Parameter] public WorkflowId? Id { get; set; }
+    [Parameter] public WorkflowVersionId? Version { get; set; }
+    [Parameter, EditorRequired] public Func<bool, CancellationToken, ValueTask> Authorize { get; set; } = default!;
+    [Parameter] public CancellationToken OwnerToken { get; set; }
+    [Parameter] public EventCallback Saved { get; set; }
+
+    private async Task<DefinitionSharingSettings> ReadAsync(CancellationToken token) {
+        var id = Id!.Value;
+        var version = Version!.Value;
+        var authorize = Authorize;
+        await authorize(false, token);
+        var result = await Catalog.GetSharingAsync(id, version, token);
+        await authorize(false, token);
+        return result;
+    }
+
+    private Task WriteAsync(DefinitionSharingSettings expected, DefinitionSharingSettings desired, CancellationToken token) =>
+        Catalog.SetSharingAsync(Id!.Value, Version!.Value, expected, desired, ct => Authorize(true, ct), token);
+}

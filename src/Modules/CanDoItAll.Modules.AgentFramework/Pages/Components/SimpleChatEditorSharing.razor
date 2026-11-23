@@ -1,0 +1,33 @@
+@inject RemoteTemplatePublicationStore Publications
+@inject RemoteSimpleChatPublisher Publisher
+
+<DefinitionSharingEditor @key="(Context.Definition?.DefinitionId, Context.Definition?.Revision, Context.Access)"
+                         DefinitionId="@Context.Definition?.DefinitionId" OwnerToken="@Context.Access.Lifetime"
+                         Disabled="@(Context.Disabled || !Context.Access.IsCurrent)"
+                         SaveFirstHint="Save this Simple Chat to change its sharing settings. The editor will reopen on this tab."
+                         Read="ReadAsync" Write="WriteAsync" Saved="NotifySavedAsync" SaveTestId="llm-chat-definition-save-sharing"
+                         ErrorTestId="llm-chat-definition-sharing-error" SavedTestId="llm-chat-definition-sharing-saved" />
+
+@code {
+    [Parameter, EditorRequired] public LlmChatDefinitionSharingContext Context { get; set; } = default!;
+    private Func<Task>? notifySaved;
+
+    private async Task<DefinitionSharingSettings> ReadAsync(CancellationToken token) {
+        var opening = Context;
+        await opening.Access.AuthorizeAsync(false, token);
+        var result = await Publications.GetSharingAsync(RemoteTemplateKind.SimpleChat, opening.Definition!.DefinitionId, token);
+        await opening.Access.AuthorizeAsync(false, token);
+        return result;
+    }
+
+    private async Task WriteAsync(DefinitionSharingSettings expected, DefinitionSharingSettings desired, CancellationToken token) {
+        var opening = Context;
+        var definition = opening.Definition!;
+        using var admission = opening.Access.EnterWrite();
+        await Publisher.SetSharingAsync(definition.DefinitionId, definition.Revision, expected, desired,
+            ct => opening.Access.AuthorizeAsync(true, ct), token);
+        notifySaved = () => opening.SharingChanged(desired.ApiAvailable, desired.SharedTemplate);
+    }
+
+    private Task NotifySavedAsync() => notifySaved?.Invoke() ?? Task.CompletedTask;
+}

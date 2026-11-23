@@ -29,7 +29,10 @@ public sealed class AgentDefinitionComparison {
                 current.RequirePerServiceCallChatHistoryPersistence, (draft, value) => draft.RequirePerServiceCallChatHistoryPersistence = value),
             Field("Background responses", original.EnableBackgroundResponses, local.EnableBackgroundResponses,
                 current.EnableBackgroundResponses, (draft, value) => draft.EnableBackgroundResponses = value),
-            Field("Template", original.IsTemplate, local.IsTemplate, current.IsTemplate, (draft, value) => draft.IsTemplate = value)
+            Field("Template", original.IsTemplate, local.IsTemplate, current.IsTemplate, (draft, value) => draft.IsTemplate = value),
+            Field("Available through API", original.ApiAvailable, local.ApiAvailable, current.ApiAvailable, (draft, value) => draft.ApiAvailable = value),
+            Field("Share as a remote template", original.SharedTemplate ?? false, local.SharedTemplate ?? false, current.SharedTemplate ?? false,
+                (draft, value) => draft.SharedTemplate = value)
         ];
         Status = Field("Status", original.Status, local.Status, current.Status, (draft, value) => draft.Status = value);
         Workload = Field("Workload", original.Workload, local.Workload, current.Workload, (draft, value) => draft.Workload = value);

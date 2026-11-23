@@ -697,6 +697,11 @@
                     }
                 </div>
                 </TabsItem>
+                @if (SharingRenderer is not null) {
+                    <TabsItem Text="Sharing" Icon="share" data-testid="workflow-canvas-tab-sharing">
+                        @SharingRenderer(document.Baseline)
+                    </TabsItem>
+                }
             </Tabs>
         </Inspector>
     </CanvasWorkbenchStage>

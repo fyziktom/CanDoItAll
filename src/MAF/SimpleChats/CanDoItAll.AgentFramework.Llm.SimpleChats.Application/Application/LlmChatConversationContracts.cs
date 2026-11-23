@@ -46,6 +46,8 @@ public sealed record LlmChatConversationQuery
     public LlmChatDefinitionId? DefinitionId { get; }
 
     public LlmChatConversationCursor? Cursor { get; }
+
+    public IReadOnlySet<Guid>? UnavailableDefinitionIds { get; init; }
 }
 
 public sealed record LlmChatTranscriptQuery

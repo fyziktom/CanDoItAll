@@ -7,10 +7,22 @@
 @implements IAsyncDisposable
 
 <LlmChatDefinitionCatalogSurface Presentation="session.Presentation" Limits="LlmChatDefinitionCatalogSession.Limits"
-                                 SelectedDefinitionId="selectedDefinitionId" OnIntent="DispatchAsync" />
+                                 SelectedDefinitionId="selectedDefinitionId" OnIntent="DispatchAsync"
+                                 ImportAction="@(ImportDefinitions?.Invoke(new(OpenImportedAsync, session.ReloadAsync)))">
+    <DefinitionSharing Context="definition">
+        @if (DefinitionSharing is not null) {
+            <Button Text="Sharing" Icon="share" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                    Click="@(() => SelectEditorAsync(definition.DefinitionId, EditorKind.Route, DefinitionEditorSection.Sharing))"
+                    data-testid="@($"llm-chat-definition-sharing-{definition.DefinitionId:D}")" />
+        }
+    </DefinitionSharing>
+</LlmChatDefinitionCatalogSurface>
 @if (editorKind != EditorKind.None) {
     var ownedEditor = editorGeneration;
     <LlmChatDefinitionEditorDialog @key="ownedEditor" DefinitionId="selectedDefinitionId"
+                                   InitialSection="initialSection" DefinitionSharing="DefinitionSharing"
+                                   SharingChanged="session.ReloadAsync"
+                                   CreatedForSharing="@(id => ContinueToSharingAsync(ownedEditor, id))"
                                    Saved="@((LlmChatDefinitionListItem value) => HandleSavedAsync(ownedEditor))"
                                    Cancelled="@(() => CloseEditorAsync(ownedEditor))" />
 }
@@ -18,6 +30,9 @@
 @code {
     [Parameter] public Guid? RequestedDefinitionId { get; set; }
     [Parameter] public EventCallback<Guid?> SelectedDefinitionIdChanged { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionImportActions>? ImportDefinitions { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionSharingContext>? DefinitionSharing { get; set; }
+    private DefinitionEditorSection initialSection;
     private enum EditorKind { None, Route, LocalCreate }
     private LlmChatDefinitionCatalogSession session = default!;
     private CancellationTokenSource? authorizationOwner;
@@ -95,12 +110,14 @@
         };
     }
 
-    private async Task SelectEditorAsync(Guid? id, EditorKind kind) {
+    private async Task SelectEditorAsync(Guid? id, EditorKind kind, DefinitionEditorSection section = DefinitionEditorSection.Identity) {
         observedRouteTarget = id;
-        OpenEditor(id, kind);
+        OpenEditor(id, kind, section);
         await SelectedDefinitionIdChanged.InvokeAsync(id);
     }
-    private void OpenEditor(Guid? id, EditorKind kind) {
+    private Task OpenImportedAsync(Guid id) => DispatchAsync(new DefinitionCatalogIntent.EditDefinition(id));
+    private void OpenEditor(Guid? id, EditorKind kind, DefinitionEditorSection section = DefinitionEditorSection.Identity) {
+        initialSection = section;
         selectedDefinitionId = id;
         editorKind = kind;
         editorGeneration++;
@@ -123,6 +140,14 @@
             return;
         }
         await CloseEditorAsync(owner);
+        await session.ReloadAsync();
+    }
+
+    private async Task ContinueToSharingAsync(long owner, Guid id) {
+        if (disposed || owner != editorGeneration || editorKind != EditorKind.LocalCreate) {
+            return;
+        }
+        await SelectEditorAsync(id, EditorKind.Route, DefinitionEditorSection.Sharing);
         await session.ReloadAsync();
     }
     private void Render() => _ = InvokeAsync(() => {

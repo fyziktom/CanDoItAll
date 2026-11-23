@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -210,6 +211,18 @@ DateTimeOffset UpdatedAtUtc)
     /// URL; the API stores any trimmed text.
     /// </summary>
     public string? AvatarImageUrl { get; init; }
+
+    [System.ComponentModel.Description("Whether the agent is available through the ordinary HTTP API.")]
+    public bool ApiAvailable { get; init; } = true;
+
+    [System.ComponentModel.Description("Explicit remote template publication. Older records without this preference retain their original local template publication.")]
+    public bool? SharedTemplate { get; init; }
+
+    [JsonIgnore]
+    public bool SharesRemoteTemplate => SharedTemplate ?? IsTemplate;
+
+    [JsonIgnore]
+    public IReadOnlyList<string> EffectiveTags => DefinitionSharingTags.Project(Tags, ApiAvailable, SharesRemoteTemplate);
 }
 
 public static class AgentAvatarImageCatalog

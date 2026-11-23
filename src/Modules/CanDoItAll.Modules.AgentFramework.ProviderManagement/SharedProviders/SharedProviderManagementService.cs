@@ -101,15 +101,20 @@ public sealed class SharedProviderManagementService(
         };
     }
 
-    public async Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(
-        CancellationToken cancellationToken = default)
-    {
+    public Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ListSourcesAsync(CancellationToken cancellationToken = default) =>
+        ReadSourcesAsync(null, cancellationToken);
+
+    public async Task<SharedProviderSourceManagementSnapshot?> FindSourceAsync(Guid sourceId, CancellationToken cancellationToken = default) =>
+        (await ReadSourcesAsync(sourceId, cancellationToken)).SingleOrDefault();
+
+    private async Task<IReadOnlyList<SharedProviderSourceManagementSnapshot>> ReadSourcesAsync(Guid? sourceId, CancellationToken cancellationToken) {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var read = dbContext.Database.IsRelational()
             ? await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken) : null;
-        var sources = (await dbContext.Set<SharedProviderSource>().AsNoTracking().OrderBy(source => source.Name).ThenBy(source => source.Id)
+        var sources = (await dbContext.Set<SharedProviderSource>().AsNoTracking().Where(source => sourceId == null || source.Id == sourceId)
+            .OrderBy(source => source.Name).ThenBy(source => source.Id)
             .ToArrayAsync(cancellationToken)).Select(SharedProviderSourceService.CreateSnapshot).ToArray();
-        var imports = await LoadImportedProfilesAsync(dbContext, cancellationToken);
+        var imports = await LoadImportedProfilesAsync(dbContext, sourceId, cancellationToken);
         return Array.AsReadOnly(sources
             .Select(source => new SharedProviderSourceManagementSnapshot(
                 source,
@@ -285,6 +290,7 @@ public sealed class SharedProviderManagementService(
 
     private static async Task<IReadOnlyList<SharedProviderImportedProfileSnapshot>> LoadImportedProfilesAsync(
         ProvidersDbContext dbContext,
+        Guid? sourceId,
         CancellationToken cancellationToken)
     {
         var rows = await (
@@ -293,6 +299,7 @@ public sealed class SharedProviderManagementService(
                     on import.SourceId equals source.Id
                 join profile in dbContext.Set<ProviderProfile>().AsNoTracking()
                     on import.ProviderProfileId equals profile.Id
+                where sourceId == null || import.SourceId == sourceId
                 select new ImportedProfileRow(import, source, profile))
             .ToArrayAsync(cancellationToken);
         return Array.AsReadOnly(rows.Select(CreateImportedSnapshot).ToArray());

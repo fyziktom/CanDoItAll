@@ -6,6 +6,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Persistence;
@@ -81,7 +82,7 @@ public sealed class ZipAgentPackageService : IAgentPackageService
             .ToHashSet();
 
         var manifest = new AgentPackageManifest(
-            Agent: agent,
+            Agent: agent with { Tags = DefinitionSharingTags.Custom(agent.Tags) },
             Sessions: NormalizeChatSessions(document.ChatSessions.Where(item => item.AgentId == agent.Id).ToList(), latestRunBySessionId),
             ExecutionLog: ProtectExecutionLogForExport(
                 document.ExecutionLog.Where(item => item.AgentId == agent.Id),

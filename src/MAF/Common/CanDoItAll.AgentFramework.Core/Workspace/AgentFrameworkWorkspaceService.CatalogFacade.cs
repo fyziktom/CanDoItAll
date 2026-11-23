@@ -5,6 +5,11 @@ namespace CanDoItAll.AgentFramework.Core;
 
 public sealed partial class AgentFrameworkWorkspaceService
 {
+    public async Task<bool?> FindAgentApiAvailabilityAsync(Guid agentId, CancellationToken cancellationToken) {
+        var catalog = await store.LoadCatalogAsync(cancellationToken);
+        return catalog.Agents.FirstOrDefault(agent => agent.Id == agentId)?.ApiAvailable;
+    }
+
     public async Task<AgentWorkspaceCatalogSnapshot> LoadCatalogSnapshotAsync(CancellationToken cancellationToken = default) {
         var snapshot = await store.LoadCatalogSnapshotAsync(cancellationToken);
         return new(activityWorkspaceIdentity, snapshot);
@@ -144,8 +149,8 @@ public sealed partial class AgentFrameworkWorkspaceService
         => catalogService.ImportAgentAsync(packagePath, cancellationToken);
 
     public Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
-        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default)
-        => remoteTemplateImport.ImportAsync(sourceId, template, expectedWorkspace, cancellationToken);
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default, RemoteTemplateModelChoice? model = null)
+        => remoteTemplateImport.ImportAsync(sourceId, template, expectedWorkspace, cancellationToken, model);
 
     public Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
         Stream package,

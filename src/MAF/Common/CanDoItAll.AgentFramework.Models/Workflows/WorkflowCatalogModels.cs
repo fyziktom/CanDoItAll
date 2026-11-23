@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json.Serialization;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Models;
 
@@ -28,6 +29,9 @@ public sealed record WorkflowCatalogItem(
     WorkflowRuntimeBackendKind PreferredBackend,
     DateTimeOffset UpdatedAtUtc)
 {
+    [Description("Current instance-managed tags. api marks API availability and shared marks template sharing.")]
+    public IReadOnlyList<string> Tags { get; init; } = DefinitionSharingTags.Project(null, true, false);
+
     /// <summary>
     /// Template key when the workflow was installed from a workflow template; empty otherwise. Not unique.
     /// </summary>
@@ -201,7 +205,10 @@ public sealed record WorkflowDefinitionDeleteRequest(
 /// </param>
 public sealed record WorkflowDefinitionDetail(
     WorkflowDefinition Definition,
-    WorkflowValidationResult Validation);
+    WorkflowValidationResult Validation) {
+    [Description("Current instance-managed tags of this workflow, including on reads of historical versions.")]
+    public IReadOnlyList<string> Tags { get; init; } = DefinitionSharingTags.Project(null, true, false);
+}
 
 /// <summary>
 /// Payload and artifact capture policy of the workflow settings: how much of each payload is kept inline in run

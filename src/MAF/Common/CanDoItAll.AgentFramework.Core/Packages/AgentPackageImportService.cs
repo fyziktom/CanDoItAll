@@ -9,7 +9,8 @@ public enum AgentPackageImportFailureKind
 {
     InvalidRequest,
     Conflict,
-    PreconditionFailed
+    PreconditionFailed,
+    NotFound
 }
 
 public sealed class AgentPackageImportException(
@@ -68,8 +69,15 @@ internal sealed class AgentPackageImportService(
             {
                 var previousOperation = document.AgentPackageImportOperations.FirstOrDefault(operation =>
                     string.Equals(operation.IdempotencyKey, command.IdempotencyKey, StringComparison.Ordinal));
+                var existingBinding = document.AgentExternalBindings.FirstOrDefault(binding =>
+                    binding.Namespace == externalIdentity.Namespace && binding.Key == externalIdentity.Key);
+                RequireAvailable(document.Agents, existingBinding?.AgentId);
+                if (command.Mode != AgentPackageImportMode.Clone) {
+                    RequireAvailable(document.Agents, imported.Agent.Id);
+                }
                 if (previousOperation is not null)
                 {
+                    RequireAvailable(document.Agents, previousOperation.Receipt.AgentId);
                     if (!string.Equals(previousOperation.RequestFingerprint, requestFingerprint, StringComparison.Ordinal))
                     {
                         throw new AgentPackageImportException(
@@ -106,6 +114,13 @@ internal sealed class AgentPackageImportService(
         }
 
         return result ?? throw new InvalidOperationException("Agent package import completed without a receipt.");
+    }
+
+    internal static void RequireAvailable(IReadOnlyList<AgentDefinition> agents, Guid? id) {
+        if (id is not null && agents.Any(agent => agent.Id == id && !agent.ApiAvailable)) {
+            throw new AgentPackageImportException(AgentPackageImportFailureKind.NotFound,
+                "agent-package.agent-not-found", "The target agent was not found.");
+        }
     }
 
     private ImportMutation CreateMutation(
@@ -164,6 +179,8 @@ internal sealed class AgentPackageImportService(
 
         if (command.Mode == AgentPackageImportMode.ReplaceExactVersion && existingAgent is not null) {
             resolvedAgent = resolvedAgent with {
+                ApiAvailable = existingAgent.ApiAvailable,
+                SharedTemplate = existingAgent.SharesRemoteTemplate,
                 UpdatedAtUtc = AgentConfigurationVersion.NextRevision(existingAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
             };
         }
@@ -345,6 +362,8 @@ internal sealed class AgentPackageImportService(
 
         return agent with
         {
+            ApiAvailable = true,
+            SharedTemplate = false,
             Name = agent.Name.Trim(),
             RoleTitle = agent.RoleTitle.Trim(),
             Summary = agent.Summary.Trim(),
@@ -353,11 +372,7 @@ internal sealed class AgentPackageImportService(
             ConfigurationJson = agent.ConfigurationJson.Trim(),
             TemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(agent.TemplateKey, agent.Name),
             Capabilities = agent.Capabilities ?? [],
-            Tags = (agent.Tags ?? [])
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()
+            Tags = AgentSpecialTags.NormalizeCustom(agent.Tags)
         };
     }
 

@@ -226,7 +226,7 @@ public sealed partial class SharedProviderNativeConsumerTests {
         await fixture.Page.GetByTestId("agents-catalog-new").ClickAsync();
         var dialog = fixture.Page.GetByTestId("agents-details-dialog").Last;
         await dialog.GetByTestId("agents-catalog-name").WaitForAsync();
-        await Assertions.Expect(dialog.GetByRole(AriaRole.Tab)).ToHaveCountAsync(10);
+        await Assertions.Expect(dialog.GetByRole(AriaRole.Tab)).ToHaveCountAsync(11);
         var name = "PP2C file agent " + marker;
         await dialog.GetByTestId("agents-catalog-name").FillAsync(name);
         await dialog.GetByTestId("agents-catalog-instructions").FillAsync(marker + ". Use the exact scoped file tools and honor every approval decision.");

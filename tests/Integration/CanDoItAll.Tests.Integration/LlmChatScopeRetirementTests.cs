@@ -57,11 +57,12 @@ public sealed class LlmChatScopeRetirementTests {
             => inner.TryGetAsync(id, cancellationToken);
         public async Task<LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>> ListPageAsync(int take,
             LlmChatDefinitionCursor? cursor, LlmChatDefinitionStatus? status, string? searchText = null,
-            IReadOnlyList<string>? tags = null, CancellationToken cancellationToken = default) {
+            IReadOnlyList<string>? tags = null, CancellationToken cancellationToken = default, IReadOnlySet<Guid>? unavailableDefinitionIds = null,
+            LlmChatSharingSnapshot? sharing = null) {
             barrier.Context = context;
             barrier.Entered.TrySetResult();
             await barrier.Release.Task.WaitAsync(TimeSpan.FromSeconds(30));
-            var result = await inner.ListPageAsync(take, cursor, status, searchText, tags, cancellationToken);
+            var result = await inner.ListPageAsync(take, cursor, status, searchText, tags, cancellationToken, unavailableDefinitionIds, sharing);
             barrier.DatabaseReadCompleted = true;
             return result;
         }

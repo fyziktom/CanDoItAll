@@ -24,6 +24,8 @@ public static class AgentEditorModelSnapshot {
         target.EnableBackgroundResponses = value.EnableBackgroundResponses;
         target.ConfigurationJson = value.ConfigurationJson;
         target.IsTemplate = value.IsTemplate;
+        target.ApiAvailable = value.ApiAvailable;
+        target.SharedTemplate = value.SharedTemplate;
         target.TemplateKey = value.TemplateKey;
         target.Permissions = value.Permissions;
         target.AllowedSecretReferences = value.AllowedSecretReferences;
@@ -57,6 +59,8 @@ public static class AgentEditorModelSnapshot {
         EnableBackgroundResponses = source.EnableBackgroundResponses,
         ConfigurationJson = source.ConfigurationJson,
         IsTemplate = source.IsTemplate,
+        ApiAvailable = source.ApiAvailable,
+        SharedTemplate = source.SharedTemplate,
         TemplateKey = source.TemplateKey,
         Permissions = source.Permissions with { AllowedSecrets = source.Permissions.AllowedSecrets?.ToArray() },
         AllowedSecretReferences = source.AllowedSecretReferences.ToList(),

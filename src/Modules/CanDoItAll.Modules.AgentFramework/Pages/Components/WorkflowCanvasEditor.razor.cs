@@ -33,6 +33,7 @@ public partial class WorkflowCanvasEditor : IDisposable {
     [Parameter] public CancellationToken OwnerToken { get; set; }
     [Parameter] public EventCallback NewDraftRequested { get; set; }
     [Parameter] public EventCallback<WorkflowDefinition> DefinitionSaved { get; set; }
+    [Parameter] public EventCallback SharingSaved { get; set; }
     [Parameter] public EventCallback<WorkflowDefinition> DefinitionPulled { get; set; }
     [Parameter] public EventCallback<WorkflowRunSnapshot> PreviewRunCompleted { get; set; }
     [Parameter] public EventCallback ComponentLibraryChanged { get; set; }

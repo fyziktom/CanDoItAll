@@ -127,6 +127,8 @@ internal static class LlmChatApiResults
     public static void SetEtag(HttpResponse response, long concurrencyToken)
         => response.Headers.ETag = $"\"{concurrencyToken.ToString(CultureInfo.InvariantCulture)}\"";
 
+    public static IResult UnavailableDefinition() => Problem(StatusCodes.Status404NotFound, LlmChatErrorCodes.DefinitionNotFound);
+
     private static IResult Problem(
         int statusCode,
         string code,

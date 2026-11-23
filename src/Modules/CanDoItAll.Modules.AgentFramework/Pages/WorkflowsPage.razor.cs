@@ -382,10 +382,10 @@ public partial class WorkflowsPage : IDisposable, IAsyncDisposable {
         Definition = selectedDefinition is { } definition
             ? new(definition.Id.Value, definition.Name, definition.Description, definition.Status.ToString(),
                 definition.RuntimePolicy.PreferredBackend.ToString(), definition.Graph.Nodes.Count,
-                definition.Graph.Edges.Count, definition.Status == WorkflowLifecycleStatus.Draft)
+                definition.Graph.Edges.Count, definition.Status == WorkflowLifecycleStatus.Draft) { Tags = SelectedDefinitionSummary?.Tags.ToImmutableArray() ?? [] }
             : SelectedDefinitionSummary is { } summary
                 ? new(summary.Id.Value, summary.Name, summary.Description, summary.Status.ToString(),
-                    summary.PreferredBackend.ToString(), 0, 0, false)
+                    summary.PreferredBackend.ToString(), 0, 0, false) { Tags = summary.Tags.ToImmutableArray() }
                 : null,
         DetailLoading = IsSelectedDefinitionDetailPending,
         DetailUnavailable = hasRouteIdentityFailure || IsSelectedDefinitionDetailUnavailable,
@@ -693,6 +693,23 @@ public partial class WorkflowsPage : IDisposable, IAsyncDisposable {
             return ValueTask.FromException(new UnauthorizedAccessException("Current native workflow editing access is required."));
         }
         return observation.AuthorizeAsync(write, cancellationToken);
+    }
+
+    private async Task<Guid> ImportWorkflowAsync(EditingObservation original, Func<CancellationToken, Task<Guid>> write, CancellationToken token) {
+        await original.AuthorizeAsync(true, token);
+        await EnsureComponentObservationAsync();
+        var componentAuthority = componentObservation ?? throw new UnauthorizedAccessException("Current workflow component access is required.");
+        async ValueTask Authorize(CancellationToken cancellation) {
+            if (disposed || catalogObservationRetired || !ReferenceEquals(catalogObservation, original)) {
+                throw new UnauthorizedAccessException("Reopen the workflow catalog with current access.");
+            }
+            await original.AuthorizeAsync(true, cancellation);
+            await componentAuthority.AuthorizeAsync(true, cancellation);
+        }
+        await Authorize(token);
+        using var admission = Changes.EnterUiWrite(Authorize);
+        using var operation = Changes.Enter(new(Guid.NewGuid(), Guid.NewGuid()));
+        return await write(token);
     }
 
     private async Task RefreshRouteAsync(

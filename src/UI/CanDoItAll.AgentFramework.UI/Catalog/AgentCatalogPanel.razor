@@ -151,6 +151,7 @@
                                                     IsSelected="@(selectedAgentId == agent.Id)"
                                                     IsPrivateProvider="@UsesPrivateProvider(agent)"
                                                     SelectedLabel="Selected"
+                                                    ShowKindBadge="@agent.IsTemplate" KindLabel="Local template"
                                                     ShowChatHistory="true"
                                                     ShowDetailsTooltip="true"
                                                     ShellTestId="agents-catalog-card-shell"
@@ -158,7 +159,7 @@
                                                     OnSelect="@(() => SelectAgentAsync(agent.Id))"
                                                     OnDoubleClick="@(() => QueueAgentDetailsDialogAsync(agent.Id))">
                                     <Actions>
-                                        @if (HrAgentIdentity.Matches(agent))
+                                        @if (!agent.IsTemplate && HrAgentIdentity.Matches(agent))
                                         {
                                             <Button Text="Open chat"
                                                     Icon="forum"
@@ -168,7 +169,7 @@
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-hr-agent-open" />
                                         }
-                                        @if (PromptsCuratorAgentIdentity.Matches(agent))
+                                        @if (!agent.IsTemplate && PromptsCuratorAgentIdentity.Matches(agent))
                                         {
                                             <Button Text="Open chat"
                                                     Icon="forum"
@@ -178,7 +179,7 @@
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-prompts-curator-open" />
                                         }
-                                        @if (WorkflowCuratorAgentIdentity.Matches(agent))
+                                        @if (!agent.IsTemplate && WorkflowCuratorAgentIdentity.Matches(agent))
                                         {
                                             <Button Text="Open chat"
                                                     Icon="account_tree"
@@ -188,7 +189,7 @@
                                                     Click="@(() => OpenManagedAgentChatAsync(agent))"
                                                     data-testid="agents-workflow-curator-open" />
                                         }
-                                        @if (SchedulerAgentIdentity.Matches(agent))
+                                        @if (!agent.IsTemplate && SchedulerAgentIdentity.Matches(agent))
                                         {
                                             <Button Text="Open chat"
                                                     Icon="event_repeat"

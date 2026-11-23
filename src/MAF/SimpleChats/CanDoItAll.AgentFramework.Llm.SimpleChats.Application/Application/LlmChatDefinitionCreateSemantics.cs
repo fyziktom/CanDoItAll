@@ -4,6 +4,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 
@@ -26,8 +27,19 @@ internal static class LlmChatDefinitionCreateSemantics {
                 LlmChatDefinitionValidation.MaximumModelLength, nameof(command.Model)),
             RevisionReason = LlmChatDefinitionValidation.NormalizeOptional(command.RevisionReason,
                 LlmChatDefinitionValidation.MaximumRevisionReasonLength, nameof(command.RevisionReason)),
-            Tags = LlmChatDefinitionValidation.NormalizeTags(command.Tags)
+            Tags = NormalizeRequestTags(command.Tags)
         };
+    }
+
+    private static IReadOnlyList<string> NormalizeRequestTags(IReadOnlyList<string>? tags) {
+        var custom = DefinitionSharingTags.Custom(tags);
+        var normalized = LlmChatDefinitionValidation.NormalizeTags(custom);
+        if (tags is null || custom.Count == tags.Count) {
+            return normalized;
+        }
+        // Version 1 receipts include any reserved names that the original caller supplied.
+        var managed = tags.Where(DefinitionSharingTags.IsManaged).Select(tag => tag.Trim().ToLowerInvariant());
+        return normalized.Concat(managed).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
     }
 
     public static LlmChatDefinitionCreateFingerprint Fingerprint(CreateLlmChatDefinitionCommand command) {

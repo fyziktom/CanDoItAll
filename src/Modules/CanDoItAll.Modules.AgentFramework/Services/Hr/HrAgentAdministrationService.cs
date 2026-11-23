@@ -495,7 +495,7 @@ public sealed class HrAgentAdministrationService(
                         assignment.ProofStatus))
                 .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
-            agent.Tags,
+            agent.EffectiveTags,
             agent.CreatedAtUtc,
             agent.UpdatedAtUtc);
     }
@@ -693,7 +693,7 @@ public sealed class HrAgentAdministrationService(
             providerName,
             agent.Model,
             agent.Capabilities.Count,
-            agent.Tags,
+            agent.EffectiveTags,
             agent.UpdatedAtUtc);
     }
 
@@ -703,7 +703,7 @@ public sealed class HrAgentAdministrationService(
                agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               agent.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase));
+               agent.EffectiveTags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase));
     }
 
     private static void ValidateCreateInput(HrAgentCreateInput input)

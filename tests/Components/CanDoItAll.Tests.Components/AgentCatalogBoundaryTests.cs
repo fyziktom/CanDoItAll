@@ -34,8 +34,11 @@ public sealed class AgentCatalogBoundaryTests {
     }
     [Fact]
     public void Controlled_panel_search_and_selection_emit_intents_without_services() {
-        var first = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog first", "");
-        var agents = new[] { first, AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog second", "") };
+        var first = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog first", "") with {
+            ApiAvailable = false, SharedTemplate = true, Tags = [" api "]
+        };
+        var second = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Catalog second", "") with { Tags = [" Shared "] };
+        var agents = new[] { first, second };
         using var context = new BunitContext();
         context.Services.AddCanDoItAllBaseLib();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -45,6 +48,10 @@ public sealed class AgentCatalogBoundaryTests {
             .Add(component => component.Selection, new AgentCatalogSelection(null, null))
             .Add(component => component.Intent, EventCallback.Factory.Create<AgentCatalogIntent>(this, intents.Add)));
 
+        cut.Find("[data-testid='agents-catalog-search']").Input("API");
+        Assert.Contains(second.Name, Assert.Single(cut.FindAll("[data-testid='agents-catalog-card']")).TextContent);
+        cut.Find("[data-testid='agents-catalog-search']").Input("shared");
+        Assert.Contains(first.Name, Assert.Single(cut.FindAll("[data-testid='agents-catalog-card']")).TextContent);
         cut.Find("[data-testid='agents-catalog-search']").Input(first.Name);
         Assert.All(cut.FindAll("[data-testid='agents-catalog-card-shell']"), card => Assert.Contains(first.Name, card.TextContent));
         cut.Find("[data-testid='agents-catalog-card']").Click();
@@ -114,8 +121,9 @@ public sealed class AgentCatalogBoundaryTests {
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
             services.AddSingleton<IAgentCatalogOperations>(operations));
         var agent = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Team member", "");
+        var template = AgentCatalogPanelTests.CreateAgent(Guid.NewGuid(), "Local authoring template", "") with { IsTemplate = true };
         var team = new AgentTeamDefinition(Guid.NewGuid(), "Team result", "", [], DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch);
-        operations.Snapshot = new([agent], [team], new Dictionary<Guid, bool>());
+        operations.Snapshot = new([agent, template], [team], new Dictionary<Guid, bool>());
         var selected = new List<AgentTeamDefinition?>();
         var cut = harness.Context.Render<AgentCatalogHost>(parameters => parameters
             .Add(component => component.SkipCatalogRepair, true)
@@ -126,6 +134,10 @@ public sealed class AgentCatalogBoundaryTests {
         cut.Find(selector).Click();
         cut.WaitForAssertion(() => Assert.Single(dialogs.Dialogs));
         Assert.Equal(members ? typeof(AgentTeamMembersDialog) : typeof(AgentTeamDetailsDialog), dialogs.Dialogs[0].ComponentType);
+        if (members) {
+            var candidates = Assert.IsAssignableFrom<IReadOnlyList<AgentDefinition>>(dialogs.Dialogs[0].Parameters[nameof(AgentTeamMembersDialog.Agents)]);
+            Assert.Equal(agent.Id, Assert.Single(candidates).Id);
+        }
         await cut.InvokeAsync(() => dialogs.CloseAsync());
         Assert.Equal(1, operations.Loads);
         Assert.Equal(0, operations.MemberWrites);

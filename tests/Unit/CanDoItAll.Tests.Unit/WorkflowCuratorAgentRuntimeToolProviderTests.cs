@@ -154,7 +154,9 @@ public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
             "Matching metadata only.",
             WorkflowLifecycleStatus.Suspended,
             WorkflowRuntimeBackendKind.InProcess,
-            DateTimeOffset.Parse("2026-07-19T11:30:00Z"));
+            DateTimeOffset.Parse("2026-07-19T11:30:00Z")) {
+            Tags = ["shared", "api"]
+        };
         var search = new RecordingWorkflowCatalogSearchService(new WorkflowCatalogSearchPage(
             [item],
             PageIndex: 2,
@@ -174,7 +176,8 @@ public sealed partial class WorkflowCuratorAgentRuntimeToolProviderTests
                 pageIndex: 2,
                 pageSize: 3));
 
-        Assert.Equal([item], result.Items);
+        var returned = Assert.Single(result.Items);
+        Assert.Equal(JsonSerializer.Serialize(item, JsonOptions), JsonSerializer.Serialize(returned, JsonOptions));
         Assert.Equal(2, result.PageIndex);
         Assert.Equal(3, result.PageSize);
         Assert.Equal(8, result.TotalCount);

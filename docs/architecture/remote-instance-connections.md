@@ -1,4 +1,38 @@
-# Remote instance connections and agent templates
+# Remote instance connections and shared definitions
+
+## Importing agents, Simple Chats and workflows
+
+Each feature publishes a definition and materializes a local draft through its own
+application writer. The shared connection owns the authenticated HTTP read. The import
+dialog owns the selected rows and an optional child dialog for choosing a provider
+and model. A database switch or a changed source invalidates that opening.
+
+The provider that authored a template can describe a preferred model using its public
+publication identity and routing model. The consumer matches these against enabled
+imports from the selected connection and publisher. A label shared by two companies
+cannot identify a provider. The consumer stores its own provider profile ID and model
+in the draft. Each model-dependent workflow step retains its own requirement, including
+whether it needs image generation or structured output.
+
+The parent dialog retains the catalog and selection when a user opens, cancels or
+confirms a model choice. A batch records choices and import results per definition.
+Applying one choice to several definitions requires compatibility with each affected
+requirement. An accepted item is never resubmitted because a later item failed.
+The local writer validates the binding again before saving. Imported definitions have
+independent local identities and lifecycles. Discovery and import perform no inference.
+
+The publisher exposes each resource through its own read scope. The definition contract
+omits conversations, execution history, API keys, grants and local database references.
+Avatar previews belong to the read contract for agents and chats. A missing avatar uses
+the same placeholder as the local list. The consumer must validate image references
+before rendering them.
+
+Acceptance covers two publishers with identical provider names, unavailable models,
+an explicitly selected local substitute, stale catalog data, permission checks and
+retry after a partial batch. Component and browser proof exercise pre-import avatars,
+stacked dialogs, cancellation, individual choices and applying a compatible choice to
+the rest of a batch. Persistence tests read back the provider and model from the saved
+agent, chat revision and workflow graph.
 
 ## Current ownership
 
@@ -36,7 +70,7 @@ protocol with explicit dependency resolution before it can produce a local agent
   source credentials, local filesystem paths, executable configuration and permission
   grants. Materialize portable inline skills and resolve installed prerequisites
   using kind and stable key. Reject unresolved prerequisites before creating an agent.
-* A user explicitly imports one selected template. Create an independent local
+* A user explicitly selects the templates to import. Create an independent local
   definition with a fresh identity, local runtime configuration and local authority.
   The saved connection ID, public publisher ID and source template ID identify an
   import. Repointing a connection to another publisher cannot adopt the first
@@ -46,21 +80,51 @@ protocol with explicit dependency resolution before it can produce a local agent
   Refreshing a catalog must never overwrite a local customization. Future remote
   execution will require its own permission, operation and lifecycle.
 
-## Extension points
+## Operator steps
 
-In the product, open **Settings → Remote instances** or choose **Agents → Import template
-→ Add instance**. Select a saved workspace secret containing the publisher's API token.
-On the publisher enable API authorization, grant the token `api.shared-agent-templates.read`
-and mark the desired agents as templates. Each token with this scope can read the draft
-and active templates in that publisher workspace. On the consumer, choose an instance, review a
-template's requirements and click **Import locally**. Open the local agent to select its
-provider, configure runtime permissions and activate it for execution. Inline skill
-instructions and embedded resources are copied. Registered or filesystem-backed skills,
-tools and other runtime dependencies must be present locally under their declared kind
-and key. Repeating an import from the same connection and publisher returns the existing
-local agent for that template. An imported agent continues to use local
-capabilities if its connection is later disabled or removed. A local provider selection
-can itself point to an explicitly imported remote provider.
+1. Enable API authorization on the publishing instance. Grant the token the read scope for
+   each catalog the consumer needs. Use `api.shared-agent-templates.read` for agents,
+   `api.shared-simple-chats.read` for chats and `api.shared-workflows.read` for workflows.
+2. Open the definition on the publisher and select **Sharing**. For a Simple Chat,
+   click its card under **Agents → Simple Chats → Definitions**. In **Agents**,
+   double-click the agent or **Local template** card. For a workflow, open **Sharing**
+   in the canvas inspector.
+   **Available through the API** lets authorized clients discover the definition and
+   start work with it. **Share as a template** lets a connected instance import a copy.
+   You can enable either option, both, or neither. Use **Save sharing** for a saved
+   chat or workflow and **Save agent** for an agent. Clear the template option on the
+   same tab to withdraw it from the remote catalog. Previously imported copies stay local.
+   Catalog tags follow the saved settings. `shared` marks a published template and
+   `api` marks a definition available through the API. Clearing either option removes
+   its tag. Existing definitions and imported copies show the tags for their local
+   settings. Agents and chats keep their custom tags alongside these read-only tags.
+3. On the consumer, open **Settings → Remote instances**, add the publisher and select the
+   saved workspace secret containing its token. Each import page can also add a connection
+   to this list. To use the publisher for inference, synchronize its provider catalog and
+   import the desired provider on the consumer. The token also needs the shared provider
+   catalog and invocation scopes for those operations.
+4. Open the import dialog from the agent, Simple Chat or workflow catalog, choose the
+   instance and select one or more definitions. Agent and chat rows include avatar previews.
+   Review required capabilities, workflow components and proposed provider/model choices.
+   A matching published model from this instance is preselected. For an unavailable or
+   ambiguous match, **Import selected** opens **Choose provider and model** over the
+   original selection. Choose a compatible local replacement or configure the shared
+   provider in a second tab and use **Refresh providers**.
+5. For a batch, confirm each item's bindings or use **Apply to all compatible**. A workflow
+   may need separate chat, vision or image-generation models. A workflow without a model
+   dependency can be imported directly. After import use **Open local copy** to edit the
+   draft. A retry from the same source and publisher preserves prior local edits.
+
+The consumer creates each definition through its domain writer. Chat imports use the
+native create receipt and start with an empty conversation history. Workflow imports
+create the draft and its component copies in one transaction. An unresolved local
+agent, subworkflow, private executor setting or unsupported executor must be resolved
+on the publisher before that workflow can be shared. Agents copy inline skills and
+their resources. Registered tools and filesystem-backed skills must exist locally under
+their declared kind and key. Running any imported definition remains a separate local
+action. A model bound to a shared provider sends inference to that provider's instance.
+
+## Extension points
 
 | Consumer | Remote selection | Local owner and binding |
 | --- | --- | --- |

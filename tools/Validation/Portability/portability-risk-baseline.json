@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-20T19:39:22.991423+00:00",
+  "generated_utc": "2026-11-22T23:08:24.792883+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15838,
+  "allowance_count": 15859,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -7436,6 +7436,12 @@
       "count": 1
     },
     {
+      "path": "src/App/CanDoItAll.Web/Api/RemoteAgentTemplatesApi.cs",
+      "category": "mcp",
+      "source_fingerprint": "f3691cc3779c13b362e39c796b0585c10d7d129cc51e5276938f5cf6559adefa",
+      "count": 1
+    },
+    {
       "path": "src/App/CanDoItAll.Web/Api/SharedProviderApiResponseWriter.cs",
       "category": "case-policy",
       "source_fingerprint": "0588cd90bf70d41e16dd52d47457034c9e716fb0351a0b38e55360acae123419",
@@ -14342,6 +14348,78 @@
       "count": 1
     },
     {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "a45349725dc97df5536e0f4ded7942dcc1a176b0bfc685b095e612e386391193",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "dfcebdeac8a6645d0dc84539bafe2d95359d4d7802f250a5bacd0bfcb192619f",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "08b0f54b22b6671347ae2b56340714777a4777f9a7ebca2469e81aa92d9910d7",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "5aa307468118ece6fee1e6ba7dadda92ed2dc1b865b9547ceafdcb04831a0140",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "6ca1a95609089655603d46fd7b884706e30c637ad412d76ac8d4ddbafbf08fa0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261121161719_AddRemoteTemplatePublications.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "8ee4efb30d1423573ca866c71f3b427f469ba2dfe25e3e628c3bd92b2eb93799",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "4c53d6837534f6ac0c8b9ceceaf53c73ca376d7155874ed2d2ff2b4927695326",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "absolute-path-field",
+      "source_fingerprint": "abcaa03ecc24ce425c3a9350a7273984881996747be5c11255d8de192edd21ee",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "08af0e73ef76c74dc2474c07e8f4c3e721c10a7a454e9305eae4e0e869408a17",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "452c22dda854c4679c14921e53a6be2eb13f7ee5494e736ea4e03254645b0fd4",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "815fa35002bd3edd90001a0f13f166a56eeb74db97d66536ec8556d3eedb13cc",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/20261122153403_AddDefinitionSharingOptions.Designer.cs",
+      "category": "process-domain",
+      "source_fingerprint": "b4ef7775617629a18cfc5ba07070bb8201d8ef844751acedb2fb03336b0dff2e",
+      "count": 1
+    },
+    {
       "path": "src/Foundation/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs",
       "category": "absolute-path-field",
       "source_fingerprint": "a33075cb8612f67d57d247ef09617e46910b005bc5020353f51528c26c3aca30",
@@ -14699,6 +14777,18 @@
       "path": "src/Foundation/CanDoItAll.SharedKernel/README.md",
       "category": "windows-executable",
       "source_fingerprint": "e48d959522b8862d97d2ef07bb6ca294679accdbc1a2bed19aeb3f2278c45b8d",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.SharedKernel/RemoteInstances/DefinitionSharingTags.cs",
+      "category": "case-policy",
+      "source_fingerprint": "021470808954adccab0f60929d419ac024f9b7b31c98af7c5a50461f0b0ef2f0",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.SharedKernel/RemoteInstances/DefinitionSharingTags.cs",
+      "category": "case-policy",
+      "source_fingerprint": "74a05c78438f9f7c1cd852a31953660aaa808c04fc3be265078e73f454832c61",
       "count": 1
     },
     {
@@ -18059,7 +18149,13 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "category": "case-policy",
       "source_fingerprint": "3121104bab2d7e8ff0a338d7b579e6e1ee1e20e9bd7106442f93d74712825310",
-      "count": 2
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
+      "category": "case-policy",
+      "source_fingerprint": "3f30bc7b31d3fc94641bdfa5d037c845dfdbf57cea640bb241bbf3d38ff8f339",
+      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
@@ -18089,12 +18185,6 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
       "category": "case-policy",
       "source_fingerprint": "d75412695c9bcc4ad4a27c8750e3d41d3ce454f711bff39f016f310475b64948",
-      "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ContextualAgentWorkspaceWindows.razor",
-      "category": "case-policy",
-      "source_fingerprint": "ea5023c1b63fb436329e58049aafed2660f4d3c170268559a82ee366cd566ec2",
       "count": 1
     },
     {
@@ -18150,12 +18240,6 @@
       "category": "case-policy",
       "source_fingerprint": "0932e6f8fc3dd6b1700c5a3d2a532d61d3f5847ae0cc6781a8458e7391983b19",
       "count": 1
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
-      "category": "case-policy",
-      "source_fingerprint": "158079ac10eb2460fa72f3e2b1aa8ab8c0f5cdca30c96d6d69ef00d5178f951c",
-      "count": 2
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/AgentDefinitionFactory.cs",
@@ -18239,6 +18323,12 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
       "category": "case-policy",
       "source_fingerprint": "dc25ffa333f6ad328731a22a37b635bee72de63fb1f2267be28500b8b2fd9671",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Agents/RemoteAgentTemplateCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "e27d3ac4d98454af9e2c69d3aa94e134a86f869c214efbbf6817dbda206ea246",
       "count": 1
     },
     {
@@ -18798,12 +18888,6 @@
       "category": "case-policy",
       "source_fingerprint": "76cf6ad1b61be9ebb3bfb0b2ae5a8c80a256f0c41fc562bd1ca8b07c15e12fac",
       "count": 2
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
-      "category": "case-policy",
-      "source_fingerprint": "804ba5e7ba24d6142533fadc664e66a9ec906a8dcedb5401fce70af643ffb92f",
-      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs",
@@ -20604,12 +20688,6 @@
       "category": "case-policy",
       "source_fingerprint": "20c9cbc94e8803629a17b4226f514ec2323b408ec1b97f1ad71fb050763e5cf2",
       "count": 2
-    },
-    {
-      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "5db8d836e4597a2bb9bc717fa2d2fbe17ee9b6c6df8b0a098ffe312e45fc9f88",
-      "count": 1
     },
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Core/Packages/AgentPackageImportService.cs",
@@ -33256,6 +33334,18 @@
     {
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/AgentSpecialTags.cs",
       "category": "case-policy",
+      "source_fingerprint": "5a3b05103b9321913bc4eff4eed6036c75a8d89bff8dba7c2e4731143e2a2361",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/AgentSpecialTags.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f2572de1f2433ae32a1194b087565bd47ffa5390645edc59a98e54e91235d222",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/AgentSpecialTags.cs",
+      "category": "case-policy",
       "source_fingerprint": "fd80e49b15ae7e1b8c958840dad9ee0396985569362eecff4c18589885038a9c",
       "count": 1
     },
@@ -33287,6 +33377,18 @@
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteAgentTemplate.cs",
       "category": "process-start",
       "source_fingerprint": "792054caf0b291e23e8dd3f73a11eef8ba1ae76668de1358b3fa093ad4ec3d96",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteTemplateModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "3a9e56e54927713cb29224886ee395248ef0cfe81502ab96e6e97dedc38c1f77",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Common/CanDoItAll.AgentFramework.Models/Agents/RemoteTemplateModels.cs",
+      "category": "case-policy",
+      "source_fingerprint": "79ee9ca0342571a0428f929c52db14b491770a27c49a6681ddc31cf31f121673",
       "count": 1
     },
     {
@@ -40184,6 +40286,12 @@
       "count": 1
     },
     {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/Definitions/LlmChatDefinitionValidation.cs",
+      "category": "case-policy",
+      "source_fingerprint": "b9481e77fd05a1210fa64955fca439f5f64667957df22444082fe0281fe5d6f5",
+      "count": 1
+    },
+    {
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Core/README.md",
       "category": "shell-elevation",
       "source_fingerprint": "4ed26fa1f192c2a7293fd8f88b64e6298a99a0a188c8b698b5f175d0a6699864",
@@ -40211,6 +40319,18 @@
       "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/README.md",
       "category": "windows-executable",
       "source_fingerprint": "ffaf8c260cd6cce6c43792faa9a5e56c85d1b928566676b3255121fe32964bc0",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/ReadModels/EfLlmChatDefinitionReadStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "115fabd57334a84759287082a3ec3fcd4c6ba3980faa36b5160944a51ea38a03",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/SimpleChats/CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence/ReadModels/EfLlmChatDefinitionReadStore.cs",
+      "category": "case-policy",
+      "source_fingerprint": "da7cd91e09cf5a212afec16cb2e5dab35ea8237af488fb77d8abc420397ecd47",
       "count": 1
     },
     {
@@ -41903,6 +42023,12 @@
       "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCatalogServices.cs",
       "category": "case-policy",
       "source_fingerprint": "8d42d41a74691c6d17cd6874bce95b8b544c24f59fc99c19ad8e47435c8c93e2",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Workflows/CanDoItAll.AgentFramework.Workflows.Core/WorkflowCatalogServices.cs",
+      "category": "case-policy",
+      "source_fingerprint": "d2ca529200d0ac649ab6637c72b2d7812d5c761c719346c45b42b1a621e21f69",
       "count": 1
     },
     {
@@ -45026,6 +45152,24 @@
       "count": 1
     },
     {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowDraftWriter.cs",
+      "category": "mcp",
+      "source_fingerprint": "864490a99dd041891abf20df6d2d62915e12dcc33c715a06be6bdc58f68e09bc",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowExecutorSettings.cs",
+      "category": "windows-path",
+      "source_fingerprint": "942fba70e8fe60993dd8a7f599e7be437513287383a4ea2f62ca5f4e9e99d5a8",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/RemoteWorkflows/RemoteWorkflowExecutorSettings.cs",
+      "category": "windows-path",
+      "source_fingerprint": "95aebb0aaae7cbee3baa99c2e1da81b7634f3c7303f95302199a7b5162867b4f",
+      "count": 1
+    },
+    {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs",
       "category": "case-policy",
       "source_fingerprint": "01d260d6e1cbfeece25e968c9ec04555a056f0af3759a9d1874feabfcbd0e5b5",
@@ -45959,13 +46103,13 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "0ca9264a443c6f9c617094e98f63ae1143e06cc60a3b0792dab51e1fc10756c5",
-      "count": 3
+      "count": 2
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "d66efbc0dc77d52d653e20509cfc1c859d9a624442b7793c75854d13754efcf2",
-      "count": 3
+      "count": 1
     },
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs",
@@ -46300,6 +46444,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
       "category": "case-policy",
+      "source_fingerprint": "628fc86382693430b4a9d3bb05a78f8027bdf6b45e6d625b63297d405abc782b",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Persistence/PersistentWorkflowStores.cs",
+      "category": "case-policy",
       "source_fingerprint": "903969876a31d3fb4677267eae13d1ea76abba66fd1d00e4bcdd47f500569aa5",
       "count": 1
     },
@@ -46415,12 +46565,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorAccessQuery.cs",
       "category": "secret-provider",
       "source_fingerprint": "f7974ab248c7f3ccc74d59f0ae97322a7cbab519c4238672e248257e1a325031",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentEditorDraftPolicy.cs",
-      "category": "case-policy",
-      "source_fingerprint": "966471e7bf59b2b83a18317ef3891addc6a6872aa4aad4cdd165ee9e2cea69a1",
       "count": 1
     },
     {
@@ -47332,6 +47476,12 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
       "category": "case-policy",
+      "source_fingerprint": "936e673cc422d944cb1b1b9b648f5b3c99e5942789f1771b1fbaaf0f268ef3fb",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
+      "category": "case-policy",
       "source_fingerprint": "a75818252f9446734e6f0c1db55f3817b6eccaa58ecbf5edf8923a4721e6f15e",
       "count": 1
     },
@@ -47345,12 +47495,6 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
       "category": "case-policy",
       "source_fingerprint": "cbcee602e2f4eb951f841db37670a0eea973b7701589490b984fd1614fb7bc4a",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/Hr/HrAgentAdministrationService.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f50de1ff5c1eb81ecd44bc7053b98c09003e9bb026f1986c1d8875085bd7e410",
       "count": 1
     },
     {
@@ -47435,6 +47579,42 @@
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/ProviderEditorSubmission.cs",
       "category": "case-policy",
       "source_fingerprint": "f6a905192b348bfbc175713cbff9580f0be7cbabbf0917bfb913257c5f2709cd",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteAgentTemplateImportFeature.cs",
+      "category": "mcp",
+      "source_fingerprint": "b77453257b45e9258f9df4d02865e7726ac421aa806e1076b0b2772de1fdd557",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteSimpleChatImportFeature.cs",
+      "category": "case-policy",
+      "source_fingerprint": "4d38dd1be1bfd5dffdecee8884cb1fff684d19ba72df73ad33637cd389ec5a3e",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateModelParameters.cs",
+      "category": "case-policy",
+      "source_fingerprint": "92ac359bc754a00c83586fb4a46c03b126be7524811aeb6e085e89d6fe4e0743",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateModelParameters.cs",
+      "category": "case-policy",
+      "source_fingerprint": "bb1426b5b18e44dfc3371c9f68ed343c8f921f85954544575764f24ee667ccab",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateProviderCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "c421ede40a5bc530b1700db39b501736dd56200dcb8b4f1ff1510630f6f5c79f",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/RemoteTemplateProviderCatalog.cs",
+      "category": "case-policy",
+      "source_fingerprint": "f42e6cad6b7491f81ba0635deabe84878bd68849618d6ecae0efbc3e6457ad70",
       "count": 1
     },
     {
@@ -76276,12 +76456,6 @@
     {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "category": "case-policy",
-      "source_fingerprint": "162ca07054224aef6ffb5b5aaea6fe2ad5bc4522eb7e35b259f6b81ef4577ff0",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
-      "category": "case-policy",
       "source_fingerprint": "2af93883bc508b09d79674a047e2c4bbb6c23321f1f49ad3735f96eba63ab6fc",
       "count": 1
     },
@@ -76295,6 +76469,12 @@
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
       "category": "case-policy",
       "source_fingerprint": "4c4cda1fda2441f10a7a967dc4c1ee1028ab9c2887d28f11cc43f7dc7b5c17e6",
+      "count": 1
+    },
+    {
+      "path": "src/UI/CanDoItAll.AgentFramework.UI/Catalog/AgentCatalogPanel.razor.cs",
+      "category": "case-policy",
+      "source_fingerprint": "85f885622eacbb6ae2c9e9974220cb2a159b15d2369c3c3de11118cf4e425d72",
       "count": 1
     },
     {
@@ -76370,18 +76550,6 @@
       "count": 1
     },
     {
-      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "6f62d6c2db6a6d16d8a5c5f55135c40d73c2fe0a32932d0b6f0f0cf82d402692",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.AgentFramework.UI/Presentation/AgentParticipantPresentationMapper.cs",
-      "category": "case-policy",
-      "source_fingerprint": "808586fe02f600e8bf782d9ad89aa412083e4e842e0062601484ad5c70ab88ad",
-      "count": 1
-    },
-    {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Settings/VoiceSettingsFields.cs",
       "category": "permissions",
       "source_fingerprint": "ae01baadba85c3493cdc5a072c6603bda9f2a7f02b90298bd19ebcc80cdbd2b6",
@@ -76438,13 +76606,13 @@
     {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
       "category": "case-policy",
-      "source_fingerprint": "6ca7807a3a08b06ca07624668172df148e17cf6dc0eef741c8f978d3a93a7f32",
+      "source_fingerprint": "5a9a0bb8615c08adae0ba70afbbdabf93b2c3a7200f80cf55fe537b50f08da95",
       "count": 1
     },
     {
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Teams/TeamMembersSelector.razor",
       "category": "case-policy",
-      "source_fingerprint": "70bc7ebcc5de1d8205ad42a256c4cd32ceb9f98a7726d87b0617e307064395e2",
+      "source_fingerprint": "6ca7807a3a08b06ca07624668172df148e17cf6dc0eef741c8f978d3a93a7f32",
       "count": 1
     },
     {
@@ -77597,18 +77765,6 @@
       "path": "src/UI/CanDoItAll.Conversations.Shell/README.md",
       "category": "windows-executable",
       "source_fingerprint": "132e2f75bebe5426882ad3f8a6396245fec9651e112d3685b62cc69792fb5f90",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "d992bff69a0e3f98f61ab9a85987e5b5bd02de18626a06b0b1a1d49d3a3718cb",
-      "count": 1
-    },
-    {
-      "path": "src/UI/CanDoItAll.CrmHr.UI/Agents/CrmHrAgentRecordDialog.razor",
-      "category": "case-policy",
-      "source_fingerprint": "e2b40da1c9438c442739136f6e9f449524c33a20beba279a26f8274c1342e641",
       "count": 1
     },
     {

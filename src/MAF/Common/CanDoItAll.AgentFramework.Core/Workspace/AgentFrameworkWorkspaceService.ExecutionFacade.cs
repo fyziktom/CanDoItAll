@@ -18,6 +18,11 @@ public sealed partial class AgentFrameworkWorkspaceService
         return await executionService.GetChatPageBootstrapAsync(agents, cancellationToken);
     }
 
+    public async Task<ChatPageBootstrapSnapshot> GetApiChatPageBootstrapAsync(bool includeTemplates, CancellationToken cancellationToken) {
+        var agents = await catalogService.ListAgentsAsync(includeTemplates, cancellationToken);
+        return await executionService.GetChatPageBootstrapAsync(agents.Where(agent => agent.ApiAvailable).ToArray(), cancellationToken);
+    }
+
     public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(
         Guid agentId,
         Guid? preferredSessionId = null,

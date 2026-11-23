@@ -6,8 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workspace.Pages.Components;
 
-public sealed record RemoteInstanceSelection(Guid Id, Guid Version);
-
 public partial class RemoteInstancePicker : IAsyncDisposable {
     [Inject] private IRemoteInstanceRegistry Registry { get; set; } = default!;
     [Inject] private IRemoteInstanceEditing Editing { get; set; } = default!;

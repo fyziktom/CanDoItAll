@@ -55,6 +55,8 @@ public static class ApiScopeCatalog {
         new(ApiAccessScopeNames.RespondWorkflows, "Respond to workflows", "Submit human responses to workflow requests.", Sensitive: true),
         new(ApiAccessScopeNames.ReadSharedProviderCatalog, "Discover shared providers", "Read the shared provider catalog."),
         new(ApiAccessScopeNames.ReadSharedAgentTemplates, "Read shared agent templates", "Read portable agent templates, their inline skills and required local capabilities."),
+        new(ApiAccessScopeNames.ReadSharedSimpleChats, "Read shared Simple Chats", "Read definitions explicitly published for local chat import."),
+        new(ApiAccessScopeNames.ReadSharedWorkflows, "Read shared workflows", "Read workflow definitions and dependencies explicitly published for local import."),
         new(ApiAccessScopeNames.InvokeSharedProviders, "Use shared providers", "Invoke published providers for chat and images.", Sensitive: true),
         new(ApiAccessScopeNames.ReadStoragePlacementRecovery, "Read Storage recovery", "Read safe placement status with current project read permission; does not expose content or storage addresses."),
         new(ApiAccessScopeNames.ReconcileStoragePlacement, "Reconcile Storage placements", "Verify the original prepared target with current project write permission; never starts another upload or native effect.", Sensitive: true),

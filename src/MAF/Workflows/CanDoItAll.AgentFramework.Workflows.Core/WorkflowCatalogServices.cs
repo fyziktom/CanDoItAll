@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Providers;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -72,7 +73,7 @@ public sealed class InMemoryWorkflowCatalogService :
             var filtered = store.Definitions.Values
                 .Select(versions => versions[^1])
                 .Where(definition => !query.Status.HasValue || definition.Status == query.Status.Value)
-                .Where(definition => query.Text is null ||
+                .Where(definition => query.Text is null || string.Equals(query.Text, DefinitionSharingTags.Api, StringComparison.OrdinalIgnoreCase) ||
                                      definition.Name.Contains(query.Text, StringComparison.OrdinalIgnoreCase) ||
                                      definition.Description.Contains(query.Text, StringComparison.OrdinalIgnoreCase));
             var totalCount = filtered.Count();

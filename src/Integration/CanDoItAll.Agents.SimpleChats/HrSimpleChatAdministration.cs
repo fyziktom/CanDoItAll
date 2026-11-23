@@ -61,7 +61,7 @@ public sealed class HrSimpleChatAdministration(
         var normalized = codec.Read<HrSimpleChatSearchRequest>(prepared);
         return ExecuteAsync(context, HrSimpleChatOperation.Search, async (_, token) => {
             var page = Require(await definitions.ListPageAsync(normalized.ToOwnerQuery(), token));
-            return new HrSimpleChatDefinitionPage(page.Items.Select(Summary).ToImmutableArray(),
+            return new HrSimpleChatDefinitionPage(page.Items.Select(item => Summary(item) with { Tags = item.EffectiveTags.ToImmutableArray() }).ToImmutableArray(),
                 page.NextCursor is { } cursor ? new(cursor.DefinitionId.Value, cursor.UpdatedAtUtc) : null);
         }, cancellationToken);
     }

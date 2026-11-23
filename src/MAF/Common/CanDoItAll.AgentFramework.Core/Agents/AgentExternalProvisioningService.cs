@@ -63,6 +63,7 @@ internal sealed class AgentExternalProvisioningService(
                 "agents.external-key-agent-not-found",
                 "The external identity binding does not resolve to an agent in this workspace.");
 
+        RequireAvailable(agent);
         return new(identity.Namespace, identity.Key, agent.Id, CreateTargetVersion(identity, agent),
             agent.Status == AgentLifecycleStatus.Archived, agent.UpdatedAtUtc);
     }
@@ -90,8 +91,11 @@ internal sealed class AgentExternalProvisioningService(
                 RequireCurrentWorkspace();
                 var previousOperation = document.AgentExternalProvisioningOperations.FirstOrDefault(operation =>
                     string.Equals(operation.IdempotencyKey, idempotencyKey, StringComparison.Ordinal));
+                var binding = FindBinding(document.AgentExternalBindings, identity);
+                RequireAvailable(document.Agents.FirstOrDefault(agent => agent.Id == binding?.AgentId));
                 if (previousOperation is not null)
                 {
+                    RequireAvailable(document.Agents.FirstOrDefault(agent => agent.Id == previousOperation.Receipt.AgentId));
                     if (!string.Equals(
                             previousOperation.RequestFingerprint,
                             requestFingerprint,
@@ -107,7 +111,6 @@ internal sealed class AgentExternalProvisioningService(
                     return document;
                 }
 
-                var binding = FindBinding(document.AgentExternalBindings, identity);
                 var created = binding is null;
                 if (created && expectedVersion is not null)
                 {
@@ -230,8 +233,11 @@ internal sealed class AgentExternalProvisioningService(
                 RequireCurrentWorkspace();
                 var previousOperation = document.AgentExternalProvisioningOperations.FirstOrDefault(operation =>
                     string.Equals(operation.IdempotencyKey, idempotencyKey, StringComparison.Ordinal));
+                var current = FindBinding(document.AgentExternalBindings, identity);
+                RequireAvailable(document.Agents.FirstOrDefault(agent => agent.Id == current?.AgentId));
                 if (previousOperation is not null)
                 {
+                    RequireAvailable(document.Agents.FirstOrDefault(agent => agent.Id == previousOperation.Receipt.AgentId));
                     if (!string.Equals(
                             previousOperation.RequestFingerprint,
                             requestFingerprint,
@@ -247,7 +253,7 @@ internal sealed class AgentExternalProvisioningService(
                     return document;
                 }
 
-                var binding = FindBinding(document.AgentExternalBindings, identity)
+                var binding = current
                     ?? throw Failure(
                         AgentExternalProvisioningFailureKind.NotFound,
                         "agents.external-key-not-found",
@@ -336,6 +342,8 @@ internal sealed class AgentExternalProvisioningService(
             EnableBackgroundResponses = source.EnableBackgroundResponses,
             ConfigurationJson = source.ConfigurationJson,
             IsTemplate = source.IsTemplate,
+            ApiAvailable = source.ApiAvailable,
+            SharedTemplate = source.SharedTemplate,
             TemplateKey = source.TemplateKey,
             Permissions = source.Permissions with { AllowedSecrets = [] },
             AllowedSecretReferences = [],
@@ -363,12 +371,19 @@ internal sealed class AgentExternalProvisioningService(
         string? expectedVersion,
         AgentEditorModel agent)
     {
+        var configuration = JsonSerializer.SerializeToNode(agent, FingerprintSerializerOptions)!.AsObject();
+        if (agent.ApiAvailable) {
+            configuration.Remove(JsonNamingPolicy.CamelCase.ConvertName(nameof(agent.ApiAvailable)));
+        }
+        if (agent.SharedTemplate is null) {
+            configuration.Remove(JsonNamingPolicy.CamelCase.ConvertName(nameof(agent.SharedTemplate)));
+        }
         var material = new
         {
             Operation = "upsert",
             Identity = AgentExternalIdentityNormalizer.ToCanonicalString(identity),
             ExpectedVersion = expectedVersion,
-            Agent = agent
+            Agent = configuration
         };
         return Convert.ToHexString(SHA256.HashData(
             JsonSerializer.SerializeToUtf8Bytes(material, FingerprintSerializerOptions)));
@@ -401,6 +416,13 @@ internal sealed class AgentExternalProvisioningService(
         IReadOnlyList<AgentExternalBindingRecord> bindings,
         AgentExternalIdentity identity)
         => bindings.FirstOrDefault(item => HasIdentity(item, identity));
+
+    private static void RequireAvailable(AgentDefinition? agent) {
+        if (agent is { ApiAvailable: false }) {
+            throw Failure(AgentExternalProvisioningFailureKind.NotFound, "agents.external-key-not-found",
+                "No agent is bound to the requested external identity in this workspace.");
+        }
+    }
 
     private static bool HasIdentity(
         AgentExternalBindingRecord binding,
