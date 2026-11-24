@@ -287,9 +287,7 @@ public sealed class ProjectStructurePageAssetAndActivationTests
 
         page.WaitForAssertion(() =>
         {
-            var invocation = Assert.Single(
-                harness.Context.JSInterop.Invocations,
-                item => string.Equals(item.Identifier, "open", StringComparison.Ordinal));
+            var invocation = Assert.Single(harness.Context.JSInterop.Invocations["open"]);
             Assert.Contains(
                 $"/projects/{subprojectId}/structure",
                 Assert.IsType<string>(invocation.Arguments[0]),

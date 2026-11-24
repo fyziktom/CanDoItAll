@@ -148,12 +148,8 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
             Assert.Equal(new[] { selectedNode.Id }, reloadedWorkbench.Instance.Surface.UiState.SelectedNodeIds);
             Assert.Empty(cut.FindAll("[data-testid='project-structure-changes-window']"));
         });
-        Assert.DoesNotContain(
-            harness.Context.JSInterop.Invocations,
-            invocation => string.Equals(
-                invocation.Identifier,
-                "CanDoItAll.canvasWorkbench.getState",
-                StringComparison.Ordinal));
+        await cut.InvokeAsync(() =>
+            Assert.Empty(harness.Context.JSInterop.Invocations["CanDoItAll.canvasWorkbench.getState"]));
     }
 
     [Fact]
