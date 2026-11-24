@@ -13,8 +13,9 @@ public sealed class MemoryScenarioStore : IMemoryProviderManagementUiService {
     public const string ProviderB = "provider.b";
     private readonly Dictionary<string, MemoryProviderProfileEditorModel> profiles = new(StringComparer.Ordinal);
     private readonly List<MemoryProviderOperationUiRecord> operations = [];
+    private readonly Lock laneLock = new();
     private readonly HashSet<MemoryScenarioLane> heldLanes = [];
-    private readonly List<TaskCompletionSource> pending = [];
+    private readonly HashSet<TaskCompletionSource> pending = [];
     private readonly MemoryScenario scenario;
     private readonly MemoryProviderUiSurfaceProjector projector = new(new MemoryProviderUiSurfaceComponentRegistry([
         new(MemoryProviderUiSurfaceKeys.MockProviderPanelComponent, typeof(MemoryMockProviderPanel))]));
@@ -26,7 +27,13 @@ public sealed class MemoryScenarioStore : IMemoryProviderManagementUiService {
     public int QueryCount { get; private set; }
     public int StatusCount { get; private set; }
     public int ReadCount { get; private set; }
-    public int PendingCount => pending.Count;
+    public int PendingCount {
+        get {
+            lock (laneLock) {
+                return pending.Count;
+            }
+        }
+    }
     public MemoryQueryEditorModel? LastQuery { get; private set; }
     public MemoryProviderProfileEditorModel? LastSave { get; private set; }
     public IReadOnlyDictionary<string, MemoryProviderProfileEditorModel> Profiles => profiles;
@@ -78,26 +85,40 @@ public sealed class MemoryScenarioStore : IMemoryProviderManagementUiService {
         }
     }
 
-    public void HoldNext(MemoryScenarioLane lane) => heldLanes.Add(lane);
+    public void HoldNext(MemoryScenarioLane lane) {
+        lock (laneLock) {
+            heldLanes.Add(lane);
+        }
+    }
+
     public void ReleaseAll() {
-        foreach (var completion in pending.ToArray()) {
+        TaskCompletionSource[] releasing;
+        lock (laneLock) {
+            releasing = [.. pending];
+            pending.Clear();
+            heldLanes.Clear();
+        }
+        foreach (var completion in releasing) {
             completion.TrySetResult();
         }
-        pending.Clear();
-        heldLanes.Clear();
     }
     public void Remove(string id) => profiles.Remove(id);
 
     private async Task WaitAsync(MemoryScenarioLane lane, CancellationToken token = default) {
-        if (!heldLanes.Remove(lane)) {
-            return;
+        TaskCompletionSource completion;
+        lock (laneLock) {
+            if (!heldLanes.Remove(lane)) {
+                return;
+            }
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            pending.Add(completion);
         }
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        pending.Add(completion);
         try {
             await completion.Task.WaitAsync(token);
         } finally {
-            pending.Remove(completion);
+            lock (laneLock) {
+                pending.Remove(completion);
+            }
         }
     }
 

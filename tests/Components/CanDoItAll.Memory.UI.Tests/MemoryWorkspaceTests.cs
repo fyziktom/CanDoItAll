@@ -131,11 +131,48 @@ public sealed class MemoryWorkspaceTests {
         await query.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Null(workspace.QueryResult);
         Assert.Equal(2, workspace.ActiveTabIndex);
-        var original = workspace.Submissions[0].QueryResult!;
-        Assert.Contains("original", original.ContextPack!.Summary, StringComparison.Ordinal);
-        Assert.Equal("module", original.ContextPack.Sections[0].Text);
-        Assert.Equal("record", original.ContextPack.Sections[0].Citations[0].SourceRef);
-        Assert.Equal("citation", original.ContextPack.Sections[0].Citations[0].Label);
+        var original = Assert.Single(workspace.Submissions, item => item.ProviderId == MemoryScenarioStore.ProviderA && item.Action == MemoryAction.Query);
+        Assert.Equal(MemoryEffectState.Observed, original.State);
+        var pack = Assert.IsType<MemoryContextPack>(original.QueryResult?.ContextPack);
+        Assert.Contains("original", pack.Summary, StringComparison.Ordinal);
+        Assert.Equal("module", pack.Sections[0].Text);
+        Assert.Equal("record", pack.Sections[0].Citations[0].SourceRef);
+        Assert.Equal("citation", pack.Sections[0].Citations[0].Label);
+    }
+
+    [Fact]
+    public async Task Releasing_held_reads_preserves_a_read_started_by_a_resumed_caller() {
+        var store = new MemoryScenarioStore();
+        Task<MemoryProviderManagementSnapshot>? next = null;
+        async Task StartNextReadAsync() {
+            await store.GetSnapshotAsync(MemoryScenarioStore.ProviderA);
+            store.HoldNext(MemoryScenarioLane.Read);
+            next = store.GetSnapshotAsync(MemoryScenarioStore.ProviderB);
+        }
+
+        store.HoldNext(MemoryScenarioLane.Read);
+        var previous = SynchronizationContext.Current;
+        Task first;
+        try {
+            SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
+            first = StartNextReadAsync();
+        } finally {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        store.ReleaseAll();
+        await first.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(next);
+        Assert.False(next.IsCompleted);
+        Assert.Equal(1, store.PendingCount);
+        store.ReleaseAll();
+        var result = await next.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(MemoryScenarioStore.ProviderB, result.SelectedProvider!.InstanceId.Value);
+        Assert.Equal(0, store.PendingCount);
+    }
+
+    private sealed class InlineSynchronizationContext : SynchronizationContext {
+        public override void Post(SendOrPostCallback callback, object? state) => callback(state);
     }
 
     [Theory]
