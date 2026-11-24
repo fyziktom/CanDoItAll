@@ -65,6 +65,18 @@ uses the retained executor and current owner check. Terminal execution scopes ar
 disposed after completion publication; bounded recent chat metadata remains available
 for reconnect. Active work is never evicted to make room for another request.
 
+When a tool requests approval, the open chat loads the saved requests for that run.
+**Approve once** allows the proposed call. **Reject and continue** sends the rejection
+to the agent so it can respond. **Cancel pending run** stops the run and keeps the
+conversation open. A new prompt can be sent once the run has settled.
+
+In a floating window, **Keep active** hides the window and preserves the pending
+decision and any draft. Reopen it from **Active** to review the same request.
+To stop a waiting chat from the window or the active list, confirm **Cancel run and
+stop chat**. The application closes the chat after the original run confirms
+cancellation. Its saved conversation remains in history. A newer run or a newly
+entered draft requires another review.
+
 This decision guarantees browser/circuit independence within a running application.
 It does not replay arbitrary tool calls after a server crash. Existing persisted run,
 receipt and startup recovery contracts continue to describe interrupted server work.

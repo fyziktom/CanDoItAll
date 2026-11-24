@@ -2,11 +2,15 @@
 
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="floating-agent-chat-close-dialog">
     <TextBlock TextStyle="TextStyle.Body1"
-               Value="@($"Keep {rendered.AgentName}'s chat ready for another action, or stop its active handle now. The saved conversation remains in chat history.")" />
+               Value="@($"You can reopen {rendered.AgentName}'s saved conversation from chat history.")" />
     @if (rendered.HasUnsentDraft) {
-        <Alert AlertStyle="AlertStyle.Warning">This chat has an unsent draft. Keep active preserves it; stopping discards it.</Alert>
+        <Alert AlertStyle="AlertStyle.Warning">Stopping discards your unsent draft. Choose Keep active to save it in this window.</Alert>
     }
-    @if (!rendered.CanStop) {
+    @if (rendered.AwaitingApproval) {
+        <Alert AlertStyle="AlertStyle.Warning">
+            Keep active leaves the approval pending. Stopping cancels the pending run and closes this chat.
+        </Alert>
+    } else if (!rendered.CanStop) {
         <Alert AlertStyle="AlertStyle.Warning">
             This chat has an active run or a pending decision. Keep it active, or resolve or cancel the run before removing the chat.
         </Alert>
@@ -18,7 +22,8 @@
         <Button Text="Keep active" Icon="schedule" Tone="ButtonTone.Default"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.KeepActive)))"
                 data-testid="floating-agent-chat-keep-active" />
-        <Button Text="@(rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")" Icon="stop_circle" Tone="ButtonTone.Danger" Disabled="@(!rendered.CanStop)"
+        <Button Text="@(rendered.AwaitingApproval ? "Cancel run and stop chat" : rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")"
+                Icon="stop_circle" Tone="ButtonTone.Danger" Disabled="@(!rendered.CanStop)"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Stop)))"
                 data-testid="floating-agent-chat-stop" />
     </Cluster>

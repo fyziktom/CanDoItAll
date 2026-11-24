@@ -22,5 +22,5 @@ public interface IAgentChatExecutionCatalog {
     IReadOnlyList<AgentChatExecutionSnapshot> Snapshot(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation);
 
     bool TryDismiss(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation,
-        Guid agentId, Guid chatSessionId);
+        Guid agentId, Guid chatSessionId, AgentExecutionActivityStreamId? expectedStream = null);
 }

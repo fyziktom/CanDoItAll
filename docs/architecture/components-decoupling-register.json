@@ -10063,7 +10063,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "76fc050cce1eff483df49756c5c79b848cdeb785d237300a9caf07d1baf64964",
+      "sha256_lf": "a980e275e091c877760c3aa43dbd701aa4a88cd9bf1441acbb1d7cfda035f55f",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -10078,7 +10078,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Circuit host reconnects the original stream and refreshes persisted workspace state; execution and approval cancellation delegate to the application owner."
+      "rationale": "The circuit host reloads the exact saved approval checkpoint and delegates decisions and cancellation to the execution owner."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDecisionPolicyDialog.razor",
@@ -10737,7 +10737,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
-      "sha256_lf": "6f1c8be9bf7755d1ad8c3abbce19b8db0c5fda193de1892e74243f9d3ea4f469",
+      "sha256_lf": "223be4789ea4b8ba716c09c7ff05c7fcb049ab3e286eae204df4fbec26645f02",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.FloatingAgentChatCloseDialog",
@@ -10754,7 +10754,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Actual renderer extracted at A3. Native context/redaction/stream/staging or operation adapter retained. No renderer services moved to the UI leaf."
+      "rationale": "The native dialog binds the stop choice to the active chat shown at confirmation and returns that choice to the shell."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatHost.razor",
@@ -11712,7 +11712,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentConversationShellContributor.cs",
-      "sha256_lf": "b83fc7f60a63a025d6739b2367c48b9f32d9cc7a8c82875c67f78990e708bca9",
+      "sha256_lf": "17ff6ba3655859d6d5ce2ae395a490fb078bda1978d3ff7ff768118e28b9d4cf",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.AgentConversationShellContributor",
@@ -11729,7 +11729,7 @@
       "assets": "CanDoItAll.Modules.AgentFramework",
       "scenario": "CanDoItAll.Modules.AgentFramework",
       "evidence": "CanDoItAll.Modules.AgentFramework",
-      "rationale": "Native shell contributor revalidates owner-scoped recovery before navigating to a safe module return route and focuses the existing chat."
+      "rationale": "The shell focuses retained chats and forwards a confirmed stop to the owner of the original execution."
     },
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs",
@@ -26558,7 +26558,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
-      "sha256_lf": "1237907fb2b8f52a101cc5bd8168b90737234ecb7e6db373e435e7e3615bda41",
+      "sha256_lf": "7ce3a22213f702bfb44b5a337a8363ae6d591bc99f3d857036562a2dc737b8a2",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.AgentFloatingCloseSurface",
@@ -26574,7 +26574,7 @@
       "assets": "CanDoItAll.AgentFramework.UI",
       "scenario": "CanDoItAll.AgentFramework.UI",
       "evidence": "CanDoItAll.AgentFramework.UI",
-      "rationale": "Pure close renderer keeps unresolved runs discoverable and explains explicit resolution or cancellation; execution policy remains in the owner."
+      "rationale": "The close renderer distinguishes keeping an approval pending from cancelling the run and reports the choice to the native host."
     },
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentImageAttachmentPicker.razor",

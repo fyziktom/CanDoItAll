@@ -73,11 +73,13 @@ public interface IFloatingAgentChatSettingsService
 public interface IAgentChatExecutionOrchestrator
 {
     (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPendingApprovalCancellation(
-        Guid agentId, Guid chatSessionId, Guid executionRunId, CancellationToken cancellationToken = default)
+        Guid agentId, Guid chatSessionId, Guid executionRunId, CancellationToken cancellationToken = default,
+        AgentExecutionActivityStreamId? expectedStream = null)
         => throw new NotSupportedException("This chat host does not support pending approval cancellation.");
 
     (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
-        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default)
+        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default,
+        AgentExecutionActivityStreamId? expectedStream = null)
         => throw new NotSupportedException("This chat host does not support saved planning actions.");
 
     Task<AgentHistoricalReceiptReview> ReadSavedEffectReceiptsAsync(AgentHistoricalReceiptReviewRequest request,

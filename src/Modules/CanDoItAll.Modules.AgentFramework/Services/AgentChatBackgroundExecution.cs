@@ -35,16 +35,18 @@ public sealed class AgentChatBackgroundExecution(
         }
     }
 
-    public bool TryDismiss(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation, Guid agentId, Guid chatSessionId) {
+    public bool TryDismiss(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation,
+        Guid agentId, Guid chatSessionId, AgentExecutionActivityStreamId? expectedStream = null) {
         RequireOwner(owner);
         lock (gate) {
             var entry = sessions.FirstOrDefault(item => item.Owner == owner && item.Snapshot.AgentId == agentId &&
                 item.Snapshot.ChatSessionId == chatSessionId && item.Snapshot.StreamId.DatabaseProfileId == profileId &&
                 item.Snapshot.StreamId.DatabaseProfileGeneration == generation);
             if (entry is null) {
-                return true;
+                return expectedStream is null;
             }
-            if (entry.Busy || entry.Snapshot.RunState != ActiveAgentChatRunState.Idle || !entry.ScopeRelease.IsCompletedSuccessfully) {
+            if (entry.Busy || entry.Snapshot.RunState != ActiveAgentChatRunState.Idle || !entry.ScopeRelease.IsCompletedSuccessfully ||
+                expectedStream is not null && entry.Snapshot.StreamId != expectedStream) {
                 return false;
             }
             sessions.Remove(entry);

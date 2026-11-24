@@ -16,6 +16,7 @@ public sealed class AgentChatRecoveryService(
     IAgentConversationContextService contexts,
     IAgentChatExecutionNotificationHub notifications,
     IDatabaseSwitchNotificationService profileNotifications,
+    IAgentChatExecutionOrchestrator operations,
     ILogger<AgentChatRecoveryService> logger) : IAsyncDisposable {
     private readonly Lock gate = new();
     private readonly SemaphoreSlim refreshGate = new(1, 1);
@@ -66,24 +67,76 @@ public sealed class AgentChatRecoveryService(
         }
     }
 
-    public async Task DismissAsync(AgentChatHandleId handleId, CancellationToken cancellationToken = default) {
+    public async Task DismissAsync(AgentChatHandleId handleId, CancellationToken cancellationToken = default,
+        ActiveAgentChat? confirmation = null) {
         await refreshGate.WaitAsync(cancellationToken);
         try {
             var batch = await ReadCurrentAsync(cancellationToken);
             AdoptPartition(batch.Partition);
             var chat = chats.Snapshot().SingleOrDefault(item => item.HandleId == handleId)
                 ?? throw new UnauthorizedAccessException("This chat is no longer available in the current workspace.");
-            if (chat.ActivityStreamId is not null && !batch.Executions.Any(item => Matches(item, chat))) {
+            var execution = batch.Executions.SingleOrDefault(item => Matches(item, chat));
+            if (chat.ActivityStreamId is not null && execution is null) {
                 RemoveProjection(chat);
                 throw new UnauthorizedAccessException("This execution is no longer available to the current chat owner.");
             }
+            if (confirmation is { } original && (original.HandleId != handleId || original.ActivityStreamId != chat.ActivityStreamId ||
+                original.ExecutionRevision != chat.ExecutionRevision || original.ChatSessionId != chat.ChatSessionId ||
+                !original.HasUnsentDraft && chat.HasUnsentDraft)) {
+                throw new InvalidOperationException("The active chat changed after the stop confirmation opened.");
+            }
+            var expectedStream = confirmation?.ActivityStreamId ?? execution?.StreamId;
+            if (confirmation is { CanCancelPendingRun: true } confirmed) {
+                if (!chat.CanCancelPendingRun ||
+                    execution is not { RunState: ActiveAgentChatRunState.AwaitingApproval, ChatSessionId: { } session, ExecutionRunId: { } run } ||
+                    execution.StreamId != confirmed.ActivityStreamId || execution.Revision != confirmed.ExecutionRevision ||
+                    execution.AgentId != confirmed.Agent.AgentId || session != confirmed.ChatSessionId || run != confirmed.ExecutionRunId) {
+                    throw new InvalidOperationException("The pending run changed before cancellation.");
+                }
+                expectedStream = await CancelPendingRunAsync(batch.Partition, execution, session, run, cancellationToken);
+                await RequirePartitionAsync(batch.Partition, cancellationToken);
+                if (!confirmed.HasUnsentDraft && chats.Snapshot().Any(item => item.HandleId == handleId && item.HasUnsentDraft)) {
+                    throw new InvalidOperationException("A new draft appeared before the chat could be closed.");
+                }
+            }
             if (chat.ChatSessionId is { } sessionId && !executions.TryDismiss(batch.Partition.Owner,
-                    batch.Partition.ProfileId, batch.Partition.Generation, chat.Agent.AgentId, sessionId)) {
+                    batch.Partition.ProfileId, batch.Partition.Generation, chat.Agent.AgentId, sessionId, expectedStream)) {
                 throw new InvalidOperationException("Resolve or cancel the active run before removing its chat.");
+            }
+            if (chat.ActivityStreamId is not null) {
+                RemoveProjection(chat);
             }
         } finally {
             refreshGate.Release();
         }
+    }
+
+    private async Task<AgentExecutionActivityStreamId> CancelPendingRunAsync(AgentChatRecoveryPartition owner,
+        AgentChatExecutionSnapshot execution, Guid sessionId, Guid runId, CancellationToken cancellationToken) {
+        var detail = await workspace.GetExecutionRunDetailAsync(runId, cancellationToken);
+        await RequirePartitionAsync(owner, cancellationToken);
+        if (detail.Run.Id != runId || detail.Run.AgentId != execution.AgentId || detail.Run.ChatSessionId != sessionId ||
+            detail.Run.State != ExecutionState.WaitingOnTool || detail.Run.CompletedAtUtc.HasValue ||
+            !executions.Snapshot(owner.Owner, owner.ProfileId, owner.Generation).Any(item =>
+                item.StreamId == execution.StreamId && item.Revision == execution.Revision)) {
+            throw new InvalidOperationException("The original approval is no longer pending.");
+        }
+        (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) cancellation;
+        if (detail.Run.ToolAdmission?.PlanningDecision is not null) {
+            if (detail.PlanningReview is not { } review || !review.AvailableActions.Contains(AgentPlanningAction.Cancel)) {
+                throw new InvalidOperationException("This plan must be resolved from its original review.");
+            }
+            cancellation = operations.StartPlanningAction(execution.AgentId, new(AgentPlanningAction.Cancel, sessionId, review.Expected),
+                cancellationToken, execution.StreamId);
+        } else {
+            cancellation = operations.StartPendingApprovalCancellation(execution.AgentId, sessionId, runId, cancellationToken, execution.StreamId);
+        }
+        var result = await cancellation.Completion;
+        if (result.Run.Id != runId || result.Run.ChatSessionId != sessionId || result.Run.AgentId != execution.AgentId ||
+            result.Run.Outcome != RunOutcome.Cancelled) {
+            throw new InvalidOperationException("The original run did not confirm cancellation.");
+        }
+        return cancellation.StreamId;
     }
 
     private async Task<AgentChatRecoveryBatch> ReadCurrentAsync(CancellationToken cancellationToken) {

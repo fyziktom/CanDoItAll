@@ -19,6 +19,36 @@ namespace CanDoItAll.Tests.Playwright;
 [Trait("Category", "HostPlatform")]
 public sealed class AgentPlanningNativeBrowserTests {
     [Fact]
+    public async Task Stopping_a_floating_chat_cancels_the_reviewed_plan_without_publishing_tasks() {
+        await using var provider = await PlanningResponseFixture.StartAsync();
+        await using var host = await LiveUiHost.StartAsync();
+        var seed = await SeedAsync(host, provider.BaseUrl);
+        var page = await host.NewPageAsync();
+        var oracle = CrmHrBrowserOracle.Attach(page);
+        await oracle.NavigateAsync($"{host.BaseUrl}/projects/{seed.ProjectId:D}/structure");
+        await ProjectFilesUiJourney.ReadyFileCanvasAsync(page);
+        var chat = await AgentUiJourneySupport.OpenFloatingChatFromCatalogAsync(page, "project-structure-agents-toggle",
+            seed.AgentId, host.Artifact("planning-cancel-catalog.png"));
+        var prompt = chat.GetByTestId("chat-prompt-input");
+        await prompt.FillAsync("Plan two manual tasks for review.");
+        await prompt.PressAsync("Tab");
+        await chat.GetByTestId("agents-chat-plan-tasks").ClickAsync();
+        await Assertions.Expect(chat.GetByTestId("agents-chat-planning-status")).ToContainTextAsync("Plan ready for review", new() { Timeout = 45_000 });
+        var original = await ReadPlanningRunAsync(host, seed.AgentId);
+        await chat.GetByRole(AriaRole.Button, new() { Name = "Hide window", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Cancel run and stop chat", Exact = true }).ClickAsync();
+        await Assertions.Expect(chat).ToBeHiddenAsync(new() { Timeout = 45_000 });
+
+        var cancelled = await ReadPlanningRunAsync(host, seed.AgentId);
+        Assert.Equal(original.Run.Id, cancelled.Run.Id);
+        Assert.Equal(RunOutcome.Cancelled, cancelled.Run.Outcome);
+        Assert.Equal(AgentPlanningGenerationState.Cancelled, cancelled.PlanningReview!.State);
+        Assert.Empty(await ReadProjectTasksAsync(host, seed.ProjectId));
+        Assert.Equal(1, provider.Requests);
+        await oracle.AssertCleanAsync();
+    }
+
+    [Fact]
     public async Task Native_project_plan_pauses_on_another_actor_then_refreshes_and_publishes_the_reviewed_generation() {
         await using var provider = await PlanningResponseFixture.StartAsync();
         await using var host = await LiveUiHost.StartAsync();
@@ -117,16 +147,8 @@ public sealed class AgentPlanningNativeBrowserTests {
             await oracle.AssertCleanAsync();
             passed = true;
 
-            Task<ExecutionRunDetail> ReadRunAsync() => host.SeedAsync(async services => {
-                var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
-                var run = Assert.Single(await workspace.ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: seed.AgentId)));
-                return await workspace.GetExecutionRunDetailAsync(run.Id);
-            });
-            Task<string[]> ReadTasksAsync() => host.SeedAsync(async services => {
-                await using var database = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
-                return await database.Set<ProjectObjectRecord>().Where(row => row.ProjectId == seed.ProjectId)
-                    .OrderBy(row => row.Title).Select(row => row.Title).ToArrayAsync();
-            });
+            Task<ExecutionRunDetail> ReadRunAsync() => ReadPlanningRunAsync(host, seed.AgentId);
+            Task<string[]> ReadTasksAsync() => ReadProjectTasksAsync(host, seed.ProjectId);
             async Task ShotAsync(string name) {
                 Assert.False(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth > document.documentElement.clientWidth"));
                 await page.ScreenshotAsync(new() { Path = host.Artifact(name + ".png") });
@@ -157,6 +179,18 @@ public sealed class AgentPlanningNativeBrowserTests {
             }));
         }
     }
+
+    private static Task<ExecutionRunDetail> ReadPlanningRunAsync(LiveUiHost host, Guid agentId) => host.SeedAsync(async services => {
+        var workspace = services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var run = Assert.Single(await workspace.ListExecutionRunsAsync(new ExecutionRunQuery(AgentId: agentId)));
+        return await workspace.GetExecutionRunDetailAsync(run.Id);
+    });
+
+    private static Task<string[]> ReadProjectTasksAsync(LiveUiHost host, Guid projectId) => host.SeedAsync(async services => {
+        await using var database = await services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>().CreateDbContextAsync();
+        return await database.Set<ProjectObjectRecord>().Where(row => row.ProjectId == projectId)
+            .OrderBy(row => row.Title).Select(row => row.Title).ToArrayAsync();
+    });
 
     private static Task<(Guid ProjectId, Guid AgentId, ProjectWriteAdmission Admission)> SeedAsync(LiveUiHost host, string endpoint) => host.SeedAsync(async services => {
         var project = await services.GetRequiredService<ProjectsService>().SaveAsync(new ProjectEditorModel {

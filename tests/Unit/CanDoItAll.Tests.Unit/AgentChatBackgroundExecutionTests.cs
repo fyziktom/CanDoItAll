@@ -32,8 +32,10 @@ public sealed class AgentChatBackgroundExecutionTests {
         Assert.Equal(1, factory.Disposals);
         Assert.Equal(ActiveAgentChatRunState.Idle, Assert.Single(executions.Snapshot(Owner,
             operation.StreamId.DatabaseProfileId, operation.StreamId.DatabaseProfileGeneration)).RunState);
+        Assert.False(executions.TryDismiss(Owner, operation.StreamId.DatabaseProfileId,
+            operation.StreamId.DatabaseProfileGeneration, operation.AgentId!.Value, operation.ChatSessionId!.Value, new Activity(operation).StreamId));
         Assert.True(executions.TryDismiss(Owner, operation.StreamId.DatabaseProfileId,
-            operation.StreamId.DatabaseProfileGeneration, operation.AgentId!.Value, operation.ChatSessionId!.Value));
+            operation.StreamId.DatabaseProfileGeneration, operation.AgentId.Value, operation.ChatSessionId.Value, operation.StreamId));
         Assert.Empty(executions.Snapshot(Owner, operation.StreamId.DatabaseProfileId, operation.StreamId.DatabaseProfileGeneration));
     }
 

@@ -92,6 +92,23 @@ public sealed class AgentChatRecoveryServiceTests {
     }
 
     [Fact]
+    public async Task Confirming_an_older_pending_run_cannot_cancel_or_dismiss_its_replacement() {
+        await using var fixture = new Fixture();
+        var original = fixture.AddExecution() with { RunState = ActiveAgentChatRunState.AwaitingApproval };
+        fixture.Catalog.Entries[0] = (fixture.Owner.Value, original);
+        await fixture.Service.InitializeAsync();
+        var confirmation = Assert.Single(fixture.Chats.Snapshot());
+        var replacement = original with { ExecutionRunId = Guid.NewGuid(), Revision = original.Revision + 1 };
+        fixture.Catalog.Entries[0] = (fixture.Owner.Value, replacement);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Service.DismissAsync(confirmation.HandleId, confirmation: confirmation));
+
+        Assert.Equal(0, fixture.Catalog.DismissCalls);
+        Assert.Equal(1, fixture.Workspace.ReadCount);
+        Assert.Equal(replacement, Assert.Single(fixture.Catalog.Entries).Snapshot);
+    }
+
+    [Fact]
     public async Task Completion_is_published_once_per_operation_despite_repeated_catalog_updates() {
         await using var fixture = new Fixture();
         var run = fixture.AddExecution();
@@ -173,7 +190,7 @@ public sealed class AgentChatRecoveryServiceTests {
             var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, WorkspaceProxy>();
             Workspace = (WorkspaceProxy)(object)service;
             Service = new(Catalog, Owner, Profile, Profile, service, Chats, Contexts, Notifications, ProfileNotifications,
-                NullLogger<AgentChatRecoveryService>.Instance);
+                DispatchProxy.Create<IAgentChatExecutionOrchestrator, WorkspaceProxy>(), NullLogger<AgentChatRecoveryService>.Instance);
         }
 
         public Catalog Catalog { get; }
@@ -232,9 +249,11 @@ public sealed class AgentChatRecoveryServiceTests {
         public IReadOnlyList<AgentChatExecutionSnapshot> Snapshot(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation)
             => Entries.Where(entry => entry.Owner == owner && entry.Snapshot.StreamId.DatabaseProfileId == profileId &&
                     entry.Snapshot.StreamId.DatabaseProfileGeneration == generation).Select(entry => entry.Snapshot).ToArray();
-        public bool TryDismiss(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation, Guid agentId, Guid chatSessionId) {
+        public bool TryDismiss(AgentChatOwnerId owner, Guid profileId, DatabaseProfileGeneration generation,
+            Guid agentId, Guid chatSessionId, AgentExecutionActivityStreamId? expectedStream = null) {
             DismissCalls++;
-            return Entries.RemoveAll(entry => entry.Owner == owner && entry.Snapshot.AgentId == agentId &&
+            return Entries.RemoveAll(entry => (expectedStream is null || entry.Snapshot.StreamId == expectedStream) &&
+                entry.Owner == owner && entry.Snapshot.AgentId == agentId &&
                 entry.Snapshot.ChatSessionId == chatSessionId && entry.Snapshot.StreamId.DatabaseProfileId == profileId &&
                 entry.Snapshot.StreamId.DatabaseProfileGeneration == generation) > 0;
         }
