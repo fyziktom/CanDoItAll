@@ -183,11 +183,12 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
     {
         ThrowIfDisposed();
         var chat = activeChatRegistry.Snapshot().FirstOrDefault(item => item.HandleId == handleId);
-        activeChatRegistry.Stop(handleId);
-        lock (gate)
-        {
+        lock (gate) {
+            if (activeOperations.Contains(handleId)) {
+                throw new InvalidOperationException("Wait for the chat operation to finish before closing it.");
+            }
+            activeChatRegistry.Stop(handleId);
             activeExecutionRunIds.Remove(handleId);
-            activeOperations.Remove(handleId);
         }
 
         conversationContextService?.Remove(AgentConversationKey.ForHandle(handleId));
@@ -201,12 +202,8 @@ public sealed class FloatingAgentChatCoordinator : IFloatingAgentChatCoordinator
         ActiveAgentChatRunState runState)
     {
         ThrowIfDisposed();
-        var recovered = activeChatRegistry.Snapshot().FirstOrDefault(chat => chat.HandleId == handleId);
         lock (gate)
         {
-            if (recovered?.ActivityStreamId is not null && !activeOperations.Contains(handleId)) {
-                return recovered;
-            }
             if (runState == ActiveAgentChatRunState.Idle && activeOperations.Contains(handleId))
             {
                 return activeChatRegistry.Snapshot()
