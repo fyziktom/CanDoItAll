@@ -239,11 +239,7 @@ public sealed class DurableFileWriter
 
         try
         {
-            await using (FileStream stream = CreateNewFileStream(
-                             temporaryPath,
-                             options.RequirePrivateUnixMode,
-                             asynchronous: true))
-            {
+            await using (FileStream stream = CreateStagingFileStream(temporaryPath, options.RequirePrivateUnixMode)) {
                 await writeContent(stream, cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 stream.Flush(flushToDisk: true);
@@ -527,16 +523,13 @@ public sealed class DurableFileWriter
         Directory.CreateDirectory(path);
     }
 
-    private static FileStream CreateNewFileStream(string path, bool requirePrivateUnixMode, bool asynchronous)
-    {
-        var options = new FileStreamOptions
-        {
+    private static FileStream CreateStagingFileStream(string path, bool requirePrivateUnixMode) {
+        var options = new FileStreamOptions {
             Mode = FileMode.CreateNew,
             Access = FileAccess.Write,
             Share = FileShare.None,
             BufferSize = 64 * 1024,
-            Options = FileOptions.WriteThrough |
-                      (asynchronous ? FileOptions.Asynchronous : FileOptions.None)
+            Options = FileOptions.Asynchronous
         };
         if (requirePrivateUnixMode && !OperatingSystem.IsWindows())
         {

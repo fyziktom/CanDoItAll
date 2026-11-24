@@ -81,6 +81,42 @@ public sealed class DurableFileWriterTests(ITestOutputHelper output) {
         Assert.Empty(Directory.EnumerateFiles(directory.Path, ".*.tmp"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Streamed_chunks_are_complete_in_staging_before_publication(bool cancel) {
+        using var directory = new TemporaryDirectory();
+        var target = Path.Combine(directory.Path, "checkpoint.bin");
+        var writer = new DurableFileWriter(new PhysicalFileSystemPathPolicyFactory());
+        await writer.WriteTextAsync(directory.Path, target, "previous");
+        using var cancellation = new CancellationTokenSource();
+        const int chunkSize = 64 * 1024;
+        var payload = new byte[2 * chunkSize + 37];
+        new Random(17).NextBytes(payload);
+
+        var write = writer.WriteStreamAsync(directory.Path, target, async (stream, token) => {
+            for (var start = 0; start < payload.Length; start += chunkSize) {
+                await stream.WriteAsync(payload.AsMemory(start, Math.Min(chunkSize, payload.Length - start)), token);
+            }
+        }, cancellationToken: cancellation.Token, beforeCommit: async token => {
+            var staged = Assert.Single(Directory.EnumerateFiles(directory.Path, ".*.tmp"));
+            Assert.Equal(payload, await File.ReadAllBytesAsync(staged, token));
+            Assert.Equal("previous", await File.ReadAllTextAsync(target, token));
+            if (cancel) {
+                cancellation.Cancel();
+            }
+        });
+
+        if (cancel) {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => write);
+            Assert.Equal("previous", await File.ReadAllTextAsync(target));
+        } else {
+            await write;
+            Assert.Equal(payload, await File.ReadAllBytesAsync(target));
+        }
+        Assert.Empty(Directory.EnumerateFiles(directory.Path, ".*.tmp"));
+    }
+
     [Fact]
     public async Task Exclusive_coordination_times_out_and_recovers_after_owner_releases_handle()
     {

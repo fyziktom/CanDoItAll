@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-22T23:08:24.792883+00:00",
+  "generated_utc": "2026-11-24T23:04:51.666841+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -10366,6 +10366,12 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
+      "source_fingerprint": "04ee61fc3702a27e20ab078c8600d03aaa07870c83446c5e437ea07bc91a3745",
+      "count": 1
+    },
+    {
+      "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
+      "category": "atomic-write",
       "source_fingerprint": "051f173eeceab127f63643b22b8cb32bed200d9be6e16f255a66a9878d3d0c56",
       "count": 1
     },
@@ -10378,7 +10384,7 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
-      "source_fingerprint": "25ce432e7f89f021b054768a2576377bec2f28d3b2c66e405291f3f25289d854",
+      "source_fingerprint": "14491eef733bc8f2692f571c14675cf6f7ea76eb9f741085c99ef8c1b405bfad",
       "count": 1
     },
     {
@@ -10397,7 +10403,7 @@
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
       "source_fingerprint": "46b18e5bbef3e1226f6ed484192d11214704bc1e1715f8efac899e6c7b23bf77",
-      "count": 2
+      "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
@@ -10444,13 +10450,13 @@
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
-      "source_fingerprint": "c30ffe38ee9d9f7dbafe74b6340095e7efd6b7dec393bd367938b883f978d27f",
+      "source_fingerprint": "c463f00556e09ac4d44cd2a9cecdfac19cc04d98585e06abc4ff829c27808470",
       "count": 1
     },
     {
       "path": "src/Foundation/CanDoItAll.Infrastructure/FileSystem/DurableFileWriter.cs",
       "category": "atomic-write",
-      "source_fingerprint": "c463f00556e09ac4d44cd2a9cecdfac19cc04d98585e06abc4ff829c27808470",
+      "source_fingerprint": "e7b1f86f57c6efddd36796e024147df6a5d7e46da3c4141ca8c2a1c227c8335f",
       "count": 1
     },
     {
