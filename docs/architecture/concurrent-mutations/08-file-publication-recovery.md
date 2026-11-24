@@ -34,3 +34,12 @@ This adds one same-directory rename per Windows replacement and no extra flush,
 database call or reader lock. The existing write-directory scan checks pending
 evidence before cleanup; explicit deletion also performs this check. Sustained
 authority capacity measurements remain a separate acceptance gate.
+
+## Updates to existing agent runs
+
+When an update callback reads a run, the file store hashes the original bytes as it
+deserializes them. It checks the file before releasing the workspace lock and again
+after acquiring the publication keys. A changed digest raises a publication conflict
+before the store writes a recovery journal. Once those checks pass, the store streams
+the compact journal to the durable writer and validates the current run again before
+applying the update. After an interruption, recovery uses the saved journal.

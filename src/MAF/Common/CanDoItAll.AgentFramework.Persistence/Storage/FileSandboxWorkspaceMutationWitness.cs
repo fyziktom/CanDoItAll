@@ -30,8 +30,9 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
     internal static Task<FileSandboxWorkspaceMutationWitness> CaptureAsync(FileSandboxWorkspaceStorageLayout layout,
         IEnumerable<string> paths, IEnumerable<string> directories, IEnumerable<string> pendingJournals,
         IPhysicalFileSystemPathPolicyFactory pathPolicies,
-        CancellationToken cancellationToken, IEnumerable<string>? pendingPublicationTargets = null) =>
-        CaptureCoreAsync(layout, paths, directories, pendingJournals, pathPolicies, cancellationToken, pendingPublicationTargets, []);
+        CancellationToken cancellationToken, IEnumerable<string>? pendingPublicationTargets = null,
+        FileSandboxWorkspaceRunReadSnapshot? originalRun = null) =>
+        CaptureCoreAsync(layout, paths, directories, pendingJournals, pathPolicies, cancellationToken, pendingPublicationTargets, [], originalRun);
 
     internal static Task<FileSandboxWorkspaceMutationWitness> CaptureAgentDeletionSourceAsync(FileSandboxWorkspaceStorageLayout layout,
         IEnumerable<string> paths, IEnumerable<string> pendingJournals,
@@ -42,7 +43,8 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
     private static async Task<FileSandboxWorkspaceMutationWitness> CaptureCoreAsync(FileSandboxWorkspaceStorageLayout layout,
         IEnumerable<string> paths, IEnumerable<string> directories, IEnumerable<string> pendingJournals,
         IPhysicalFileSystemPathPolicyFactory pathPolicies, CancellationToken cancellationToken,
-        IEnumerable<string>? pendingPublicationTargets, IEnumerable<string> reconciledProjectionPaths) {
+        IEnumerable<string>? pendingPublicationTargets, IEnumerable<string> reconciledProjectionPaths,
+        FileSandboxWorkspaceRunReadSnapshot? originalRun = null) {
         var policy = pathPolicies.Create(layout.RootPath);
         var projectionPaths = reconciledProjectionPaths.Select(policy.ResolveContainedPath).ToImmutableHashSet(policy.PathComparer);
         var pendingPaths = pendingJournals.Select(policy.ResolveContainedPath).ToHashSet(policy.PathComparer);
@@ -58,7 +60,7 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
             var kind = pendingPaths.Contains(path) ? ObservationKind.PendingRecovery
                 : policy.PathComparer.Equals(path, layout.WorkspaceIndexPath) ? ObservationKind.WorkspaceIndex
                 : ObservationKind.Payload;
-            observations.Add(await ObserveAsync(path, kind, policy, cancellationToken).ConfigureAwait(false));
+            observations.Add(await ObserveAsync(path, kind, policy, cancellationToken, originalRun).ConfigureAwait(false));
         }
         return new(observations.OrderBy(item => item.Kind).ToImmutableArray(), membership, pendingTargets, projectionPaths, pathPolicies, layout.RootPath);
     }
@@ -144,9 +146,12 @@ internal sealed class FileSandboxWorkspaceMutationWitness {
     }
 
     private static async Task<FileObservation> ObserveAsync(string path, ObservationKind kind, IPhysicalFileSystemPathPolicy policy,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken, FileSandboxWorkspaceRunReadSnapshot? originalRun = null) {
         cancellationToken.ThrowIfCancellationRequested();
         policy.EnsureSafePath(path, allowMissingLeaf: true);
+        if (kind == ObservationKind.Payload && originalRun?.GetOriginalDigest(path) is { } originalDigest) {
+            return new(path, kind, originalDigest, null);
+        }
         FileStream stream;
         try {
             stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, FileSandboxWorkspaceJsonStore.SequentialReadBufferSize,

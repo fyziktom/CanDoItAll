@@ -16,6 +16,9 @@ internal sealed class FileSandboxWorkspaceRunReadSnapshot {
 
     internal ExecutionRunRecord Run { get; }
 
+    internal string? GetOriginalDigest(string path) =>
+        string.Equals(fullPath, path, StringComparison.Ordinal) ? digest : null;
+
     internal bool MatchesPrevious(string path, ExecutionRunRecord previous) =>
         string.Equals(fullPath, path, StringComparison.Ordinal) && ReferenceEquals(Run, previous);
 

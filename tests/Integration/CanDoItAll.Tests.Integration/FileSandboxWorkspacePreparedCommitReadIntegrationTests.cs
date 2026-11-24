@@ -55,6 +55,32 @@ public sealed class FileSandboxWorkspacePreparedCommitReadIntegrationTests(ITest
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Original_run_bytes_changed_during_preparation_conflict_before_the_journal_is_written(bool includeCatalog) {
+        await using var scenario = await CreateScenarioAsync();
+        var path = scenario.PathFor(PayloadKind.Run);
+        var original = await File.ReadAllTextAsync(path);
+        ExecutionRunDetail Change(ExecutionRunDetail detail) {
+            File.AppendAllText(path, " ");
+            return AppendProgress(detail);
+        }
+
+        var runId = scenario.Before.Run.Id;
+        var conflict = await Assert.ThrowsAsync<SandboxWorkspacePublicationConflictException>(() => includeCatalog
+            ? scenario.Store.UpdateExecutionRunDetailAsync(runId, (_, detail) => Change(detail))
+            : scenario.Store.UpdateExecutionRunDetailAsync(runId, Change));
+
+        Assert.Equal(SandboxWorkspacePublicationConflictKind.OriginalBytesChanged, conflict.Kind);
+        Assert.False(File.Exists(scenario.PendingJournalPath));
+        Assert.Equal(original + " ", await File.ReadAllTextAsync(path));
+        var current = await scenario.Store.GetExecutionRunDetailAsync(runId);
+        Assert.NotNull(current);
+        Assert.Equal(scenario.Before.Run.Revision, current.Run.Revision);
+        Assert.Equal(scenario.Before.ExecutionLog, current.ExecutionLog);
+    }
+
+    [Theory]
     [InlineData(PayloadKind.Run, JsonShape.Canonical)]
     [InlineData(PayloadKind.Run, JsonShape.Compact)]
     [InlineData(PayloadKind.Run, JsonShape.UnknownProperty)]

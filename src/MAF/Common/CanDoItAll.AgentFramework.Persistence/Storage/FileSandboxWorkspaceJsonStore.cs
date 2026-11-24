@@ -48,7 +48,9 @@ internal sealed class FileSandboxWorkspaceJsonReadDiagnostics
 internal sealed class FileSandboxWorkspaceJsonStore
 {
     internal const int SequentialReadBufferSize = 64 * 1024;
-    private static readonly JsonSerializerOptions CompactSerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions CompactSerializerOptions = new(JsonSerializerDefaults.Web) {
+        DefaultBufferSize = SequentialReadBufferSize
+    };
     private static readonly FileShare SharedReadFileShare = FileShare.ReadWrite | FileShare.Delete;
     private readonly FileSandboxWorkspaceJsonReadDiagnostics? readDiagnostics;
     private readonly IPhysicalFileSystemPathPolicyFactory physicalPathPolicyFactory;
@@ -427,16 +429,27 @@ internal sealed class FileSandboxWorkspaceJsonStore
         return true;
     }
 
-    public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken, bool compact = false) {
-        var options = compact ? CompactSerializerOptions : SerializerOptions;
+    public async Task WriteExistingRunJournalAsync(string fullPath, ExistingRunDetailCommitJournal journal, CancellationToken cancellationToken) {
+        var directory = Path.GetDirectoryName(fullPath)
+            ?? throw new InvalidOperationException("Workspace JSON path does not have a parent directory.");
+        using var writeActivity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.write");
+        await durableFileWriter.WriteStreamAsync(ResolveManagedRoot(directory), fullPath, async (stream, token) => {
+            using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.serialize");
+            activity?.SetTag("payload.type", nameof(ExistingRunDetailCommitJournal));
+            await JsonSerializer.SerializeAsync(stream, journal, CompactSerializerOptions, token);
+            writeActivity?.SetTag("payload.bytes", stream.Position);
+        }, cancellationToken: cancellationToken);
+    }
+
+    public async Task WriteJsonAtomicallyAsync<T>(string fullPath, T payload, CancellationToken cancellationToken) {
         if (payload is ProviderUsageObservation) {
-            await WriteObservedJsonAsync(fullPath, payload, compact ? JsonSerializer.Serialize(payload, options) : Serialize(payload), cancellationToken);
+            await WriteObservedJsonAsync(fullPath, payload, Serialize(payload), cancellationToken);
             return;
         }
         byte[] encoded;
         using (var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("workspace.json.serialize")) {
             activity?.SetTag("payload.type", typeof(T).Name);
-            encoded = JsonSerializer.SerializeToUtf8Bytes(payload, options);
+            encoded = JsonSerializer.SerializeToUtf8Bytes(payload, SerializerOptions);
         }
         await WriteEncodedJsonAtomicallyAsync(fullPath, encoded, cancellationToken);
     }
