@@ -40,6 +40,7 @@ authoritative.
 - [CRM/HR API](crm-hr-api.md)
 - [OAuth email plugins](oauth-email-plugins.md)
 - [Provider capability and pricing](provider-capability-and-pricing.md)
+- [Remote instances and shared definitions](architecture/remote-instance-connections.md#operator-steps)
 - [Shared providers](shared-providers.md)
 - [Provider request history](provider-request-history.md)
 - [Memory providers](memory-providers/README.md)

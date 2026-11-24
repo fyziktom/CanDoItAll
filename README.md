@@ -53,6 +53,11 @@ contract remains available to remote clients: turn admission returns a durable o
 dispatcher owns provider execution, and clients follow status or replayable SSE. See
 [LLM Chats product and API](docs/llm-chats-api.md).
 
+Under **Settings → Remote instances**, save a connection for each publisher you use.
+An imported provider sends model requests to its publisher. Imported agents, Simple Chats
+and workflows run as local copies with the provider and model chosen during import.
+See [sharing and importing definitions](docs/architecture/remote-instance-connections.md#operator-steps).
+
 > **Existing PostgreSQL installations: migrate before updating.** Give your coding agent
 > [the PostgreSQL 16-to-18 preservation runbook](tools/dev/Migrate-PostgreSql16To18.md)
 > before running an installer or changing an image. Preserve and restore existing data

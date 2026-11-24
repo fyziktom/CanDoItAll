@@ -46,9 +46,9 @@ updates, deletion guards, edit authorization and change notifications.
 
 The Agents catalog owns local definitions, capabilities and editor lifetimes. Its ZIP
 export supports backup and restore, including history, memory and workspace-specific
-configuration. Its export API returns a producer-local result. The package clone path can
-drop unresolved prerequisites. A remote template consequently needs a definition-only
-protocol with explicit dependency resolution before it can produce a local agent.
+configuration. Its export API returns a producer-local result. Remote agent import reads
+a definition-only template, resolves its required tools and skills on the consumer, and
+creates the local agent after those checks succeed.
 
 ## Decision
 
@@ -93,7 +93,8 @@ protocol with explicit dependency resolution before it can produce a local agent
    start work with it. **Share as a template** lets a connected instance import a copy.
    You can enable either option, both, or neither. Use **Save sharing** for a saved
    chat or workflow and **Save agent** for an agent. Clear the template option on the
-   same tab to withdraw it from the remote catalog. Previously imported copies stay local.
+   same tab to withdraw it from the remote catalog. Simple Chats and workflows are eligible
+   in the Draft or Active state. Previously imported copies stay local.
    Catalog tags follow the saved settings. `shared` marks a published template and
    `api` marks a definition available through the API. Clearing either option removes
    its tag. Existing definitions and imported copies show the tags for their local
@@ -124,7 +125,7 @@ their resources. Registered tools and filesystem-backed skills must exist locall
 their declared kind and key. Running any imported definition remains a separate local
 action. A model bound to a shared provider sends inference to that provider's instance.
 
-## Extension points
+## Implemented consumers
 
 | Consumer | Remote selection | Local owner and binding |
 | --- | --- | --- |
@@ -132,13 +133,22 @@ action. A model bound to a shared provider sends inference to that provider's in
 | Agents | Selected template and portable skill content | Local agent, locally registered tools, local execution |
 | Simple Chats | Definition, system instructions | Simple Chat definition owner binds a local provider. Conversations stay local |
 | Workflows | Template graph and component identities | Workflow draft service resolves local bindings before creating the graph |
-| Processes | Process template, role and step contracts | Process owner checks compatibility and maps local roles and drivers |
-| Projects | Structure and template relationships | Project owner allocates local identities and maps ownership and dependencies |
 
-Each new consumer supplies its own payload, publication rules and import semantics.
-The registry does not deserialize arbitrary domain objects or expose a generic execution API.
+## Extension points
+
+Process and project import are future extensions. A process importer would map roles
+and step drivers. A project importer would allocate local identities and map ownership
+and structure relationships. Each new consumer supplies its own payload, publication
+rules and import semantics.
 
 ## Validation
+
+The PostgreSQL integration suites are `RemoteAgentTemplateIntegrationTests`,
+`RemoteSimpleChatIntegrationTests` and `RemoteWorkflowSharingIntegrationTests`.
+`DefinitionSharingPersistenceTests` covers upgrades and concurrent publication edits.
+`DefinitionSharingTagsTests` checks the resulting catalog tags. `RemoteInstanceBrowserTests`
+exercises the production picker and import dialogs.
+Use the [focused test and database setup](../testing.md) for these suites.
 
 | Boundary | Focused verification |
 | --- | --- |

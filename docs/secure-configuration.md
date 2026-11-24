@@ -6,13 +6,21 @@ Configure `OPENAI_API_KEY` through an environment variable, user-secret, enterpr
 
 If a provider key is ever committed, treat it as compromised and rotate or revoke it outside the repository before reuse.
 
-## Shared providers and captured request content
+## Remote instance credentials
 
-Treat a consumer's shared-source token as a credential: bind it through the secret vault,
-never in a source URL or exported catalog. HTTPS public destinations are the default;
-HTTP loopback is supported for local development. Other HTTP/private-network sources
-need explicit source policy and remain subject to destination/DNS and redirect checks.
-See [shared providers](shared-providers.md#network-and-credential-policy).
+Store each publisher's token in the consumer's secret vault and select that secret
+on its **Remote instances** connection. Grant the read scope for each template
+catalog the consumer needs. Using a published provider also requires provider
+catalog access for discovery and invocation access for model requests.
+See [catalog scopes](api-control-plane.md#shared-definitions) and
+[provider permissions](api-control-plane.md#shared-providers-and-history).
+
+HTTPS public destinations are the default. HTTP loopback is supported for local
+development. Other HTTP or private-network destinations need explicit approval on
+the connection and remain subject to destination, DNS and redirect checks.
+See [network and credential policy](shared-providers.md#network-and-credential-policy).
+
+## Shared providers and captured request content
 
 [Request history](provider-request-history.md) defaults to Light metadata-only capture.
 Detailed standalone text is bounded, redacted and encrypted, and content access is

@@ -66,6 +66,14 @@ definition revisions, pinned PostgreSQL conversations, and retry-safe operations
 provider credentials, endpoints, EF entities, or agent execution. See
 [`docs/llm-chats-api.md`](../../../docs/llm-chats-api.md).
 
+## Shared definitions
+
+The host maps read-only template catalogs under `/api/shared-agent-templates`,
+`/api/shared-simple-chats` and `/api/shared-workflows`. Each family has its own
+read scope and checks publication on both catalog and individual reads. Agent and
+Simple Chat catalogs also expose an avatar route. See the
+[shared definition routes and permissions](../../../docs/api-control-plane.md#shared-definitions).
+
 ## Shared providers and request history
 
 The host maps exactly five shared-provider operations under `/api/shared-providers`:
