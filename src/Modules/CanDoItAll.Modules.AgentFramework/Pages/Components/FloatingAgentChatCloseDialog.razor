@@ -14,7 +14,7 @@
         }
         presented = Chat;
         state = new(Guid.NewGuid(), Chat.HandleId,
-            Chat.Agent.Name, Chat.CanStop || Chat.CanCancelPendingRun, Chat.CanCancelPendingRun, Chat.HasUnsentDraft);
+            Chat.Agent.Name, Chat.CanStop || Chat.CanCancelPendingRun, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval, Chat.HasUnsentDraft);
     }
 
     private Task DecideAsync(AgentFloatingCloseIntent intent) {

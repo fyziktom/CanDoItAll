@@ -10737,7 +10737,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/FloatingAgentChatCloseDialog.razor",
-      "sha256_lf": "223be4789ea4b8ba716c09c7ff05c7fcb049ab3e286eae204df4fbec26645f02",
+      "sha256_lf": "b2f4f1d859ccb06af8301ec4f2b775cb772d3697e250e6e18bd03fa10a56a970",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.FloatingAgentChatCloseDialog",
@@ -26558,7 +26558,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/AgentFloatingCloseSurface.razor",
-      "sha256_lf": "7ce3a22213f702bfb44b5a337a8363ae6d591bc99f3d857036562a2dc737b8a2",
+      "sha256_lf": "6ca747b5d68ba7e5c916d6b1bfd1921d63fe28a49a4f2a58a2366b7d1c5b8939",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.AgentFloatingCloseSurface",

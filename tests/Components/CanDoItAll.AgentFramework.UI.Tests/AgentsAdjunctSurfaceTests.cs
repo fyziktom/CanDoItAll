@@ -57,6 +57,19 @@ public sealed class AgentsAdjunctSurfaceTests {
         Assert.Contains("resolve or cancel the run", close.Markup, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, "Stop chat")]
+    [InlineData(true, "Cancel run and stop chat")]
+    public void Pending_close_offers_cancellation_when_the_host_can_stop_the_run(bool canStop, string label) {
+        using var context = Context();
+        var close = context.Render<AgentFloatingCloseSurface>(p => p.Add(c => c.State,
+            new(Guid.NewGuid(), new(Guid.NewGuid()), "Review", CanStop: canStop, AwaitingApproval: true)));
+        var stop = close.Find("[data-testid='floating-agent-chat-stop']");
+        Assert.EndsWith(label, stop.TextContent.Trim(), StringComparison.Ordinal);
+        Assert.Equal(!canStop, stop.HasAttribute("disabled"));
+        Assert.Equal(canStop, close.Markup.Contains("Stopping cancels the pending run", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Input_file_retains_the_selection_generation_and_does_not_reconstruct_bytes() {
         using var context = Context();

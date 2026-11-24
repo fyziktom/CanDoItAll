@@ -1,4 +1,7 @@
-@{ var rendered = State; }
+@{
+    var rendered = State;
+    var canCancelPendingRun = rendered.CanStop && rendered.AwaitingApproval;
+}
 
 <Stack GapScale="LayoutGap.Medium" AlignItems="AlignItems.Stretch" data-testid="floating-agent-chat-close-dialog">
     <TextBlock TextStyle="TextStyle.Body1"
@@ -6,7 +9,7 @@
     @if (rendered.HasUnsentDraft) {
         <Alert AlertStyle="AlertStyle.Warning">Stopping discards your unsent draft. Choose Keep active to save it in this window.</Alert>
     }
-    @if (rendered.AwaitingApproval) {
+    @if (canCancelPendingRun) {
         <Alert AlertStyle="AlertStyle.Warning">
             Keep active leaves the approval pending. Stopping cancels the pending run and closes this chat.
         </Alert>
@@ -22,7 +25,7 @@
         <Button Text="Keep active" Icon="schedule" Tone="ButtonTone.Default"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.KeepActive)))"
                 data-testid="floating-agent-chat-keep-active" />
-        <Button Text="@(rendered.AwaitingApproval ? "Cancel run and stop chat" : rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")"
+        <Button Text="@(canCancelPendingRun ? "Cancel run and stop chat" : rendered.HasUnsentDraft ? "Stop and discard draft" : "Stop chat")"
                 Icon="stop_circle" Tone="ButtonTone.Danger" Disabled="@(!rendered.CanStop)"
                 Click="@(() => Intent.InvokeAsync(new(rendered.Origin, rendered.HandleId, AgentFloatingCloseChoice.Stop)))"
                 data-testid="floating-agent-chat-stop" />
