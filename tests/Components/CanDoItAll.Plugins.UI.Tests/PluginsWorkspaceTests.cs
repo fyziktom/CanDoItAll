@@ -219,6 +219,35 @@ public sealed class PluginsWorkspaceTests {
     }
 
     [Fact]
+    public async Task Closing_cancels_the_replacement_read_started_by_an_older_cancellation_callback() {
+        var release = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var replacement = new TaskCompletionSource<(Task<bool> Read, CancellationToken Token)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var state = new PluginReadState<int>(0);
+        var failures = new List<Exception>();
+        using var lane = new PluginReadLane<int>(state, () => { }, failures.Add);
+        var first = lane.LoadAsync(async token => {
+            using var registration = token.Register(() => {
+                CancellationToken nextToken = default;
+                var nextRead = lane.LoadAsync(next => {
+                    nextToken = next;
+                    return release.Task;
+                });
+                replacement.SetResult((nextRead, nextToken));
+            });
+            return await release.Task;
+        });
+        lane.Invalidate();
+        var next = await replacement.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        lane.Dispose();
+        release.SetResult(1);
+        Assert.False(await first);
+        Assert.False(await next.Read);
+        Assert.True(next.Token.IsCancellationRequested);
+        Assert.Equal(PluginReadStatus.Initial, state.Status);
+        Assert.Empty(failures);
+    }
+
+    [Fact]
     public async Task Grant_target_includes_scope_and_conflicting_decisions_share_admission() {
         var (store, workspace, _) = await ReadyAsync(PluginScenario.HeldGrant);
         using (workspace) {
