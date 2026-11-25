@@ -55,8 +55,8 @@ public sealed class ProjectProcessAssetProposalCodec : IAgentToolProposalPrepare
         if (result.Create is { } create && create.ObjectType is not (ProjectObjectType.File or ProjectObjectType.ImageAsset or ProjectObjectType.VideoAsset)) {
             throw new ArgumentException("A managed asset proposal requires a File, ImageAsset or VideoAsset.");
         }
-        if (result.Revision is { Media: null }) {
-            throw new ArgumentException("An asset revision requires supplied media.");
+        if (result.Revision is { HasSingleMediaSource: false }) {
+            throw new ArgumentException("An asset revision requires exactly one of media or sourceWorkspacePath.");
         }
         return result;
     }

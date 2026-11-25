@@ -843,11 +843,11 @@ public sealed class ProjectStructureAgentRuntimeToolRoundTripIntegrationTests
         Assert.False(assetCreateRequestSchema.TryGetProperty("metadataJson", out _));
         var assetRevision = Assert.IsAssignableFrom<AIFunction>(
             FindTool(tools, "project_structure_asset_create_revision"));
-        var assetRevisionRequestSchema = assetRevision.JsonSchema
-            .GetProperty("properties")
-            .GetProperty("request")
-            .GetProperty("properties");
-        Assert.False(assetRevisionRequestSchema.TryGetProperty("metadataJson", out _));
+        var revisionSchema = assetRevision.JsonSchema.GetProperty("properties").GetProperty("request");
+        var revisionFields = revisionSchema.GetProperty("properties");
+        Assert.True(revisionFields.TryGetProperty("sourceWorkspacePath", out _));
+        Assert.False(revisionFields.TryGetProperty("metadataJson", out _));
+        Assert.DoesNotContain(revisionSchema.GetProperty("required").EnumerateArray(), member => member.GetString() == "media");
 
         var selectedSubtree = await InvokeAsync<ProjectStructureReadToolData>(
             FindTool(tools, "project_structure_read"),

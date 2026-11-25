@@ -109,6 +109,8 @@ A chat opened from the general Agents page can create a workbook when its worksp
 
 The agent creates and validates the workbook in the managed workspace. It passes the returned workbook path as `request.sourceWorkspacePath` to `project_structure_asset_create`, together with the project ID, a `File` object type, title and parent node. The asset metadata and content reads return the project node, original filename and stored length. The agent receives a bounded confirmation for binary workbooks. The authorized content API can return the complete workbook for download.
 
+To publish a new version of an existing workbook, the agent calls `project_structure_asset_create_revision` with the original asset's `nodeId`, the new title and `request.sourceWorkspacePath`. The revision is a child node with a `DerivedFrom` link to the original. Each version has its own downloadable content.
+
 ## Image Generation And Asset Analysis
 
 `image_generation_create` accepts PNG, JPEG and WebP raster sources. It checks the

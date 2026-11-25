@@ -530,7 +530,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                 AIFunctionFactory.Create(
                     (Guid projectId, string nodeId, ProjectStructureAgentAssetRevisionRequest request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureAssetCreateRevisionAsync(agent, accessState, projectId, nodeId, request, estimatedMinutes, cancellationToken),
                     ProjectProcessAssetProposalCodec.RevisionToolName,
-                    "Creates a new revision asset node under an existing asset node instead of overwriting the original asset. Use title, subtitle, and notes for descriptive evidence; typed storage metadata is derived by the service and is not caller-controlled."),
+                    "Creates a revision under the existing asset identified by projectId and nodeId. To attach a finished workbook or other workspace file, put its project-authorized relative path in request.sourceWorkspacePath and its title in request.title. Alternatively supply request.media with inline content. Supply one content source."),
                 AIFunctionFactory.Create(
                     (Guid projectId, ProjectStructureLinkInput request, int? estimatedMinutes = null, CancellationToken cancellationToken = default) => ProjectStructureLinkCreateAsync(agent, accessState, projectId, request, estimatedMinutes, cancellationToken),
                     "project_structure_link_create",
@@ -2444,7 +2444,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         var admission = processAssetAdmission ?? throw new InvalidOperationException("Recoverable Process assets require their owner admission adapter.");
                         var invocation = await admission.RequireInvocationAsync(providerContext,
                             new ProjectProcessAssetRevisionProposal(projectId, nodeId, request, estimatedMinutes), cancellationToken);
-                        var result = await agentService.CreateAssetRevisionAsync(projectId, nodeId, request.ToServiceRequest(),
+                        var result = await agentService.CreateAssetRevisionAsync(projectId, nodeId, request, metadataJson: null,
                             BuildAgentContext(agent, accessState, projectId) with { ProcessAssetInvocation = invocation }, cancellationToken);
                         if (result.ProcessAssetReceipt is { } receipt) {
                             AgentToolInvocationEffectScope.RecordCommitted(ProjectProcessAssetToolAdmission.EffectSourceKind, receipt.Receipt.IntentId.Value.ToString("D"));
@@ -2459,7 +2459,7 @@ internal sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTo
                         return await agentService.CreateAssetRevisionAsync(
                             projectId,
                             nodeId,
-                            request.ToServiceRequest(),
+                            request, metadataJson: null,
                             BuildAgentContext(agent, accessState, projectId) with { ExpectedProjectAdmission = projectAdmission },
                             cancellationToken);
                     }

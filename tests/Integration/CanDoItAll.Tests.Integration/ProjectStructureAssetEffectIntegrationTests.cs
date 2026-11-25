@@ -41,6 +41,35 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
     }
 
     [Fact]
+    public async Task Revision_tool_publishes_workspace_bytes_under_the_original_asset() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var tools = await CreateToolsAsync(services, projectId);
+        var original = await CreateAssetAsync(tools, projectId, "Original");
+        var tool = Assert.Single(tools, item => item.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision);
+        var relativePath = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/forecast.bin";
+        var path = services.GetRequiredService<IWorkspacePathResolutionService>().ResolveFilePath(relativePath, allowMissing: true);
+        Directory.CreateDirectory(Path.GetDirectoryName(path.FullPath)!);
+        byte[] content = [0, 1, 127, 128, 254, 255];
+        await File.WriteAllBytesAsync(path.FullPath, content);
+
+        var revision = await InvokeAsync<ProjectStructureAssetDescriptor>(tool, new AIFunctionArguments {
+            ["projectId"] = projectId, ["nodeId"] = original.Id,
+            ["request"] = new ProjectStructureAgentAssetRevisionRequest("Revision", SourceWorkspacePath: relativePath)
+        });
+
+        var reader = services.GetRequiredService<ProjectStructureAgentService>();
+        Assert.Equal(content, (await reader.GetAssetBinaryContentAsync(projectId, revision.NodeId)).Bytes);
+        Assert.Equal("Original"u8.ToArray(), (await reader.GetAssetBinaryContentAsync(projectId, original.Id)).Bytes);
+        var graph = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId);
+        Assert.Equal(original.Id, Assert.Single(graph.Nodes, node => node.Id == revision.NodeId).ParentId);
+        Assert.Contains(graph.Links, link => link.SourceId == revision.NodeId && link.TargetId == original.Id &&
+            link.Kind == ProjectObjectLinkKind.DerivedFrom);
+    }
+
+    [Fact]
     public async Task Invalid_parent_fails_without_creating_an_asset()
     {
         await using var application = await TestApplication.CreateAsync();

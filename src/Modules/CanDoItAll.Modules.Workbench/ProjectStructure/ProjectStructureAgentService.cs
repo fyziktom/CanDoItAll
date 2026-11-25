@@ -1778,22 +1778,29 @@ public sealed partial class ProjectStructureAgentService(
             cancellationToken);
     }
 
-    public async Task<ProjectStructureAssetDescriptor> CreateAssetRevisionAsync(
+    public Task<ProjectStructureAssetDescriptor> CreateAssetRevisionAsync(
         Guid projectId,
         string nodeId,
         ProjectStructureAssetRevisionRequest request,
         ProjectStructureAgentContext agent,
-        CancellationToken cancellationToken = default)
-    {
+        CancellationToken cancellationToken = default) {
+        if (request.Media is null) {
+            throw ProjectStructureAssetAgentFailureBoundary.Create(ProjectStructureAssetAgentFailureKind.MediaPayloadRequired);
+        }
+        return CreateAssetRevisionAsync(projectId, nodeId, new ProjectStructureAgentAssetRevisionRequest(
+            request.Title, request.Subtitle, request.Notes, request.Media, request.ObjectSubtype, request.LeaseToken),
+            request.MetadataJson, agent, cancellationToken);
+    }
+
+    internal async Task<ProjectStructureAssetDescriptor> CreateAssetRevisionAsync(
+        Guid projectId, string nodeId, ProjectStructureAgentAssetRevisionRequest request, string? metadataJson,
+        ProjectStructureAgentContext agent, CancellationToken cancellationToken) {
         if (agent.ProcessAssetInvocation is not null) {
             var result = await CreateProcessAssetAsync(projectId, agent, request.LeaseToken, cancellationToken);
             return MapAsset(result.Node, projectId, result.Node.ParentId) with {
                 ProcessAssetReceipt = result.Observation
             };
         }
-        EnsureValidMediaPayload(request.Media);
-        ProjectStructureSvgAssetValidator.Validate(request.Media);
-
         return await leaseService.RunWithProjectMutationLeaseAsync(
             projectId,
             request.LeaseToken,
@@ -1807,6 +1814,8 @@ public sealed partial class ProjectStructureAgentService(
                     cancellationToken);
                 var originalAsset = await GetAssetAsync(projectId, nodeId, cancellationToken);
                 var originalNode = await GetNodeAsync(projectId, nodeId, cancellationToken);
+                var media = await ResolveAssetRevisionMediaAsync(projectId, request, agent.ActiveWorkspaceScope, cancellationToken);
+                ProjectStructureSvgAssetValidator.Validate(media);
 
                 var createdRevision = await projectWorkbenchService.CreateObjectAsync(
                     projectId,
@@ -1821,8 +1830,8 @@ public sealed partial class ProjectStructureAgentService(
                         null,
                         null,
                         string.IsNullOrWhiteSpace(request.ObjectSubtype) ? originalNode.ObjectSubtype : request.ObjectSubtype,
-                        request.Media,
-                        string.IsNullOrWhiteSpace(request.MetadataJson) ? originalAsset.MetadataJson : request.MetadataJson,
+                        media,
+                        string.IsNullOrWhiteSpace(metadataJson) ? originalAsset.MetadataJson : metadataJson,
                         originalNode.DurationSeconds,
                         PlacementIntent: ProjectObjectPlacementIntent.AutomaticAroundParent) {
                         ExpectedProjectAdmission = agent.ExpectedProjectAdmission,
@@ -2065,7 +2074,8 @@ public sealed partial class ProjectStructureAgentService(
                 return await ResolveExternalSourceMediaAsync(request, workspacePathSourceUri, cancellationToken);
             }
 
-            return await ResolveWorkspaceSourceMediaAsync(projectId, request, activeWorkspaceScope, cancellationToken);
+            return await ResolveWorkspaceSourceMediaAsync(projectId, request.SourceWorkspacePath, request.SourceFileName,
+                request.SourceContentType, activeWorkspaceScope, cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SourceUrl))
@@ -2080,19 +2090,31 @@ public sealed partial class ProjectStructureAgentService(
             ProjectStructureAssetAgentFailureKind.MediaSourceRequired);
     }
 
+    private Task<ProjectObjectMediaPayload> ResolveAssetRevisionMediaAsync(Guid projectId, ProjectStructureAgentAssetRevisionRequest request,
+        WorkspaceScopeDescriptor? activeWorkspaceScope, CancellationToken cancellationToken) {
+        if (!request.HasSingleMediaSource) {
+            throw ProjectStructureAssetAgentFailureBoundary.Create(ProjectStructureAssetAgentFailureKind.RevisionMediaSourceInvalid);
+        }
+        if (request.Media is { } media) {
+            EnsureValidMediaPayload(media);
+            return Task.FromResult(media);
+        }
+        return ResolveWorkspaceSourceMediaAsync(projectId, request.SourceWorkspacePath!, null, null, activeWorkspaceScope, cancellationToken);
+    }
+
     private async Task<ProjectObjectMediaPayload> ResolveWorkspaceSourceMediaAsync(
         Guid projectId,
-        ProjectStructureAssetCreateInput request,
+        string sourceWorkspacePath, string? sourceFileName, string? sourceContentType,
         WorkspaceScopeDescriptor? activeWorkspaceScope,
         CancellationToken cancellationToken)
     {
         var resolution = sourceWorkspacePathResolver.ResolveExistingFile(
             projectId,
-            request.SourceWorkspacePath!,
+            sourceWorkspacePath,
             activeWorkspaceScope);
         var bytes = await ProjectStructureWorkspaceAssetReader.ReadAsync(resolution.FullPath, cancellationToken);
-        var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
-        var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(request.SourceContentType, fileName);
+        var fileName = ResolveSourceAssetFileName(sourceFileName, resolution.FullPath);
+        var contentType = ProjectStructureAssetMediaTypePolicy.Resolve(sourceContentType, fileName);
         return new ProjectObjectMediaPayload(
             fileName,
             contentType,
