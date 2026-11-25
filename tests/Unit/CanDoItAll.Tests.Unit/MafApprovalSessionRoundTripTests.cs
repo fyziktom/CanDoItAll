@@ -13,6 +13,7 @@ public sealed class MafApprovalSessionRoundTripTests
 {
     private const string ApprovalStateKey = "_pendingApprovalRequests";
     private const string CallId = "call-001";
+    private const string SecondCallId = "call-002";
     private const string ConversationId = "provider-conversation-001";
     private const string HostedMcpApprovalId = "hosted-mcp-approval-001";
     private const string HostedMcpCallId = "hosted-mcp-call-001";
@@ -223,16 +224,20 @@ public sealed class MafApprovalSessionRoundTripTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
     public async Task Consecutive_approval_requests_survive_serialized_session_reentry(
-        bool useStreaming)
+        bool useStreaming, bool repeatContext, bool approveSecond)
     {
         var probe = new InvocationProbe();
         var initialAgent = CreateAgent(
             new ConsecutiveApprovalScriptChatClient(),
             probe,
-            includeCompaction: true);
+            includeCompaction: true, repeatContext: repeatContext);
         var initialSession = await initialAgent.CreateSessionAsync();
         var firstApproval = await RequestApprovalAsync(
             initialAgent,
@@ -243,7 +248,7 @@ public sealed class MafApprovalSessionRoundTripTests
         var secondAgent = CreateAgent(
             new ConsecutiveApprovalScriptChatClient(),
             probe,
-            includeCompaction: true);
+            includeCompaction: true, repeatContext: repeatContext);
         var secondSession = await secondAgent.DeserializeSessionAsync(firstSerializedSession);
         var firstContinuationMessages = CreateRehydratedApprovalMessages(
             firstApproval,
@@ -266,13 +271,13 @@ public sealed class MafApprovalSessionRoundTripTests
             StringComparison.Ordinal);
 
         var finalAgent = CreateAgent(
-            new ConsecutiveApprovalScriptChatClient(),
+            new ConsecutiveApprovalScriptChatClient(approveSecond),
             probe,
-            includeCompaction: true);
+            includeCompaction: true, repeatContext: repeatContext);
         var finalSession = await finalAgent.DeserializeSessionAsync(secondSerializedSession);
         var secondContinuationMessages = CreateRehydratedApprovalMessages(
             secondApproval,
-            secondSerializedSession);
+            secondSerializedSession, approveSecond);
         var completion = await RunAsync(
             finalAgent,
             secondContinuationMessages,
@@ -280,13 +285,13 @@ public sealed class MafApprovalSessionRoundTripTests
             useStreaming);
 
         Assert.Equal("completed", completion.Text);
-        Assert.Equal(2, probe.InvocationCount);
-        Assert.Equal(SecondSafePath, probe.LastPath);
+        Assert.Equal(approveSecond ? 2 : 1, probe.InvocationCount);
+        Assert.Equal(approveSecond ? SecondSafePath : SafePath, probe.LastPath);
     }
 
     private static IReadOnlyList<ChatMessage> CreateRehydratedApprovalMessages(
         ToolApprovalRequestContent approval,
-        JsonElement serializedSession)
+        JsonElement serializedSession, bool approved = true)
     {
         var pending = new MafApprovalContinuationDriver().MapPendingApproval(approval);
         var timestamp = new DateTimeOffset(2026, 7, 28, 12, 0, 0, TimeSpan.Zero);
@@ -305,7 +310,7 @@ public sealed class MafApprovalSessionRoundTripTests
         return new MafApprovalContinuationDriver()
             .CreateApprovalInputMessages(
                 persistedSession,
-                [new AgentRuntimeApprovalDecision(pending.ApprovalId, Approved: true)])
+                [new AgentRuntimeApprovalDecision(pending.ApprovalId, approved)])
             .ToList();
     }
 
@@ -368,7 +373,7 @@ public sealed class MafApprovalSessionRoundTripTests
     private static ChatClientAgent CreateAgent(
         IChatClient chatClient,
         InvocationProbe probe,
-        bool includeCompaction = false)
+        bool includeCompaction = false, bool repeatContext = false)
     {
         var function = AIFunctionFactory.Create(
             new Func<string, string>(probe.Write),
@@ -391,14 +396,13 @@ public sealed class MafApprovalSessionRoundTripTests
         if (includeCompaction)
         {
 #pragma warning disable MAAI001
-            options.AIContextProviders =
-            [
-                new CompactionProvider(
-                    new PipelineCompactionStrategy(
-                        new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
-                        new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
-                        new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000))))
-            ];
+            var compaction = new MafApprovalAwareCompactionProvider(new PipelineCompactionStrategy(
+                new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
+                new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
+                new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000))));
+            options.AIContextProviders = repeatContext
+                ? [new StaticMessageContextProvider(new ChatMessage(ChatRole.System, "Workspace context."), nameof(CreateAgent)), compaction]
+                : [compaction];
 #pragma warning restore MAAI001
             options.ChatHistoryProvider = new InMemoryChatHistoryProvider();
             options.RequirePerServiceCallChatHistoryPersistence = true;
@@ -653,7 +657,7 @@ public sealed class MafApprovalSessionRoundTripTests
         }
     }
 
-    private sealed class ConsecutiveApprovalScriptChatClient : IChatClient
+    private sealed class ConsecutiveApprovalScriptChatClient(bool approveSecond = true) : IChatClient
     {
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
@@ -668,16 +672,20 @@ public sealed class MafApprovalSessionRoundTripTests
                 .ToList();
             foreach (var result in functionResults) {
                 Assert.Null(result.Exception);
-                Assert.Equal("written", result.Result?.ToString());
+                if (result.CallId == SecondCallId && !approveSecond) {
+                    Assert.Contains("rejected", result.Result?.ToString(), StringComparison.OrdinalIgnoreCase);
+                } else {
+                    Assert.Equal("written", result.Result?.ToString());
+                }
             }
-            if (functionResults.Any(result => string.Equals(result.CallId, "call-002", StringComparison.Ordinal)))
+            if (functionResults.Any(result => string.Equals(result.CallId, SecondCallId, StringComparison.Ordinal)))
             {
                 return Task.FromResult(CreateResponse(new TextContent("completed")));
             }
 
             var nextCall = functionResults.Any(result => string.Equals(result.CallId, CallId, StringComparison.Ordinal))
                 ? new FunctionCallContent(
-                    "call-002",
+                    SecondCallId,
                     ToolName,
                     new Dictionary<string, object?>
                     {

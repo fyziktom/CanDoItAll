@@ -20,6 +20,8 @@ The .NET 10 adapter uses Microsoft Agent Framework 1.28.0, the matching A2A prev
 
 Native conversation and approval state from MAF 1.20.0, 1.22.0 and 1.28.0 can be restored when its provider, model, history and policy match. Durable tool proposals also carry their original SDK fingerprint. An incompatible journal requires reconciliation before an operator starts replacement work. Preserve the journal and recorded effects when upgrading. See the [retained-state scenarios](../../../../docs/architecture/maf-1.22-upgrade.md).
 
+Approval continuations pass the operator's decision directly through the context compaction stage. MAF binds each decision to the saved proposal before invoking its tool. Ordinary conversation turns continue to use the configured compaction thresholds.
+
 ## Runtime Proof Slices
 
 MAF runtime regression proof is tracked by named slices so process automation and release checks do not treat one broad test run as complete coverage:

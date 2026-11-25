@@ -336,7 +336,7 @@ public sealed class OpenAiChatCompletionsRealClientWireTests
             providers.Add(new StaticMessageContextProvider(new(ChatRole.User, "Scoped runtime context"), StaticMessageContextProvider.TransientAgentChatStateKey));
         }
         if (includeCompaction) {
-            providers.Add(new CompactionProvider(new PipelineCompactionStrategy(
+            providers.Add(new MafApprovalAwareCompactionProvider(new PipelineCompactionStrategy(
                 new ToolResultCompactionStrategy(CompactionTriggers.MessagesExceed(40)),
                 new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(32)),
                 new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(64000)))));
