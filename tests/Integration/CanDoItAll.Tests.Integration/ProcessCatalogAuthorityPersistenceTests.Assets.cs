@@ -412,9 +412,9 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var projectId = test.Owner.Project.ProjectId;
         var parent = test.Invocation.ParentNodeKey;
         var path = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/proposal.txt";
-        var file = services.GetRequiredService<IWorkspacePathResolutionService>().ResolveFilePath(path, allowMissing: true);
-        Directory.CreateDirectory(Path.GetDirectoryName(file.FullPath)!);
-        await File.WriteAllBytesAsync(file.FullPath, "approved content"u8.ToArray());
+        var filePath = Path.Combine(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(), path);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllBytesAsync(filePath, "approved content"u8.ToArray());
         var request = new ProjectStructureAgentAssetRevisionRequest("Revised asset", SourceWorkspacePath: path);
         var payload = new ProjectProcessAssetProposalCodec().Prepare(ProjectProcessAssetProposalCodec.RevisionToolName,
             JsonSerializer.SerializeToElement(new ProjectProcessAssetRevisionProposal(projectId, parent, request), ProjectProcessAssetProposalCodec.Json));
@@ -425,7 +425,7 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
         var service = services.GetRequiredService<ProjectStructureAgentService>();
 
         var created = await service.CreateAssetRevisionAsync(projectId, parent, request, null, agent, default);
-        await File.WriteAllBytesAsync(file.FullPath, "later content"u8.ToArray());
+        await File.WriteAllBytesAsync(filePath, "later content"u8.ToArray());
         var replay = await service.CreateAssetRevisionAsync(projectId, parent, request, null, agent, default);
 
         Assert.Equal(created.NodeId, replay.NodeId);

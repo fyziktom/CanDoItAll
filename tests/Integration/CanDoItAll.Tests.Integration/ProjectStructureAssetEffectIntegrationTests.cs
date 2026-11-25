@@ -5,10 +5,12 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -47,13 +49,25 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
         var services = scope.ServiceProvider;
         var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
         var tools = await CreateToolsAsync(services, projectId);
-        var original = await CreateAssetAsync(tools, projectId, "Original");
         var tool = Assert.Single(tools, item => item.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision);
-        var relativePath = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/forecast.bin";
-        var path = services.GetRequiredService<IWorkspacePathResolutionService>().ResolveFilePath(relativePath, allowMissing: true);
-        Directory.CreateDirectory(Path.GetDirectoryName(path.FullPath)!);
-        byte[] content = [0, 1, 127, 128, 254, 255];
-        await File.WriteAllBytesAsync(path.FullPath, content);
+        var relativePath = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/forecast.xlsx";
+        var filePath = Path.Combine(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(), relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        var spreadsheets = services.GetRequiredService<ISpreadsheetDocumentService>();
+        void WriteForecast(string amount) {
+            spreadsheets.Write(new SpreadsheetWriteRequest(filePath, filePath, "Forecast", [],
+                [new SpreadsheetRangeWrite("A1:B1", [["Amount", amount]])], CreateWorkbookIfMissing: true, Overwrite: true));
+        }
+
+        WriteForecast("100");
+        var originalBytes = await File.ReadAllBytesAsync(filePath);
+        var original = await InvokeAsync<ProjectStructureNodeSummary>(FindAssetCreateTool(tools), new AIFunctionArguments {
+            ["projectId"] = projectId,
+            ["request"] = new ProjectStructureAgentAssetCreateInput(ProjectObjectType.File, "Original",
+                ParentNodeKey: $"project:{projectId:D}", ObjectSubtype: "xlsx", SourceWorkspacePath: relativePath)
+        });
+        WriteForecast("125");
+        var revisedBytes = await File.ReadAllBytesAsync(filePath);
 
         var revision = await InvokeAsync<ProjectStructureAssetDescriptor>(tool, new AIFunctionArguments {
             ["projectId"] = projectId, ["nodeId"] = original.Id,
@@ -61,8 +75,9 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
         });
 
         var reader = services.GetRequiredService<ProjectStructureAgentService>();
-        Assert.Equal(content, (await reader.GetAssetBinaryContentAsync(projectId, revision.NodeId)).Bytes);
-        Assert.Equal("Original"u8.ToArray(), (await reader.GetAssetBinaryContentAsync(projectId, original.Id)).Bytes);
+        Assert.NotEqual(originalBytes, revisedBytes);
+        Assert.Equal(revisedBytes, (await reader.GetAssetBinaryContentAsync(projectId, revision.NodeId)).Bytes);
+        Assert.Equal(originalBytes, (await reader.GetAssetBinaryContentAsync(projectId, original.Id)).Bytes);
         var graph = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId);
         Assert.Equal(original.Id, Assert.Single(graph.Nodes, node => node.Id == revision.NodeId).ParentId);
         Assert.Contains(graph.Links, link => link.SourceId == revision.NodeId && link.TargetId == original.Id &&
