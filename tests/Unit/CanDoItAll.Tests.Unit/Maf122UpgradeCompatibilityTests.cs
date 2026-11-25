@@ -15,8 +15,8 @@ public sealed class Maf122UpgradeCompatibilityTests
     [Fact]
     public void Resolved_runtime_uses_the_reviewed_Maf_and_Meai_versions()
     {
-        Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
-        Assert.Equal(new Version(1, 22, 0, 0), typeof(RunStatus).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 28, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 28, 0, 0), typeof(RunStatus).Assembly.GetName().Version);
         Assert.Equal(new Version(10, 11, 0, 0), typeof(AIFunction).Assembly.GetName().Version);
     }
 

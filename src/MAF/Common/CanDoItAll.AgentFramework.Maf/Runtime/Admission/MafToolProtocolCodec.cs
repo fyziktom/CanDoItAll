@@ -22,10 +22,6 @@ internal static class MafToolProtocolCodec {
     internal const int CompressedResponseVersion = 2;
     internal static JsonSerializerOptions SerializationOptions => Options;
     private static readonly ModelReaderWriterOptions ModelOptions = new("J");
-    private static readonly IReadOnlyDictionary<string, Type> OpenAiTypes = ModelTypes(typeof(OpenAIClient).Assembly,
-        type => typeof(IPersistableModel<object>).IsAssignableFrom(type));
-    private static readonly IReadOnlyDictionary<string, Type> OllamaTypes = ModelTypes(typeof(OllamaApiClient).Assembly,
-        type => type.Namespace?.StartsWith("OllamaSharp.Models", StringComparison.Ordinal) == true);
     private static readonly JsonSerializerOptions Options = CreateOptions();
     private static readonly string McpPackage = typeof(ContentBlock).Assembly.GetName().Version!.ToString();
     private static readonly string PackageFingerprint = string.Join("|",
@@ -170,7 +166,7 @@ internal static class MafToolProtocolCodec {
 
         Type? type = raw.GetType();
         if (type.Assembly == typeof(OpenAIClient).Assembly && raw is IPersistableModel<object>) {
-            while (type is not null && !OpenAiTypes.ContainsKey(type.FullName!)) {
+            while (type is not null && !IsOpenAiModel(type)) {
                 type = type.BaseType;
             }
 
@@ -180,7 +176,7 @@ internal static class MafToolProtocolCodec {
             }
         }
 
-        if (type is not null && OllamaTypes.ContainsKey(type.FullName!)) {
+        if (type is not null && IsOllamaModel(type)) {
             return new(NativeProtocolKind.Ollama, type.FullName!, JsonSerializer.Serialize(raw, type));
         }
 
@@ -203,11 +199,13 @@ internal static class MafToolProtocolCodec {
             return null;
         }
 
-        if (saved.Kind == NativeProtocolKind.OpenAi && OpenAiTypes.TryGetValue(saved.Model, out var openAiType)) {
+        if (saved.Kind == NativeProtocolKind.OpenAi &&
+            FindModel(typeof(OpenAIClient).Assembly, saved.Model) is { } openAiType && IsOpenAiModel(openAiType)) {
             return ModelReaderWriter.Read(BinaryData.FromString(saved.Json), openAiType, ModelOptions);
         }
 
-        if (saved.Kind == NativeProtocolKind.Ollama && OllamaTypes.TryGetValue(saved.Model, out var ollamaType)) {
+        if (saved.Kind == NativeProtocolKind.Ollama &&
+            FindModel(typeof(OllamaApiClient).Assembly, saved.Model) is { } ollamaType && IsOllamaModel(ollamaType)) {
             return JsonSerializer.Deserialize(saved.Json, ollamaType)
                 ?? throw Unsupported("The saved Ollama protocol item is empty.");
         }
@@ -226,9 +224,24 @@ internal static class MafToolProtocolCodec {
         throw Unsupported("The saved opaque provider item is outside the installed-package allowlist.");
     }
 
-    private static IReadOnlyDictionary<string, Type> ModelTypes(Assembly assembly, Func<Type, bool> include)
-        => assembly.GetTypes().Where(type => type.IsVisible && !type.IsGenericTypeDefinition && include(type))
-            .ToDictionary(type => type.FullName!, StringComparer.Ordinal);
+    private static Type? FindModel(Assembly assembly, string name) {
+        if (string.IsNullOrEmpty(name) || !name.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '+')) {
+            return null;
+        }
+        try {
+            return assembly.GetType(name, throwOnError: false, ignoreCase: false);
+        } catch (TypeLoadException) {
+            throw Unsupported("The recorded SDK model cannot be loaded from the installed provider package.");
+        }
+    }
+
+    private static bool IsOpenAiModel(Type type)
+        => type.Assembly == typeof(OpenAIClient).Assembly && type.IsVisible && !type.IsGenericType &&
+            typeof(IPersistableModel<object>).IsAssignableFrom(type);
+
+    private static bool IsOllamaModel(Type type)
+        => type.Assembly == typeof(OllamaApiClient).Assembly && type.IsVisible && !type.IsGenericType &&
+            (type.Namespace is "OllamaSharp.Models" || type.Namespace?.StartsWith("OllamaSharp.Models.", StringComparison.Ordinal) == true);
 
     private static AgentToolAdmissionException Unsupported(string message)
         => new(AgentToolAdmissionException.UnsupportedProtocolCode, message);

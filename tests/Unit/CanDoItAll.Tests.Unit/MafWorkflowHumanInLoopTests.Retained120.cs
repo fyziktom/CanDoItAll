@@ -19,7 +19,7 @@ public sealed partial class MafWorkflowHumanInLoopTests {
         };
         var fixture = JsonSerializer.Deserialize<RetainedWorkflowFixture>(json, options)!;
         Assert.Equal("1.20.0.0", fixture.MafVersion);
-        Assert.Equal(new Version(1, 22, 0, 0), typeof(Microsoft.Agents.AI.AIAgent).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 28, 0, 0), typeof(Microsoft.Agents.AI.AIAgent).Assembly.GetName().Version);
         Assert.True(fixture.Payload.Payload.HasValidHash);
         var marker = new CountingLlmInvoker();
         var componentId = fixture.Definition.Graph.Nodes.Single(node => node.Id.Value == "marker").Settings.ComponentId!.Value;

@@ -735,7 +735,7 @@
       "evaluated_packages": [
         {
           "Identity": "Microsoft.Agents.AI.Hosting.A2A",
-          "Version": "1.22.0-preview.260918.1"
+          "Version": "1.28.0-preview.261106.1"
         },
         {
           "Identity": "Microsoft.Extensions.DependencyInjection.Abstractions",
@@ -844,19 +844,19 @@
       "evaluated_packages": [
         {
           "Identity": "Microsoft.Agents.AI",
-          "Version": "1.22.0"
+          "Version": "1.28.0"
         },
         {
           "Identity": "Microsoft.Agents.AI.A2A",
-          "Version": "1.22.0-preview.260918.1"
+          "Version": "1.28.0-preview.261106.1"
         },
         {
           "Identity": "Microsoft.Agents.AI.OpenAI",
-          "Version": "1.22.0"
+          "Version": "1.28.0"
         },
         {
           "Identity": "Microsoft.Agents.AI.Workflows",
-          "Version": "1.22.0"
+          "Version": "1.28.0"
         },
         {
           "Identity": "Microsoft.Extensions.AI",
@@ -1849,11 +1849,11 @@
       "evaluated_packages": [
         {
           "Identity": "Microsoft.Agents.AI",
-          "Version": "1.22.0"
+          "Version": "1.28.0"
         },
         {
           "Identity": "Microsoft.Agents.AI.Workflows",
-          "Version": "1.22.0"
+          "Version": "1.28.0"
         },
         {
           "Identity": "Microsoft.Extensions.AI.Abstractions",
@@ -8094,7 +8094,7 @@
     {
       "identity": "src/MAF/MicrosoftAgentFramework.Packages.props",
       "path": "src/MAF/MicrosoftAgentFramework.Packages.props",
-      "sha256_lf": "aca565cec0c37a87b8abe642967ef02ef5530d94cd47e8f5c37a84af41b17559",
+      "sha256_lf": "b9d26ab5a9d804bc062144470c6c7febda40fb038d637a98b290a59a24cf9e61",
       "kind": "BUILD",
       "role": "PRODUCT",
       "type": "Not a component type",

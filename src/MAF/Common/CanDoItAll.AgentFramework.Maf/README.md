@@ -16,7 +16,9 @@ dotnet build src/MAF/Common/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramew
 
 ## Dependencies
 
-The authoritative project and package dependency list is in [CanDoItAll.AgentFramework.Maf.csproj](CanDoItAll.AgentFramework.Maf.csproj). This README focuses on the project's purpose, boundaries, and validation. The current target is MAF 1.22.0 with the matching A2A preview. See [upgrade and retained-state behavior](../../../../docs/architecture/maf-1.22-upgrade.md).
+The .NET 10 adapter uses Microsoft Agent Framework 1.28.0, the matching A2A preview, Microsoft.Extensions.AI 10.11.0 and OpenAI SDK 2.14.0. The durable tool codec resolves the individual SDK model recorded in each checkpoint. See the [package references](CanDoItAll.AgentFramework.Maf.csproj) and [version pins](../../MicrosoftAgentFramework.Packages.props).
+
+Native conversation and approval state from MAF 1.20.0, 1.22.0 and 1.28.0 can be restored when its provider, model, history and policy match. Durable tool proposals also carry their original SDK fingerprint. An incompatible journal requires reconciliation before an operator starts replacement work. Preserve the journal and recorded effects when upgrading. See the [retained-state scenarios](../../../../docs/architecture/maf-1.22-upgrade.md).
 
 ## Runtime Proof Slices
 

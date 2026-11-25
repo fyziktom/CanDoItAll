@@ -184,7 +184,7 @@ public sealed class MafToolAdmissionNativeLoopIntegrationTests {
             $"journal-{wireProvider}-{streaming}-{stage}.json");
         var saved = JsonSerializer.Deserialize<RetainedJournalFixture>(await File.ReadAllTextAsync(path), JsonSerializerOptions.Web)!;
         Assert.Equal("1.20.0.0", saved.MafVersion);
-        Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 28, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
         await using var fixture = await AgentToolAdmissionJournalFixture.RestoreRetainedAsync(saved.Agent, saved.Provider,
             saved.Profile, saved.Detail);
         var probe = new EffectProbe();

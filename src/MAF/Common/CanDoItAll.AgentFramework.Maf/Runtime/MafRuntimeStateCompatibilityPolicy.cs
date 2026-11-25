@@ -207,8 +207,8 @@ internal sealed class MafRuntimeStateCompatibilityPolicy : IRuntimeStateCompatib
         static Version? Parse(string version) => Version.TryParse(version.Split('+')[0], out var parsed) ? parsed : null;
         var captured = Parse(capturedVersion);
         var current = Parse(currentVersion);
-        return current is { Major: 1, Minor: 22, Build: 0 } &&
-            captured is { Major: 1, Minor: 20 or 22, Build: 0 };
+        return current is { Major: 1, Minor: 28, Build: 0 } &&
+            captured is { Major: 1, Minor: 20 or 22 or 28, Build: 0 };
     }
 
     private static bool TryParseMajor(string version, out int major)
