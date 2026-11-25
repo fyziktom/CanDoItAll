@@ -42,26 +42,44 @@ public sealed class SpreadsheetAgentToolFailureRegressionTests
         Assert.False(File.Exists(workbookPath));
     }
 
-    [Fact]
-    public void Existing_input_workbook_can_be_updated_in_place_without_overwrite()
-    {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Existing_input_workbook_can_be_updated_in_place_without_overwrite(bool useEquivalentOutputPath) {
         using var temp = new SpreadsheetRegressionTempDirectory();
         var workbookPath = Path.Combine(temp.Path, "in-place-update.xlsx");
+        var outputPath = useEquivalentOutputPath ? Path.Combine(temp.Path, ".", Path.GetFileName(workbookPath)) : workbookPath;
         var service = new ClosedXmlSpreadsheetDocumentService();
         service.Write(CreateValidWriteRequest(workbookPath, overwrite: false));
 
         var result = service.Write(new SpreadsheetWriteRequest(
             workbookPath,
-            workbookPath,
+            outputPath,
             "Calculations",
             [new SpreadsheetCellWrite("A1", "=1+1")],
             [],
             CreateWorkbookIfMissing: true,
             Overwrite: false));
 
-        Assert.Equal(workbookPath, result.WorkbookPath);
+        Assert.Equal(outputPath, result.WorkbookPath);
         Assert.Equal("Created", service.ReadCell(workbookPath, "Summary", "A1").Value);
         Assert.Equal("=1+1", service.ReadCell(workbookPath, "Calculations", "A1").Value);
+    }
+
+    [Fact]
+    public void Writing_to_a_new_output_preserves_the_input_workbook() {
+        using var temp = new SpreadsheetRegressionTempDirectory();
+        var original = Path.Combine(temp.Path, "original.xlsx");
+        var copy = Path.Combine(temp.Path, "revised.xlsx");
+        var service = new ClosedXmlSpreadsheetDocumentService();
+        service.Write(CreateValidWriteRequest(original, overwrite: false));
+        var originalBytes = File.ReadAllBytes(original);
+
+        service.Write(new SpreadsheetWriteRequest(original, copy, "Summary",
+            [new SpreadsheetCellWrite("A1", "Revised")], [], CreateWorkbookIfMissing: false, Overwrite: false));
+
+        Assert.Equal(originalBytes, File.ReadAllBytes(original));
+        Assert.Equal("Revised", service.ReadCell(copy, "Summary", "A1").Value);
     }
 
     [Fact]

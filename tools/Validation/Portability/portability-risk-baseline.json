@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-24T23:04:51.666841+00:00",
+  "generated_utc": "2026-11-25T23:59:31.789285+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15859,
+  "allowance_count": 15860,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -41159,6 +41159,12 @@
       "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Spreadsheets/ClosedXmlSpreadsheetDocumentService.cs",
       "category": "os-branch",
       "source_fingerprint": "9de4db19bac7ddea3ffd9889a3909a8d84e2b0e87af1601bf422d6b48512d227",
+      "count": 1
+    },
+    {
+      "path": "src/MAF/Tools/CanDoItAll.Tools.Documents/Spreadsheets/ClosedXmlSpreadsheetDocumentService.cs",
+      "category": "path-api",
+      "source_fingerprint": "0351124003c3aa6e7d403849778e4eeda35f177632bf119c887b61582f688a6c",
       "count": 1
     },
     {
