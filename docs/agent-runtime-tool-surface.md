@@ -101,6 +101,14 @@ There is no silent snapshot-to-database fallback. Writes always go through canon
 See [Internal communication](architecture/internal-communication.md) for the execution
 and live-event communication contract.
 
+## Attaching a workbook to a project
+
+Open the destination project, choose **Agent chats** in Structure or Gantt and start a chat with the agent. The agent needs workspace spreadsheet access, permission to write non-task structure, and access to that project. An unrestricted project writer also has the required project permission. The managed Financial Strategist template starts with project read access. An operator can grant non-task writes for the projects where it should publish files.
+
+A chat opened from the general Agents page can create a workbook when its workspace tools allow it. Project mutations require a project context. A read-only project context also filters out workspace write tools for that run. Start the chat from the destination project after granting access so the new run uses the intended project and permissions.
+
+The agent creates and validates the workbook in the managed workspace. It passes the returned workbook path as `request.sourceWorkspacePath` to `project_structure_asset_create`, together with the project ID, a `File` object type, title and parent node. The asset metadata and content reads return the project node, original filename and stored length. The agent receives a bounded confirmation for binary workbooks. The authorized content API can return the complete workbook for download.
+
 ## Image Generation And Asset Analysis
 
 `image_generation_create` accepts PNG, JPEG and WebP raster sources. It checks the
