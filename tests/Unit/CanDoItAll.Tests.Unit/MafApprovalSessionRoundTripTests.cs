@@ -666,6 +666,10 @@ public sealed class MafApprovalSessionRoundTripTests
                 .SelectMany(message => message.Contents)
                 .OfType<FunctionResultContent>()
                 .ToList();
+            foreach (var result in functionResults) {
+                Assert.Null(result.Exception);
+                Assert.Equal("written", result.Result?.ToString());
+            }
             if (functionResults.Any(result => string.Equals(result.CallId, "call-002", StringComparison.Ordinal)))
             {
                 return Task.FromResult(CreateResponse(new TextContent("completed")));
