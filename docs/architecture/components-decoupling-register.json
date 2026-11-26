@@ -7566,7 +7566,7 @@
     {
       "identity": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
       "path": "src/MAF/Common/CanDoItAll.AgentFramework.Components/ChatWorkspacePanel.razor",
-      "sha256_lf": "a5e8a028c360e6c667db86feec9602a2e61b01c6a8f7a9e9d43031f28d96b839",
+      "sha256_lf": "744f17037236c3d3229b19dcc74936a51b6caeec9efbc04e7051c5180032d4cc",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.Components.ChatWorkspacePanel",
@@ -10035,7 +10035,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor",
-      "sha256_lf": "b01e6aa556f93f050305f3ac60447a41f7b77187b909c38384d57e52d8ff2620",
+      "sha256_lf": "9c55bd7cd4150cab82529ca8347f5cae3626cc33e236956a37ef6b0bfddeb5e4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel",
@@ -10063,7 +10063,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentChatPanel.razor.cs",
-      "sha256_lf": "a980e275e091c877760c3aa43dbd701aa4a88cd9bf1441acbb1d7cfda035f55f",
+      "sha256_lf": "c5da17e82eff29d1e0db2fb852b48016fadc0528edafcc04ea3465906a85241c",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentChatPanel, CanDoItAll.Modules.AgentFramework.Pages.Components.VoiceOperation",
@@ -10294,7 +10294,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
       "path": "src/Modules/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFloatingConversationContent.razor",
-      "sha256_lf": "f9fdf065d5f5184b32fe44463d0b0215238c4f44060032d09aeccb8250169d52",
+      "sha256_lf": "feb15580e7415c5d7d0ae6196c35dd5617a99e75792953772b09dbd347a5270a",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.AgentFramework.Pages.Components.AgentFloatingConversationContent",
@@ -26620,7 +26620,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
-      "sha256_lf": "8f85930b657af58fb353c85fe242e5461fb1c9c1bfd84184d52405451c67f954",
+      "sha256_lf": "b6da4c6d8eb5b59e339abffe5d1799926a3a20a94373bcd012fd1b3a02118276",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.ChatWorkspaceSurface",
@@ -29028,7 +29028,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationComposer.razor",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationComposer.razor",
-      "sha256_lf": "0f40dc61cbb0511ee99826de747189ead73d4146ea16032c1d81abd03922b727",
+      "sha256_lf": "16a9e1a9c32f4a2d8dc08ac4d8574cc279b03ea4db269566d8954dd0c271cb84",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Conversations.Components.ConversationComposer",
@@ -29051,7 +29051,7 @@
     {
       "identity": "src/UI/CanDoItAll.Conversations.Components/ConversationComposer.razor.css",
       "path": "src/UI/CanDoItAll.Conversations.Components/ConversationComposer.razor.css",
-      "sha256_lf": "98948b9b9792c2b4c0ecf04b2ac145dd4d0ea15c279fc3e3bbc56141d6f3e636",
+      "sha256_lf": "31f9c45399c71b75e893d2b051ef100ddf560f143d20ab3c5eca6b8d525bb6d6",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",

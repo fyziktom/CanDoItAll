@@ -13,6 +13,21 @@ profile lifetime, agent, conversation, activity stream, execution state and safe
 return location needed to reconnect. It does not retain a component, circuit
 service provider, authentication provider or browser callback.
 
+## Floating composer
+
+**Send** submits the draft with the context shown in the conversation header. Open
+the project name there to inspect access, detach, or follow the current surface
+again. The paperclip adds files from this conversation's last run to the draft
+alongside any uploaded images.
+
+**Plan tasks** submits a separate request to prepare project tasks for review.
+It requires a followed Project Structure context, permission to use tools and
+write tasks for that project, and a saved workspace decision-data policy. If
+planning is rejected before a run starts, the composer explains the reason and
+keeps the draft available to edit or send as an ordinary message.
+After approval, the project receives one change notification for the committed
+batch. Its open canvas can then display the new tasks together.
+
 ## Responsibility and dependencies
 
 | Responsibility | Current owner | Target owner |

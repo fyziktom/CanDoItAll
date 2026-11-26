@@ -15,6 +15,9 @@
                     PersistedActiveChatRunState="@Chat.RunState"
                     PersistedActivityStreamId="@Chat.ActivityStreamId"
                     PersistedExecutionRunId="@Chat.ExecutionRunId"
+                    HasProjectPlanningContext="@(Binding?.Mode != AgentConversationContextMode.Detached &&
+                        currentContext?.Scope.Source.Kind.Value == AgentChatTrustedSourceKinds.ProjectStructure &&
+                        currentContext.CanRead(Chat.Agent.AgentId))"
                     DisplayMode="AgentChatPanelDisplayMode.FocusedFloating">
         <HeaderContext>
             <AgentConversationContextSurface State="Presentation" Intent="HandleContextIntent" />

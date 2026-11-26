@@ -57,6 +57,9 @@ public partial class AgentChatPanel : IAsyncDisposable {
     [Parameter]
     public AgentChatPanelDisplayMode DisplayMode { get; set; }
 
+    [Parameter]
+    public bool HasProjectPlanningContext { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
@@ -433,6 +436,25 @@ public partial class AgentChatPanel : IAsyncDisposable {
 
     private Task SendMessageAsync() => SendMessageCoreAsync(null);
 
+    private string? ProjectPlanningUnavailableReason() {
+        if (selectedAgent is null) {
+            return "Select an agent to plan project tasks.";
+        }
+        if (IsFocusedFloating) {
+            if (!HasProjectPlanningContext) {
+                return "Open Project Structure and follow its context to plan tasks.";
+            }
+            var access = AgentProjectStructureAccessMetadata.Read(selectedAgent.ConfigurationJson);
+            if (!selectedAgent.Permissions.CanUseTools || !(access.CanWrite || access.CanWriteTasks)) {
+                return "Task planning requires permission to use tools and write project tasks.";
+            }
+        }
+        if (draftAttachmentPaths.Count > 0) {
+            return "Remove attachments before planning project tasks.";
+        }
+        return string.IsNullOrWhiteSpace(draftPrompt) ? "Enter a prompt to plan project tasks." : null;
+    }
+
     private Task SendMessageCoreAsync(AgentPlanningOwner? planningOwner) {
         if (!selectedAgentId.HasValue) {
             SetMessage("Heads up", "warning", "Select a technical agent before sending a prompt.");
@@ -453,8 +475,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
             return Task.CompletedTask;
         }
 
-        if (planningOwner is not null && draftAttachmentPaths.Count > 0) {
-            SetMessage("Attachments are not supported", "warning", "Remove the attachments before planning project tasks. Your draft has not changed.");
+        if (planningOwner is not null && ProjectPlanningUnavailableReason() is { } reason) {
+            SetMessage("Task planning unavailable", "info", reason);
             return Task.CompletedTask;
         }
 
@@ -584,7 +606,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             } else {
                 LogDetachedOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "send");
             }
-        } catch (AgentChatAdmissionConflictException exception) when (!executionCompleted) {
+        } catch (AgentChatAdmissionRejectedException exception) when (!executionCompleted) {
             var originalTarget = exception.AgentId == executionAgentId && exception.ChatSessionId == executionSessionId;
             if (!submissionObserved) {
                 Submissions.RecordFailure(submission.Id, exception);
@@ -1285,14 +1307,15 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 SetMessage("Attachment failed", "danger", "The artifacts do not belong to this thread.");
                 return;
             }
-            draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
+            var artifacts = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
                 .Distinct(StringComparer.Ordinal).ToImmutableArray();
+            draftAttachmentPaths = draftAttachmentPaths.Union(artifacts, StringComparer.Ordinal).ToImmutableArray();
             ProtectUnsentDraft();
-            var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
-            SetMessage("Ready", omitted > 0 || draftAttachmentPaths.Count == 0 ? "warning" : "success", omitted > 0
-                ? $"Staged {draftAttachmentPaths.Count} artifact path(s). Unsafe or duplicate references were omitted."
-                : draftAttachmentPaths.Count == 0 ? "The selected run does not have persisted artifacts yet."
-                : $"Staged {draftAttachmentPaths.Count} artifact path(s) for the next prompt.");
+            var omitted = detail.Artifacts.Count - artifacts.Length;
+            SetMessage("Ready", omitted > 0 || artifacts.IsEmpty ? "warning" : "success", omitted > 0
+                ? $"Staged {artifacts.Length} artifact path(s). Unsafe or duplicate references were omitted."
+                : artifacts.IsEmpty ? "The selected run does not have persisted artifacts yet."
+                : $"Staged {artifacts.Length} artifact path(s) for the next prompt.");
         } catch (Exception exception) {
             if (chatSession.IsCurrent(generation) && !request.IsCancellationRequested) {
                 LogOperationFailure(exception, run.AgentId, run.ChatSessionId, ActiveChatHandleId, "read artifacts", false);

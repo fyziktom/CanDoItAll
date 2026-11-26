@@ -45,8 +45,8 @@
 }
 
 .chat-composer-panel--compact .chat-composer__tools {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
 }
 
 .chat-composer-panel--compact ::deep .chat-composer__textarea {

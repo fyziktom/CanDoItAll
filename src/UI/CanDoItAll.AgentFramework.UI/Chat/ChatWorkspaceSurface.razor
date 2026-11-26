@@ -159,19 +159,20 @@
                               DraftPromptChanged="@(value => EmitAsync(ChatWorkspaceAction.DraftChanged, value))"
                               SendRequested="@(() => EmitAsync(ChatWorkspaceAction.Send))"
                               IsBusy="@IsBusy"
-                              IsSendDisabled="@(Presentation.IsSendBlocked || IsBusy || HasPendingApprovals)"
+                              IsSendDisabled="@(Presentation.IsSendBlocked || IsBusy || HasPendingApprovals ||
+                                  (Compact && string.IsNullOrWhiteSpace(DraftPrompt) && DraftAttachmentPaths.Count == 0))"
                               ComposerKey="@ComposerKey" Compact="Compact">
             <LeadingActions>
                     @ComposerActions
                     @AttachmentPicker
-                    <Button Icon="add"
+                    <Button Icon="attach_file"
                             Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Disabled="@IsBusy"
+                            Disabled="@(IsBusy || !Presentation.CanAttachRunArtifacts)"
                             Class="chat-composer__icon-button"
                             Click="@(async () => await EmitAsync(ChatWorkspaceAction.AttachArtifacts))"
-                            aria-label="Attach workspace artifact"
-                            title="Attach workspace artifact"
+                            aria-label="Attach files from the last run"
+                            title="@(Presentation.CanAttachRunArtifacts ? "Attach files from the last run" : "Files can be attached after this conversation has a run.")"
                             data-testid="chat-attachment-button" />
             </LeadingActions>
             <TrailingActions>

@@ -36,6 +36,7 @@ public sealed class AgentChatSandboxFixture {
                 new(new("fixture-assistant"), ConversationMessageRole.Assistant, "Assistant", PresentationTone.Success,
                     text, ChatPresentationTime.Format(now.AddMinutes(1)), copyValue: text)],
             DraftPrompt = "A safe sample prompt",
+            CanAttachRunArtifacts = scenario is not (AgentChatScenario.Threads or AgentChatScenario.Loading or AgentChatScenario.NoAgents or AgentChatScenario.MissingAgent),
             CanUseVoiceMode = true,
             ComposerGuidance = "All actions update sample presentation only."
         };
