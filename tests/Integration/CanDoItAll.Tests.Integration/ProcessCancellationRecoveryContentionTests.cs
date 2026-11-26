@@ -91,23 +91,31 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
             var firstContext = fixture.CommandContext;
             var secondContext = fixture.CommandContext;
             Assert.True((await engine.BeginRootCancellationAsync(fixture.State, firstContext, token)).CommittedNow);
-            Assert.True((await engine.BeginRootCancellationAsync(siblingState, secondContext, token)).CommittedNow);
             await using var inspection = Context(services);
             await worker.StartAsync(token);
-            while (!await inspection.CancellationRecoveries.AsNoTracking().AnyAsync(
-                    item => item.RootRunId == fixture.State.RootRunId.Value && item.LeaseGeneration > 0, token)) {
+            // Discovery also takes a lease. Measure contention once the worker owns the decision behind the held file lock.
+            while (true) {
+                var position = await inspection.CancellationRecoveries.AsNoTracking()
+                    .Where(item => item.RootRunId == fixture.State.RootRunId.Value && item.LeaseToken != null)
+                    .Select(item => item.PositionJson).SingleOrDefaultAsync(token);
+                if (position is not null && ProcessCancellationRecoveryCodec.ReadPosition(position).CurrentDecision is not null) {
+                    break;
+                }
                 await Task.Delay(10, token);
             }
             var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var writerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             batch = Task.WhenAll(Enumerable.Range(0, writers).Select(async owner => {
                 var publisher = new FileSandboxWorkspaceStore(layout.RootPath, layout.Scope);
                 await start.Task.WaitAsync(token);
                 while (Interlocked.Increment(ref next) < 100) {
                     var watch = Stopwatch.StartNew();
                     try {
-                        await publisher.UpdateExecutionRunDetailAsync(selected[owner].Id, current => current with {
+                        var publication = publisher.UpdateExecutionRunDetailAsync(selected[owner].Id, current => current with {
                             Run = current.Run with { Revision = checked(current.Run.Revision + 1), UpdatedAtUtc = current.Run.UpdatedAtUtc.AddTicks(1) }
                         }, token);
+                        writerStarted.TrySetResult();
+                        await publication;
                         accepted[owner]++;
                         writes.Add(watch.Elapsed.TotalMilliseconds);
                     } catch (SandboxWorkspacePublicationConflictException) {
@@ -122,6 +130,8 @@ public sealed class ProcessCancellationRecoveryContentionTests(ITestOutputHelper
             deadline.CancelAfter(TimeSpan.FromMinutes(3));
             elapsed.Start();
             start.SetResult();
+            await writerStarted.Task.WaitAsync(token);
+            Assert.True((await engine.BeginRootCancellationAsync(siblingState, secondContext, token)).CommittedNow);
             while (!batch.IsCompleted) {
                 var observed = await store.GetExecutionRunAsync(siblingRun.Id, token);
                 if (observed?.Outcome == RunOutcome.Cancelled) {
