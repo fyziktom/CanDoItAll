@@ -15,8 +15,8 @@
                     <StatusBadge Tone="@StateTone(view)" Text="@StateLabel(view)" />
                 }
                 @if (!string.IsNullOrWhiteSpace(view.Opening.Notice)) {
-                    <HelpPopover Glyph="i" AriaLabel="File information" Title="File information" Body="@view.Opening.Notice"
-                                 OpenOnHover="true" PanelTestId="project-structure-file-interaction-policy" />
+                    <HelpPopover Glyph="i" AriaLabel="File information" Title="@view.Opening.Notice" Body="@view.Opening.Notice"
+                                 PanelTestId="project-structure-file-interaction-policy" />
                 }
                 <Button Text="Close" Size="ButtonSize.Small" Variant="Variant.Text" Click="@(() => RequestCloseAsync(view))" />
             </Actions>

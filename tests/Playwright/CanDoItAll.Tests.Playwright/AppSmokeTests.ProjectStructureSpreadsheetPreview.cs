@@ -125,6 +125,8 @@ public sealed partial class AppSmokeTests
         Assert.InRange(Math.Abs(rail.Y - viewer.Y), 0, 1);
         var info = dialog.GetByRole(AriaRole.Button, new() { Name = "File information", Exact = true });
         var notice = dialog.GetByTestId("project-structure-file-interaction-policy");
+        Assert.Contains("bounded, read-only preview", await info.GetAttributeAsync("title"));
+        await info.HoverAsync();
         await Assertions.Expect(notice).ToHaveCountAsync(0);
         await info.FocusAsync();
         await info.PressAsync("Enter");

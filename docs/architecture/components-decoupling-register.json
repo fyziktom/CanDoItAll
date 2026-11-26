@@ -34830,7 +34830,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
-      "sha256_lf": "4c0fdf6b664a2643df99c4ae6eb95ff69b3e6b9854f36de1e07e1250ea8adb90",
+      "sha256_lf": "7ea95475063a3a840009331300b1aae636c8927ecf6a25c50c6053ad66c5c03e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.ContentFileInteractionDialog",
