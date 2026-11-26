@@ -164,14 +164,14 @@
             <LeadingActions>
                     @ComposerActions
                     @AttachmentPicker
-                    <Button Icon="add"
+                    <Button Icon="attach_file"
                             Tone="ButtonTone.Default"
                             Size="ButtonSize.Small"
-                            Disabled="@IsBusy"
+                            Disabled="@(IsBusy || !Presentation.CanAttachRunArtifacts)"
                             Class="chat-composer__icon-button"
                             Click="@(async () => await EmitAsync(ChatWorkspaceAction.AttachArtifacts))"
-                            aria-label="Attach workspace artifact"
-                            title="Attach workspace artifact"
+                            aria-label="Attach files from the last run"
+                            title="@(Presentation.CanAttachRunArtifacts ? "Attach files from the last run" : "Files can be attached after this conversation has a run.")"
                             data-testid="chat-attachment-button" />
             </LeadingActions>
             <TrailingActions>

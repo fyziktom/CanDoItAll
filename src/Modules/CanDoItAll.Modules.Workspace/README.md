@@ -4,6 +4,11 @@
 
 Product module for workspace records, workspace state, and cross-module workspace services.
 
+**Settings → Remote instances** and the inline `RemoteInstancePicker` use
+`IRemoteInstanceRegistry` to manage the same saved connections. Adding a publisher
+from a feature makes it available in Settings and the other import pages.
+See [remote instance connections](../../../docs/architecture/remote-instance-connections.md).
+
 ## Project Type
 
 - SDK: `Microsoft.NET.Sdk.Razor`

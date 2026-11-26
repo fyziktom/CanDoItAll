@@ -10,6 +10,7 @@ internal enum ProjectStructureAssetAgentFailureKind
     MediaPayloadTooLarge,
     InvalidBase64Payload,
     MediaSourceRequired,
+    RevisionMediaSourceInvalid,
     NodeNotFound,
     AssetRequired
 }
@@ -32,6 +33,8 @@ internal static class ProjectStructureAssetAgentFailureBoundary
                 (400, "InvalidBase64Payload", "The media payload base64Data is invalid. Encode the file as valid base64 and retry."),
             ProjectStructureAssetAgentFailureKind.MediaSourceRequired =>
                 (400, "MediaSourceRequired", "Asset creation requires a source accepted by the current tool, such as a media payload or source workspace path. Provide one supported source and retry."),
+            ProjectStructureAssetAgentFailureKind.RevisionMediaSourceInvalid =>
+                (400, "RevisionMediaSourceInvalid", "Supply exactly one of media or sourceWorkspacePath for the revision."),
             ProjectStructureAssetAgentFailureKind.NodeNotFound =>
                 (404, "NodeNotFound", "The requested project-structure node was not found. Read the current structure and retry with an existing node id."),
             ProjectStructureAssetAgentFailureKind.AssetRequired =>

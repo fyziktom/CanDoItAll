@@ -18,6 +18,84 @@ public sealed class LlmChatDefinitionUiTests
     private static readonly Guid DefinitionId = Guid.Parse("10101010-1010-1010-1010-101010101010");
     private static readonly Guid ProviderId = Guid.Parse("20202020-2020-2020-2020-202020202020");
 
+    [Fact]
+    public async Task Sharing_in_the_open_editor_preserves_unsaved_fields_and_uses_its_original_access() {
+        var otherId = Guid.NewGuid();
+        var gateway = new StubDefinitionGateway(CreateEditor(tags: ["api", "research"]),
+            CreateEditor(name: "Another definition", definitionId: otherId, tags: ["api"]));
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        LlmChatDefinitionSharingContext? sharing = null;
+        var catalogRefreshes = 0;
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionId, DefinitionId)
+            .Add(component => component.SharingChanged, () => { catalogRefreshes++; })
+            .Add(component => component.DefinitionSharing, editor => builder => {
+                sharing = editor;
+                builder.AddContent(0, editor.Definition?.Name);
+            }));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']").Change("Unsaved local name");
+        Assert.Equal("api", cut.WaitForElement("[data-testid='llm-chat-definition-managed-tags']").TextContent.Trim());
+        cut.Find("[data-testid='llm-chat-definition-tab-sharing']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(DefinitionId, sharing?.Definition?.DefinitionId));
+        var original = sharing!;
+        Assert.True(original.Access.IsCurrent);
+        await cut.InvokeAsync(() => original.SharingChanged(false, true));
+        Assert.Equal(1, catalogRefreshes);
+        Assert.Empty(cut.FindAll("[data-testid='llm-chat-definition-editor-save']"));
+        Assert.Empty(cut.FindAll("[data-testid^='llm-chat-definition-status-']"));
+        cut.Find("[data-testid='llm-chat-definition-editor-cancel']").Click();
+        cut.WaitForElement("[data-testid='llm-chat-definition-discard-confirmation']");
+        cut.Find("[data-testid='llm-chat-definition-tab-identity']").Click();
+        Assert.Equal("shared", cut.Find("[data-testid='llm-chat-definition-managed-tags']").TextContent.Trim());
+        Assert.Equal(["research"], cut.FindComponent<TagEditor>().Instance.Value);
+        Assert.Single(cut.FindAll("[data-testid='llm-chat-definition-editor-save']"));
+        Assert.Equal("Unsaved local name", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value"));
+        Assert.Equal(0, gateway.UpdateCalls);
+        cut.Render(parameters => parameters.Add(component => component.DefinitionId, otherId));
+        cut.WaitForAssertion(() => Assert.Equal("Another definition", cut.Find("[data-testid='llm-chat-definition-name']").GetAttribute("value")));
+        Assert.False(original.Access.IsCurrent);
+        await cut.InvokeAsync(() => original.SharingChanged(false, true));
+        Assert.Equal(1, catalogRefreshes);
+        Assert.Equal("api", cut.Find("[data-testid='llm-chat-definition-managed-tags']").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task Existing_custom_tags_keep_their_full_capacity_when_sharing_tags_are_present() {
+        var custom = Enumerable.Range(1, LlmChatDefinitionValidation.MaximumTags).Select(index => $"tag-{index:D2}").ToArray();
+        var gateway = new StubDefinitionGateway(CreateEditor(tags: ["shared", "api", .. custom]));
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters.Add(component => component.DefinitionId, DefinitionId));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']");
+        var editor = cut.FindComponent<TagEditor>();
+        Assert.Equal(custom, editor.Instance.Value);
+        Assert.Equal(custom.Length, editor.Instance.MaxTags);
+        await cut.InvokeAsync(() => editor.Instance.ValueChanged.InvokeAsync(custom[..^1]));
+        Assert.Equal(custom.Length, editor.Instance.MaxTags);
+        await cut.InvokeAsync(() => editor.Instance.ValueChanged.InvokeAsync([" API ", .. custom, "SHARED"]));
+        Assert.Equal(custom, editor.Instance.Value);
+        cut.Find("[data-testid='llm-chat-definition-name']").Change("Updated custom tag fixture");
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(custom, gateway.UpdatedMutation?.Tags));
+    }
+
+    [Fact]
+    public void Saving_a_new_chat_from_sharing_opens_the_committed_definition() {
+        var gateway = new StubDefinitionGateway(CreateEditor());
+        using var context = CreateContext(gateway, new StubProviderGateway(), new StubAuthorization(true, true));
+        Guid? opened = null;
+        var cut = context.Render<LlmChatDefinitionEditorDialog>(parameters => parameters
+            .Add(component => component.DefinitionSharing, editor => builder => builder.AddContent(0, editor.Definition?.Name ?? "Save first"))
+            .Add(component => component.CreatedForSharing, id => opened = id));
+        cut.WaitForElement("[data-testid='llm-chat-definition-name']").Change("Available locally");
+        cut.Find("[data-testid='llm-chat-definition-tab-runtime']").Click();
+        cut.Find("[data-testid='llm-chat-definition-provider']").Change(ProviderId.ToString("D"));
+        cut.Find("[data-testid='llm-chat-definition-tab-sharing']").Click();
+        Assert.Contains("Save first", cut.Markup);
+        cut.Find("[data-testid='llm-chat-definition-editor-save']").Click();
+        cut.WaitForAssertion(() => Assert.Equal(DefinitionId, opened));
+        Assert.Equal("Available locally", gateway.CreatedMutation?.Name);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("_content/CanDoItAll.Components.BaseLib/assets/identity/avatars/avatar-02.jpg")]

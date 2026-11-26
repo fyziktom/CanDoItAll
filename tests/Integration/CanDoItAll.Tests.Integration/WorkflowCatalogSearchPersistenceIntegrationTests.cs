@@ -11,6 +11,7 @@ using CanDoItAll.Composition;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Prompts;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
@@ -198,6 +199,41 @@ public sealed class WorkflowCatalogSearchPersistenceIntegrationTests(ITestOutput
     }
 
     public enum CatalogReadLane { List, Search, Lookup }
+
+    [Fact]
+    public async Task Sharing_tag_search_matches_current_lifetimes_before_count_and_paging() {
+        AppDbContextModelRegistry.ConfigureAssemblies(ModuleAssemblies.All);
+        await using var database = PostgresTestDatabaseLease.Create("workflowsharingtags");
+        var factory = new WorkflowUsagePostgresDbContextFactory(database.CreateAppDbContextOptions());
+        SeededCatalog seeded;
+        await using (var db = factory.CreateDbContext()) {
+            await db.Database.EnsureCreatedAsync();
+            seeded = await SeedCatalogAsync(db);
+            var birth = (await db.Set<WorkflowDefinitionRecord>().Select(row => row.CreatedAtUtc).FirstAsync()).UtcTicks;
+            void Add(int index, long ticks, bool api, bool shared) => db.Add(new RemoteTemplatePublication {
+                Kind = RemoteTemplateKind.Workflow, DefinitionId = seeded.MatchingIds[index].Value, CreatedUtcTicks = ticks,
+                ApiAvailable = api, SharedTemplate = shared
+            });
+            Add(0, birth, false, true);
+            Add(1, birth, true, true);
+            Add(2, birth - 10, false, true);
+            Add(3, birth, false, false);
+            await db.SaveChangesAsync();
+        }
+        var catalog = WorkflowOwnerPersistenceTestFactory.CreateCatalog(WorkflowObservationTestSupport.Create(), factory, new WorkflowDefinitionValidator(), CreateGallery(factory));
+        var shared = await catalog.SearchDefinitionsAsync(new("  ShArEd ", WorkflowLifecycleStatus.Active, pageIndex: 1, pageSize: 1));
+        Assert.Equal(2, shared.TotalCount);
+        var both = Assert.Single(shared.Items);
+        Assert.Equal(seeded.MatchingIds[1], both.Id);
+        Assert.Equal([DefinitionSharingTags.Shared, DefinitionSharingTags.Api], both.Tags);
+        var api = await catalog.SearchDefinitionsAsync(new("API", WorkflowLifecycleStatus.Active));
+        Assert.Equal(4, api.TotalCount);
+        Assert.DoesNotContain(api.Items, item => item.Id == seeded.MatchingIds[0] || item.Id == seeded.MatchingIds[3]);
+        Assert.Equal([DefinitionSharingTags.Api], Assert.Single(api.Items, item => item.Id == seeded.MatchingIds[2]).Tags);
+        var lookup = await catalog.LookupDefinitionsAsync(new([seeded.MatchingIds[0], seeded.MatchingIds[3]]));
+        Assert.Equal([DefinitionSharingTags.Shared], Assert.Single(lookup, row => row.Id == seeded.MatchingIds[0]).Tags);
+        Assert.Empty(Assert.Single(lookup, row => row.Id == seeded.MatchingIds[3]).Tags);
+    }
 
     [Theory]
     [InlineData(false)]

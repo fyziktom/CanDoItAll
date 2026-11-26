@@ -162,6 +162,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         }
     }
 
+    public Task<bool?> FindAgentApiAvailabilityAsync(Guid agentId, CancellationToken cancellationToken)
+        => ResolveService().FindAgentApiAvailabilityAsync(agentId, cancellationToken);
+
     public Task<IReadOnlyList<AgentDefinition>> ListAgentsAsync(bool includeTemplates = true, CancellationToken cancellationToken = default)
     {
         return ResolveService().ListAgentsAsync(includeTemplates, cancellationToken);
@@ -331,7 +334,8 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     public Task<Guid> ConvertToTemplateAsync(Guid agentId, string templateKey, CancellationToken cancellationToken = default)
         => CompleteAgentCopyAsync(() => ResolveService().ConvertToTemplateAsync(agentId, templateKey, cancellationToken), cancellationToken);
 
-    private async Task<Guid> CompleteAgentCopyAsync(Func<Task<Guid>> copy, CancellationToken cancellationToken) {
+    private async Task<Guid> CompleteAgentCopyAsync(Func<Task<Guid>> copy, CancellationToken cancellationToken,
+        AgentExecutionActivityWorkspaceIdentity? expectedWorkspace = null) {
         Guid id;
         Exception? publicationWarning = null;
         try {
@@ -342,7 +346,7 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         }
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
             exception => new AgentDirectoryProjectionSynchronizationException(id,
-                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception)));
+                publicationWarning is null ? exception : new AggregateException(publicationWarning, exception)), expectedWorkspace);
         if (publicationWarning is not null) {
             throw new AgentDirectoryProjectionSynchronizationException(id, publicationWarning);
         }
@@ -360,6 +364,16 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
         await SynchronizeDirectoryProjectionWithReferenceDataInvalidationAsync(cancellationToken,
             exception => new AgentDirectoryProjectionSynchronizationException(agentId, exception));
         return agentId;
+    }
+
+    public async Task<Guid> ImportRemoteAgentTemplateAsync(Guid sourceId, RemoteAgentTemplate template,
+        AgentExecutionActivityWorkspaceIdentity expectedWorkspace, CancellationToken cancellationToken = default, RemoteTemplateModelChoice? model = null) {
+        var (service, workspace) = ResolveExternalMutationWorkspace();
+        if (workspace != expectedWorkspace) {
+            throw new RemoteAgentTemplateImportException("The active workspace changed. Select the remote template again.");
+        }
+        return await CompleteAgentCopyAsync(() => service.ImportRemoteAgentTemplateAsync(sourceId, template, expectedWorkspace, cancellationToken, model),
+            cancellationToken, expectedWorkspace);
     }
 
     public async Task<AgentPackageImportReceipt> ImportAgentPackageAsync(
@@ -526,6 +540,9 @@ internal sealed class CurrentProfileAgentFrameworkWorkspaceService :
     {
         return ResolveService().GetChatPageBootstrapAsync(includeTemplates, cancellationToken);
     }
+
+    public Task<ChatPageBootstrapSnapshot> GetApiChatPageBootstrapAsync(bool includeTemplates, CancellationToken cancellationToken) =>
+        ResolveService().GetApiChatPageBootstrapAsync(includeTemplates, cancellationToken);
 
     public Task<ChatAgentWorkspaceSnapshot> GetChatAgentWorkspaceAsync(Guid agentId, Guid? preferredSessionId = null, CancellationToken cancellationToken = default)
     {

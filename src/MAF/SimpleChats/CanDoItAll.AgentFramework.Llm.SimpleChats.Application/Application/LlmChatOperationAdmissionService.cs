@@ -66,6 +66,10 @@ public sealed class LlmChatOperationAdmissionService(
                     : Result<LlmChatSendAdmission>.Failure(LlmChatErrors.OperationIdConflict());
             }
 
+            if (command.CanStartNewTurn is { } canStart && !await canStart(conversation.DefinitionId, token)) {
+                return Result<LlmChatSendAdmission>.Failure(LlmChatErrors.ConversationNotFound());
+            }
+
             if (!dispatchSignal.HasAvailableExecutor)
             {
                 return Result<LlmChatSendAdmission>.Failure(LlmChatErrors.DispatcherUnavailable());

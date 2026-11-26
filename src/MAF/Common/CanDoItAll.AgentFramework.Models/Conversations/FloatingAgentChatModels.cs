@@ -1089,6 +1089,9 @@ public sealed record ActiveAgentChat(
     public bool IsVisible => Visibility == ActiveAgentChatVisibility.Visible;
 
     public bool CanStop => RunState == ActiveAgentChatRunState.Idle;
+
+    public bool CanCancelPendingRun => RunState == ActiveAgentChatRunState.AwaitingApproval &&
+        ChatSessionId.HasValue && ExecutionRunId.HasValue && ActivityStreamId is not null;
 }
 
 public sealed record FloatingAgentChatSettings(

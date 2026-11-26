@@ -192,6 +192,10 @@ public sealed class ProviderModelSelectionException(
 
 public static class ProviderModelSelectionPolicy
 {
+    public static bool CanPinLocalAgentModel(ProviderProfile profile, string model) =>
+        string.Equals(profile.DefaultModel, model, StringComparison.Ordinal) ||
+        ProviderPricingDefaults.TryFindPrice(profile.ModelPrices, model, out _);
+
     public static void EnsureAllowed(
         ProviderProfile provider,
         string? requestedModel)

@@ -22,6 +22,7 @@ public partial class SharedProviderSourcesDialog : ISharedProviderSourcesView, I
     public IReadOnlyList<SecretListItem> Secrets { get; set; } = [];
 
     [Parameter] public string? SecretMetadataError { get; set; }
+    [Parameter] public string? RegistryHref { get; set; }
     [Parameter] public ProviderEditingOpening? OriginalOpening { get; set; }
 
     [Parameter]

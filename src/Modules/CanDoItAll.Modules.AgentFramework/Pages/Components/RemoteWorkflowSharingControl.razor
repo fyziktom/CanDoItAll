@@ -1,0 +1,50 @@
+<PageHeaderActionButton Icon="cloud_download" Label="Import shared workflows" TooltipText="Import workflows from a configured remote instance."
+                        Click="@(() => showImport = true)" Disabled="Disabled" data-testid="workflows-remote-import" />
+@if (Selected is { } selected) {
+    <PageHeaderActionButton Icon="share" Label="Share workflow" TooltipText="@($"Manage sharing for {selected.Name}.")"
+                            Click="@(() => publication = selected)" Disabled="Disabled" data-testid="workflows-remote-sharing" />
+}
+@if (showImport) {
+    <RemoteTemplateImportDialog Kind="RemoteTemplateKind.Workflow" Authorize="Authorize" Write="Write"
+                                Closed="@(() => showImport = false)" AcceptedAndClosed="CloseAndRefreshAsync" Imported="OpenLocalAsync" />
+}
+@if (publication is { } opening && Selected?.Id == opening.Id) {
+    <Dialog IsOpen="true" Title="@($"Sharing for {opening.Name}")" OnClose="@(() => publication = null)"
+            CloseOnBackdrop="false" TestId="workflows-remote-publication-dialog">
+        <WorkflowSharingSettings @key="opening.VersionId" Id="opening.Id" Version="opening.VersionId"
+                                 Authorize="Authorize" Saved="ClosePublicationAsync" />
+    </Dialog>
+}
+
+@code {
+    [Parameter] public WorkflowCatalogItem? Selected { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter, EditorRequired] public Func<bool, CancellationToken, ValueTask> Authorize { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<Func<CancellationToken, Task<Guid>>, CancellationToken, Task<Guid>> Write { get; set; } = default!;
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback<Guid> Imported { get; set; }
+
+    private bool showImport;
+    private WorkflowCatalogItem? publication;
+
+    protected override void OnParametersSet() {
+        if (Selected?.Id != publication?.Id) {
+            publication = null;
+        }
+    }
+
+    private async Task CloseAndRefreshAsync() {
+        showImport = false;
+        await Refresh.InvokeAsync();
+    }
+
+    private async Task OpenLocalAsync(Guid id) {
+        await CloseAndRefreshAsync();
+        await Imported.InvokeAsync(id);
+    }
+
+    private async Task ClosePublicationAsync() {
+        publication = null;
+        await Refresh.InvokeAsync();
+    }
+}

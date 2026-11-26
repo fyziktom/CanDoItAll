@@ -203,6 +203,35 @@ public sealed class AgentJsonSchemaOutputExecutionIntegrationTests
         Assert.Single(runtime.ExecutionOptions);
     }
 
+    [Fact]
+    public async Task Imported_remote_template_produces_structured_output_on_the_selected_local_provider() {
+        var runtime = new DeterministicJsonSchemaAgentRuntime("""{"status":"ready","count":1}""");
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false, useInMemoryDatabase: true, agentRuntimeOverride: runtime,
+            configureServices: services => {
+                services.RemoveAll<ISecretVault>();
+                services.AddSingleton<ISecretVault, InMemorySecretVault>();
+            });
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var snapshot = await workspace.LoadCatalogSnapshotAsync();
+        var localProvider = snapshot.Snapshot.Catalog.Agents.First(agent => !agent.IsTemplate && agent.ProviderProfileId.HasValue);
+        var template = new RemoteAgentTemplate(Guid.NewGuid(), "Local output agent", "Writer", "Create a status report", "Summarize the input",
+            AgentWorkloadKind.General, [], [], DateTimeOffset.UtcNow) { PublisherId = Guid.NewGuid(), CatalogRevision = 1 };
+        var id = await workspace.ImportRemoteAgentTemplateAsync(Guid.NewGuid(), template, snapshot.Workspace);
+        var editor = await workspace.GetAgentEditorAsync(id);
+        editor.ProviderProfileId = localProvider.ProviderProfileId;
+        editor.Status = AgentLifecycleStatus.Active;
+        await workspace.SaveAgentAsync(editor);
+        var session = await workspace.GetOrCreateChatSessionAsync(id);
+        var result = await workspace.ExecuteRunAsync(new(id, "Return the requested status.", AgentExecutionOperationId.New(),
+            ChatSessionId: session.Id, JsonSchemaOutput: CreateContract()));
+        Assert.Equal(ExecutionState.Completed, result.State);
+        var structured = Assert.IsType<AgentJsonSchemaOutputResult>(result.StructuredOutput);
+        Assert.Equal(AgentJsonSchemaOutputValidationStatus.Valid, structured.ValidationStatus);
+        Assert.Equal("ready", structured.Data!.Value.GetProperty("status").GetString());
+        Assert.Single(runtime.ExecutionOptions);
+    }
+
     private static void AssertReceiptRecoveryProviders(IServiceProvider services) {
         var providers = services.GetServices<IAgentToolReceiptReconciliationProvider>().ToArray();
         Assert.Equal(new[] {

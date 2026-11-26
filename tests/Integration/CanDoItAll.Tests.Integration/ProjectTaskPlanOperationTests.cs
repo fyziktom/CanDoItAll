@@ -39,6 +39,8 @@ public sealed class ProjectTaskPlanOperationTests {
     public async Task Concurrent_identical_addresses_return_one_exact_committed_batch() {
         await using var fixture = await ProjectTaskPlanOperationFixture.CreateAsync();
         var command = await fixture.CommandAsync();
+        var changes = fixture.Services.GetRequiredService<ProjectStructureChangeFeed>();
+        var cursor = changes.Read(fixture.Project.DatabaseProfileId, [fixture.Project.ProjectId]).Cursor;
         using var secondAuthority = new TaskPlanAuthority();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var writes = await Task.WhenAll(fixture.Publisher().PublishAsync(command, fixture.Invocation, deadline.Token),
@@ -46,6 +48,8 @@ public sealed class ProjectTaskPlanOperationTests {
         var accepted = writes.Select(value => Assert.IsType<ProjectTaskPlanOutcome.Accepted>(value)).ToArray();
         Assert.Single(accepted, value => !value.Replayed);
         Assert.Single(accepted, value => value.Replayed);
+        var batch = Assert.Single(changes.Read(fixture.Project.DatabaseProfileId, [fixture.Project.ProjectId], cursor).Changes);
+        Assert.Equal(command.Proposal.Tasks.Count, batch.Nodes.Count(node => node.Kind == ProjectStructureChangeKind.Created));
         Assert.Equal(ProjectTaskPlanOperationCodec.EncodeAccepted(accepted[0].Acknowledgement),
             ProjectTaskPlanOperationCodec.EncodeAccepted(accepted[1].Acknowledgement));
         await fixture.VerifyAsync(2, 1, accepted[0].Acknowledgement);

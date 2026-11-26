@@ -9,6 +9,8 @@ public sealed class Maf122RetainedStatePolicyTests {
     [InlineData("1.20.0", true)]
     [InlineData("1.20.0+recorded-build", true)]
     [InlineData("1.22.0", true)]
+    [InlineData("1.28.0", true)]
+    [InlineData("1.27.0", false)]
     [InlineData("1.24.0", false)]
     [InlineData("1.17.0", false)]
     [InlineData("1.21.0", false)]
@@ -22,7 +24,7 @@ public sealed class Maf122RetainedStatePolicyTests {
         var request = new RuntimeStateCompatibilityRequest(envelope, false, false,
             envelope.ProviderProfileId, envelope.ProviderTransport, envelope.Model, envelope.ToolsetFingerprint,
             envelope.ContextPolicyFingerprint, envelope.HistoryMode) {
-            CurrentAdapterPackageVersion = "1.22.0",
+            CurrentAdapterPackageVersion = MafRuntimeStateAdapter.AdapterPackageVersion,
             RequiresVerifiedNativeAuthority = true
         };
 
@@ -39,7 +41,7 @@ public sealed class Maf122RetainedStatePolicyTests {
     public void Parseable_unversioned_json_cannot_supply_pending_native_authority() {
         var request = new RuntimeStateCompatibilityRequest(null, true, false, Guid.NewGuid(),
             ProviderTransportKind.Responses, "fixture-model", "tools", "context", AgentChatHistoryMode.FrameworkManaged) {
-            CurrentAdapterPackageVersion = "1.22.0",
+            CurrentAdapterPackageVersion = MafRuntimeStateAdapter.AdapterPackageVersion,
             RequiresVerifiedNativeAuthority = true
         };
 

@@ -132,13 +132,23 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         LlmChatDefinitionStatus? status,
         string? searchText = null,
         IReadOnlyList<string>? tagFilters = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null,
+        LlmChatSharingSnapshot? sharing = null)
     {
         var normalizedSearchText = searchText?.Trim() ?? string.Empty;
+        sharing ??= LlmChatSharingSnapshot.Default;
         var ordered = definitions.Values
+            .Where(item => unavailableDefinitionIds?.Contains(item.Id.Value) != true)
             .Where(item => status is null || item.Status == status)
-            .Where(item => MatchesSearch(item, normalizedSearchText))
-            .Where(item => MatchesTags(item, tagFilters))
+            .Where(item => {
+                var effective = CanDoItAll.RemoteInstances.DefinitionSharingTags.Project(tags.GetValueOrDefault(item.Id, []),
+                    !sharing.ApiUnavailable.Contains(item.Id.Value), sharing.Published.Contains(item.Id.Value));
+                return (item.Name.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase) ||
+                    item.Summary.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase) ||
+                    effective.Any(tag => tag.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase))) &&
+                    (tagFilters is null || tagFilters.All(tag => effective.Contains(tag, StringComparer.OrdinalIgnoreCase)));
+            })
             .Where(item => cursor is not { } position ||
                            item.UpdatedAtUtc < position.UpdatedAtUtc ||
                            item.UpdatedAtUtc == position.UpdatedAtUtc &&
@@ -163,23 +173,6 @@ internal sealed class InMemoryLlmChatDefinitionRepository :
         return new LlmChatPage<LlmChatDefinitionReadModel, LlmChatDefinitionCursor>(items, next);
     }
 
-    private bool MatchesSearch(LlmChatDefinition definition, string searchText)
-    {
-        if (searchText.Length == 0)
-        {
-            return true;
-        }
-
-        return definition.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-               definition.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-               tags.GetValueOrDefault(definition.Id, [])
-                   .Any(tag => tag.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private bool MatchesTags(LlmChatDefinition definition, IReadOnlyList<string>? tagFilters)
-        => tagFilters is null || tagFilters.Count == 0 || tagFilters.All(filter =>
-            tags.GetValueOrDefault(definition.Id, [])
-                .Contains(filter, StringComparer.OrdinalIgnoreCase));
 }
 
 internal sealed class InMemoryLlmChatConversationRepository : ILlmChatConversationRepository
@@ -250,7 +243,8 @@ internal sealed class StubLlmChatConversationReadStore(
         int take,
         LlmChatConversationCursor? cursor,
         LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
         => throw new NotSupportedException();
 
     public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(

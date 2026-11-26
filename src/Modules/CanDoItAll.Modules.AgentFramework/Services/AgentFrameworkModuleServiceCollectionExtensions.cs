@@ -11,6 +11,7 @@ using CanDoItAll.AgentFramework.Capabilities.Access;
 using CanDoItAll.AgentFramework.Components;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Components;
+using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
 using CanDoItAll.AgentFramework.WorkflowExecutors.Standard.Network;
@@ -59,6 +60,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
 {
     public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.TryAddScoped<RemoteTemplatePublicationStore>();
+        services.TryAddScoped<ILlmChatSharingReader>(provider => provider.GetRequiredService<RemoteTemplatePublicationStore>());
+        services.TryAddScoped<RemoteTemplateProviderCatalog>();
+        services.TryAddScoped<RemoteSimpleChatPublisher>();
+        services.TryAddScoped<RemoteWorkflowCatalog>();
         services.AddPooledDbContextFactory<AgentProjectAccessDbContext>((provider, options) => {
             AppDbContextOptionsConfigurator.Configure(options, provider.GetRequiredService<ICanonicalRuntimeDatabase>().Profile);
         });

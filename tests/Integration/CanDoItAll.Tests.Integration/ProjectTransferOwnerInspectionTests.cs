@@ -422,7 +422,7 @@ public sealed class ProjectTransferOwnerInspectionTests {
     private static void AssertOwnerModels(InspectionProbe probe) {
         Dictionary<Type, int> expected = new() {
             [typeof(SearchDbContext)] = 1, [typeof(StorageDbContext)] = 3,
-            [typeof(WorkflowDbContext)] = 17, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
+            [typeof(WorkflowDbContext)] = CurrentDatabaseModelAssertions.WorkflowEntityCount, [typeof(AgentProjectAccessDbContext)] = 1, [typeof(AgentHistoryDbContext)] = 1,
             [typeof(CollaborationDbContext)] = 4, [typeof(CrmHrDbContext)] = 30, [typeof(ProcessPersistenceDbContext)] = 37,
             [typeof(ProjectsDbContext)] = 9, [typeof(PromptsDbContext)] = 10, [typeof(ResourcesDbContext)] = 1,
             [typeof(SchedulerPlannerDbContext)] = 3, [typeof(TestLabDbContext)] = 4, [typeof(WorkbenchDbContext)] = 16,

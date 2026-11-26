@@ -1,0 +1,104 @@
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.AgentFramework.Pages.Navigation
+
+<Dialog IsOpen="true" Title="Choose provider and model" Eyebrow="@ItemName" CloseOnBackdrop="false"
+        Size="ModalSize.Medium" OnClose="Closed" TestId="remote-template-model-dialog">
+    <ChildContent>
+        <Stack GapScale="LayoutGap.Medium">
+            <TextBlock Value="@Requirement.Label" TextStyle="TextStyle.Subtitle1" />
+            @if (!string.IsNullOrWhiteSpace(Requirement.ModelName)) {
+                <TextBlock Value="@($"Publisher model · {Requirement.ModelName}")" TextStyle="TextStyle.Muted" />
+            }
+            @if (Requirement.ThinkingEffort is { } effort) {
+                <TextBlock Value="@($"Required reasoning effort · {effort}")" TextStyle="TextStyle.Muted" />
+            }
+            @if (Requirement.RequiresModelPrice) {
+                <TextBlock Value="This workflow step needs a price or a free tariff configured for the model." TextStyle="TextStyle.Muted" />
+            }
+            @if (Compatible.Count == 0) {
+                <Alert AlertStyle="AlertStyle.Warning">No enabled provider has a compatible model for this step.</Alert>
+            } else {
+                <FormField Text="Provider">
+                    <SelectInput TValue="Guid?" @bind-Value:get="providerId" @bind-Value:set="ChangeProvider"
+                                 data-testid="remote-template-provider" disabled="@Busy">
+                        <option value="">Choose a provider</option>
+                        @foreach (var option in Compatible.DistinctBy(option => option.Choice.ProviderId)) {
+                            <option value="@option.Choice.ProviderId">@option.ProviderName · @(option.FromSource ? "Shared" : "Local")</option>
+                        }
+                    </SelectInput>
+                </FormField>
+                <FormField Text="Model">
+                    <SelectInput TValue="string" @bind-Value="model" disabled="@(Busy || providerId is null)" data-testid="remote-template-model">
+                        <option value="">Choose a model</option>
+                        @foreach (var option in Compatible.Where(option => option.Choice.ProviderId == providerId)) {
+                            <option value="@option.Choice.Model">@option.DisplayName</option>
+                        }
+                    </SelectInput>
+                </FormField>
+            }
+            <Cluster Gap="LayoutGap.Small">
+                <Button Text="Manage provider connections" Href="@ProviderConnectionsHref" Target="_blank" Icon="open_in_new"
+                        Size="ButtonSize.Small" Tone="ButtonTone.Default" />
+                <Button Text="Refresh providers" Click="Refresh" Disabled="Busy" IsBusy="Busy" Size="ButtonSize.Small" Tone="ButtonTone.Default"
+                        data-testid="remote-template-model-refresh" />
+            </Cluster>
+            @if (Error is not null) {
+                <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-template-model-error">@Error</Alert>
+            }
+        </Stack>
+    </ChildContent>
+    <Footer>
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Confirm" Click="@(() => ChooseAsync(Confirmed))" Disabled="@(Selected is null || Busy)" data-testid="remote-template-model-confirm" />
+            @if (CanApplyToAll) {
+                <Button Text="Apply to all compatible" Click="@(() => ChooseAsync(AppliedToAll))" Disabled="@(Selected is null || Busy)"
+                        Tone="ButtonTone.Default" data-testid="remote-template-model-all" />
+            }
+            <Button Text="Cancel" Click="Closed" Tone="ButtonTone.Default" data-testid="remote-template-model-cancel" />
+        </Cluster>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public string ItemName { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public RemoteTemplateModelRequirement Requirement { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<RemoteTemplateModelOption> Options { get; set; } = [];
+    [Parameter] public RemoteTemplateModelChoice? InitialChoice { get; set; }
+    [Parameter] public bool CanApplyToAll { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback<RemoteTemplateModelOption> Confirmed { get; set; }
+    [Parameter] public EventCallback<RemoteTemplateModelOption> AppliedToAll { get; set; }
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+
+    private static readonly string ProviderConnectionsHref = AgentsUrlCodec.Instance.Href(AgentsUrlCodec.Path,
+        new AgentsUrlState { Tab = AgentWorkspaceSection.Providers, Dialog = AgentsPageDialog.SharedConnections });
+    private Guid? providerId;
+    private string model = string.Empty;
+    private RemoteTemplateModelChoice? previousInitialChoice;
+    private IReadOnlyList<RemoteTemplateModelOption> Compatible { get; set; } = [];
+    private RemoteTemplateModelOption? Selected => Compatible.FirstOrDefault(option => option.Choice.ProviderId == providerId && option.Choice.Model == model);
+
+    protected override void OnParametersSet() {
+        Compatible = Options.Where(option => option.Supports(Requirement)).ToArray();
+        if (providerId.HasValue && Compatible.All(option => option.Choice.ProviderId != providerId)) {
+            ChangeProvider(null);
+        } else if (model.Length > 0 && Selected is null) {
+            model = string.Empty;
+        }
+        if (providerId is null && InitialChoice is not null && InitialChoice != previousInitialChoice) {
+            providerId = InitialChoice.ProviderId;
+            model = InitialChoice.Model;
+        }
+        previousInitialChoice = InitialChoice;
+    }
+
+    private void ChangeProvider(Guid? id) {
+        providerId = id;
+        model = Compatible.FirstOrDefault(option => option.Choice.ProviderId == id && option.IsDefault)?.Choice.Model ?? string.Empty;
+    }
+
+    private Task ChooseAsync(EventCallback<RemoteTemplateModelOption> callback) =>
+        !Busy && Selected is { } option ? callback.InvokeAsync(option) : Task.CompletedTask;
+}

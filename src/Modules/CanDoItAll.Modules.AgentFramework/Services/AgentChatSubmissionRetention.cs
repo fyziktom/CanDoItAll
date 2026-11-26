@@ -137,7 +137,7 @@ public sealed class AgentChatSubmissionRetention {
                 RemoveCore(current);
             } else {
                 var notSent = failure switch {
-                    AgentChatAdmissionConflictException conflict => conflict.AgentId == current.AgentId && conflict.ChatSessionId == current.SessionId,
+                    AgentChatAdmissionRejectedException refusal => refusal.AgentId == current.AgentId && refusal.ChatSessionId == current.SessionId,
                     AgentChatSessionBlockedException blocked => blocked.AgentId == current.AgentId && blocked.ChatSessionId == current.SessionId,
                     _ => false
                 };

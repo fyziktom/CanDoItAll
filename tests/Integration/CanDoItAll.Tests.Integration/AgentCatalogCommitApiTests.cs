@@ -95,6 +95,8 @@ public sealed class AgentCatalogCommitApiTests {
                     return Task.FromException<Guid>(new AgentDirectoryProjectionSynchronizationException(CopyId, cause));
                 case nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync):
                     return Task.FromResult<IReadOnlyList<AgentDefinition>>([Agent]);
+                case nameof(IAgentFrameworkWorkspaceService.FindAgentApiAvailabilityAsync):
+                    return Task.FromResult<bool?>((Guid)args![0]! == Agent.Id ? Agent.ApiAvailable : null);
                 case nameof(IAgentFrameworkWorkspaceService.ListAgentTeamsAsync):
                     return Task.FromResult<IReadOnlyList<AgentTeamDefinition>>([Team]);
                 default:

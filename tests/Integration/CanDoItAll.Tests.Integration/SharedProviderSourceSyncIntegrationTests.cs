@@ -8,6 +8,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework.ProviderManagement;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.Security.Abstractions;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
@@ -75,6 +76,71 @@ public sealed class SharedProviderSourceSyncIntegrationTests
         var source = await harness.CreateSourceAsync();
         await Assert.ThrowsAsync<SharedProviderConcurrencyException>(() => harness.Sync.SynchronizeAsync(source.Id, PublicationSet()));
         Assert.Empty(harness.Http.Requests);
+    }
+
+    [Fact]
+    public async Task Remote_instance_registry_and_provider_sources_share_identity_and_conflict_detection() {
+        await using var harness = await SourceSyncHarness.CreateAsync("remote-instance-registry");
+        IRemoteInstanceRegistry registry = new RemoteInstanceRegistry(harness.Sources);
+        var first = await harness.CreateSourceAsync();
+        var existing = Assert.Single(await registry.ListAsync());
+        Assert.Equal(first.Id, existing.Id);
+        Assert.Equal(first.SecretId, existing.ApiTokenSecretId);
+        Assert.Equal(first.ConcurrencyToken, existing.ConcurrencyToken);
+
+        var secondId = Guid.NewGuid();
+        var secret = await harness.CreateSecretAsync("second-instance-token", "Second source");
+        var settings = new RemoteInstanceSettings("Second source", new Uri("https://second.example.test/workspace"),
+            secret, IsEnabled: true, AllowPrivateNetwork: false);
+        var second = await registry.CreateAsync(secondId, settings);
+        var providerSource = await harness.Sources.GetAsync(secondId);
+        Assert.Equal(new Uri("https://second.example.test/workspace/"), providerSource.BaseUri);
+        Assert.Equal(second.ConcurrencyToken, providerSource.ConcurrencyToken);
+        Assert.Equal(secret, providerSource.ApiTokenSecretId);
+        Assert.Equal(2, (await registry.ListAsync()).Count);
+        await Assert.ThrowsAsync<RemoteInstanceConflictException>(() => registry.CreateAsync(secondId, settings));
+
+        var disabled = await harness.Sources.SetEnabledAsync(secondId, second.ConcurrencyToken, false);
+        Assert.False((await registry.GetAsync(secondId)).IsEnabled);
+        await Assert.ThrowsAsync<RemoteInstanceConflictException>(() => registry.UpdateAsync(secondId, second.ConcurrencyToken, settings));
+        await Assert.ThrowsAsync<RemoteInstanceConflictException>(() => registry.DeleteAsync(secondId, second.ConcurrencyToken));
+        await registry.DeleteAsync(secondId, disabled.ConcurrencyToken);
+        Assert.Equal(existing, Assert.Single(await registry.ListAsync()));
+        Assert.Equal(first.Id, Assert.Single(await harness.Sources.ListAsync()).Id);
+        Assert.Empty(harness.Http.Requests);
+    }
+
+    [Fact]
+    public async Task Remote_instance_registry_keeps_imported_provider_bindings_and_guards_deletion() {
+        await using var harness = await SourceSyncHarness.CreateAsync("remote-instance-imported");
+        IRemoteInstanceRegistry registry = new RemoteInstanceRegistry(harness.Sources);
+        var seed = await harness.CreateSourceAsync();
+        harness.Http.EnqueueCatalog(CreateCatalog());
+        await harness.SynchronizeAsync(seed.Id, PublicationSet(PrimaryPublicationId));
+        var before = await registry.GetAsync(seed.Id);
+        var imported = Assert.Single((await harness.LoadStateAsync(seed.Id)).Imports);
+        await Assert.ThrowsAsync<RemoteInstanceInUseException>(() => registry.DeleteAsync(seed.Id, before.ConcurrencyToken));
+
+        var secret = await harness.CreateSecretAsync("rotated-token", "Rotated credential");
+        var endpoint = new Uri("https://changed.example.test/site/");
+        var settings = new RemoteInstanceSettings("Updated instance", endpoint, secret, IsEnabled: false, AllowPrivateNetwork: true);
+        harness.Observer.Clear();
+        var accepted = await registry.UpdateAsync(seed.Id, before.ConcurrencyToken, settings);
+        Assert.Equal(accepted, await registry.GetAsync(seed.Id));
+        Assert.True(accepted.AllowPrivateNetwork);
+        Assert.False(accepted.IsEnabled);
+        Assert.Null(accepted.Warning);
+        Assert.NotEqual(before.ConcurrencyToken, accepted.ConcurrencyToken);
+        var state = await harness.LoadStateAsync(seed.Id);
+        Assert.Equal(imported.Id, Assert.Single(state.Imports).Id);
+        var profile = Assert.Single(state.Profiles);
+        Assert.Equal(imported.ProviderProfileId, profile.Id);
+        Assert.Equal(secret, profile.ApiKeySecretId);
+        Assert.Equal(SharedProviderRoutes.ResolveOpenAiBase(endpoint).AbsoluteUri, profile.BaseUrl);
+        Assert.Equal(profile.Id, Assert.Single(harness.Observer.SavedProviderIds));
+        var disabled = await harness.SynchronizeAsync(seed.Id, PublicationSet(PrimaryPublicationId));
+        Assert.Equal(SharedProviderSourceOperationOutcome.SourceDisabled, disabled.Outcome);
+        Assert.Single(harness.Http.Requests);
     }
 
     [Fact]

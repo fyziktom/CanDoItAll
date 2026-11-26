@@ -81,6 +81,7 @@
                         Tone="ButtonTone.Primary"
                         Click="OpenCreateEditor"
                         data-testid="llm-chat-definition-create" />
+                @ImportAction
             }
             @if (Presentation.CanRead) {
                 <Button Text="Refresh definitions" Icon="refresh" Variant="Variant.Outlined" Click="@(() => OnIntent.InvokeAsync(new DefinitionCatalogIntent.Refresh()))"
@@ -135,6 +136,7 @@
                                             Variant="Variant.Outlined"
                                             Click="@(() => OpenEditorAsync(definition.DefinitionId))"
                                             data-testid="@($"llm-chat-definition-edit-{definition.DefinitionId:D}")" />
+                                    @DefinitionSharing?.Invoke(definition)
                                 }
                             </Actions>
                         </ConversationParticipantCard>
@@ -163,6 +165,8 @@
     [Parameter, EditorRequired] public DefinitionCatalogFilterLimits Limits { get; set; } = default!;
     [Parameter] public Guid? SelectedDefinitionId { get; set; }
     [Parameter] public EventCallback<DefinitionCatalogIntent> OnIntent { get; set; }
+    [Parameter] public RenderFragment? ImportAction { get; set; }
+    [Parameter] public RenderFragment<DefinitionCatalogCard>? DefinitionSharing { get; set; }
     private static readonly IReadOnlyList<LlmChatDefinitionStatusFilterOption> StatusOptions = [
         new(LlmChatDefinitionStatusFilter.All, "All statuses"), new(LlmChatDefinitionStatusFilter.Draft, "Draft"),
         new(LlmChatDefinitionStatusFilter.Active, "Active"), new(LlmChatDefinitionStatusFilter.Suspended, "Suspended"),

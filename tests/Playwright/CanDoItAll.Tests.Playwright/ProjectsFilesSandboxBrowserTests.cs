@@ -41,6 +41,7 @@ public sealed class ProjectsFilesSandboxBrowserTests {
             await dialog.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "notes.txt" }).PressAsync("Enter");
             await Assertions.Expect(dialog.GetByTestId("interaction-text-view")).ToContainTextAsync("Žluťoučký 東京");
             await VisibleAsync(dialog);
+            await Assertions.Expect(dialog.GetByTestId("interaction-mode-edit")).ToHaveCountAsync(0);
             await Shot("independent-dialog");
             await dialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
             await Assertions.Expect(dialog).ToHaveCountAsync(0);
@@ -51,6 +52,7 @@ public sealed class ProjectsFilesSandboxBrowserTests {
                 await Assertions.Expect(item).ToBeFocusedAsync();
                 await item.PressAsync("Enter");
                 await VisibleAsync(pane);
+                await Assertions.Expect(pane.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
                 string viewer = file switch {
                     "image.png" => "interaction-image-view",
                     "manual.pdf" => "interaction-pdf-view",
@@ -128,6 +130,5 @@ public sealed class ProjectsFilesSandboxBrowserTests {
         var bounds = await surface.GetByTestId("file-interaction").BoundingBoxAsync();
         Assert.NotNull(bounds);
         Assert.True(bounds.Width >= 640);
-        await Assertions.Expect(surface.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
     }
 }

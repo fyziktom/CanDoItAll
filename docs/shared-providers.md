@@ -13,10 +13,15 @@ relax the publication protocol.
 1. Configure and test the publisher's local provider and secret through provider administration. Only eligible connector/capability combinations can be published.
 2. Publish the desired provider/model selection. Use the catalog's opaque routing model IDs when invoking it; do not substitute the publisher's private upstream model name.
 3. Issue an appropriately scoped managed API token on the publisher. Store that token as a source secret on the consumer.
-4. Add the source base URI, synchronize its catalog, and import the desired publication. Select the resulting shared provider in the normal provider/model picker.
+4. Choose or add a connection in the provider sources dialog. The same list is available under **Settings → Remote instances**. Synchronize that source's catalog and import the desired publication. Select the resulting shared provider in the normal provider/model picker.
 5. Refresh after publication, model, capability, or pricing changes. An unavailable source or publication leaves the import visible but operationally disabled; it must not silently route to an unrelated local provider.
 
 Local and shared providers can coexist. Shared model selection remains constrained to the imported publication, including models intentionally omitted from suggestions. Deletion checks protect source/import/secret references; resolve reported references before deleting an entity.
+
+When importing an agent, Simple Chat or workflow, the consumer can select the matching
+model from a provider already imported from the same connection and publisher. The
+import dialog also offers compatible local substitutes and lets users confirm choices
+for a batch. See [importing shared definitions](architecture/remote-instance-connections.md#operator-steps).
 
 ## HTTP surface
 

@@ -8,7 +8,7 @@ Simple Chat into agent execution.
 
 ## Product Model
 
-An LLM Chat definition is reusable lifecycle-managed configuration. Every edit appends an immutable
+An LLM Chat definition is reusable lifecycle-managed configuration. Editing its content appends an immutable
 definition revision. A conversation pins the current revision when it is created, so later definition
 edits do not change existing conversations. Definitions can be activated, suspended, reactivated, and
 archived; conversations can be renamed and archived.
@@ -27,6 +27,12 @@ The primary UI is the **Simple Chats** tab at `/agents?tab=simple-chats`. The fo
 compatibility redirect that preserves supported definition, conversation, and view query state.
 
 - The definitions view lists, creates, edits, activates, suspends, and archives reusable definitions.
+- Open a saved definition's **Sharing** tab to set **Available through the API** and
+  **Share as a template** independently. **Save sharing** updates its `api` and `shared`
+  tags. A draft or active definition can be shared.
+- **Import shared Simple Chats** previews the publisher's definitions and avatars. Import
+  creates a local draft with the chosen provider and model and an empty conversation history.
+  See [the publishing and import guide](architecture/remote-instance-connections.md#operator-steps).
 - The conversations view creates and resumes revision-pinned conversations, follows durable turn
   progress, and exposes explicit cancellation or recovery actions when required.
 - The shared conversation shell can open a Simple Chat as a floating conversation without moving
@@ -139,9 +145,9 @@ cross-repository snapshot and the `candoitall-api-llm-chats` operator skill live
 Definition and conversation resources return strong numeric ETags. Mutation requests must supply the
 matching expected token in the body or `If-Match` where supported. Lists and transcript messages use
 bounded `take` values and opaque cursors. Read-scoped transcript pages exclude persisted `System`
-messages before cursor paging. The manage-scoped editor resource is the only definition read contract
-that returns the system prompt; its allowlisted response never includes provider credentials, endpoints,
-or local paths.
+messages before cursor paging. Within `/api/llm-chats`, the manage-scoped editor returns the
+system prompt. Explicitly sharing a template also makes its system instructions available to
+clients with `api.shared-simple-chats.read` through the [shared definition API](api-control-plane.md#shared-definitions).
 
 ## Turn Idempotency And Failures
 

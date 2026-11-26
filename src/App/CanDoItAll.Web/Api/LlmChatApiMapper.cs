@@ -98,7 +98,7 @@ internal static class LlmChatApiMapper
                     format.SchemaName,
                     format.SchemaDescription)
                 : null,
-            details.NormalizedTags,
+            details.EffectiveTags,
             details.Revision.Reason,
             details.Definition.ConcurrencyToken,
             details.Definition.CreatedAtUtc,
@@ -177,7 +177,7 @@ internal static class LlmChatApiMapper
             details.Revision.ProviderKind,
             details.Revision.Model,
             details.Revision.Settings.ThinkingEffort,
-            details.NormalizedTags,
+            details.EffectiveTags,
             details.Definition.ConcurrencyToken,
             details.Definition.CreatedAtUtc,
             details.Definition.UpdatedAtUtc);

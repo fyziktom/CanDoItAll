@@ -21,6 +21,13 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
         var agentIds = document.Agents
             .Select(item => item.Id)
             .ToHashSet();
+        if (document.RemoteTemplateBindings is { Count: > 0 } bindings &&
+            (bindings.Any(binding => binding is null || binding.SourceId == Guid.Empty || binding.PublisherId == Guid.Empty ||
+                binding.TemplateId == Guid.Empty || !agentIds.Contains(binding.AgentId)) ||
+             bindings.DistinctBy(binding => (binding.SourceId, binding.PublisherId, binding.TemplateId)).Count() != bindings.Count ||
+             bindings.DistinctBy(binding => binding.AgentId).Count() != bindings.Count)) {
+            throw new InvalidOperationException("Remote template bindings must have unique origins and resolve to distinct local agents.");
+        }
         var providerIds = document.Providers
             .Select(item => item.Id)
             .ToHashSet();

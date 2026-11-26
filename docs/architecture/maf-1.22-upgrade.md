@@ -1,6 +1,8 @@
 # MAF 1.22 upgrade and retained state
 
-The adapter targets Microsoft.Agents.AI 1.22.0 and A2A preview 1.22.0-preview.260918.1. Shared dependency floors are Microsoft.Extensions.AI 10.11.0, relevant Microsoft.Extensions packages 10.0.14, OpenAI 2.14.0 and OpenTelemetry.Api 1.20.1. The resolved A2A SDK is 1.0.0-preview2.
+This record describes the upgrade to Microsoft.Agents.AI 1.22.0 and A2A preview 1.22.0-preview.260918.1. At that release the shared dependency floors were Microsoft.Extensions.AI 10.11.0, relevant Microsoft.Extensions packages 10.0.14, OpenAI 2.14.0 and OpenTelemetry.Api 1.20.1. The resolved A2A SDK was 1.0.0-preview2.
+
+The .NET 10 application now runs Microsoft.Agents.AI 1.28.0. For current package versions and checkpoint compatibility, see the [MAF adapter](../../src/MAF/Common/CanDoItAll.AgentFramework.Maf/README.md).
 
 ## Runtime behavior
 

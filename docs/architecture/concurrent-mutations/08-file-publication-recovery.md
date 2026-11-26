@@ -6,6 +6,11 @@ new readers observe the replacement while a held reader keeps its original bytes
 CreateNew still refuses existing files. Unix replacement retains its existing
 rename path. These are visibility guarantees, not power-loss durability claims.
 
+The writer buffers chunks in a staging file and calls
+`FileStream.Flush(flushToDisk: true)` after the producer finishes. A failed flush
+or a cancellation observed before publication leaves the previous target available.
+[.NET file flush semantics](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestream.flush?view=net-10.0)
+
 Immediately before Windows replacement, the writer renames its flushed staging
 file from `.target.<guid>.tmp` to `.target.<guid>.pending`. A successful replacement
 consumes it. Documented nontransition failures may retry within the bounded write
@@ -34,3 +39,12 @@ This adds one same-directory rename per Windows replacement and no extra flush,
 database call or reader lock. The existing write-directory scan checks pending
 evidence before cleanup; explicit deletion also performs this check. Sustained
 authority capacity measurements remain a separate acceptance gate.
+
+## Updates to existing agent runs
+
+When an update callback reads a run, the file store hashes the original bytes as it
+deserializes them. It checks the file before releasing the workspace lock and again
+after acquiring the publication keys. A changed digest raises a publication conflict
+before the store writes a recovery journal. Once those checks pass, the store streams
+the compact journal to the durable writer and validates the current run again before
+applying the update. After an interruption, recovery uses the saved journal.

@@ -19,11 +19,13 @@ public sealed class AgentCatalogOperationsIntegrationTests {
         Assert.Empty(empty.Agents);
         Assert.Empty(empty.Teams);
         Assert.Empty(empty.PrivateProviderById);
+        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var templateId = await workspace.SaveAgentAsync(new() { Name = "Local authoring template", IsTemplate = true });
         var loaded = await operations.LoadAsync(new(Repair: false));
         Assert.Equal(1, repair.Reads);
-        Assert.NotEmpty(loaded.Agents);
-        var workspace = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
-        Assert.Equal((await workspace.ListAgentsAsync(false)).Select(agent => agent.Id), loaded.Agents.Select(agent => agent.Id));
+        Assert.Contains(loaded.Agents, agent => agent.Id == templateId && agent.IsTemplate);
+        Assert.Equal((await workspace.ListAgentsAsync(true)).Select(agent => agent.Id), loaded.Agents.Select(agent => agent.Id));
+        Assert.DoesNotContain(await workspace.ListAgentsAsync(false), agent => agent.Id == templateId);
     }
 
     [Fact]

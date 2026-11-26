@@ -3,13 +3,18 @@ using CanDoItAll.Plugins.UI;
 namespace CanDoItAll.Modules.Plugins.Presentation;
 
 public sealed class PluginReadLane<T>(PluginReadState<T> state, Action changed, Action<Exception> failed) : IDisposable {
-    private CancellationTokenSource? current;
-    private long generation;
+    private readonly Lock gate = new();
+    private PendingRead? current;
     private bool disposed;
     private bool hasValue;
 
     public void Invalidate(bool clear = false, T empty = default!) {
-        generation++;
+        lock (gate) {
+            InvalidateCurrent(clear, empty);
+        }
+    }
+
+    private void InvalidateCurrent(bool clear, T empty) {
         current?.Cancel();
         current = null;
         if (clear) {
@@ -22,43 +27,76 @@ public sealed class PluginReadLane<T>(PluginReadState<T> state, Action changed, 
     }
 
     public async Task<bool> LoadAsync(Func<CancellationToken, Task<T>> read, Action<T>? accept = null) {
-        if (disposed) {
-            return false;
-        }
-        Invalidate();
-        var request = generation;
-        using var source = new CancellationTokenSource();
-        current = source;
-        state.Status = PluginReadStatus.Loading;
-        changed();
-        try {
-            var value = await read(source.Token);
-            if (disposed || request != generation) {
+        await using var request = new PendingRead();
+        lock (gate) {
+            if (disposed) {
                 return false;
             }
-            accept?.Invoke(value);
-            state.Value = value;
-            hasValue = true;
-            state.Status = PluginReadStatus.Ready;
+            current?.Cancel();
+            current = request;
+            state.Status = PluginReadStatus.Loading;
+        }
+        try {
+            changed();
+            var value = await read(request.Token);
+            lock (gate) {
+                if (current != request) {
+                    return false;
+                }
+                accept?.Invoke(value);
+                // Accepting a selection can invalidate the read that supplied it.
+                if (current != request) {
+                    return false;
+                }
+                state.Value = value;
+                hasValue = true;
+                state.Status = PluginReadStatus.Ready;
+            }
             return true;
-        } catch (OperationCanceledException) when (source.IsCancellationRequested) {
+        } catch (OperationCanceledException) when (request.Token.IsCancellationRequested) {
             return false;
         } catch (Exception exception) {
-            if (!disposed && request == generation) {
+            lock (gate) {
+                if (current != request) {
+                    return false;
+                }
                 state.Status = hasValue ? PluginReadStatus.Stale : PluginReadStatus.Unavailable;
-                failed(exception);
             }
+            failed(exception);
             return false;
         } finally {
-            if (!disposed && request == generation) {
-                current = null;
+            bool notify;
+            lock (gate) {
+                notify = current == request;
+                if (notify) {
+                    current = null;
+                }
+            }
+            if (notify) {
                 changed();
             }
         }
     }
 
     public void Dispose() {
-        disposed = true;
-        Invalidate();
+        lock (gate) {
+            disposed = true;
+            InvalidateCurrent(clear: false, default!);
+        }
+    }
+
+    private sealed class PendingRead : IAsyncDisposable {
+        private readonly CancellationTokenSource source = new();
+        private Task callbacks = Task.CompletedTask;
+        public CancellationToken Token => source.Token;
+        public void Cancel() => callbacks = source.CancelAsync();
+
+        public async ValueTask DisposeAsync() {
+            try {
+                await callbacks;
+            } finally {
+                source.Dispose();
+            }
+        }
     }
 }

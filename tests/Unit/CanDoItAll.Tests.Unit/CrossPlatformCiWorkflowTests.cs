@@ -46,7 +46,8 @@ public sealed class CrossPlatformCiWorkflowTests
     [InlineData("quarantine-in-stable-gate")]
     [InlineData("quarantine-in-host-lane")]
     [InlineData("dropped-linux-shard")]
-    [InlineData("dropped-host-shard")]
+    [InlineData("dropped-full-host-shard")]
+    [InlineData("dropped-split-host-shard")]
     [InlineData("linux-host-platform-only")]
     [InlineData("host-lane-without-windows")]
     [InlineData("full-scope-never-runs")]
@@ -81,7 +82,8 @@ public sealed class CrossPlatformCiWorkflowTests
                 "Category!=Quarantined&Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform",
                 "Category!=UnixRuntimePortability&RequiresHostDocker!=true&Category=HostPlatform"),
             "dropped-linux-shard" => ReplaceFirst(workflow, "shard: [1, 2, 3, 4, 5]", "shard: [1, 2, 3, 4]"),
-            "dropped-host-shard" => ReplaceFirst(workflow, "shard: [1, 2, 3]\n", "shard: [1, 2]\n"),
+            "dropped-full-host-shard" => ReplaceFirst(workflow, "&& '[1, 2, 3, 4]'", "&& '[1, 2, 3]'"),
+            "dropped-split-host-shard" => ReplaceFirst(workflow, "|| '[1, 2, 3]'", "|| '[1, 2]'"),
             "linux-host-platform-only" => ReplaceFirst(
                 workflow,
                 "RequiresHostDocker!=true\"\n          -ShardIndex ${{ matrix.shard }} -ShardCount 5",
@@ -464,26 +466,22 @@ public sealed class CrossPlatformCiWorkflowTests
             foreach (string jobName in new[] { "tests-linux", "tests-host" })
             {
                 string job = JobText(workflow, jobName);
-                Match shards = Regex.Match(job, @"(?m)^\s+shard: \[([0-9, ]+)\]\s*$");
-                int[] shardValues = shards.Success
-                    ? shards.Groups[1].Value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray()
-                    : [];
                 string[] invocations = Regex.Split(job, @"(?m)^      - ")
                     .Where(step => step.Contains("./tools/Validation/Invoke-TestShard.ps1", StringComparison.Ordinal))
                     .ToArray();
-                if (invocations.Length == 0 || shardValues.Length == 0 ||
-                    !shardValues.SequenceEqual(Enumerable.Range(1, shardValues.Length)))
-                {
-                    violations.Add($"Job {jobName} must run Invoke-TestShard.ps1 over a contiguous shard matrix starting at 1.");
+                if (invocations.Length == 0) {
+                    violations.Add($"Job {jobName} must run Invoke-TestShard.ps1.");
                     continue;
                 }
 
                 foreach (string invocation in invocations)
                 {
+                    bool fullScope = invocation.Contains("if: needs.dependencies.outputs.platform-scope == 'full'", StringComparison.Ordinal);
+                    int[] shardValues = ReadShardIndices(job, fullScope);
                     Match count = Regex.Match(invocation, @"-ShardIndex \$\{\{ matrix\.shard \}\} -ShardCount (\d+)");
-                    if (!count.Success || int.Parse(count.Groups[1].Value) != shardValues.Length)
-                    {
-                        violations.Add($"Job {jobName} step '{StepName(invocation)}' does not partition over its {shardValues.Length} matrix shards.");
+                    if (!count.Success || shardValues.Length == 0 ||
+                        !shardValues.SequenceEqual(Enumerable.Range(1, int.Parse(count.Groups[1].Value)))) {
+                        violations.Add($"Job {jobName} step '{StepName(invocation)}' must cover every shard in its matrix starting at 1.");
                     }
 
                     foreach (string project in new[] { "CanDoItAll.Tests.Components.csproj", "CanDoItAll.Tests.Integration.csproj" })
@@ -521,6 +519,14 @@ public sealed class CrossPlatformCiWorkflowTests
                     }
                 }
             }
+        }
+
+        private static int[] ReadShardIndices(string job, bool fullScope) {
+            var literal = Regex.Match(job, @"(?m)^\s+shard: \[([0-9, ]+)\]\s*$");
+            var indices = literal.Success ? literal.Groups[1] : Regex.Match(job,
+                @"(?m)^\s+shard: \$\{\{ fromJSON\(needs\.dependencies\.outputs\.platform-scope == 'full' && '\[([0-9, ]+)\]' \|\| '\[([0-9, ]+)\]'\) \}\}\s*$")
+                .Groups[fullScope ? 1 : 2];
+            return indices.Value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
         }
 
         private static string JobText(string workflow, string jobName)

@@ -232,7 +232,7 @@
         var query = owner.Search.Trim();
         return owner.Agents.Where(agent => query.Length == 0 || agent.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
             || agent.RoleTitle.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Summary.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.Tags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            || agent.Model.Contains(query, StringComparison.OrdinalIgnoreCase) || agent.EffectiveTags.Any(tag => tag.Contains(query, StringComparison.OrdinalIgnoreCase)))
             .OrderByDescending(agent => owner.Selected.Contains(agent.Id)).ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase).ToArray();
     }
     public void Dispose() => disposed = true;

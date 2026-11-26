@@ -38,6 +38,7 @@ public sealed record ChatWorkspacePresentation {
     public bool AutoApproval { get; init; }
     public string ComposerGuidance { get; init; } = "";
     public ImmutableArray<string> Attachments { get; init; } = [];
+    public bool CanAttachRunArtifacts { get; init; }
     public bool CanUseVoiceMode { get; init; }
     public bool IsVoiceModeEnabled { get; init; }
     public bool IsVoiceRecording { get; init; }

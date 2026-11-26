@@ -20,6 +20,7 @@ public sealed class SettingsUrlCodecTests {
     [InlineData("?tab=files", "?tab=files")]
     [InlineData("?tab=provider-history", "?tab=provider-history")]
     [InlineData("?tab=providers", "?tab=providers")]
+    [InlineData("?tab=Remote-Instances&secretId=" + Record, "?tab=remote-instances")]
     [InlineData("?tab=api-access", "?tab=api-access")]
     [InlineData("?tab=secrets&secretId=6F1F0A51-6A3D-4A8F-9F0E-0C2D6F7A4B11", "?tab=secrets&secretId=" + Record)]
     [InlineData("?tab=data-sources&profileId=" + Record, "?tab=data-sources&profileId=" + Record)]
@@ -67,7 +68,8 @@ public sealed class SettingsUrlCodecTests {
             new(WorkspaceSection.ApiAccess, Search: "alice", Page: 4),
             new(WorkspaceSection.Files),
             new(WorkspaceSection.ProviderHistory),
-            new(WorkspaceSection.Providers)
+            new(WorkspaceSection.Providers),
+            new(WorkspaceSection.RemoteInstances)
         ];
 
         foreach (var state in states) {

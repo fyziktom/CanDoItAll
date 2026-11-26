@@ -83,6 +83,16 @@ public sealed class AgentPackageImportApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.Conflict, conflictResponse.StatusCode);
         Assert.Contains("agent-package.idempotency-conflict", conflictBody, StringComparison.Ordinal);
+
+        var privateForm = await host.Client.GetFromJsonAsync<AgentEditorModel>($"/api/agents/{agent.Id:D}");
+        Assert.NotNull(privateForm);
+        privateForm.ApiAvailable = false;
+        using var hide = await host.Client.PostAsJsonAsync("/api/agents/", privateForm);
+        hide.EnsureSuccessStatusCode();
+        using var privateReplay = await SendImportAsync(host.Client, packageBytes, idempotencyKey, externalKey);
+        using var privateImport = await SendImportAsync(host.Client, packageBytes, $"copy-{idempotencyKey}", externalKey);
+        Assert.Equal(HttpStatusCode.NotFound, privateReplay.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, privateImport.StatusCode);
     }
 
     [Fact]

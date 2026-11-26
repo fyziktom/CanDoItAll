@@ -106,7 +106,7 @@ public sealed class Maf122RetainedNativeStateTests {
         var json = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Fixtures", $"Maf1{writerMinor}", "Native", file));
         var fixture = JsonSerializer.Deserialize<NativeFixture>(json, JsonSerializerOptions.Web)!;
         Assert.Equal($"1.{writerMinor}.0.0", fixture.MafVersion);
-        Assert.Equal(new Version(1, 22, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
+        Assert.Equal(new Version(1, 28, 0, 0), typeof(AIAgent).Assembly.GetName().Version);
         return fixture;
     }
 

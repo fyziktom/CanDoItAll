@@ -1,0 +1,128 @@
+@using CanDoItAll.Editing.UI
+@using CanDoItAll.RemoteInstances
+@using Microsoft.Extensions.Logging
+@inject ILogger<DefinitionSharingEditor> Logger
+@implements IDisposable
+
+<Stack GapScale="LayoutGap.Medium">
+    @if (DefinitionId is null) {
+        <TextBlock Value="@SaveFirstHint" />
+    } else if (busy && original is null) {
+        <TextBlock Value="Loading sharing settings…" />
+    }
+    @if (DefinitionId is null || original is not null) {
+        <DefinitionSharingFields ApiAvailable="@draft.ApiAvailable" SharedTemplate="@draft.SharedTemplate"
+                                 ApiAvailableChanged="value => Change(draft with { ApiAvailable = value })"
+                                 SharedTemplateChanged="value => Change(draft with { SharedTemplate = value })"
+                                 Disabled="@(Blocked || original is null)" />
+    }
+    @if (error is not null) {
+        <Alert AlertStyle="AlertStyle.Warning" data-testid="@ErrorTestId">@error</Alert>
+    } else if (confirmed) {
+        <TextBlock Value="Sharing settings saved." data-testid="@SavedTestId" />
+    }
+    @if (DefinitionId is not null) {
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Save sharing" Icon="save" Click="SaveAsync" IsBusy="@(busy && original is not null)"
+                    Disabled="@(Blocked || original is null || draft == original)" data-testid="@SaveTestId" />
+            @if (error is not null) {
+                <Button Text="Reload sharing" Click="LoadAsync" Disabled="@(busy || Disabled || OwnerToken.IsCancellationRequested)" Variant="Variant.Outlined" />
+            }
+        </Cluster>
+    }
+</Stack>
+
+@code {
+    [Parameter] public Guid? DefinitionId { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public CancellationToken OwnerToken { get; set; }
+    [Parameter, EditorRequired] public string SaveFirstHint { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public Func<CancellationToken, Task<DefinitionSharingSettings>> Read { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<DefinitionSharingSettings, DefinitionSharingSettings, CancellationToken, Task> Write { get; set; } = default!;
+    [Parameter] public EventCallback Saved { get; set; }
+    [Parameter] public string? SaveTestId { get; set; }
+    [Parameter] public string? ErrorTestId { get; set; }
+    [Parameter] public string? SavedTestId { get; set; }
+
+    private CancellationTokenSource lifetime = default!;
+    private DefinitionSharingSettings? original;
+    private DefinitionSharingSettings draft = DefinitionSharingSettings.Default;
+    private bool busy;
+    private bool confirmed;
+    private string? error;
+    private bool Blocked => busy || Disabled || OwnerToken.IsCancellationRequested || error is not null;
+
+    protected override Task OnInitializedAsync() {
+        lifetime = CancellationTokenSource.CreateLinkedTokenSource(OwnerToken);
+        return LoadAsync();
+    }
+
+    private void Change(DefinitionSharingSettings value) {
+        if (Blocked || original is null) {
+            return;
+        }
+        draft = value;
+        confirmed = false;
+    }
+
+    private async Task LoadAsync() {
+        if (DefinitionId is null || busy) {
+            return;
+        }
+        var token = lifetime.Token;
+        busy = true;
+        error = null;
+        confirmed = false;
+        original = null;
+        try {
+            var result = await Read(token);
+            token.ThrowIfCancellationRequested();
+            original = result;
+            draft = result;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception failure) {
+            Report(failure);
+        } finally {
+            busy = false;
+        }
+    }
+
+    private async Task SaveAsync() {
+        if (Blocked || original is not { } expected || draft == expected) {
+            return;
+        }
+        var token = lifetime.Token;
+        var desired = draft;
+        busy = true;
+        try {
+            await Write(expected, desired, token);
+            token.ThrowIfCancellationRequested();
+            original = desired;
+            confirmed = draft == desired;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+            return;
+        } catch (Exception failure) {
+            Report(failure);
+            return;
+        } finally {
+            busy = false;
+        }
+        if (!token.IsCancellationRequested) {
+            await Saved.InvokeAsync();
+        }
+    }
+
+    private void Report(Exception failure) {
+        Logger.LogWarning("Sharing settings for definition {DefinitionId} could not be confirmed ({FailureType}).", DefinitionId, failure.GetType().Name);
+        error = failure switch {
+            RemoteInstanceReadException invalid => invalid.Message,
+            UnauthorizedAccessException => "Editing access changed. Reopen the definition.",
+            _ => "Sharing settings could not be confirmed. Reload sharing before saving."
+        };
+    }
+
+    public void Dispose() {
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+}

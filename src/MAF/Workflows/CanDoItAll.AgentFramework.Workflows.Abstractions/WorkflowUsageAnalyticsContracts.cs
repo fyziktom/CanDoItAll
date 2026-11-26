@@ -70,7 +70,9 @@ public sealed record WorkflowAnalyticsQuery(
     WorkflowRunState? State = null,
     WorkflowRuntimeBackendKind? Backend = null,
     string Search = "",
-    int RecentTake = 8);
+    int RecentTake = 8) {
+    public IReadOnlySet<WorkflowId>? ExcludedDefinitionIds { get; init; }
+}
 
 /// <summary>
 /// Model usage added up over a set of usage observations. An observation is the usage recorded for one model call

@@ -21,7 +21,7 @@ public sealed partial class ProjectStructureAgentService {
                     await projectWorkbenchService.RequireProcessAssetMediaReadAsync(prepared, token);
                     var media = input.Create is { } create
                         ? await ResolveAssetCreateMediaAsync(projectId, create.ToServiceRequest(), agent.ActiveWorkspaceScope, token)
-                        : input.Revision!.Media;
+                        : await ResolveAssetRevisionMediaAsync(projectId, input.Revision!, agent.ActiveWorkspaceScope, token);
                     EnsureValidMediaPayload(media);
                     ProjectStructureSvgAssetValidator.Validate(media);
                     prepared = await projectWorkbenchService.MaterializeProcessAssetAsync(prepared, media, token);

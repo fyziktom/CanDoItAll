@@ -1,2 +1,23 @@
-::deep .content-file-interaction-layout { height: 100%; min-height: 0; width: 100%; overflow: hidden; }
-::deep .content-file-interaction { flex: 1 1 0; min-height: 0; overflow: hidden; width: 100%; }
+.content-file-host ::deep .content-file-layout,
+.content-file-host ::deep .content-file-details,
+.content-file-host ::deep .content-file-preview {
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.content-file-host ::deep .content-file-details {
+    padding-inline-end: var(--cad-space-content-gap, 0.75rem);
+    border-inline-end: 1px solid var(--ui-overlay-border-soft);
+}
+
+.content-file-host ::deep .content-file-details-scroll {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.content-file-host ::deep .content-file-notes {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

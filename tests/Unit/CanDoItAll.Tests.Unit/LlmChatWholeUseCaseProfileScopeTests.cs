@@ -232,7 +232,8 @@ internal sealed class SwitchingConversationReadStore(
         int take,
         LlmChatConversationCursor? cursor,
         LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
         => throw new NotSupportedException();
 
     public Task<LlmChatTranscriptReadModel?> TryGetTranscriptPageAsync(

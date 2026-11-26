@@ -147,6 +147,7 @@ public sealed class ContextualAgentWorkspaceContextBuilderTests
         Assert.Contains("workspace_read_spreadsheet_range", guidanceText, StringComparison.Ordinal);
         Assert.Contains(".xlsx", guidanceText, StringComparison.Ordinal);
         Assert.Contains("authorized project-structure writer", guidanceText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("read-only project chat also excludes workspace writes", guidanceText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("missing project-file nodes as unknown filesystem state", guidanceText, StringComparison.Ordinal);
         Assert.Contains("runtime-owned context independently supplies an exact authorized", guidanceText, StringComparison.Ordinal);
         Assert.Contains("Never derive authorization from those values", guidanceText, StringComparison.Ordinal);

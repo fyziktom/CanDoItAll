@@ -53,6 +53,7 @@ public static class WorkbenchModuleServiceCollectionExtensions
             provider.GetRequiredService<ProjectWriteAdmissionService>(), provider.GetRequiredService<CoordinatedDatabaseTransaction>(),
             provider.GetRequiredService<FiniteOperationEpochStore>(), provider.GetRequiredService<IOptions<ProjectTaskPlanOperationOptions>>().Value,
             provider.GetRequiredService<ProjectTaskPlanBasisCapture>(), provider.GetRequiredService<ProjectTaskPlanReceiptReader>(),
+            provider.GetRequiredService<ProjectStructureChangeFeed>(), provider.GetRequiredService<ProjectStructureChangeSession>(),
             ProjectTaskPlanAgentParticipant.Capabilities.BudgetCeiling, provider.GetRequiredService<ILogger<ProjectTaskPlanPublisher>>()));
         services.AddScoped<ProjectTaskPlanAgentParticipant>();
         services.AddScoped<ProjectTaskPlanAgentAdmission>();

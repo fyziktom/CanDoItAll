@@ -126,7 +126,7 @@ public sealed class ProcessesSandboxBrowserTests {
             var files = page.GetByTestId("process-run-files-dialog");
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasTextString = "evidence.md" }).PressAsync("Enter");
             await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("Process evidence");
-            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
+            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToHaveCountAsync(0);
             await Shot("files-open");
             await files.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).Last.ClickAsync();
             await page.GetByRole(AriaRole.Button, new() { Name = "Live processes", Exact = true }).ClickAsync();

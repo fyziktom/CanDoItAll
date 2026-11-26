@@ -39,7 +39,7 @@ public sealed class ProjectsPortfolioBrowserTests {
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasText = "portfolio-proof.md" }).PressAsync("Enter");
             await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("Actual authorized Markdown bytes.");
             await AssertVisibleFileSurfaceAsync(files);
-            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
+            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToHaveCountAsync(0);
             await page.ScreenshotAsync(new() { Path = host.Artifact("projects-native-files-dialog.png") });
             await files.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
             await Assertions.Expect(files).ToHaveCountAsync(0);

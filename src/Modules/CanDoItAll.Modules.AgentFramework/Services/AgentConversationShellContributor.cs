@@ -391,29 +391,35 @@ public sealed class AgentConversationShellContributor(
             return;
         }
 
-        if (decision == FloatingAgentChatCloseDecision.Stop && chat.CanStop)
-        {
+        if (decision == FloatingAgentChatCloseDecision.Stop && (chat.CanStop || chat.CanCancelPendingRun)) {
             if (coordinator.Snapshot().ActiveChats.FirstOrDefault(item => item.HandleId == handleId)?.HasUnsentDraft == true && !chat.HasUnsentDraft) {
                 notificationService.Warning("Draft retained", "A new draft appeared while close confirmation was open. Review it before stopping this chat.");
                 shell.FocusWindow(SourceIdentifier, BuildWindowId(handleId));
                 return;
             }
-            try
-            {
-                if (recovery is not null) {
-                    await recovery.DismissAsync(handleId, owner.Token);
+            try {
+                if (!coordinator.TryBeginOperation(handleId)) {
+                    throw new InvalidOperationException("Another chat operation is still in progress.");
+                }
+                try {
+                    if (recovery is not null) {
+                        await recovery.DismissAsync(handleId, owner.Token, chat);
+                    } else if (chat.CanCancelPendingRun) {
+                        throw new InvalidOperationException("The execution owner is unavailable for cancellation.");
+                    }
+                } finally {
+                    coordinator.ReconcileRunStateAfterOperation(handleId);
                 }
                 coordinator.Stop(handleId);
                 shell.ClearFocusedWindow(SourceIdentifier, BuildWindowId(handleId));
                 return;
-            }
-            catch (InvalidOperationException exception)
-            {
+            } catch (OperationCanceledException) when (owner.IsCancellationRequested) {
+                return;
+            } catch (Exception exception) {
                 logger.LogWarning(
-                    exception,
-                    "Unable to stop Agent chat handle during close. HandleId={HandleId}.",
-                    handleId);
-                notificationService.Warning("Chat kept active", "The Agent chat could not be stopped yet.");
+                    "Unable to stop Agent chat. HandleId={HandleId} RunId={RunId} FailureType={FailureType}.",
+                    handleId, chat.ExecutionRunId, exception.GetType().Name);
+                notificationService.Warning("Chat kept active", "Open the chat to review its current run and draft before stopping it.");
             }
         }
 

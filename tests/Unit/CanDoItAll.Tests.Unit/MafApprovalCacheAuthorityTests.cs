@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Runtime.Abstractions;
@@ -64,6 +65,34 @@ public sealed class MafApprovalCacheAuthorityTests {
             new ToolApprovalRequestContent(restored.RequestId, restored.ToolCall)));
         Assert.True(cached.Approved);
         Assert.True(restored.Approved);
+    }
+
+    [Fact]
+    public async Task Approved_spreadsheet_cells_bind_to_the_native_function_without_changing_their_values() {
+        const string amount = "1234567890123456.123456";
+        using var cells = JsonDocument.Parse($$"""[{"cellAddress":"A2","value":{{amount}}}]""");
+        var driver = new MafApprovalContinuationDriver();
+        var request = new ToolApprovalRequestContent("approval", new FunctionCallContent("call", "workspace_write_spreadsheet",
+            new Dictionary<string, object?> { ["cellWrites"] = cells.RootElement.Clone() }));
+        var session = CreateSession([driver.MapPendingApproval(request)]);
+
+        var approved = Assert.IsType<FunctionCallContent>(CreateResponse(driver, session).ToolCall);
+        var function = AIFunctionFactory.Create((WorkspaceSpreadsheetCellWriteArgument[] cellWrites) =>
+            Assert.Single(cellWrites).Value.GetRawText(), "workspace_write_spreadsheet");
+        var result = await function.InvokeAsync(new AIFunctionArguments(approved.Arguments!));
+
+        Assert.Equal(amount, Assert.IsType<JsonElement>(result).GetString());
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("{")]
+    public void Invalid_saved_arguments_stop_approval_before_the_tool_is_called(string json) {
+        var driver = new MafApprovalContinuationDriver();
+        var pending = driver.MapPendingApproval(CreateRequest()) with { ArgumentsJson = json };
+
+        Assert.Throws<InvalidOperationException>(() => CreateResponse(driver, CreateSession([pending])));
     }
 
     private static ToolApprovalResponseContent CreateResponse(MafApprovalContinuationDriver driver, ChatSessionRecord session) {

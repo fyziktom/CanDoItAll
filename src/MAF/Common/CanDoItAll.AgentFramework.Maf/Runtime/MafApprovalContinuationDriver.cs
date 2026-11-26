@@ -57,10 +57,13 @@ internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? tool
             decision => decision.Approved,
             StringComparer.Ordinal);
 
+        // MAF compaction compares unidentified approval responses by content type alone.
         return approvals
             .Select(item => new ChatMessage(
                 ChatRole.User,
-                [item.CreateResponse(ResolveDecision(item, decisionByRequestId))]))
+                [item.CreateResponse(ResolveDecision(item, decisionByRequestId))]) {
+                MessageId = $"approval-response-{item.RequestId}"
+            })
             .ToList();
     }
 
@@ -228,7 +231,13 @@ internal sealed class MafApprovalContinuationDriver(AgentToolPolicyCatalog? tool
 
     private static ToolApprovalRequestContent RehydratePendingApproval(PendingToolApprovalRecord record)
     {
-        var arguments = MafToolInvocationArgumentFormatter.DeserializeArguments(record.ArgumentsJson);
+        Dictionary<string, object?> arguments;
+        try {
+            arguments = JsonSerializer.Deserialize<Dictionary<string, object?>>(record.ArgumentsJson, SerializerOptions)
+                ?? throw new JsonException("The saved tool arguments must be an object.");
+        } catch (JsonException exception) {
+            throw new InvalidOperationException("The saved arguments for the pending approval are invalid. Reconcile the original proposal before continuing.", exception);
+        }
         ToolCallContent toolCall = record.ToolKind switch
         {
             "mcp" or "hosted-mcp" => new McpServerToolCallContent(record.CallId, record.ToolName, record.Details)

@@ -1,0 +1,12 @@
+<RemoteTemplateImportDialog Kind="RemoteTemplateKind.Agent" Authorize="Opening.AuthorizeAsync" Write="WriteAsync"
+                            Closed="Closed" AcceptedAndClosed="AcceptedAndClosed" Imported="Imported" />
+
+@code {
+    [Parameter, EditorRequired] public AgentConfigurationOpening Opening { get; set; } = default!;
+    [Parameter] public EventCallback Closed { get; set; }
+    [Parameter] public EventCallback AcceptedAndClosed { get; set; }
+    [Parameter] public EventCallback<Guid> Imported { get; set; }
+
+    private Task<Guid> WriteAsync(Func<CancellationToken, Task<Guid>> write, CancellationToken token) =>
+        Opening.WriteAsync(write, token);
+}

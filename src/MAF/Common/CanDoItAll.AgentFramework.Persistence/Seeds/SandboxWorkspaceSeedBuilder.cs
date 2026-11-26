@@ -15,6 +15,7 @@ internal static class SandboxWorkspaceSeedBuilder
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
+        OpenAiModelIds.Gpt61Sol,
         OpenAiModelIds.Gpt6Astra,
         OpenAiModelIds.Gpt56,
         OpenAiModelIds.Gpt56Luna,
@@ -340,6 +341,7 @@ internal static class SandboxWorkspaceSeedBuilder
                 now,
                 now)
             {
+                SharedTemplate = false,
                 AvatarImageUrl = AgentAvatarImageCatalog.RequireBundledAvatarUrl(
                     settings.AvatarImageUrl,
                     member.Key)

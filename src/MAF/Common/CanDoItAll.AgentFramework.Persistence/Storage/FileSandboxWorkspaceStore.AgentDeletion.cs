@@ -248,6 +248,7 @@ public sealed partial class FileSandboxWorkspaceStore
             AgentExternalBindings = currentCatalog.AgentExternalBindings
                 .Where(item => item.AgentId != agentId)
                 .ToList(),
+            RemoteTemplateBindings = currentCatalog.RemoteTemplateBindings?.Where(binding => binding.AgentId != agentId).ToArray(),
             Memory = currentCatalog.Memory
                 .Where(item => item.AgentId != agentId)
                 .ToList(),

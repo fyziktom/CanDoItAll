@@ -17,6 +17,13 @@ public static class AgentFrameworkUiServiceCollectionExtensions
         services.TryAddScoped<IAgentGovernanceReads, AgentGovernanceReads>();
         services.TryAddScoped<IAgentDiagnosticsReads, AgentDiagnosticsReads>();
         services.TryAddScoped<IAgentCatalogOperations, AgentCatalogOperations>();
+        services.TryAddScoped<RemoteAgentTemplateDiscovery>();
+        services.TryAddScoped<RemoteTemplateConnectionReader>();
+        services.TryAddScoped<RemoteTemplateImportCoordinator>();
+        services.TryAddScoped<RemoteWorkflowDraftWriter>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IRemoteTemplateImportFeature, RemoteAgentTemplateImportFeature>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IRemoteTemplateImportFeature, RemoteSimpleChatImportFeature>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IRemoteTemplateImportFeature, RemoteWorkflowImportFeature>());
         services.TryAddScoped<IAgentCapabilitiesReads, AgentCapabilitiesReads>();
         services.TryAddScoped<IAgentCapabilityCommands, AgentCapabilityCommands>();
         services.TryAddScoped<AgentChatSubmissionRetention>();

@@ -236,7 +236,7 @@ public sealed class ProjectsPageTests
         {
             Assert.Contains("Replaced authorized content.", cut.Find("[data-testid='interaction-markdown-view']").TextContent);
             Assert.Empty(cut.FindAll(".ft-file-browser"));
-            Assert.True(cut.Find("[data-testid='interaction-mode-edit']").HasAttribute("disabled"));
+            Assert.Empty(cut.FindAll("[data-testid='interaction-mode-edit']"));
         });
     }
 

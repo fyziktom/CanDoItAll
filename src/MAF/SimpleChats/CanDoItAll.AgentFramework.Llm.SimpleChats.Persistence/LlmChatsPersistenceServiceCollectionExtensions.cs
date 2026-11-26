@@ -32,7 +32,9 @@ public static class LlmChatsPersistenceServiceCollectionExtensions
             provider.GetRequiredService<EfLlmChatDefinitionRepository>());
         services.AddScoped<ILlmChatDefinitionCreateReceiptRepository>(provider =>
             provider.GetRequiredService<EfLlmChatDefinitionRepository>());
-        services.AddScoped<ILlmChatDefinitionReadStore, EfLlmChatDefinitionReadStore>();
+        services.AddScoped<EfLlmChatDefinitionReadStore>();
+        services.AddScoped<ILlmChatDefinitionReadStore>(provider => provider.GetRequiredService<EfLlmChatDefinitionReadStore>());
+        services.AddScoped<ILlmChatTemplateSummaryReader>(provider => provider.GetRequiredService<EfLlmChatDefinitionReadStore>());
         services.AddScoped<ILlmChatConversationRepository, EfLlmChatConversationRepository>();
         services.AddScoped<ILlmChatConversationReadStore, EfLlmChatConversationReadStore>();
         services.AddScoped<ILlmChatOperationRepository, EfLlmChatOperationRepository>();

@@ -403,6 +403,37 @@ public sealed partial class ProcessCatalogAuthorityPersistenceTests {
     }
 
     [Fact]
+    public async Task Process_asset_revision_reuses_the_committed_workspace_content_on_replay() {
+        var clock = new NativeClock();
+        await using var app = await TestApplication.CreateAsync(AssetHarness(clock, new AssetDriverProbe()));
+        await using var scope = app.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var test = await CreateAssetCaseAsync(services, clock, revision: true);
+        var projectId = test.Owner.Project.ProjectId;
+        var parent = test.Invocation.ParentNodeKey;
+        var path = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/proposal.txt";
+        var filePath = Path.Combine(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(), path);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllBytesAsync(filePath, "approved content"u8.ToArray());
+        var request = new ProjectStructureAgentAssetRevisionRequest("Revised asset", SourceWorkspacePath: path);
+        var payload = new ProjectProcessAssetProposalCodec().Prepare(ProjectProcessAssetProposalCodec.RevisionToolName,
+            JsonSerializer.SerializeToElement(new ProjectProcessAssetRevisionProposal(projectId, parent, request), ProjectProcessAssetProposalCodec.Json));
+        var invocation = new ProjectProcessAssetInvocation(test.Invocation.Admitted with { Payload = payload, ApprovedDigest = payload.Digest },
+            test.Invocation.Execution, parent);
+        var agent = new ProjectStructureAgentContext(test.Owner.Agent.Id.ToString("D"), "Revision", Environment.MachineName,
+            app.RootPath, "fixture", Guid.NewGuid().ToString("D")) { ProcessAssetInvocation = invocation };
+        var service = services.GetRequiredService<ProjectStructureAgentService>();
+
+        var created = await service.CreateAssetRevisionAsync(projectId, parent, request, null, agent, default);
+        await File.WriteAllBytesAsync(filePath, "later content"u8.ToArray());
+        var replay = await service.CreateAssetRevisionAsync(projectId, parent, request, null, agent, default);
+
+        Assert.Equal(created.NodeId, replay.NodeId);
+        Assert.Equal(created.ProcessAssetReceipt!.Receipt, replay.ProcessAssetReceipt!.Receipt);
+        Assert.Equal("approved content"u8.ToArray(), (await service.GetAssetBinaryContentAsync(projectId, replay.NodeId)).Bytes);
+    }
+
+    [Fact]
     public async Task Asset_service_uses_retained_materialization_without_repeating_its_external_source_read() {
         var clock = new NativeClock();
         var driver = new AssetDriverProbe();

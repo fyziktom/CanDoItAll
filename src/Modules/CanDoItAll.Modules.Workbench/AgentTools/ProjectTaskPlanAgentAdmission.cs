@@ -27,7 +27,7 @@ internal sealed class ProjectTaskPlanAgentAdmission(IAgentCatalogReadLeaseStore 
         RequireCurrentProfile(preparation.Profile);
         var capturedSettings = await settings.ReadV2Async(cancellationToken);
         if (capturedSettings.DecisionDataPolicy is not { } policy || capturedSettings.Expectation.Head is not { } head) {
-            throw new AgentToolAdmissionException("planning.workspace-policy-missing", "Configure and save the Workspace decision-data policy before starting a plan.");
+            throw new AgentToolAdmissionException(AgentPlanningRunPreparation.MissingWorkspacePolicyCode, "Configure and save the Workspace decision-data policy before starting a plan.");
         }
         var project = new ProjectWriteAdmission(lifetime.DatabaseProfileId, lifetime.ProjectId, lifetime.LifetimeId);
         await using var held = await catalog.AcquireAgentReadLeaseAsync(preparation.Agent.Id, cancellationToken);

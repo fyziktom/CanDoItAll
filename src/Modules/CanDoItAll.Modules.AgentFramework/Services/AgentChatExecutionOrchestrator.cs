@@ -27,11 +27,12 @@ public sealed class AgentChatExecutionOrchestrator(
         workspaceExecutionService, turnContextCaptureService, notificationHub, conversationContextService);
 
     public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPlanningAction(
-        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default) {
+        Guid agentId, AgentPlanningActionRequest request, CancellationToken cancellationToken = default,
+        AgentExecutionActivityStreamId? expectedStream = null) {
         ValidateAgentId(agentId);
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        var operation = AdmitOperation(agentId, request.ChatSessionId, "Planning action accepted.");
+        var operation = AdmitOperation(agentId, request.ChatSessionId, "Planning action accepted.", expectedStream);
         return (operation.StreamId, background is null
             ? inlineExecutor.PlanAsync(operation, request, cancellationToken)
             : background.PlanAsync(GetOwner(cancellationToken), operation, request));
@@ -160,14 +161,15 @@ public sealed class AgentChatExecutionOrchestrator(
     }
 
     public (AgentExecutionActivityStreamId StreamId, Task<ExecutionRunDetail> Completion) StartPendingApprovalCancellation(
-        Guid agentId, Guid chatSessionId, Guid executionRunId, CancellationToken cancellationToken = default) {
+        Guid agentId, Guid chatSessionId, Guid executionRunId, CancellationToken cancellationToken = default,
+        AgentExecutionActivityStreamId? expectedStream = null) {
         ValidateAgentId(agentId);
         ValidateSessionId(chatSessionId);
         if (executionRunId == Guid.Empty) {
             throw new ArgumentException("An execution run id is required.", nameof(executionRunId));
         }
         cancellationToken.ThrowIfCancellationRequested();
-        var operation = AdmitOperation(agentId, chatSessionId, "Pending approval cancellation accepted.");
+        var operation = AdmitOperation(agentId, chatSessionId, "Pending approval cancellation accepted.", expectedStream);
         return (operation.StreamId, background is null
             ? inlineExecutor.CancelPendingAsync(operation, executionRunId, cancellationToken)
             : background.CancelPendingAsync(GetOwner(cancellationToken), operation, executionRunId));

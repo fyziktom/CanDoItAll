@@ -531,6 +531,7 @@
             AutoApproval = IsAutoApprovalActive(),
             ComposerGuidance = ResolveComposerGuidance(),
             Attachments = DraftAttachmentPaths.Select(RelativeAttachmentPath.NormalizeOrNull).OfType<string>().ToImmutableArray(),
+            CanAttachRunArtifacts = ActiveRun is { } run && Session is { } session && run.AgentId == Agent?.Id && run.ChatSessionId == session.Id,
             CanUseVoiceMode = CanUseVoiceMode,
             IsVoiceModeEnabled = IsVoiceModeEnabled,
             IsVoiceRecording = IsVoiceRecording,

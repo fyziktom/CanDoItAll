@@ -1,14 +1,18 @@
 using CanDoItAll.Editing;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Editing;
+using CanDoItAll.RemoteInstances;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.AgentFramework.ProviderManagement;
 
 public sealed class ProviderEditingChanges(EditingChangeFeed feed, ICanonicalRuntimeDatabase database,
     IEditingUiAccess access, ProviderEditingWrites writes, ILogger<EditingObservation> logger)
-    : IProviderProfileCommitObserver, ISharedProviderPublicationCommitObserver {
+    : IProviderProfileCommitObserver, ISharedProviderPublicationCommitObserver, IRemoteInstanceEditing {
     public EditingScope Scope => new(EditingScopeKind.Dataset, database.Profile.Profile.Id, database.Generation);
+    IRemoteInstanceOpening IRemoteInstanceEditing.Open(Guid editorId, Func<bool> owns)
+        => Open(editorId, owns, EditingOwner.SharedProviderSource);
+
     public ProviderEditingOpening Open(Guid editorId, Func<bool> owns, EditingOwner owner = EditingOwner.ProviderProfile,
         ProviderEditingOpening? parent = null) {
         if (owner is not (EditingOwner.ProviderProfile or EditingOwner.SharedProviderSource)) {
@@ -31,7 +35,7 @@ public sealed class ProviderEditingChanges(EditingChangeFeed feed, ICanonicalRun
     }
 }
 
-public sealed class ProviderEditingOpening : IAsyncDisposable {
+public sealed class ProviderEditingOpening : IRemoteInstanceOpening {
     private readonly EditingObservation observation;
     private readonly EditingTopic topic;
     private readonly ProviderEditingWrites writes;
@@ -52,6 +56,9 @@ public sealed class ProviderEditingOpening : IAsyncDisposable {
         this.parent = parent;
         EditorId = editorId;
     }
+
+    Task IRemoteInstanceOpening.StartAsync(Func<Task> changed, Func<Task> retired)
+        => StartAsync(_ => changed(), retired);
 
     public async Task StartAsync(Func<EditingChangeBatch, Task> changed, Func<Task> retired) {
         this.retired = retired;

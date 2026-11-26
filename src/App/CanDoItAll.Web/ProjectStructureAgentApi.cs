@@ -3731,9 +3731,8 @@ public static class ProjectStructureAgentApi
     /// <remarks>
     /// Stores the new content as a new asset node of the same type under the original asset and links it to the
     /// original with DerivedFrom; the result's <c>revisionParentNodeId</c> names the original. The original node and
-    /// its content stay unchanged. Omitted subtype and metadata are copied from the original. Always send <c>media</c>:
-    /// a null value creates a revision node without content and then fails with HTTP 400 <c>AssetRequired</c>, leaving
-    /// that node in the structure. Repeating a request creates another revision.
+    /// its content stay unchanged. Omitted subtype and metadata are copied from the original. The API validates the
+    /// required <c>media</c> payload before creating the revision. Repeating a successful request creates another revision.
     ///
     /// Authority: when API authorization is enabled, a bearer token with the <c>api</c> or
     /// <c>api.project-structure.write</c> scope. Send <c>leaseToken</c> to work under your own project lease. Without
@@ -3755,10 +3754,9 @@ public static class ProjectStructureAgentApi
     /// revision.</param>
     /// <response code="200">Metadata of the committed revision node.</response>
     /// <response code="400">
-    /// An invalid <c>media</c> payload (<c>FileNameRequired</c>, <c>MediaPayloadRequired</c>,
-    /// <c>InvalidBase64Payload</c>, <c>InvalidSvgRoot</c>, <c>InvalidSvgXml</c>; nothing was created) or
-    /// <c>AssetRequired</c> (the node is not an asset, or <c>media</c> was null and a content-less revision node was
-    /// created).
+    /// Missing or invalid <c>media</c> produces <c>MediaPayloadRequired</c>, <c>FileNameRequired</c>,
+    /// <c>InvalidBase64Payload</c>, <c>InvalidSvgRoot</c> or <c>InvalidSvgXml</c>. Revising a node that lacks an
+    /// asset produces <c>AssetRequired</c>.
     /// </response>
     /// <response code="403">
     /// <c>ProjectBlockRootOutsideExecutionScope</c>: the asset is under a block whose folder lies outside the managed

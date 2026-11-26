@@ -23,7 +23,7 @@ public sealed class WorkflowOwnerPersistenceTests {
         await using var owner = await application.Services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>().CreateDbContextAsync();
         var canonicalModel = canonical.GetService<IDesignTimeModel>().Model;
         var ownerModel = owner.GetService<IDesignTimeModel>().Model;
-        Assert.Equal(17, ownerModel.GetEntityTypes().Count());
+        Assert.Equal(CurrentDatabaseModelAssertions.WorkflowEntityCount, ownerModel.GetEntityTypes().Count());
         foreach (var entity in ownerModel.GetEntityTypes()) {
             var complete = Assert.IsAssignableFrom<IEntityType>(canonicalModel.FindEntityType(entity.ClrType));
             if (entity.ClrType != typeof(WorkflowComponentRecord)) {
@@ -77,7 +77,7 @@ public sealed class WorkflowOwnerPersistenceTests {
     }
 
     [Fact]
-    public async Task All_seventeen_canonical_record_payloads_survive_restart_and_factory_profile_isolation() {
+    public async Task Every_canonical_workflow_record_survives_restart_and_factory_profile_isolation() {
         await using var environment = CanDoItAllTestEnvironment.Create("workflow-owner-restart");
         var profile = environment.CreatePostgreSqlProfile("original");
         var otherProfile = environment.CreatePostgreSqlProfile("other");
@@ -103,7 +103,8 @@ public sealed class WorkflowOwnerPersistenceTests {
         await using var restarted = await TestApplication.CreateAsync(harness);
         var factory = restarted.Services.GetRequiredService<IDbContextFactory<WorkflowDbContext>>();
         await using var owner = await factory.CreateDbContextAsync();
-        Assert.Equal(17, expected.Select(row => row.EntityType).Distinct().Count());
+        Assert.Equal(owner.Model.GetEntityTypes().Select(entity => entity.ClrType).OrderBy(type => type.Name),
+            expected.Select(row => row.EntityType).Distinct().OrderBy(type => type.Name));
         foreach (var row in expected) {
             var restored = await owner.FindAsync(row.EntityType, row.Keys);
             Assert.NotNull(restored);
@@ -189,6 +190,7 @@ public sealed class WorkflowOwnerPersistenceTests {
             new WorkflowDefinitionRecord { WorkflowId = workflow, VersionId = version, Revision = 11, Name = "Legacy owner definition",
                 Description = "Original description", DefinitionJson = payload, InstructionSnapshotSchemaVersion = 3,
                 CreatedAtUtc = now, UpdatedAtUtc = now },
+            new RemoteTemplatePublication { Kind = RemoteTemplateKind.Workflow, DefinitionId = workflow, CreatedUtcTicks = now.UtcTicks },
             new WorkflowDefinitionHeadRecord { WorkflowId = workflow, VersionId = version, ExternalNamespace = "owner-fixture", ExternalKey = workflow.ToString("N") },
             new WorkflowComponentRecord { Id = Guid.NewGuid(), Name = "Legacy owner component", Model = "fixture", ComponentJson = payload,
                 PromptGalleryBindingSchemaVersion = 1, CreatedAtUtc = now, UpdatedAtUtc = now },

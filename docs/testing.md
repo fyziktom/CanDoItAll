@@ -1026,12 +1026,17 @@ Windows and macOS run the tests whose behavior depends on the host operating sys
 |---|---|---|
 | `stable` | Windows, Linux, macOS | Unit and Memory with the stable filter, then the actual-host portability, PostgreSQL, runtime-portability, headless-host, documentation and installer gates |
 | `tests-linux` | Linux, 5 shards | every stable Components and Integration test |
-| `tests-host` | Windows and macOS, 3 shards each | Components and Integration classes in `Category=HostPlatform`; in the full scope, every stable Components and Integration test |
+| `tests-host` | Windows and macOS, 3 shards each in split scope and 4 each in full scope | Host-platform Components and Integration classes in split scope. Every stable Components and Integration test in full scope. |
 
 The full scope runs for pushes to and pull requests into `main`, the weekly schedule, and a manual
 run with `platform-scope: full`. Every other run uses the split scope. Both scopes use the stable
 filter and its exclusions; the split scope only removes platform-neutral classes from the Windows
 and macOS shards.
+
+The Linux stable job also runs the floating agent chat in Chromium against PostgreSQL
+and a scripted loopback model. It covers browser refresh, approval, rejection,
+cancelling the pending run and stopping the chat. The decision cases verify the
+saved run, provider request count and whether the proposed file was created.
 
 A Components or Integration test class is host-platform when its own source reaches the operating
 system: processes, real files and directories, temporary roots, links and file modes, data
@@ -1096,9 +1101,15 @@ of equal host-platform timings.
 Windows full-scope shards 2 and 3 completed after approximately 168 and 178 minutes,
 including setup, while shard 1 was cancelled at 180 minutes. macOS shard 1 also reached
 that limit; its other shards completed. The full-scope host job budget is now 240 minutes
-to allow completion and evidence collection. The split-scope host budget remains 180
-minutes. Test selection, assertions, per-operation deadlines and failure reporting are
-unchanged; both the code failures and the refreshed scheduling require another CI run.
+to allow completion and evidence collection. The split-scope host budget is 180 minutes.
+
+On 2026-11-24 full CI run 184 reached the 240-minute limit in macOS shard 2.
+It had reported 2,145 of its 2,367 integration cases, with tests still passing
+in the last minute. Full-scope Windows and macOS jobs now divide the suite into
+four shards per platform. Using the existing class weights, timings from the five
+Linux shards project 62–64 minutes of test execution per full shard. Combining
+the available macOS timings with the preceding complete macOS run projects
+146–160 minutes per shard before setup, discovery and teardown.
 
 ## Runtime Portability Gate
 

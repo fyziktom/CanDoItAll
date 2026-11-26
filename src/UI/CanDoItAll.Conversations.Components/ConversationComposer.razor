@@ -9,9 +9,16 @@
                                         class="chat-composer__textarea"
                                         data-testid="@PromptTestId" />
             <div class="chat-composer__tools">
-                @LeadingActions
-                <Button Icon="send"
-                        Tone="ButtonTone.Default"
+                @if (Compact) {
+                    <Cluster Gap="LayoutGap.XSmall" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                        @LeadingActions
+                        @TrailingActions
+                    </Cluster>
+                } else {
+                    @LeadingActions
+                }
+                <Button Icon="send" Text="@(Compact ? "Send" : null)"
+                        Tone="@(Compact ? ButtonTone.Primary : ButtonTone.Default)"
                         Size="ButtonSize.Small"
                         Disabled="@IsSendDisabled"
                         IsBusy="@IsBusy"
@@ -20,7 +27,9 @@
                         aria-label="@SendAriaLabel"
                         title="@SendAriaLabel"
                         data-testid="@SendTestId" />
-                @TrailingActions
+                @if (!Compact) {
+                    @TrailingActions
+                }
             </div>
         </div>
     </FormField>

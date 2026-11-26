@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Operations;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Web.Api.Streaming;
 using CanDoItAll.Modules.Workspace.ApiAccess;
 using Microsoft.AspNetCore.Mvc;
@@ -153,6 +154,7 @@ internal static class LlmChatOperationsApi
         HttpRequest httpRequest,
         HttpResponse response,
         ILlmChatOperationApplicationService service,
+        RemoteTemplatePublicationStore publications,
         CancellationToken cancellationToken)
     {
         var body = await LlmChatApiRequestReader
@@ -169,7 +171,8 @@ internal static class LlmChatOperationsApi
         }
 
         var result = await LlmChatApiResults.WriteAsync(() => service.SendAsync(command! with {
-            HistoryCaller = ProviderHistoryRequestContext.Caller(httpRequest.HttpContext)
+            HistoryCaller = ProviderHistoryRequestContext.Caller(httpRequest.HttpContext),
+            CanStartNewTurn = (id, token) => publications.IsApiAvailableAsync(RemoteTemplateKind.SimpleChat, id.Value, token)
         }, cancellationToken), response).ConfigureAwait(false);
         if (result.IsFailure)
         {

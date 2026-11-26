@@ -1,6 +1,6 @@
 @if (IsOpen) {
     <Dialog IsOpen="true"
-            Eyebrow="Project workspace"
+            Eyebrow="@(State.Preview is null ? "Project workspace" : null)"
             Title="@DialogTitle"
             Subtitle="@DialogSubtitle"
             Size="ModalSize.Full"
@@ -9,7 +9,9 @@
             TestId="project-files-dialog"
             OnClose="State.Closed">
         <HeaderActions>
-            @if (State.Snapshot?.Search is { } search) {
+            @if (State.Preview is not null) {
+                <StatusBadge Tone="info" Text="Read only" />
+            } else if (State.Snapshot?.Search is { } search) {
                 <StatusBadge Tone="neutral" Text="@($"{State.Snapshot.Items.Count} visible")" />
                 <StatusBadge Tone="info" Text="@($"{search.ScannedItems} inspected")" />
                 <StatusBadge Tone="neutral" Text="@($"{search.RetainedItems} retained")" />
@@ -38,7 +40,7 @@
                             Description="The current project view contains no available file sources." />
             }
             else if (State.Preview is not null) {
-                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch" FillHeight="true" Class="min-h-0 overflow-hidden">
                     @if (!string.IsNullOrWhiteSpace(State.ActivationError)) {
                         <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
                             @State.ActivationError
@@ -54,7 +56,7 @@
                                      Composition="State.Preview.Composition"
                                      OpenExternallyRequested="State.Preview.OpenExternally"
                                      OpenExternallyLabel="Open in preferred app"
-                                     AllowModeSwitch="false"
+                                     AllowModeSwitch="false" Embedded="true" FillAvailableHeight="true"
                                      MaximumContentBytes="@(4 * 1024 * 1024)"
                                      AriaLabel="@($"Read-only project file {State.Preview.Request.FileName}")" />
                 </Stack>
@@ -102,7 +104,7 @@
     public string ProjectName { get; set; } = string.Empty;
 
     private string DialogTitle => State.Preview?.Request.FileName ?? $"Files \u00B7 {ProjectName}";
-    private string DialogSubtitle => State.Preview is null
+    private string? DialogSubtitle => State.Preview is null
         ? "Browse and search this project's authorized text-file source. Activate a file to replace browsing with a read-only interaction."
-        : "Read-only content is authorized independently from the browser component.";
+        : null;
 }

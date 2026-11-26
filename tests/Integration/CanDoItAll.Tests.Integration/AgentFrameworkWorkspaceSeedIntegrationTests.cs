@@ -1626,7 +1626,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.True(captureTemplate.IsTemplate);
         Assert.Equal("app-screenshot-capture-agent", captureTemplate.TemplateKey);
-        AssertOpenAiBacked(captureTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(captureTemplate, openAiDefaultProvider.Id);
         AssertHasCapabilities(
             captureTemplate,
             capabilityIdsByKey["playwright-local-mcp"],
@@ -1660,7 +1660,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.True(reviewTemplate.IsTemplate);
         Assert.Equal("screenshot-review-storage-agent", reviewTemplate.TemplateKey);
-        AssertOpenAiBacked(reviewTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(reviewTemplate, openAiDefaultProvider.Id);
         AssertHasCapabilities(
             reviewTemplate,
             capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"],
@@ -1695,7 +1695,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 
         Assert.True(layoutTemplate.IsTemplate);
         Assert.Equal("layout-image-generation-agent", layoutTemplate.TemplateKey);
-        AssertOpenAiBacked(layoutTemplate, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(layoutTemplate, openAiDefaultProvider.Id);
         AssertHasCapabilities(
             layoutTemplate,
             capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"],
@@ -2123,24 +2123,24 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var financialStrategistAgent = Assert.Single(agents, item => string.Equals(item.Name, "Financial Strategist", StringComparison.Ordinal));
         var marketingSpecialistAgent = Assert.Single(agents, item => string.Equals(item.Name, "Marketing Specialist", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(runtimeFailureAnalystAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(javascriptArchitectAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(javascriptDeveloperAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(javascriptQaAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(businessStrategistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(financialStrategistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(marketingSpecialistAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(runtimeFailureAnalystAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(javascriptArchitectAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(javascriptDeveloperAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(javascriptQaAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(businessStrategistAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(financialStrategistAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(marketingSpecialistAgent, openAiDefaultProvider.Id);
 
         AssertHasCapabilities(architectAgent, codeanalyticsCapabilityId, componentsCapabilityId, architectureSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId);
         AssertHasCapabilities(programmingAgent, playwrightCapabilityId, codeanalyticsCapabilityId, componentsCapabilityId, frontendThemeCapabilityId, frontendSkillCapabilityId, playwrightWorkflowCapabilityId, runTestsCapabilityId, mstestCapabilityId, concreteDeliverableDeliveryCapabilityId, dotnetAppDeliveryCapabilityId, blazorSsrDeliveryCapabilityId, workspaceSourceRagCapabilityId, createDirectoryCapabilityId, writeFileCapabilityId, appendFileCapabilityId, workspaceDotnetRunCapabilityId, workspaceDotnetStopCapabilityId, workspaceDotnetNewCapabilityId, pwshRunScriptCapabilityId);
@@ -2544,13 +2544,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var securityReviewAgent = Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal));
         var releaseManagerAgent = Assert.Single(agents, item => string.Equals(item.Name, "Release Readiness Manager", StringComparison.Ordinal));
 
-        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id, OpenAiModelIds.Gpt56Luna);
-        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(architectAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(programmingAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(qaAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(codeReviewAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(securityReviewAgent, openAiDefaultProvider.Id);
+        AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id);
 
         AssertHasCapabilities(architectAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-components-mcp"], capabilityIdsByKey["architecture-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"]);
         AssertHasCapabilities(programmingAgent, capabilityIdsByKey["candoitall-codeanalytics-mcp"], capabilityIdsByKey["candoitall-frontend-theme"], capabilityIdsByKey["frontend-skill"], capabilityIdsByKey["candoitall-watch-playwright-loop"], capabilityIdsByKey["run-tests"], capabilityIdsByKey["writing-mstest-tests"], capabilityIdsByKey["concrete-deliverable-delivery-inline-skill"], capabilityIdsByKey["dotnet-app-delivery-inline-skill"], capabilityIdsByKey["blazor-ssr-delivery-inline-skill"], capabilityIdsByKey["workspace-source-rag"], capabilityIdsByKey["workspace-create-directory"], capabilityIdsByKey["workspace-write-file"], capabilityIdsByKey["workspace-append-file"], capabilityIdsByKey["workspace-dotnet-run"], capabilityIdsByKey["workspace-dotnet-stop"], capabilityIdsByKey["workspace-pwsh-run-script"]);
@@ -2819,11 +2819,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains(GetExpectedSeriousDeliveryManagedSeedVersion(), refreshedStopSnapshot.ConfigurationJson, StringComparison.Ordinal);
     }
 
-    private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId, string expectedModel)
+    private static void AssertOpenAiBacked(AgentDefinition agent, Guid providerId)
     {
-        Assert.False(string.IsNullOrWhiteSpace(expectedModel));
         Assert.Equal(providerId, agent.ProviderProfileId);
-        Assert.Equal(expectedModel, agent.Model);
+        Assert.Equal(OpenAiModelIds.Gpt61Sol, agent.Model);
     }
 
     private static void AssertManagedSeedRefreshed(string agentName, (string Model, string ConfigurationJson) snapshot)

@@ -292,8 +292,7 @@ public sealed class ActiveAgentChatRegistry(TimeProvider timeProvider) : IActive
         lock (gate)
         {
             var chat = RequireChat(handleId);
-            if (chat.RunState == runState)
-            {
+            if (chat.ActivityStreamId is not null || chat.RunState == runState) {
                 return chat;
             }
 

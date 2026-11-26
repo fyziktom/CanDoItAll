@@ -2,6 +2,7 @@ using System.ComponentModel;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Conversations;
+using CanDoItAll.Modules.AgentFramework;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CanDoItAll.Web.Api;
@@ -20,6 +21,7 @@ internal static class LlmChatConversationEndpoints
     {
         var definitions = api.MapGroup("/llm-chats")
             .WithTags("LLM Chats")
+            .AddEndpointFilter(LlmChatApiAvailability.RequireAvailableDefinitionAsync)
             .DisableAntiforgery();
         definitions.MapPost("/{definitionId:guid}/conversations", CreateConversationAsync)
             .WithName("CreateLlmChatConversation")
@@ -112,6 +114,7 @@ internal static class LlmChatConversationEndpoints
         string? cursor,
         Guid? definitionId,
         ILlmChatConversationApplicationService service,
+        RemoteTemplatePublicationStore publications,
         CancellationToken cancellationToken)
     {
         if (!LlmChatApiCursorCodec.TryDecodeConversation(cursor, out var position))
@@ -140,7 +143,8 @@ internal static class LlmChatConversationEndpoints
             return LlmChatApiResults.InvalidRequest("The conversation page size is invalid.");
         }
 
-        var result = await service.ListPageAsync(query, cancellationToken).ConfigureAwait(false);
+        var unavailable = await publications.ListApiUnavailableIdsAsync(RemoteTemplateKind.SimpleChat, cancellationToken);
+        var result = await service.ListPageAsync(query with { UnavailableDefinitionIds = unavailable }, cancellationToken);
         if (result.IsFailure)
         {
             return LlmChatApiResults.FromFailure(result.Errors);

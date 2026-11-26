@@ -1,0 +1,54 @@
+@namespace CanDoItAll.Workspace.UI
+<Dialog IsOpen="true" Title="@(Draft.ExpectedVersion.HasValue ? "Edit remote instance" : "Add remote instance")"
+        Size="ModalSize.Medium" OnClose="Close" TestId="remote-instance-editor">
+    <ChildContent>
+        @if (Error is not null) {
+            <Alert AlertStyle="AlertStyle.Warning" data-testid="remote-instance-editor-error">@Error</Alert>
+        }
+        <EditForm Model="Draft" OnSubmit="@(() => Save.InvokeAsync(Draft))">
+            <fieldset disabled="@Busy">
+                <Stack GapScale="LayoutGap.Medium">
+                    <FormField Text="Instance name">
+                        <TextInput @bind-Value="Draft.Name" Immediate="true" maxlength="200" data-testid="remote-instance-name" />
+                    </FormField>
+                    <FormField Text="Instance base URL">
+                        <TextInput @bind-Value="Draft.Address" Immediate="true" placeholder="https://instance.example.com/" data-testid="remote-instance-url" />
+                    </FormField>
+                    <FormField Text="API credential">
+                        <SelectInput @bind-Value="Draft.CredentialId" data-testid="remote-instance-credential">
+                            <option value="@Guid.Empty">Select a stored credential</option>
+                            @if (Draft.CredentialId != Guid.Empty && !Credentials.Any(item => item.Id == Draft.CredentialId)) {
+                                <option value="@Draft.CredentialId" disabled>Unavailable credential</option>
+                            }
+                            @foreach (var credential in Credentials) {
+                                <option value="@credential.Id">@credential.Name</option>
+                            }
+                        </SelectInput>
+                        <TextBlock TextStyle="TextStyle.Muted">Manage credentials in Settings → Secrets. Agent templates require a publisher token with permission to read shared agent templates. For provider sharing through an open API, select a dedicated placeholder.</TextBlock>
+                    </FormField>
+                    <FormField Text="Enabled">
+                        <CheckBox TValue="bool" @bind-Value="Draft.Enabled" data-testid="remote-instance-enabled" />
+                    </FormField>
+                    <FormField Text="Allow private network access">
+                        <CheckBox TValue="bool" @bind-Value="Draft.AllowPrivateNetwork" data-testid="remote-instance-private" />
+                    </FormField>
+                    <Button Type="submit" Text="Save instance" Style="display: none" tabindex="-1" aria-hidden="true" />
+                </Stack>
+            </fieldset>
+        </EditForm>
+    </ChildContent>
+    <Footer>
+        <Button Text="Cancel" Tone="ButtonTone.Default" Click="Close" Disabled="Busy" />
+        <Button Text="Save instance" Click="@(() => Save.InvokeAsync(Draft))" Disabled="@(Busy || SaveBlocked)" IsBusy="Busy" data-testid="remote-instance-save" />
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter, EditorRequired] public RemoteInstanceDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<SecretListItem> Credentials { get; set; } = [];
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool SaveBlocked { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback<RemoteInstanceDraft> Save { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+}

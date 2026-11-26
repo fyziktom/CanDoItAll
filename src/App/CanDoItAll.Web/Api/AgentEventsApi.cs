@@ -30,7 +30,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status403Forbidden,
                 StatusCodes.Status404NotFound);
 
-        agents.MapPost("/{agentId:guid}/chat/stream", StreamChatAsync)
+        agents.MapPost("/{agentId:guid}/chat/stream", StreamChatAsync).DescribeAgentAvailability()
             .WithName("StreamAgentChatMessage").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentChatApiRequest>("application/json")
             .Produces<string>(
@@ -46,7 +46,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
-        agents.MapPost("/execution-runs/stream", StreamExecutionRunAsync)
+        agents.MapPost("/execution-runs/stream", StreamExecutionRunAsync).DescribeAgentAvailability()
             .WithName("StreamAgentExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunApiRequest>("application/json")
             .Produces<string>(
@@ -62,7 +62,7 @@ internal static class AgentEventsApi
                 StatusCodes.Status500InternalServerError,
                 StatusCodes.Status503ServiceUnavailable);
 
-        agents.MapPost("/{agentId:guid}/execution-runs/stream", StreamScopedExecutionRunAsync)
+        agents.MapPost("/{agentId:guid}/execution-runs/stream", StreamScopedExecutionRunAsync).DescribeAgentAvailability()
             .WithName("StreamAgentScopedExecutionRun").WithApiPermission(ApiAccessScopeNames.ExecuteAgents)
             .Accepts<AgentExecutionRunStartApiRequest>("application/json")
             .Produces<string>(
@@ -340,7 +340,7 @@ internal static class AgentEventsApi
     /// unavailable (<c>agents.provider-quota-unavailable</c>, <c>agents.provider-rate-limited</c> or
     /// <c>agents.provider-failed</c>).
     /// </response>
-    internal static Task<IResult> StreamChatAsync(
+    internal static async Task<IResult> StreamChatAsync(
         Guid agentId,
         AgentChatApiRequest request,
         HttpContext context,
@@ -349,18 +349,18 @@ internal static class AgentEventsApi
         IOptions<ApiAccessOptions> apiOptions,
         ILoggerFactory loggerFactory)
     {
-        var validation = AgentApiRequestValidation.ValidateCommand(
+        var validation = await AgentApiRequestValidation.ValidateCommandAsync(workspaceService,
             context,
             agentId,
             request.ChatSessionId,
             request.Prompt);
         if (validation is not null)
         {
-            return Task.FromResult(validation);
+            return validation;
         }
 
         var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
-        return StreamCommandAsync(
+        return await StreamCommandAsync(
             context,
             operationId,
             agentId,
@@ -480,7 +480,7 @@ internal static class AgentEventsApi
     /// unavailable (<c>agents.provider-quota-unavailable</c>, <c>agents.provider-rate-limited</c> or
     /// <c>agents.provider-failed</c>).
     /// </response>
-    internal static Task<IResult> StreamExecutionRunAsync(
+    internal static async Task<IResult> StreamExecutionRunAsync(
         AgentExecutionRunApiRequest request,
         HttpContext context,
         IAgentFrameworkWorkspaceService workspaceService,
@@ -488,7 +488,7 @@ internal static class AgentEventsApi
         IOptions<ApiAccessOptions> apiOptions,
         ILoggerFactory loggerFactory)
     {
-        var validation = AgentApiRequestValidation.ValidateCommand(
+        var validation = await AgentApiRequestValidation.ValidateCommandAsync(workspaceService,
             context,
             request.AgentId,
             request.ChatSessionId,
@@ -496,7 +496,7 @@ internal static class AgentEventsApi
             request.Context);
         if (validation is not null)
         {
-            return Task.FromResult(validation);
+            return validation;
         }
 
         var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
@@ -509,7 +509,7 @@ internal static class AgentEventsApi
             request.AutoApprovePendingToolCalls,
             InputAttachmentPaths: request.InputAttachmentPaths,
             JsonSchemaOutput: request.StructuredOutput);
-        return StreamCommandAsync(
+        return await StreamCommandAsync(
             context,
             operationId,
             request.AgentId,
@@ -627,7 +627,7 @@ internal static class AgentEventsApi
     /// unavailable (<c>agents.provider-quota-unavailable</c>, <c>agents.provider-rate-limited</c> or
     /// <c>agents.provider-failed</c>).
     /// </response>
-    internal static Task<IResult> StreamScopedExecutionRunAsync(
+    internal static async Task<IResult> StreamScopedExecutionRunAsync(
         Guid agentId,
         AgentExecutionRunStartApiRequest request,
         HttpContext context,
@@ -636,7 +636,7 @@ internal static class AgentEventsApi
         IOptions<ApiAccessOptions> apiOptions,
         ILoggerFactory loggerFactory)
     {
-        var validation = AgentApiRequestValidation.ValidateCommand(
+        var validation = await AgentApiRequestValidation.ValidateCommandAsync(workspaceService,
             context,
             agentId,
             request.ChatSessionId,
@@ -644,7 +644,7 @@ internal static class AgentEventsApi
             request.Context);
         if (validation is not null)
         {
-            return Task.FromResult(validation);
+            return validation;
         }
 
         var operationId = request.ActivityOperationId ?? AgentExecutionOperationId.New();
@@ -657,7 +657,7 @@ internal static class AgentEventsApi
             request.AutoApprovePendingToolCalls,
             InputAttachmentPaths: request.InputAttachmentPaths,
             JsonSchemaOutput: request.StructuredOutput);
-        return StreamCommandAsync(
+        return await StreamCommandAsync(
             context,
             operationId,
             agentId,

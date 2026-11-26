@@ -120,7 +120,7 @@ public sealed class ProjectTaskPlanMigrationTests {
         await using var context = fixture.Canonical();
         var migration = await UpgradeAsync(context);
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Equal(186, context.Model.GetEntityTypes().Count());
+        CurrentDatabaseModelAssertions.Canonical(context.Model);
         await using var owner = fixture.Owner();
         Assert.Equal(16, owner.Model.GetEntityTypes().Count());
         var canonical = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(ProjectTaskPlanReceiptRecord))!;

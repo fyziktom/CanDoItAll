@@ -1,4 +1,5 @@
 @namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Components
+@using CanDoItAll.AgentFramework.Llm.SimpleChats.UI
 
 <Tabs SelectedIndex="@selectedTabIndex"
       SelectedIndexChanged="HandleSelectedTabChangedAsync"
@@ -15,6 +16,7 @@
               data-testid="llm-chats-tab-definitions">
         @if (definitionsVisited) {
             <LlmChatDefinitionCatalogPanel RequestedDefinitionId="@retainedDefinitionId"
+                                           ImportDefinitions="ImportDefinitions" DefinitionSharing="DefinitionSharing"
                                            SelectedDefinitionIdChanged="HandleDefinitionChangedAsync" />
         }
     </TabsItem>
@@ -44,6 +46,8 @@
     public EventCallback<SimpleChatWorkspaceRouteState> RouteStateChanged { get; set; }
 
     [Parameter] public Func<string, Guid?, bool>? RetainsConversationNavigation { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionImportActions>? ImportDefinitions { get; set; }
+    [Parameter] public RenderFragment<LlmChatDefinitionSharingContext>? DefinitionSharing { get; set; }
 
     private int selectedTabIndex;
     private bool definitionsVisited;

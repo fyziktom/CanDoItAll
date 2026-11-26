@@ -305,6 +305,9 @@ public sealed class AgentDecisionPolicyHttpTests {
                 Lookups++;
                 return Task.FromResult(LookupResult);
             }
+            if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.FindAgentApiAvailabilityAsync)) {
+                return Task.FromResult<bool?>((Guid)args![0]! == AgentId ? true : null);
+            }
             if (targetMethod?.Name == nameof(IAgentFrameworkWorkspaceService.ReadAgentDecisionDataPolicyAsync)) {
                 return FailRead ? Task.FromException<AgentDecisionDataPolicySnapshot>(new IOException(PrivateMarker))
                     : Task.FromResult(new AgentDecisionDataPolicySnapshot(Snapshot.Expectation.ToDomain(), null));

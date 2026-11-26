@@ -43,11 +43,7 @@ public sealed class SharedProviderCatalogClient(
         }
 
         using var message = CreateRequest(request, canonicalSourceBaseUri);
-        var clientName = canonicalSourceBaseUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-            ? PrivateHttpClientName
-            : request.NetworkPolicy == SharedProviderSourceNetworkPolicy.AllowPrivateNetwork
-                ? TrustedNetworkClientName
-                : PublicClientName;
+        var clientName = RemoteInstanceJsonReader.SelectClientName(canonicalSourceBaseUri, request.NetworkPolicy);
         var client = httpClientFactory.CreateClient(clientName);
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(RequestTimeout);

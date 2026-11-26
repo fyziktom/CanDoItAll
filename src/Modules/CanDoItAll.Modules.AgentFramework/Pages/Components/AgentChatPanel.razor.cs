@@ -57,6 +57,9 @@ public partial class AgentChatPanel : IAsyncDisposable {
     [Parameter]
     public AgentChatPanelDisplayMode DisplayMode { get; set; }
 
+    [Parameter]
+    public bool HasProjectPlanningContext { get; set; }
+
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
 
@@ -169,7 +172,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
     private AgentChatSessionBlockedException? sessionStartRejection;
     private AgentExecutionActivityStreamId? activeActivityStreamId;
     private (AgentExecutionActivityStreamId? Stream, Guid? Run, ActiveAgentChatRunState State)? observedExecution;
-    private Guid? terminalWorkspaceRefreshRunId;
+    private (Guid RunId, Guid? ApprovalEntryId)? settledWorkspaceRefresh;
     private Guid? activeWorkspaceRefreshRunId;
     private readonly HashSet<Guid> sessionsWithVoiceIdentifierOmissionNotice = [];
     private bool hasVoiceIdentifierOmissionNoticeWithoutSession;
@@ -270,7 +273,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             return;
         }
         await LoadTargetAsync(PreferredAgentId ?? (IsFocusedFloating ? null : selectedAgentId), PreferredSessionId,
-            refreshCatalog: true, throwOnFailure: false, usePreferredAgent: true);
+            refreshCatalog: true, throwOnFailure: false, runId: PersistedExecutionRunId, usePreferredAgent: true);
         activeActivityStreamId = PersistedActivityStreamId ?? activeActivityStreamId;
     }
 
@@ -305,7 +308,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
         ProtectUnsentDraft();
         isBusy = false;
         activeActivityStreamId = null;
-        terminalWorkspaceRefreshRunId = null;
+        settledWorkspaceRefresh = null;
         activeWorkspaceRefreshRunId = null;
         switchDialogOpen = false;
         runStateText = "";
@@ -433,6 +436,25 @@ public partial class AgentChatPanel : IAsyncDisposable {
 
     private Task SendMessageAsync() => SendMessageCoreAsync(null);
 
+    private string? ProjectPlanningUnavailableReason() {
+        if (selectedAgent is null) {
+            return "Select an agent to plan project tasks.";
+        }
+        if (IsFocusedFloating) {
+            if (!HasProjectPlanningContext) {
+                return "Open Project Structure and follow its context to plan tasks.";
+            }
+            var access = AgentProjectStructureAccessMetadata.Read(selectedAgent.ConfigurationJson);
+            if (!selectedAgent.Permissions.CanUseTools || !(access.CanWrite || access.CanWriteTasks)) {
+                return "Task planning requires permission to use tools and write project tasks.";
+            }
+        }
+        if (draftAttachmentPaths.Count > 0) {
+            return "Remove attachments before planning project tasks.";
+        }
+        return string.IsNullOrWhiteSpace(draftPrompt) ? "Enter a prompt to plan project tasks." : null;
+    }
+
     private Task SendMessageCoreAsync(AgentPlanningOwner? planningOwner) {
         if (!selectedAgentId.HasValue) {
             SetMessage("Heads up", "warning", "Select a technical agent before sending a prompt.");
@@ -453,8 +475,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
             return Task.CompletedTask;
         }
 
-        if (planningOwner is not null && draftAttachmentPaths.Count > 0) {
-            SetMessage("Attachments are not supported", "warning", "Remove the attachments before planning project tasks. Your draft has not changed.");
+        if (planningOwner is not null && ProjectPlanningUnavailableReason() is { } reason) {
+            SetMessage("Task planning unavailable", "info", reason);
             return Task.CompletedTask;
         }
 
@@ -554,7 +576,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 ObserveEffectContinuation(continuation, executionAgentId, result.ChatSessionId, operation.StreamId);
             }
             continuationWorkspaceGeneration = unchecked(chatSession.Generation + 1);
-            await LoadWorkspaceAsync(executionAgentId, result.ChatSessionId);
+            await LoadWorkspaceAsync(executionAgentId, result.ChatSessionId,
+                result.State == ExecutionState.WaitingOnTool ? result.ExecutionRunId : null);
             if (chatSession.Generation != continuationWorkspaceGeneration ||
                 selectedAgentId != executionAgentId ||
                 selectedSessionId != result.ChatSessionId) {
@@ -583,7 +606,7 @@ public partial class AgentChatPanel : IAsyncDisposable {
             } else {
                 LogDetachedOperationFailure(exception, executionAgentId, executionSessionId, executionHandleId, "send");
             }
-        } catch (AgentChatAdmissionConflictException exception) when (!executionCompleted) {
+        } catch (AgentChatAdmissionRejectedException exception) when (!executionCompleted) {
             var originalTarget = exception.AgentId == executionAgentId && exception.ChatSessionId == executionSessionId;
             if (!submissionObserved) {
                 Submissions.RecordFailure(submission.Id, exception);
@@ -895,7 +918,8 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 ObserveEffectContinuation(continuation, executionAgentId, executionSessionId, operation.StreamId);
             }
             continuationWorkspaceGeneration = unchecked(chatSession.Generation + 1);
-            await LoadWorkspaceAsync(executionAgentId, executionSessionId);
+            await LoadWorkspaceAsync(executionAgentId, executionSessionId,
+                result.State == ExecutionState.WaitingOnTool ? result.ExecutionRunId : null);
             if (chatSession.Generation != continuationWorkspaceGeneration ||
                 selectedAgentId != executionAgentId ||
                 selectedSessionId != executionSessionId) {
@@ -1283,14 +1307,15 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 SetMessage("Attachment failed", "danger", "The artifacts do not belong to this thread.");
                 return;
             }
-            draftAttachmentPaths = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
+            var artifacts = detail.Artifacts.Select(item => RelativeAttachmentPath.NormalizeOrNull(item.RelativePath)).OfType<string>()
                 .Distinct(StringComparer.Ordinal).ToImmutableArray();
+            draftAttachmentPaths = draftAttachmentPaths.Union(artifacts, StringComparer.Ordinal).ToImmutableArray();
             ProtectUnsentDraft();
-            var omitted = detail.Artifacts.Count - draftAttachmentPaths.Count;
-            SetMessage("Ready", omitted > 0 || draftAttachmentPaths.Count == 0 ? "warning" : "success", omitted > 0
-                ? $"Staged {draftAttachmentPaths.Count} artifact path(s). Unsafe or duplicate references were omitted."
-                : draftAttachmentPaths.Count == 0 ? "The selected run does not have persisted artifacts yet."
-                : $"Staged {draftAttachmentPaths.Count} artifact path(s) for the next prompt.");
+            var omitted = detail.Artifacts.Count - artifacts.Length;
+            SetMessage("Ready", omitted > 0 || artifacts.IsEmpty ? "warning" : "success", omitted > 0
+                ? $"Staged {artifacts.Length} artifact path(s). Unsafe or duplicate references were omitted."
+                : artifacts.IsEmpty ? "The selected run does not have persisted artifacts yet."
+                : $"Staged {artifacts.Length} artifact path(s) for the next prompt.");
         } catch (Exception exception) {
             if (chatSession.IsCurrent(generation) && !request.IsCancellationRequested) {
                 LogOperationFailure(exception, run.AgentId, run.ChatSessionId, ActiveChatHandleId, "read artifacts", false);
@@ -1677,7 +1702,10 @@ public partial class AgentChatPanel : IAsyncDisposable {
         runStateTone = ResolveExecutionTone(entry.State);
         SynchronizeActiveChatRunState(entry.State);
         StateHasChanged();
-        if (entry.State is not (ExecutionState.Completed or ExecutionState.Failed) &&
+        var approvalCheckpoint = AgentExecutionActivityRuntimeProgressPolicy.ResolvePhase(entry.State, entry.Phase)
+            == AgentExecutionActivityPhase.AwaitingApproval;
+        var settled = approvalCheckpoint || entry.State is ExecutionState.Completed or ExecutionState.Failed;
+        if (!settled &&
             entry.ExecutionRunId != Guid.Empty && selectedSessionId.HasValue &&
             workspace?.SelectedRun?.Id != entry.ExecutionRunId && activeWorkspaceRefreshRunId != entry.ExecutionRunId) {
             activeWorkspaceRefreshRunId = entry.ExecutionRunId;
@@ -1699,38 +1727,28 @@ public partial class AgentChatPanel : IAsyncDisposable {
                 }
             }
         }
-        if (!ShouldReloadWorkspaceAfterExternalTerminalUpdate(entry)) {
+        var checkpoint = (entry.ExecutionRunId, ApprovalEntryId: approvalCheckpoint ? (Guid?)entry.Id : null);
+        if (!settled || entry.ExecutionRunId == Guid.Empty || selectedSessionId is not { } sessionId ||
+            isBusy || !trackedChatOperation.IsCompleted || settledWorkspaceRefresh == checkpoint) {
             return;
         }
 
-        var refreshAgentId = selectedAgentId!.Value;
-        var refreshSessionId = selectedSessionId!.Value;
-        terminalWorkspaceRefreshRunId = entry.ExecutionRunId;
+        settledWorkspaceRefresh = checkpoint;
         try {
-            await LoadWorkspaceAsync(refreshAgentId, refreshSessionId);
+            await LoadWorkspaceAsync(entry.AgentId, sessionId, approvalCheckpoint ? entry.ExecutionRunId : null);
         } catch {
-            if (terminalWorkspaceRefreshRunId == entry.ExecutionRunId) {
-                terminalWorkspaceRefreshRunId = null;
+            if (settledWorkspaceRefresh == checkpoint) {
+                settledWorkspaceRefresh = null;
             }
 
             throw;
         }
 
         if (!isDisposed &&
-            selectedAgentId == refreshAgentId &&
-            selectedSessionId == refreshSessionId) {
+            selectedAgentId == entry.AgentId &&
+            selectedSessionId == sessionId) {
             StateHasChanged();
         }
-    }
-
-    private bool ShouldReloadWorkspaceAfterExternalTerminalUpdate(ExecutionLogEntry entry) {
-        return entry.State is ExecutionState.Completed or ExecutionState.Failed &&
-               entry.ExecutionRunId != Guid.Empty &&
-               selectedAgentId.HasValue &&
-               selectedSessionId.HasValue &&
-               !isBusy &&
-               trackedChatOperation.IsCompleted &&
-               terminalWorkspaceRefreshRunId != entry.ExecutionRunId;
     }
 
     private bool ShouldAcceptExecutionEntry(ExecutionLogEntry entry) {

@@ -31,7 +31,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
         {
             Base64Data = string.Empty,
             Base64DataOmitted = true,
-            ContentSummary = $"{reason} {nextAction}"
+            ContentSummary = $"Read {content.ContentLength:N0} byte(s) from the stored project asset. {reason} {nextAction}"
         };
     }
 
@@ -97,7 +97,7 @@ internal static class ProjectStructureAgentRuntimeAssetContentSanitizer
 
         if (IsSpreadsheetContentType(contentType))
         {
-            return $"Use workspace_inspect_spreadsheet or workspace_spreadsheet_summary with '{mediaPath}', then use workspace_read_spreadsheet_range when tabular content is required.";
+            return $"The project and node IDs and the stored length confirm the attachment. To inspect cells, use an attached workspace_spreadsheet_summary or workspace_inspect_spreadsheet tool with '{mediaPath}', then workspace_read_spreadsheet_range.";
         }
 
         if (ProjectStructureAgentRuntimeAssetTextReader.IsSupported(asset))

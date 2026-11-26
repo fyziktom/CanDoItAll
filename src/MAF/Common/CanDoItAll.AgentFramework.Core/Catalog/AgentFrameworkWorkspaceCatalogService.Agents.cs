@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.RemoteInstances;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -212,6 +213,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 Id = cloneId,
                 Name = cloneName.Trim(),
                 IsTemplate = false,
+                ApiAvailable = true,
+                SharedTemplate = false,
+                Tags = DefinitionSharingTags.Custom(source.Tags),
                 TemplateKey = cloneTemplateKey,
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
                     source.ConfigurationJson),
@@ -246,6 +250,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             {
                 Id = templateId,
                 IsTemplate = true,
+                ApiAvailable = true,
+                SharedTemplate = false,
+                Tags = DefinitionSharingTags.Custom(source.Tags),
                 TemplateKey = normalizedTemplateKey,
                 Name = $"{source.Name} template",
                 ConfigurationJson = AgentManagedSeedCustomizationMetadata.RemoveManagedSeedOwnership(
@@ -285,11 +292,14 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         var normalizedImportedAgent = NormalizeImportedAgent(imported.Agent);
         await store.UpdateWorkspaceAsync(document =>
         {
+            AgentPackageImportService.RequireAvailable(document.Agents, normalizedImportedAgent.Id);
             var providerIdMap = BuildProviderIdMap(document.Providers, normalizedImportedProviders);
             var capabilityIdMap = BuildCapabilityIdMap(document.Capabilities, normalizedImportedCapabilities);
             var importedAgent = RemapImportedAgent(normalizedImportedAgent, providerIdMap, capabilityIdMap, document.Capabilities, normalizedImportedCapabilities);
             if (document.Agents.FirstOrDefault(agent => agent.Id == importedAgent.Id) is { } previousAgent) {
                 importedAgent = importedAgent with {
+                    ApiAvailable = previousAgent.ApiAvailable,
+                    SharedTemplate = previousAgent.SharesRemoteTemplate,
                     UpdatedAtUtc = AgentConfigurationVersion.NextRevision(previousAgent.UpdatedAtUtc, DateTimeOffset.UtcNow)
                 };
             }
@@ -392,6 +402,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
         return document with
         {
             Agents = document.Agents.Where(item => item.Id != agentId).ToList(),
+            RemoteTemplateBindings = document.RemoteTemplateBindings?.Where(binding => binding.AgentId != agentId).ToArray(),
             AgentExternalBindings = document.AgentExternalBindings
                 .Where(item => item.AgentId != agentId)
                 .ToList(),
@@ -558,6 +569,8 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
     {
         return agent with
         {
+            ApiAvailable = true,
+            SharedTemplate = false,
             Name = agent.Name.Trim(),
             RoleTitle = agent.RoleTitle.Trim(),
             Summary = agent.Summary.Trim(),
@@ -565,11 +578,7 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
             Model = agent.Model.Trim(),
             ConfigurationJson = agent.ConfigurationJson.Trim(),
             TemplateKey = WorkspaceCatalogIdentityNormalizer.NormalizeTemplateKey(agent.TemplateKey, agent.Name),
-            Tags = agent.Tags
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Select(item => item.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList()
+            Tags = AgentSpecialTags.NormalizeCustom(agent.Tags)
         };
     }
 

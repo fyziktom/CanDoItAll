@@ -18,6 +18,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
     private readonly AgentFrameworkWorkspaceCatalogService catalogService;
     private readonly AgentFrameworkWorkspaceExecutionService executionService;
     private readonly AgentPackageImportService packageImportService;
+    private readonly RemoteAgentTemplateImport remoteTemplateImport;
     private readonly AgentExternalProvisioningService externalProvisioningService;
     private readonly AgentDecisionDataPolicyOwner policyOwner;
     private readonly ExecutionBoundaryDescriptor toolExecutionBoundary;
@@ -89,6 +90,7 @@ public sealed partial class AgentFrameworkWorkspaceService :
 
         var resolvedProviderProfileService = providerProfileService ?? new ProviderProfileService();
         var resolvedProviderProfileRegistry = providerProfileRegistry ?? new WorkspaceBackedProviderProfileRegistry(store, resolvedProviderProfileService, activityWorkspaceIdentity);
+        remoteTemplateImport = new(store, resolvedProviderProfileRegistry, resolvedProviderProfileService, activityWorkspaceIdentity, executionProfileGenerationSource);
         var resolvedProviderRuntimeProfileSource = providerRuntimeProfileSource
             ?? resolvedProviderProfileRegistry as IProviderRuntimeProfileSource
             ?? throw new InvalidOperationException(

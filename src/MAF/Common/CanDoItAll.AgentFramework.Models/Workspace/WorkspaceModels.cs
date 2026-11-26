@@ -52,6 +52,8 @@ public sealed record SandboxWorkspaceDocument(
     public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
     public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
     public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<RemoteAgentTemplateBinding>? RemoteTemplateBindings { get; init; }
     public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -80,6 +82,7 @@ public sealed record SandboxWorkspaceDocument(
             AgentTeams = AgentTeams,
             AgentPackageImportOperations = AgentPackageImportOperations,
             AgentExternalBindings = AgentExternalBindings,
+            RemoteTemplateBindings = RemoteTemplateBindings,
             AgentExternalProvisioningOperations = AgentExternalProvisioningOperations,
             AgentDecisionDataPolicyReceipts = AgentDecisionDataPolicyReceipts
         };
@@ -124,6 +127,7 @@ public sealed record SandboxWorkspaceDocument(
             AgentTeams = catalog.AgentTeams,
             AgentPackageImportOperations = catalog.AgentPackageImportOperations,
             AgentExternalBindings = catalog.AgentExternalBindings,
+            RemoteTemplateBindings = catalog.RemoteTemplateBindings,
             AgentExternalProvisioningOperations = catalog.AgentExternalProvisioningOperations,
             AgentDecisionDataPolicyReceipts = catalog.AgentDecisionDataPolicyReceipts,
             ExecutionRuns = executionState.ExecutionRuns,
@@ -147,6 +151,8 @@ public sealed record SandboxWorkspaceCatalog(
     public IReadOnlyList<AgentTeamDefinition> AgentTeams { get; init; } = [];
     public IReadOnlyList<AgentPackageImportOperationRecord> AgentPackageImportOperations { get; init; } = [];
     public IReadOnlyList<AgentExternalBindingRecord> AgentExternalBindings { get; init; } = [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<RemoteAgentTemplateBinding>? RemoteTemplateBindings { get; init; }
     public IReadOnlyList<AgentExternalProvisioningOperationRecord> AgentExternalProvisioningOperations { get; init; } = [];
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

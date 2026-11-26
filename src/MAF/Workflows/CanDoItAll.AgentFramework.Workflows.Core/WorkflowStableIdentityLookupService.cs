@@ -8,7 +8,8 @@ public sealed class WorkflowStableIdentityLookupService(
 {
     public async Task<WorkflowStableIdentityResolution> ResolveByTemplateKeyAsync(
         string templateKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<WorkflowCatalogItem, bool>? isVisible = null)
     {
         var normalizedKey = WorkflowStableIdentityNormalizer.NormalizeKey(
             templateKey,
@@ -22,13 +23,15 @@ public sealed class WorkflowStableIdentityLookupService(
                 item.TemplateKey,
                 normalizedKey,
                 StringComparison.Ordinal),
+            isVisible,
             cancellationToken);
     }
 
     public async Task<WorkflowStableIdentityResolution> ResolveByExternalKeyAsync(
         string externalNamespace,
         string externalKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<WorkflowCatalogItem, bool>? isVisible = null)
     {
         var normalizedNamespace = WorkflowStableIdentityNormalizer.NormalizeNamespace(
             externalNamespace,
@@ -50,6 +53,7 @@ public sealed class WorkflowStableIdentityLookupService(
                     item.ExternalKey,
                     normalizedKey,
                     StringComparison.Ordinal),
+            isVisible,
             cancellationToken);
     }
 
@@ -58,10 +62,12 @@ public sealed class WorkflowStableIdentityLookupService(
         string identityNamespace,
         string key,
         Func<WorkflowCatalogItem, bool> matches,
+        Func<WorkflowCatalogItem, bool>? isVisible,
         CancellationToken cancellationToken)
     {
         var materializations = (await catalogService.ListDefinitionsAsync(cancellationToken))
             .Where(matches)
+            .Where(item => isVisible is null || isVisible(item))
             .OrderBy(item => item.Id.Value)
             .ToArray();
 

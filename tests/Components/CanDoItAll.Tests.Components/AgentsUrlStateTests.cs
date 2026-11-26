@@ -142,6 +142,21 @@ public sealed class AgentsUrlStateTests {
     }
 
     [Fact]
+    public async Task Selecting_a_local_template_in_the_catalog_does_not_pass_it_to_chat() {
+        await using var fixture = await UrlFixture.CreateAsync();
+        var workspace = fixture.Harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var id = await workspace.SaveAgentAsync(new() { Name = "Local sharing template", IsTemplate = true });
+        fixture.Navigation.NavigateTo("/agents?tab=agents");
+        var page = fixture.RenderPage();
+        var card = page.WaitForElement("[aria-label='Select Local sharing template']");
+        Assert.Contains("Local template", card.TextContent);
+        await page.InvokeAsync(() => card.ClickAsync());
+        await page.InvokeAsync(() => FindTab(page, "Chat").ClickAsync());
+        page.WaitForAssertion(() => Assert.StartsWith("/agents?tab=chat", fixture.Location, StringComparison.Ordinal));
+        Assert.DoesNotContain(fixture.Navigation.History, entry => entry.Uri.Contains(id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Malformed_and_foreign_values_are_canonicalized_with_one_replace() {
         await using var fixture = await UrlFixture.CreateAsync();
         fixture.Navigation.NavigateTo("/agents?tab=AGENTS&agentSection=runtime&usageScope=agents&teamId=not-a-guid&utm=keep#top");

@@ -1,5 +1,8 @@
 @page "/agents"
 @using CanDoItAll.AgentFramework.UI.Shell
+@using CanDoItAll.AppComponents.Navigation
+@using CanDoItAll.Modules.Workspace
+@using CanDoItAll.Modules.Workspace.Pages
 
 <PageTitle>Agents</PageTitle>
 
@@ -10,6 +13,7 @@
             <AgentProviderProfilesPanel ProviderId="@route.ProviderId"
                                         Section="@route.ProviderSection"
                                         ConnectionsOpen="@route.IsSharedConnectionsOpen"
+                                        RegistryHref="@SettingsUrlCodec.Instance.Href(SettingsUrlCodec.Path, new(WorkspaceSection.RemoteInstances))"
                                         HistoryLocation="@historyLocation"
                                         ProviderRequested="HandleProviderRequestedAsync"
                                         ProviderPublished="HandleProviderPublishedAsync"
@@ -52,7 +56,14 @@
                                   DefinitionId="@simpleChatRouteState.DefinitionId"
                                   ConversationId="@simpleChatRouteState.ConversationId"
                                   RouteStateChanged="HandleSimpleChatRouteStateChangedAsync"
-                                  RetainsConversationNavigation="RetainsSimpleChatConversationNavigation" />
+                                  RetainsConversationNavigation="RetainsSimpleChatConversationNavigation">
+                <ImportDefinitions Context="actions">
+                    <RemoteSimpleChatSharingControl Imported="actions.Open" Refresh="actions.Refresh" />
+                </ImportDefinitions>
+                <DefinitionSharing Context="editor">
+                    <SimpleChatEditorSharing @key="editor.Access" Context="editor" />
+                </DefinitionSharing>
+            </SimpleChatsWorkspace>
         }
         else if (route.Tab == AgentWorkspaceSection.Chat)
         {

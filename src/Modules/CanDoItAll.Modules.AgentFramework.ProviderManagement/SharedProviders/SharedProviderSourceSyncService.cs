@@ -264,12 +264,7 @@ public sealed class SharedProviderSourceSyncService
         try
         {
             tokenValue = await secretRuntimeResolver.ResolveValueAsync(
-                new SecretRuntimeRequest(
-                    source.ApiTokenSecretId,
-                    SecretRuntimePurposes.SharedProviderSourceToken,
-                    AllowedSecretIds: [source.ApiTokenSecretId],
-                    ConsumerType: SecretRuntimeConsumerTypes.SharedProviderSource,
-                    ConsumerId: SecretRuntimeConsumerIds.SharedProviderSource(source.Id)),
+                SecretRuntimeRequests.RemoteInstanceToken(source.Id, source.ApiTokenSecretId),
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

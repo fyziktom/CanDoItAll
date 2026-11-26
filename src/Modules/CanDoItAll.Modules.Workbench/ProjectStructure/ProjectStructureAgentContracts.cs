@@ -2189,8 +2189,7 @@ public sealed record ProjectStructureAssetImageAnalysisDescriptor(
 /// <param name="Subtitle">Secondary display text; may be empty.</param>
 /// <param name="Notes">Free-text notes; may be empty.</param>
 /// <param name="Media">
-/// Inline content of the revision; always send it. A null value is not rejected up front: the revision node is created
-/// without content and the request then fails with HTTP 400 <c>AssetRequired</c>, leaving that node in the structure.
+/// Inline content of the revision. A missing payload is rejected before the revision is created.
 /// </param>
 /// <param name="ObjectSubtype">
 /// Lower-case subtype of the revision; null or blank keeps the original's subtype.
@@ -2216,22 +2215,19 @@ public sealed record ProjectStructureAssetRevisionRequest(
 
 public sealed record ProjectStructureAgentAssetRevisionRequest(
     string Title,
-    string Subtitle,
-    string Notes,
-    ProjectObjectMediaPayload Media,
+    string Subtitle = "",
+    string Notes = "",
+    ProjectObjectMediaPayload? Media = null,
     string? ObjectSubtype = null,
-    string? LeaseToken = null)
-{
-    public ProjectStructureAssetRevisionRequest ToServiceRequest()
-    {
-        return new ProjectStructureAssetRevisionRequest(
-            Title,
-            Subtitle,
-            Notes,
-            Media,
-            ObjectSubtype,
-            MetadataJson: null,
-            LeaseToken);
+    string? LeaseToken = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SourceWorkspacePath = null) {
+    internal bool HasSingleMediaSource => Media is null ? !string.IsNullOrWhiteSpace(SourceWorkspacePath) : string.IsNullOrWhiteSpace(SourceWorkspacePath);
+
+    public ProjectStructureAssetRevisionRequest ToServiceRequest() {
+        if (Media is null || !HasSingleMediaSource) {
+            throw new InvalidOperationException("An inline revision request requires a media payload. Resolve a workspace source within the project scope.");
+        }
+        return new(Title, Subtitle, Notes, Media, ObjectSubtype, MetadataJson: null, LeaseToken);
     }
 }
 

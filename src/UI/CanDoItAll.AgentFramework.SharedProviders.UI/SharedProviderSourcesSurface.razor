@@ -49,6 +49,9 @@
                         <StatusBadge Tone="neutral" Text="@($"{state.Sources.Sum(source => source.ImportCount)} import(s)")" />
                     </Cluster>
                     <Cluster Gap="LayoutGap.Small">
+                        @if (RegistryHref is not null) {
+                            <Button Text="Remote instance settings" Href="@RegistryHref" Tone="ButtonTone.Default" Size="ButtonSize.Small" />
+                        }
                         <Button Text="Add source" Icon="add_link" Size="ButtonSize.Small" Disabled="@(state.Loading || state.WritesBlocked)"
                                 Click="@(() => View.NewSource(viewId))" data-testid="shared-provider-source-add" />
                         <Button Text="Refresh" Icon="refresh" Tone="ButtonTone.Default" Size="ButtonSize.Small"
@@ -258,6 +261,7 @@
 
 @code {
     [Parameter, EditorRequired] public ISharedProviderSourcesView View { get; set; } = default!;
+    [Parameter] public string? RegistryHref { get; set; }
     private static string SourceTone(SharedProviderSourceAvailability status) => status switch {
         SharedProviderSourceAvailability.Available => "success",
         SharedProviderSourceAvailability.NeverSynchronized => "neutral",

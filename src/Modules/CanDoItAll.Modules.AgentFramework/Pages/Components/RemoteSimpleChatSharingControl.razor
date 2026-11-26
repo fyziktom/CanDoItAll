@@ -1,0 +1,111 @@
+@using CanDoItAll.RemoteInstances
+@using Microsoft.Extensions.Logging
+@inject ILlmChatDefinitionEditorAccess EditorAccess
+@inject ILogger<RemoteSimpleChatSharingControl> Logger
+@implements IAsyncDisposable
+
+<Button Text="Import shared Simple Chats" Icon="cloud_download" Click="OpenAsync" Disabled="busy"
+        Variant="Variant.Outlined" data-testid="llm-chat-definition-import" />
+@if (opening is { IsCurrent: true } owner) {
+    <RemoteTemplateImportDialog @key="owner" Kind="RemoteTemplateKind.SimpleChat" Authorize="owner.AuthorizeAsync"
+                                Write="@((write, token) => WriteAsync(owner, write, token))" Closed="CloseAsync"
+                                AcceptedAndClosed="CloseAndRefreshAsync" Imported="OpenImportedAsync" />
+}
+@if (error is not null && opening is not { IsCurrent: true }) {
+    <Alert AlertStyle="AlertStyle.Warning">@error</Alert>
+}
+
+@code {
+    [Parameter] public EventCallback<Guid> Imported { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    private readonly CancellationTokenSource lifetime = new();
+    private LlmChatEditorOpening? opening;
+    private Guid openingId;
+    private bool busy;
+    private string? error;
+
+    private async Task OpenAsync() {
+        if (opening is { IsCurrent: false }) {
+            await CloseAsync();
+        }
+        if (busy || opening is not null) {
+            return;
+        }
+        busy = true;
+        error = null;
+        var token = lifetime.Token;
+        var generation = Guid.NewGuid();
+        openingId = generation;
+        LlmChatEditorOpening? access = null;
+        try {
+            access = await EditorAccess.OpenAsync(null, generation, () => Task.CompletedTask,
+                () => RetireAsync(generation), token);
+            await access.AuthorizeAsync(true, token);
+            token.ThrowIfCancellationRequested();
+            if (openingId != generation) {
+                return;
+            }
+            opening = access;
+            access = null;
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+        } catch (Exception failure) {
+            Report(failure);
+        } finally {
+            busy = false;
+            if (access is not null) {
+                await access.DisposeAsync();
+            }
+        }
+    }
+
+    private Task RetireAsync(Guid generation) => InvokeAsync(() => {
+        if (openingId == generation) {
+            openingId = Guid.Empty;
+            opening?.Stop();
+            error = "Simple Chat management access changed. Reopen the definition catalog.";
+            StateHasChanged();
+        }
+    });
+
+    private static async Task<Guid> WriteAsync(LlmChatEditorOpening owner, Func<CancellationToken, Task<Guid>> write, CancellationToken token) {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(owner.Lifetime, token);
+        await owner.AuthorizeAsync(true, linked.Token);
+        using var admission = owner.EnterWrite();
+        return await write(linked.Token);
+    }
+
+    private void Report(Exception failure) {
+        Logger.LogWarning("Could not open the shared Simple Chat import ({ExceptionType}).", failure.GetType().Name);
+        error = failure switch {
+            RemoteInstanceReadException invalid => invalid.Message,
+            UnauthorizedAccessException => "Simple Chat management access changed. Reopen the definition catalog.",
+            _ => "Could not open the shared Simple Chat import. Refresh the catalog and try again."
+        };
+    }
+
+    private async Task CloseAsync() {
+        var owner = opening;
+        openingId = Guid.Empty;
+        opening = null;
+        error = null;
+        if (owner is not null) {
+            await owner.DisposeAsync();
+        }
+    }
+
+    private async Task CloseAndRefreshAsync() {
+        await CloseAsync();
+        await Refresh.InvokeAsync();
+    }
+
+    private async Task OpenImportedAsync(Guid id) {
+        await CloseAndRefreshAsync();
+        await Imported.InvokeAsync(id);
+    }
+
+    public async ValueTask DisposeAsync() {
+        await lifetime.CancelAsync();
+        await CloseAsync();
+        lifetime.Dispose();
+    }
+}

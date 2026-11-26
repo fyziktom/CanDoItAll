@@ -267,7 +267,7 @@ public sealed class AiAgentDirectoryQueryService : IAiAgentDirectoryQueryService
                item.Agent.RoleTitle.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                item.Agent.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                item.Agent.Model.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-               ContainsTag(item.Agent.Tags, searchText) ||
+               ContainsTag(item.Agent.EffectiveTags, searchText) ||
                item.Governance.OwnerName.Contains(searchText, StringComparison.OrdinalIgnoreCase);
     }
 

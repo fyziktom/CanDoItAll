@@ -83,7 +83,7 @@ public sealed class AgentEditorDraftPolicyTests {
             ImageGenerationAccess = new() { CanGenerateImages = true, DefaultModel = "  image  " },
             ProjectStructureAccess = new() { CanWriteTasks = true, AllowedProjectIds = [Guid.Empty, projectId, projectId] }
         };
-        var submission = AgentEditorDraftPolicy.Capture(draft, ["  review ", "REVIEW", "", AgentSpecialTags.Favorite], []);
+        var submission = AgentEditorDraftPolicy.Capture(draft, ["  review ", "REVIEW", "", " Shared ", "API", AgentSpecialTags.Favorite], []);
         Assert.Equal("runtime", submission.Request.Model);
         Assert.Equal("image", submission.Request.ImageGenerationAccess.DefaultModel);
         Assert.True(submission.Request.ProjectStructureAccess.CanRead);

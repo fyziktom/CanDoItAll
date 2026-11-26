@@ -74,6 +74,11 @@ public static class ApiEndpointRouteBuilderExtensions
         group.MapLlmChatsApi();
         group.MapLlmChatOperationsApi();
         endpoints.MapSharedProviderCatalogApi();
+        if (options.Authorization.Enabled) {
+            endpoints.MapRemoteAgentTemplates();
+            endpoints.MapRemoteSimpleChats();
+            endpoints.MapRemoteWorkflows();
+        }
         endpoints.MapSharedProviderInferenceApi();
 
         return endpoints;

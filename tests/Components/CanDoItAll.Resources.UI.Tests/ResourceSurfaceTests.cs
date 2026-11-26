@@ -92,7 +92,7 @@ public sealed class ResourceSurfaceTests {
         await using var browse = await ResourceBrowseTests.OpenAsync(store, context);
         browse.Promoted = _ => registry.RefreshAsync();
         var cut = Render(context, registry, browse);
-        cut.Find("[data-testid='resources-tab-browse']").Click();
+        await cut.Find("[data-testid='resources-tab-browse']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".ft-file-browser__item-main").Count));
         foreach (var sourceClass in Enum.GetValues<ResourceFileSourceClass>()) {
             Assert.NotNull(cut.Find($"[data-testid='resources-source-group-{sourceClass.ToString().ToLowerInvariant()}']"));
@@ -110,8 +110,8 @@ public sealed class ResourceSurfaceTests {
         Assert.Equal(receipt.Snapshot!.Expected.ResourceId, browse.Preview!.ResourceId);
         cut.WaitForAssertion(() => Assert.Contains("Owned synthetic Resources content", cut.Markup, StringComparison.Ordinal));
         await cut.InvokeAsync(() => registry.SelectAsync(receipt.Snapshot.Expected.ResourceId));
-        cut.Find("[data-testid='resources-tab-registry']").Click();
-        Assert.NotNull(cut.Find("[data-testid='resource-governed-storage-object']"));
+        await cut.Find("[data-testid='resources-tab-registry']").ClickAsync();
+        cut.WaitForElement("[data-testid='resource-governed-storage-object']");
         Assert.Empty(cut.FindComponents<EditForm>());
     }
 

@@ -70,6 +70,14 @@ links retain the generic policy. Project admission and commit authorization rema
 unchanged; choosing a repository must not produce a committed task followed by a
 rejected generic resource link.
 
+## Previewing Excel files
+
+Select an XLSX file or revision and choose **Expand preview**. The worksheet tabs
+show formatted cell values. Common formulas can use cells on other sheets or outside
+the visible grid. FileTools uses saved Excel results for formulas outside its
+calculation support. A cell displays **Calculation unavailable** when it has neither
+a usable saved result nor a supported calculation. The preview is read-only.
+
 ## Manual review
 
 - In dark mode, double-click a Note and verify text, caret, selection, hint, and

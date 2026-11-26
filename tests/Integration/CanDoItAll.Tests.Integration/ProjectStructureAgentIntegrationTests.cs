@@ -3728,6 +3728,12 @@ public sealed class ProjectStructureAgentIntegrationTests
             string.Equals(link.SourceId, revision.NodeId, StringComparison.Ordinal) &&
             string.Equals(link.TargetId, original.Id, StringComparison.Ordinal) &&
             link.Kind == ProjectObjectLinkKind.DerivedFrom);
+
+        var missingMedia = new ProjectStructureAssetRevisionRequest("Missing content", "", "", null!);
+        var failure = await Assert.ThrowsAsync<ProjectStructureAgentException>(() =>
+            agentService.CreateAssetRevisionAsync(projectId, original.Id, missingMedia, DefaultAgent));
+        Assert.Equal("MediaPayloadRequired", failure.ErrorCode);
+        Assert.Equal(surface.Nodes.Count, (await workbench.GetStructureAsync(projectId)).Nodes.Count);
     }
 
     [Fact]

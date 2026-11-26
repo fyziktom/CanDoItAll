@@ -70,9 +70,6 @@ internal static class MafToolInvocationArgumentFormatter {
     public static string FormatArgumentValue(object? value)
         => AgentToolArgumentDisplayFormatter.FormatArgumentValue(value);
 
-    public static Dictionary<string, object?> DeserializeArguments(string? argumentsJson)
-        => AgentToolArgumentDisplayFormatter.DeserializeArguments(argumentsJson);
-
     public static object? ConvertJsonValue(JsonElement value)
         => AgentToolArgumentDisplayFormatter.ConvertJsonValue(value);
 }

@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Editing;
 using CanDoItAll.Modules.Security;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedProviders.Abstractions;
 using Microsoft.EntityFrameworkCore;
@@ -375,11 +376,15 @@ public sealed class SharedProviderSourceService
             ToNetworkPolicy(request.AllowInsecurePrivateNetwork));
     }
 
-    internal static SharedProviderSourceSnapshot CreateSnapshot(SharedProviderSource source)
-        => new(
+    internal static SharedProviderSourceSnapshot CreateSnapshot(SharedProviderSource source) {
+        if (!Uri.TryCreate(source.BaseUri, UriKind.Absolute, out var address) ||
+            address.Scheme != Uri.UriSchemeHttps && address.Scheme != Uri.UriSchemeHttp) {
+            throw new RemoteInstanceReadException($"The saved address of remote instance {source.Id:D} is invalid.");
+        }
+        return new(
             source.Id,
             source.Name,
-            new Uri(source.BaseUri, UriKind.Absolute),
+            address,
             source.ApiTokenSecretId,
             source.IsEnabled,
             ToNetworkPolicy(source.AllowInsecurePrivateNetwork),
@@ -390,6 +395,7 @@ public sealed class SharedProviderSourceService
             source.LastStatusCode,
             source.LastStatusMessage,
             source.ConcurrencyToken);
+    }
 
     private static SharedProviderSourceNetworkPolicy ToNetworkPolicy(
         bool allowInsecurePrivateNetwork)

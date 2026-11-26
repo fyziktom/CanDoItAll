@@ -35,7 +35,7 @@ public static class AgentActiveChatPresentationMapper
                     StopActionKey,
                     "Stop",
                     "stop_circle",
-                    isDisabled: !chat.CanStop,
+                    isDisabled: !chat.CanStop && !chat.CanCancelPendingRun,
                     style: ConversationActionStyle.Danger)
             ]);
     }

@@ -4,13 +4,34 @@ using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Entities;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.Repositories;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Ports;
+using CanDoItAll.RemoteInstances;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Persistence.ReadModels;
 
-public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext) : ILlmChatDefinitionReadStore
+public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext) : ILlmChatDefinitionReadStore, ILlmChatTemplateSummaryReader
 {
+    public async Task<IReadOnlyList<LlmChatTemplateSummary>> ListAsync(IReadOnlySet<Guid> sharedIds, CancellationToken token) {
+        if (sharedIds.Count == 0) {
+            return [];
+        }
+        var ids = sharedIds.ToArray();
+        return await ShareableDefinitions.Where(row => ids.Contains(row.Id))
+            .OrderBy(row => row.Name).ThenBy(row => row.Id)
+            .Select(row => new LlmChatTemplateSummary(row.Id, row.Name, row.Summary,
+                row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix) ? null : row.AvatarImageUrl,
+                row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix), row.UpdatedAtUtc, row.CurrentRevision))
+            .ToArrayAsync(token);
+    }
+
+    public Task<LlmChatTemplateAvatar?> ReadAvatarAsync(Guid id, CancellationToken token) =>
+        ShareableDefinitions.Where(row => row.Id == id && row.AvatarImageUrl.StartsWith(LlmChatDefinitionValidation.EmbeddedAvatarPrefix))
+            .Select(row => new LlmChatTemplateAvatar(row.AvatarImageUrl, row.CurrentRevision)).SingleOrDefaultAsync(token);
+
+    private IQueryable<LlmChatDefinitionRow> ShareableDefinitions => dbContext.Set<LlmChatDefinitionRow>().AsNoTracking()
+        .Where(row => row.Status == LlmChatDefinitionStatus.Active || row.Status == LlmChatDefinitionStatus.Draft);
+
     public async Task<LlmChatDefinitionReadModel?> TryGetAsync(
         LlmChatDefinitionId id,
         CancellationToken cancellationToken = default)
@@ -39,33 +60,49 @@ public sealed class EfLlmChatDefinitionReadStore(SimpleChatsDbContext dbContext)
         LlmChatDefinitionStatus? status,
         string? searchText = null,
         IReadOnlyList<string>? tagFilters = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null,
+        LlmChatSharingSnapshot? sharing = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
         var query = dbContext.Set<LlmChatDefinitionRow>().AsNoTracking();
+        if (unavailableDefinitionIds is { Count: > 0 }) {
+            var excluded = unavailableDefinitionIds.ToArray();
+            query = query.Where(item => !excluded.Contains(item.Id));
+        }
         if (status is { } value)
         {
             query = query.Where(item => item.Status == value);
         }
 
         var normalizedSearchText = searchText?.Trim() ?? string.Empty;
+        sharing ??= LlmChatSharingSnapshot.Default;
+        var shared = sharing.Published.ToArray();
+        var apiUnavailable = sharing.ApiUnavailable.ToArray();
         if (normalizedSearchText.Length > 0)
         {
             var searchPattern = $"%{EscapeLikePattern(normalizedSearchText)}%";
+            var matchesShared = DefinitionSharingTags.Shared.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase);
+            var matchesApi = DefinitionSharingTags.Api.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase);
             query = query.Where(item =>
+                matchesShared && shared.Contains(item.Id) ||
+                matchesApi && !apiUnavailable.Contains(item.Id) ||
                 EF.Functions.ILike(item.Name, searchPattern, "\\") ||
                 EF.Functions.ILike(item.Summary, searchPattern, "\\") ||
                 dbContext.Set<LlmChatDefinitionTagRow>().Any(tag =>
                     tag.DefinitionId == item.Id &&
+                    tag.Tag.Trim().ToLower() != DefinitionSharingTags.Api && tag.Tag.Trim().ToLower() != DefinitionSharingTags.Shared &&
                     EF.Functions.ILike(tag.Tag, searchPattern, "\\")));
         }
 
         foreach (var tag in tagFilters ?? [])
         {
-            var normalizedTag = tag;
-            query = query.Where(item => dbContext.Set<LlmChatDefinitionTagRow>().Any(candidate =>
-                candidate.DefinitionId == item.Id &&
-                candidate.Tag == normalizedTag));
+            query = tag.Trim().ToLowerInvariant() switch {
+                DefinitionSharingTags.Shared => query.Where(item => shared.Contains(item.Id)),
+                DefinitionSharingTags.Api => query.Where(item => !apiUnavailable.Contains(item.Id)),
+                var custom => query.Where(item => dbContext.Set<LlmChatDefinitionTagRow>().Any(candidate =>
+                    candidate.DefinitionId == item.Id && candidate.Tag == custom))
+            };
         }
 
         if (cursor is { } position)

@@ -11,3 +11,7 @@
     min-height: 0;
     overflow: hidden;
 }
+
+.process-run-files-dialog__content--preview {
+    height: 100%;
+}

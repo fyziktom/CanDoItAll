@@ -96,6 +96,22 @@ public sealed class ProjectStructureAgentRuntimeAssetContentSanitizerTests
     }
 
     [Fact]
+    public void Workbook_readback_confirms_the_stored_file_without_sending_binary_content_to_the_model() {
+        var asset = CreateAsset(ProjectObjectType.File, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "managed-files/project-media/files/forecast.xlsx");
+        var stored = new ProjectStructureAssetContentDescriptor(asset, 4, "UEsDBA==");
+
+        var result = ProjectStructureAgentRuntimeAssetContentSanitizer.BoundForAgentRuntime(stored);
+
+        Assert.Equal(asset, result.Asset);
+        Assert.Equal(4, result.ContentLength);
+        Assert.Empty(result.Base64Data);
+        Assert.True(result.Base64DataOmitted);
+        Assert.Contains("Read 4 byte(s) from the stored project asset", result.ContentSummary, StringComparison.Ordinal);
+        Assert.Contains("confirm the attachment", result.ContentSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BoundForAgentRuntime_reports_image_analysis_permission_boundary()
     {
         var content = new ProjectStructureAssetContentDescriptor(

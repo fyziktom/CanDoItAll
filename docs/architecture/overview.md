@@ -25,6 +25,14 @@ flowchart TB
     Infrastructure --> PostgreSQL[("PostgreSQL")]
 ```
 
+## Remote instances
+
+Workspace Settings and the feature pickers use the same connection registry.
+Each import selects a publisher. The connection authenticates catalog reads, and
+the agent, Simple Chat or workflow writer creates the corresponding local definition.
+Providers use the same registry for discovery and forward model requests to the
+publisher. See [remote instance connections](remote-instance-connections.md).
+
 ## Shared provider and request history boundaries
 
 `SharedProviders.Abstractions` owns framework-neutral protocol values and ports;

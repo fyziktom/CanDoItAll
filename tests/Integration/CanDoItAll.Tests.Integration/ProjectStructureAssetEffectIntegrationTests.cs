@@ -5,16 +5,19 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Tooling;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Tests.Support;
+using CanDoItAll.Tools.Documents;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CanDoItAll.Tests.Integration.ProjectStructure;
 
+[Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureAssetEffectIntegrationTests
 {
     private static readonly JsonSerializerOptions FunctionResultJsonOptions = CreateFunctionResultJsonOptions();
@@ -38,6 +41,48 @@ public sealed class ProjectStructureAssetEffectIntegrationTests
         var evidence = Assert.IsAssignableFrom<IAgentToolInvocationResultEvidence>(created);
         Assert.Equal(AgentToolInvocationOutcome.Succeeded, evidence.Outcome);
         Assert.Equal(AgentToolEffectState.Committed, evidence.EffectState);
+    }
+
+    [Fact]
+    public async Task Revision_tool_publishes_workspace_bytes_under_the_original_asset() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var projectId = await CreateProjectAsync(services.GetRequiredService<ProjectsService>());
+        var tools = await CreateToolsAsync(services, projectId);
+        var tool = Assert.Single(tools, item => item.Name == ProjectStructureToolPolicy.ProjectStructureAssetCreateRevision);
+        var relativePath = $"{WorkspaceScopeDescriptor.Project(projectId.ToString("D")).ArtifactRootRelativePath}/forecast.xlsx";
+        var filePath = Path.Combine(services.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot(), relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        var spreadsheets = services.GetRequiredService<ISpreadsheetDocumentService>();
+        void WriteForecast(string amount) {
+            spreadsheets.Write(new SpreadsheetWriteRequest(filePath, filePath, "Forecast", [],
+                [new SpreadsheetRangeWrite("A1:B1", [["Amount", amount]])], CreateWorkbookIfMissing: true, Overwrite: true));
+        }
+
+        WriteForecast("100");
+        var originalBytes = await File.ReadAllBytesAsync(filePath);
+        var original = await InvokeAsync<ProjectStructureNodeSummary>(FindAssetCreateTool(tools), new AIFunctionArguments {
+            ["projectId"] = projectId,
+            ["request"] = new ProjectStructureAgentAssetCreateInput(ProjectObjectType.File, "Original",
+                ParentNodeKey: $"project:{projectId:D}", ObjectSubtype: "xlsx", SourceWorkspacePath: relativePath)
+        });
+        WriteForecast("125");
+        var revisedBytes = await File.ReadAllBytesAsync(filePath);
+
+        var revision = await InvokeAsync<ProjectStructureAssetDescriptor>(tool, new AIFunctionArguments {
+            ["projectId"] = projectId, ["nodeId"] = original.Id,
+            ["request"] = new ProjectStructureAgentAssetRevisionRequest("Revision", SourceWorkspacePath: relativePath)
+        });
+
+        var reader = services.GetRequiredService<ProjectStructureAgentService>();
+        Assert.NotEqual(originalBytes, revisedBytes);
+        Assert.Equal(revisedBytes, (await reader.GetAssetBinaryContentAsync(projectId, revision.NodeId)).Bytes);
+        Assert.Equal(originalBytes, (await reader.GetAssetBinaryContentAsync(projectId, original.Id)).Bytes);
+        var graph = await services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(projectId);
+        Assert.Equal(original.Id, Assert.Single(graph.Nodes, node => node.Id == revision.NodeId).ParentId);
+        Assert.Contains(graph.Links, link => link.SourceId == revision.NodeId && link.TargetId == original.Id &&
+            link.Kind == ProjectObjectLinkKind.DerivedFrom);
     }
 
     [Fact]

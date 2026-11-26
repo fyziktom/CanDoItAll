@@ -251,16 +251,25 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
         await using var application = await database.OpenAsync(resolver);
         await using var scope = application.Services.CreateAsyncScope();
         var service = scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptService>();
-        var admission = CreateCommand();
+        var request = CreateCommand();
+        var admission = request with { Definition = request.Definition with { Tags = ["alpha", "beta", "shared", "api"] } };
         var original = (await service.CreateOnceAsync(admission)).Value!.Receipt;
         var command = admission.Definition;
+        var prepared = LlmChatDefinitionCreatePreparation.Prepare(command);
+        Assert.Equal(["alpha", "api", "beta", "shared"], prepared.Definition.Tags);
+        var ownerReceipts = scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionCreateReceiptRepository>();
+        Assert.Equal(prepared.Fingerprint, (await ownerReceipts.TryGetReceiptAsync(admission.Key))!.Fingerprint);
+        var definitions = scope.ServiceProvider.GetRequiredService<ILlmChatDefinitionApplicationService>();
+        var current = (await definitions.GetAsync(original.DefinitionId)).Value!;
+        Assert.Equal(["alpha", "beta"], current.NormalizedTags);
+        Assert.Equal(["api", "alpha", "beta"], current.EffectiveTags);
         var reordered = command with {
             Name = "  " + command.Name + "  ",
             Summary = command.Summary + "  ",
             AvatarImageUrl = command.AvatarImageUrl + "  ",
             Model = " " + command.Model,
             RevisionReason = " " + command.RevisionReason,
-            Tags = [" BETA ", "ALPHA"],
+            Tags = [" BETA ", " SHARED ", "Api", "ALPHA"],
             Settings = command.Settings with { ModelParameterConfigurationJson = "{\"b\":{\"y\":2,\"x\":1},\"a\":1}" },
             ResponseFormat = command.ResponseFormat! with {
                 SchemaName = " " + command.ResponseFormat.SchemaName,
@@ -272,6 +281,8 @@ public sealed partial class LlmChatDefinitionCreateReceiptIntegrationTests {
         Assert.True(replay.IsSuccess);
         Assert.True(replay.Value!.WasReplay);
         Assert.Equal(original, replay.Value.Receipt);
+        var withoutRequestedSharingTags = await service.CreateOnceAsync(request);
+        Assert.Equal(LlmChatErrorCodes.DefinitionCreateIntentConflict, Assert.Single(withoutRequestedSharingTags.Errors).Code);
         var duplicate = await service.CreateOnceAsync(new(NewKey(), command with { Tags = ["alpha", " ALPHA "] }));
         Assert.Equal(LlmChatErrorCodes.InvalidRequest, Assert.Single(duplicate.Errors).Code);
         Assert.Equal(1, resolver.Calls);

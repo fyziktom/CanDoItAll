@@ -30,10 +30,15 @@ public sealed class EfLlmChatConversationReadStore(SimpleChatsDbContext dbContex
         int take,
         LlmChatConversationCursor? cursor,
         LlmChatDefinitionId? definitionId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? unavailableDefinitionIds = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(take, 1);
         var query = dbContext.Set<LlmChatConversationRow>().AsNoTracking();
+        if (unavailableDefinitionIds is { Count: > 0 }) {
+            var excluded = unavailableDefinitionIds.ToArray();
+            query = query.Where(item => item.Status == LlmChatConversationStatus.Archived || !excluded.Contains(item.DefinitionId));
+        }
         if (definitionId is { } id)
         {
             query = query.Where(item => item.DefinitionId == id.Value);

@@ -347,6 +347,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             } else {
                 AgentPlanningPublicationResult published;
                 using (var registration = executionCancellationRegistry.Register(original, cancellationToken)) {
+                    using var audit = WorkspaceExecutionAuditContext.BeginScope(original);
                     operation.Report(AgentExecutionActivityPhase.UsingTool, "Publishing the exact reviewed planning proposal.");
                     published = await planning.ApproveAsync(original, request, continuationRuntime, registration.Token);
                 }
@@ -1498,7 +1499,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         request.PlanningOwner is { } selection ? await RequirePlanning().PrepareAsync(selection,
                             CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider,
                                 ResolveEffectiveManagedSeedModel(preparation.Blueprint.Agent, provider)),
-                            provider, preparation.Blueprint.Request.Version.CatalogRevision, context, cancellationToken) : null,
+                            provider, preparation.Blueprint.Request.Version.CatalogRevision, context, request.ChatSessionId, cancellationToken) : null,
                         cancellationToken);
                     break;
                 }

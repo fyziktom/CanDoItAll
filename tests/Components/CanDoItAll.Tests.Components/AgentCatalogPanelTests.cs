@@ -46,7 +46,7 @@ public sealed class AgentCatalogPanelTests
         context.Services.AddCanDoItAllBaseLib();
         var agent = CreateAgent(Guid.NewGuid(), longName, string.Empty) with
         {
-            Tags = [longTag, "review", "managed"],
+            Tags = [longTag, "review", "managed", " Shared "], SharedTemplate = true,
             Summary = "A complete summary that remains available through the shared tooltip service."
         };
 
@@ -64,8 +64,11 @@ public sealed class AgentCatalogPanelTests
             "Active",
             cut.Find("[data-testid='agent-status-ribbon']").TextContent.Trim());
         Assert.Contains("AI agent", cut.Find(".agent-selection-card__badges").TextContent);
-        Assert.Equal(3, cut.FindAll(".agent-selection-card__tag-target").Count);
-        Assert.Contains("+1", cut.Find(".agent-selection-card__tags").TextContent);
+        var displayed = cut.FindAll(".agent-selection-card__tag-target");
+        Assert.Equal(3, displayed.Count);
+        Assert.Equal("shared", displayed[0].TextContent.Trim());
+        Assert.Equal("api", displayed[1].TextContent.Trim());
+        Assert.Contains("+3", displayed[2].TextContent);
 
         cut.Find(".agent-selection-card__name-target").TriggerEvent(
             "onmouseenter",

@@ -9,6 +9,26 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Tests.Unit.Processes;
 
 public sealed class ProcessAssetProposalTests {
+    [Fact]
+    public void Revision_proposals_bind_one_content_source_and_keep_inline_checkpoint_shape() {
+        var codec = new ProjectProcessAssetProposalCodec();
+        var media = new ProjectObjectMediaPayload("original.txt", "text/plain", "YQ==");
+        var input = new ProjectProcessAssetRevisionProposal(Guid.NewGuid(), "custom:original", new("Revision", Media: media));
+        AgentToolPreparedPayload Prepare(ProjectStructureAgentAssetRevisionRequest request) =>
+            codec.Prepare(ProjectProcessAssetProposalCodec.RevisionToolName,
+                JsonSerializer.SerializeToElement(input with { Request = request }, ProjectProcessAssetProposalCodec.Json));
+
+        var inline = Prepare(input.Request);
+        Assert.DoesNotContain("sourceWorkspacePath", inline.ArgumentsJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(media, codec.Read(inline).Revision!.Media);
+        var fromFile = input.Request with { Media = null, SourceWorkspacePath = "artifacts/forecast.xlsx" };
+        var saved = Prepare(fromFile);
+        Assert.Equal(fromFile.SourceWorkspacePath, codec.Read(saved).Revision!.SourceWorkspacePath);
+        Assert.NotEqual(saved.Digest, Prepare(fromFile with { SourceWorkspacePath = "artifacts/revised.xlsx" }).Digest);
+        Assert.Throws<ArgumentException>(() => Prepare(fromFile with { Media = media }));
+        Assert.Throws<ArgumentException>(() => Prepare(fromFile with { SourceWorkspacePath = null }));
+    }
+
     [Theory]
     [InlineData(ProjectObjectType.File)]
     [InlineData(ProjectObjectType.ImageAsset)]

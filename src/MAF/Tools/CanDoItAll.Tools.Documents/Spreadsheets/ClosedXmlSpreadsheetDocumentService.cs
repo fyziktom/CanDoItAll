@@ -190,7 +190,8 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
             throw SpreadsheetWriteConflictException.OutputWorkbookExists();
         }
 
-        using var workbook = File.Exists(request.WorkbookPath)
+        var inputExists = File.Exists(request.WorkbookPath);
+        using var workbook = inputExists
             ? OpenReadWorkbook(request.WorkbookPath)
             : CreateWorkbook(request);
         var worksheet = workbook.Worksheets.FirstOrDefault(item => string.Equals(item.Name, request.WorksheetName, StringComparison.OrdinalIgnoreCase))
@@ -218,8 +219,13 @@ public sealed class ClosedXmlSpreadsheetDocumentService : ISpreadsheetDocumentSe
             }
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        workbook.SaveAs(outputPath);
+        if (inputExists && updatesInputWorkbook) {
+            workbook.Save();
+        } else {
+            var fullOutputPath = Path.GetFullPath(outputPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullOutputPath)!);
+            workbook.SaveAs(fullOutputPath);
+        }
 
         return new SpreadsheetWriteResult(
             outputPath,

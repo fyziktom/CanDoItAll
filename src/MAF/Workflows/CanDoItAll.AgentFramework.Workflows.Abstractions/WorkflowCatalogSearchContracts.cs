@@ -105,10 +105,12 @@ public interface IWorkflowStableIdentityLookupService
 {
     Task<WorkflowStableIdentityResolution> ResolveByTemplateKeyAsync(
         string templateKey,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<WorkflowCatalogItem, bool>? isVisible = null);
 
     Task<WorkflowStableIdentityResolution> ResolveByExternalKeyAsync(
         string externalNamespace,
         string externalKey,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        Func<WorkflowCatalogItem, bool>? isVisible = null);
 }

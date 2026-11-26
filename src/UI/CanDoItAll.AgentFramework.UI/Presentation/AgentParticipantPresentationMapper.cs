@@ -25,7 +25,7 @@ public static class AgentParticipantPresentationMapper
             avatarImageUrl: agent.AvatarImageUrl,
             avatarSeed: ResolveAvatarSeed(agent, "Sandbox Agent"),
             avatarFallbackText: BuildInitials(ResolveAvatarSeed(agent, "Sandbox Agent")),
-            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, agent.Model),
+            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, agent.Model, string.Join(' ', visibleTags)),
             detailsText: options.ShowDetailsTooltip ? BuildCardDetails(agent, visibleTags, role) : null,
             detailsAriaLabel: "Show agent details",
             selectLabel: string.IsNullOrWhiteSpace(agent.Name) ? "Select agent" : $"Select {agent.Name}",
@@ -71,7 +71,7 @@ public static class AgentParticipantPresentationMapper
             avatarImageUrl: agent.AvatarImageUrl,
             avatarSeed: ResolveAvatarSeed(agent, "Agent"),
             avatarFallbackText: BuildInitials(ResolveAvatarSeed(agent, "Agent")),
-            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, model),
+            searchText: string.Join(' ', agent.Name, agent.RoleTitle, agent.Summary, model, string.Join(' ', tags)),
             detailsText: $"{role}. {model}. {workload}. {(tags.Count == 0 ? "No visible tags" : $"Tags: {string.Join(", ", tags)}")}.",
             badges: [new(isBusy ? "Preparing" : workload, isBusy ? PresentationTone.Default : PresentationTone.Info)],
             tags: tags,
@@ -89,11 +89,7 @@ public static class AgentParticipantPresentationMapper
         => agent.Tags.Any(AgentSpecialTags.IsFavorite);
 
     public static IReadOnlyList<string> VisibleTags(AgentDefinition agent)
-        => agent.Tags
-            .Where(item => !AgentSpecialTags.IsFavorite(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        => AgentSpecialTags.Visible(agent);
 
     private static IReadOnlyList<PresentationBadge> BuildCardBadges(
         AgentDefinition agent,

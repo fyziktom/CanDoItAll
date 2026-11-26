@@ -1,23 +1,29 @@
 @namespace CanDoItAll.Processes.UI
 @if (IsOpen) {
     <Dialog IsOpen="true"
-            Eyebrow="Process run"
+            Eyebrow="@(View.Request is null ? "Process run" : null)"
             Title="@(View.Request?.FileName ?? $"Files · Run {View.RunId.ToString("N")[..8]}")"
-            Subtitle="@(View.Request is null ? "Browse current managed artifacts and product outputs. Refresh re-resolves run data and re-enumerates storage." : "Read-only content remains authorized independently from the disposed browser session.")"
+            Subtitle="@(View.Request is null ? "Browse current managed artifacts and product outputs. Refresh re-resolves run data and re-enumerates storage." : null)"
             Size="ModalSize.Full"
             DenseChrome="true"
             CloseOnBackdrop="false"
             TestId="process-run-files-dialog"
-            OnClose="CloseAsync">
+            OnClose="CloseAsync" Footer="@(View.Request is null ? BrowseFooter : null)">
         <HeaderActions>
-            @if (View.Browser is not null) {
-                <StatusBadge Tone="info" Text="@($"{View.SourceCount} root(s)")" />
-                <StatusBadge Tone="neutral" Text="@($"revision {View.Revision[..12]}")" />
+            @if (View.Request is not null) {
+                <StatusBadge Tone="info" Text="Read only" />
+                <Button Tone="ButtonTone.Default" Icon="arrow_back" Text="Back to run files" Size="ButtonSize.Small"
+                        data-testid="process-run-files-back" Click="RefreshAsync" />
+            } else {
+                @if (View.Browser is not null) {
+                    <StatusBadge Tone="info" Text="@($"{View.SourceCount} root(s)")" />
+                    <StatusBadge Tone="neutral" Text="@($"revision {View.Revision[..12]}")" />
+                }
+                <StatusBadge Tone="neutral" Text="Always current" />
             }
-            <StatusBadge Tone="neutral" Text="Always current" />
         </HeaderActions>
         <ChildContent>
-            <div class="process-run-files-dialog__content">
+            <div class="process-run-files-dialog__content @(View.Request is null ? null : "process-run-files-dialog__content--preview")">
                 @if (View.IsLoading) {
                     <LoadingState Eyebrow="Authorized run roots"
                                   Title="Resolving current process files"
@@ -36,14 +42,6 @@
                     <Stack GapScale="LayoutGap.Small"
                            AlignItems="AlignItems.Stretch"
                            Class="h-full min-h-0 overflow-hidden">
-                        <Cluster Gap="LayoutGap.XSmall" Class="shrink-0">
-                            <Button Tone="ButtonTone.Default"
-                                    Icon="arrow_back"
-                                    Text="Back to run files"
-                                    data-testid="process-run-files-back"
-                                    Click="RefreshAsync" />
-                            <StatusBadge Tone="info" Text="Read only" />
-                        </Cluster>
                         @if (!string.IsNullOrWhiteSpace(View.ActivationError)) {
                             <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined">
                                 @View.ActivationError
@@ -59,7 +57,7 @@
                                          Composition="InteractionComposition"
                                          OpenExternallyRequested="OpenInteractionExternallyCallback"
                                          OpenExternallyLabel="Open in preferred app"
-                                         AllowModeSwitch="false"
+                                         AllowModeSwitch="false" Embedded="true" FillAvailableHeight="true"
                                          MaximumContentBytes="@(16 * 1024 * 1024)"
                                          AriaLabel="@($"Read-only process-run file {View.Request.FileName}")" />
                     </Stack>
@@ -93,30 +91,27 @@
                 }
             </div>
         </ChildContent>
-        <Footer>
-            <Split Gap="LayoutGap.Small">
-                <Cluster Gap="LayoutGap.Small">
-                    <Button Icon="refresh"
-                            Text="Refresh sources"
-                            Tone="ButtonTone.Default"
-                            Size="ButtonSize.Small"
-                            Disabled="@View.IsLoading"
-                            data-testid="process-run-files-refresh"
-                            Click="RefreshAsync" />
-                    <TextBlock TextStyle="TextStyle.Caption"
-                               Value="Host cache and session retention are disabled for live run roots." />
-                </Cluster>
-                <Button Text="Close"
-                        Tone="ButtonTone.Default"
-                        Size="ButtonSize.Small"
-                        Click="CloseAsync" />
-            </Split>
-        </Footer>
     </Dialog>
 }
 
-
 @code {
+    private RenderFragment BrowseFooter => @<Split Gap="LayoutGap.Small">
+        <Cluster Gap="LayoutGap.Small">
+            <Button Icon="refresh"
+                    Text="Refresh sources"
+                    Tone="ButtonTone.Default"
+                    Size="ButtonSize.Small"
+                    Disabled="@View.IsLoading"
+                    data-testid="process-run-files-refresh"
+                    Click="RefreshAsync" />
+            <TextBlock TextStyle="TextStyle.Caption"
+                       Value="Host cache and session retention are disabled for live run roots." />
+        </Cluster>
+        <Button Text="Close"
+                Tone="ButtonTone.Default"
+                Size="ButtonSize.Small"
+                Click="CloseAsync" />
+    </Split>;
     [Parameter] public bool IsOpen { get; set; }
     [Parameter, EditorRequired] public ProcessRunFilesPresentation View { get; set; } = default!;
     [Parameter] public FileInteractionComponentComposition? InteractionComposition { get; set; }

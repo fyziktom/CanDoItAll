@@ -1203,14 +1203,15 @@ public sealed partial class FileSandboxWorkspaceStore :
         }
         var chatPaths = new[] { previousDetail?.Run.ChatSessionId, detail.Run.ChatSessionId }
             .OfType<Guid>().Select(layout.SessionPath).Distinct().ToArray();
-        var witness = previousDetail is not null && validatedCatalog is null
-            ? await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
-                PendingCommitJournalPaths.Concat(chatPaths).Append(layout.RunPath(detail.Run.Id)),
-                [layout.RunRoot(detail.Run.Id)], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
-                pendingPublicationTargets: SharedPublicationPaths)
-            : await CapturePublicationWitnessAsync(cancellationToken, chatPaths, [layout.RunRoot(detail.Run.Id)]);
+        var includeCatalog = previousDetail is null || validatedCatalog is not null;
+        var publicationPaths = includeCatalog ? SharedPublicationPaths : PendingCommitJournalPaths;
+        var witness = await FileSandboxWorkspaceMutationWitness.CaptureAsync(layout,
+            publicationPaths.Concat(chatPaths).Append(layout.RunPath(detail.Run.Id)),
+            [layout.RunRoot(detail.Run.Id)], PendingCommitJournalPaths, physicalPathPolicyFactory, cancellationToken,
+            pendingPublicationTargets: SharedPublicationPaths,
+            originalRun: ReferenceEquals(snapshot?.Run, previousDetail?.Run) ? snapshot : null);
         await using var publication = await operation.AcquireAsync(
-            FileSandboxWorkspaceWriteSet.Run(previousDetail?.Run, detail.Run, validatedCatalog is not null || previousDetail is null),
+            FileSandboxWorkspaceWriteSet.Run(previousDetail?.Run, detail.Run, includeCatalog),
             witness, cancellationToken, requireCurrentAuthority);
         if (unchanged) {
             return previousDetail!;
@@ -1240,10 +1241,10 @@ public sealed partial class FileSandboxWorkspaceStore :
                     targetWorkspaceIndex);
                 ValidateExistingRunDetailCommitJournal(journal);
 
-                await jsonStore.WriteJsonAtomicallyAsync(
+                await jsonStore.WriteExistingRunJournalAsync(
                     PendingExistingRunDetailCommitJournalPath,
                     journal,
-                    cancellationToken, compact: true);
+                    cancellationToken);
                 NotifyExistingRunDetailCommitBoundary(
                     ExistingRunDetailCommitStage.JournalPersisted);
                 return await CommitExistingRunDetailJournalAsync(

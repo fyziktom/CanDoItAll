@@ -2,7 +2,7 @@ using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.Modules.Workspace;
 
-public enum WorkspaceSection { Workspace, DataSources, Storage, Files, ProviderHistory, Secrets, Providers, ApiAccess }
+public enum WorkspaceSection { Workspace, DataSources, Storage, Files, ProviderHistory, Secrets, Providers, ApiAccess, RemoteInstances }
 public enum SettingsWriteState { Refused, Committed, CommittedWarning }
 public enum SettingsDiagnostic { None, Validation, Missing, ReferenceBlocked, CleanupPending, ActivityPending, LoggingPending, Retired, ReadBackPending, Unknown, Conflict }
 

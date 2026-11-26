@@ -51,7 +51,8 @@ internal static class SandboxWorkspaceSeedNormalizer
             providers.Items,
             capabilities.Items,
             providers.IdMap,
-            capabilities.IdMap);
+            capabilities.IdMap,
+            (catalog.RemoteTemplateBindings ?? []).Select(binding => binding.AgentId).ToHashSet());
         var memory = MergeMemory(catalog.Memory, seeded.Memory, agents.IdMap);
         var activeCapabilities = RemoveRetiredCapabilities(capabilities.Items, seeded.Capabilities);
         var activeAgents = AgentDecisionDataPolicyMetadata.Preserve(catalog.Agents,
@@ -319,7 +320,8 @@ internal static class SandboxWorkspaceSeedNormalizer
         IReadOnlyList<ProviderProfile> providers,
         IReadOnlyList<CapabilityCatalogItem> capabilities,
         IReadOnlyDictionary<Guid, Guid> providerIdMap,
-        IReadOnlyDictionary<Guid, Guid> capabilityIdMap)
+        IReadOnlyDictionary<Guid, Guid> capabilityIdMap,
+        IReadOnlySet<Guid> importedAgentIds)
     {
         var merged = existingAgents.ToList();
         var idMap = new Dictionary<Guid, Guid>();
@@ -336,10 +338,11 @@ internal static class SandboxWorkspaceSeedNormalizer
 
             var match = idMatch
                 ?? (!requiresCanonicalIdentity && !string.IsNullOrWhiteSpace(seededAgent.TemplateKey)
-                    ? merged.FirstOrDefault(item => string.Equals(item.TemplateKey, seededAgent.TemplateKey, StringComparison.OrdinalIgnoreCase))
+                    ? merged.FirstOrDefault(item => !importedAgentIds.Contains(item.Id) && string.Equals(item.TemplateKey, seededAgent.TemplateKey, StringComparison.OrdinalIgnoreCase))
                     : null)
                 ?? (!requiresCanonicalIdentity
-                    ? merged.FirstOrDefault(item => string.Equals(item.Name, seededAgent.Name, StringComparison.OrdinalIgnoreCase) && item.IsTemplate == seededAgent.IsTemplate)
+                    ? merged.FirstOrDefault(item => !importedAgentIds.Contains(item.Id) && item.IsTemplate == seededAgent.IsTemplate &&
+                        string.Equals(item.Name, seededAgent.Name, StringComparison.OrdinalIgnoreCase))
                     : null);
 
             if (match is null)

@@ -6,15 +6,20 @@
     [Parameter, EditorRequired] public ActiveAgentChat Chat { get; set; } = default!;
     [CascadingParameter] public DialogReference? DialogReference { get; set; }
     private AgentFloatingCloseState state = default!;
+    private ActiveAgentChat? presented;
 
     protected override void OnParametersSet() {
-        state = new(state?.HandleId == Chat.HandleId ? state.Origin : Guid.NewGuid(), Chat.HandleId,
-            Chat.Agent.Name, Chat.CanStop, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval, Chat.HasUnsentDraft);
+        if (presented == Chat) {
+            return;
+        }
+        presented = Chat;
+        state = new(Guid.NewGuid(), Chat.HandleId,
+            Chat.Agent.Name, Chat.CanStop || Chat.CanCancelPendingRun, Chat.RunState == ActiveAgentChatRunState.AwaitingApproval, Chat.HasUnsentDraft);
     }
 
     private Task DecideAsync(AgentFloatingCloseIntent intent) {
         if (intent.Origin != state.Origin || intent.HandleId != Chat.HandleId
-            || intent.Choice == AgentFloatingCloseChoice.Stop && !Chat.CanStop) {
+            || intent.Choice == AgentFloatingCloseChoice.Stop && !Chat.CanStop && !Chat.CanCancelPendingRun) {
             return Task.CompletedTask;
         }
         var decision = intent.Choice switch {

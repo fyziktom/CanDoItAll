@@ -97,8 +97,10 @@ public sealed class AgentChatModalTests
     public void Agent_switch_dialog_filters_by_search_and_tags_and_sorts_favorites_first()
     {
         using var context = CreateContext();
-        var implementation = CreateAgent("Alpha Developer", ".NET implementation specialist", "implementation");
-        var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", "quality", AgentSpecialTags.Favorite);
+        var implementation = CreateAgent("Alpha Developer", ".NET implementation specialist", "implementation", "SHARED");
+        var review = CreateAgent("Zulu Review Lead", ".NET QA specialist", "quality", AgentSpecialTags.Favorite) with {
+            SharedTemplate = true, ApiAvailable = false
+        };
         var diagnostics = CreateAgent("Diagnostics Operator", "Runtime analyst", "diagnostics");
 
         var cut = context.Render<AgentSwitchDialog>(parameters => parameters
@@ -125,6 +127,8 @@ public sealed class AgentChatModalTests
         Assert.Single(cards);
         Assert.Contains("Alpha Developer", cards[0].TextContent);
 
+        cut.Find("[data-testid='agent-switch-search']").Input("shared");
+        Assert.Contains("Zulu Review Lead", Assert.Single(cut.FindAll("[data-testid='agent-switch-card']")).TextContent);
         cut.Find("[data-testid='agent-switch-search']").Input(string.Empty);
         cut.Find("[data-testid='agent-switch-tag-filter-input']").Input("quality,");
         cards = cut.FindAll("[data-testid='agent-switch-card']");

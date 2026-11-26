@@ -28,14 +28,21 @@ internal sealed class AgentPlanningCoordinator(AgentToolAdmissionJournal journal
     }
 
     internal async Task<AgentPlanningPreparedRun> PrepareAsync(AgentPlanningOwner selection, AgentDefinition agent,
-        ProviderProfile provider, CatalogDataRevision revision, ExecutionInvocationContext context, CancellationToken cancellationToken) {
-        var participant = RequireParticipant(selection);
-        var source = AgentTurnContextMetadata.TryReadTurnContextReference(context.MetadataJson)
-            ?? throw new AgentToolAdmissionException(UnsupportedCode, "Planning requires its original source context.");
-        var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(context.MetadataJson)
-            ?? throw new AgentToolAdmissionException(UnsupportedCode, "Planning requires its original execution authority.");
-        var admission = await participant.PrepareRunAsync(new(agent, revision, journal.Profile, source, governance), cancellationToken);
-        return new(admission, selection, runtime.CaptureRuntimeContract(agent, provider, participant));
+        ProviderProfile provider, CatalogDataRevision revision, ExecutionInvocationContext context, Guid? chatSessionId, CancellationToken cancellationToken) {
+        try {
+            var participant = RequireParticipant(selection);
+            var source = AgentTurnContextMetadata.TryReadTurnContextReference(context.MetadataJson)
+                ?? throw new AgentToolAdmissionException(UnsupportedCode, "Planning requires its original source context.");
+            var governance = AgentTurnContextMetadata.TryReadExecutionGovernanceSnapshot(context.MetadataJson)
+                ?? throw new AgentToolAdmissionException(UnsupportedCode, "Planning requires its original execution authority.");
+            var admission = await participant.PrepareRunAsync(new(agent, revision, journal.Profile, source, governance), cancellationToken);
+            return new(admission, selection, runtime.CaptureRuntimeContract(agent, provider, participant));
+        } catch (AgentToolAdmissionException refusal) {
+            var message = refusal.Code == AgentPlanningRunPreparation.MissingWorkspacePolicyCode
+                ? "Configure and save the workspace decision-data policy in Settings before planning tasks."
+                : "Task planning is unavailable for this context. Follow the project in Project Structure and check the agent’s task permissions.";
+            throw new AgentChatAdmissionRejectedException(agent.Id, chatSessionId, message, refusal);
+        }
     }
 
     internal async Task<AgentPlanningExecutionResult> RunAsync(AgentDefinition agent, ProviderProfile provider, ExecutionRunRecord original,

@@ -3,7 +3,9 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.AgentFramework.Core;
 
 public sealed record AgentPlanningRunPreparation(AgentDefinition Agent, CatalogDataRevision CatalogRevision,
-    AgentToolProfileBinding Profile, AgentTurnContextReference Source, AgentExecutionGovernanceSnapshot Governance);
+    AgentToolProfileBinding Profile, AgentTurnContextReference Source, AgentExecutionGovernanceSnapshot Governance) {
+    public const string MissingWorkspacePolicyCode = "planning.workspace-policy-missing";
+}
 
 public sealed class AgentPlanningRunAdmission {
     private readonly AgentToolProfileBinding profile;

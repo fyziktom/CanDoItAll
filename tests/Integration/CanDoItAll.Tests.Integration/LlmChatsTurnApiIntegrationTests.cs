@@ -122,6 +122,9 @@ public sealed class LlmChatsIdempotencyApiIntegrationTests
             expectedTranscriptRevision = StubLlmChatOperationApplicationService.TranscriptRevision,
             message = "A different paid request."
         });
+        using var revisionConflict = await host.Client.PostAsJsonAsync(route, request with {
+            expectedTranscriptRevision = request.expectedTranscriptRevision + 1
+        });
 
         Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
         Assert.Equal(HttpStatusCode.Accepted, retry.StatusCode);
@@ -132,6 +135,8 @@ public sealed class LlmChatsIdempotencyApiIntegrationTests
         Assert.False(firstJson.RootElement.TryGetProperty("requestFingerprint", out _));
         Assert.False(retryJson.RootElement.TryGetProperty("requestFingerprint", out _));
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, revisionConflict.StatusCode);
+        Assert.Contains(LlmChatErrorCodes.OperationIdConflict, await revisionConflict.Content.ReadAsStringAsync());
         var conflictBody = await conflict.Content.ReadAsStringAsync();
         Assert.Contains(LlmChatErrorCodes.OperationIdConflict, conflictBody);
         Assert.DoesNotContain("requestFingerprint", conflictBody, StringComparison.OrdinalIgnoreCase);
@@ -315,8 +320,7 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
     public const long TranscriptRevision = 5;
 
     private static readonly DateTimeOffset Now = new(2026, 8, 14, 0, 0, 0, TimeSpan.Zero);
-    private static readonly LlmChatRequestFingerprint Fingerprint = new(new string('a', 64));
-    private readonly Dictionary<LlmChatOperationId, SendLlmChatTurnCommand> commands = [];
+    private static readonly LlmChatSettingsFingerprint SettingsFingerprint = new(new string('a', 64));
     private readonly Dictionary<LlmChatOperationId, LlmChatOperationDetails> operations = [];
     private readonly HashSet<LlmChatOperationId> liveOwners = [];
 
@@ -332,20 +336,18 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
         SendLlmChatTurnCommand command,
         CancellationToken cancellationToken = default)
     {
-        if (command.ExpectedTranscriptRevision != TranscriptRevision)
-        {
-            return Failure(LlmChatErrorCodes.TranscriptRevisionConflict);
-        }
-
         if (operations.TryGetValue(command.OperationId, out var existing))
         {
-            return commands[command.OperationId] == command
+            return existing.Operation.RequestFingerprint == Fingerprint(command)
                 ? Success(existing with { Replayed = true })
                 : Failure(LlmChatErrorCodes.OperationIdConflict);
         }
 
+        if (command.ExpectedTranscriptRevision != TranscriptRevision) {
+            return Failure(LlmChatErrorCodes.TranscriptRevisionConflict);
+        }
+
         ProviderDispatchCount++;
-        commands.Add(command.OperationId, command);
         var details = command.Message switch
         {
             "running" => CreateDetails(command, LlmChatOperationStatus.Running),
@@ -438,7 +440,6 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
     public void SeedRecoveryRequired(LlmChatOperationId operationId, bool hasLiveOwner)
     {
         var command = new SendLlmChatTurnCommand(operationId, ConversationId, TranscriptRevision, "recover");
-        commands[operationId] = command;
         operations[operationId] = CreateDetails(
             command,
             LlmChatOperationStatus.RecoveryRequired,
@@ -480,7 +481,6 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
                 LlmStreamingDeliveryMode.Incremental,
                 ordinal == count ? string.Empty : "stop"))
             .ToArray();
-        commands[operationId] = command;
         operations[operationId] = CreateDetails(
             command,
             LlmChatOperationStatus.Failed,
@@ -500,7 +500,7 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
             command.OperationId,
             command.ConversationId,
             LlmChatOperationKind.SendTurn,
-            Fingerprint,
+            Fingerprint(command),
             command.ExpectedTranscriptRevision,
             status,
             Now,
@@ -527,6 +527,10 @@ internal sealed class StubLlmChatOperationApplicationService : ILlmChatOperation
 
     private static Task<Result<LlmChatOperationDetails>> Success(LlmChatOperationDetails details)
         => Task.FromResult(Result<LlmChatOperationDetails>.Success(details));
+
+    private static LlmChatRequestFingerprint Fingerprint(SendLlmChatTurnCommand command) =>
+        LlmChatFingerprints.CreateRequest(command.ConversationId, command.ExpectedTranscriptRevision, command.Message,
+            SettingsFingerprint, command.AttributionScope);
 
     private static Task<Result<LlmChatOperationDetails>> Failure(string code)
         => Task.FromResult(Result<LlmChatOperationDetails>.Failure(

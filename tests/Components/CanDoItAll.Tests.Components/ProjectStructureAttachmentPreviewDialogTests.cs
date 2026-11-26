@@ -60,6 +60,8 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             Assert.Single(cut.FindComponents<FileInteraction>());
             Assert.Empty(cut.FindComponents<FileBrowser>());
             Assert.NotNull(cut.Find("[data-testid='project-structure-direct-file-interaction']"));
+            Assert.Empty(cut.FindAll("[data-testid='file-interaction'] > header"));
+            Assert.Empty(cut.FindAll("[aria-label='File details']"));
             Assert.DoesNotContain($"/managed-files/{fileName}", cut.Markup, StringComparison.Ordinal);
             Assert.Equal(expectsBrowserFrame, cut.FindAll("iframe").Count == 1);
             Assert.Equal(mediaType == "video/mp4", cut.FindAll("video").Count == 1);
@@ -110,9 +112,10 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
             .Add(component => component.CanEditNode, _ => false));
 
         Assert.Contains("Reviewed by finance.", cut.Markup, StringComparison.Ordinal);
-        var notes = cut.Find("[data-testid='project-structure-file-interaction-notes']");
-        Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
-        Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
+        var details = cut.Find("[role='complementary'][aria-label='File details']");
+        Assert.NotNull(details.QuerySelector("[data-testid='project-structure-file-interaction-notes']"));
+        Assert.NotNull(details.QuerySelector("[aria-label='File actions']"));
+        Assert.Null(details.QuerySelector("[data-testid='file-interaction']"));
         var fileInteraction = cut.FindComponent<FileInteraction>();
         fileInteraction.WaitForAssertion(() =>
         {
@@ -123,16 +126,16 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         spreadsheet.WaitForAssertion(() =>
         {
             Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-preview']"));
-            Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-grid']"));
             Assert.Contains("Acceptance", spreadsheet.Markup, StringComparison.Ordinal);
-            Assert.Contains("=COUNTA(A1:A2)", spreadsheet.Markup, StringComparison.Ordinal);
+            var calculatedCell = spreadsheet.Find("[data-testid='spreadsheet-grid'] tbody tr:nth-child(2) td:nth-of-type(2)");
+            Assert.Equal("2", calculatedCell.TextContent);
             Assert.Empty(cut.FindAll("iframe"));
         });
-        await cut.FindAll("button")
-            .Single(button => button.TextContent.Trim() == "Open in preferred app")
+        await cut.FindAll("[aria-label='File actions'] button")
+            .Single(button => button.TextContent.Trim().EndsWith("Open in preferred app", StringComparison.Ordinal))
             .ClickAsync(new());
-        await cut.FindAll("button")
-            .Single(button => button.TextContent.Trim() == "Show in folder")
+        await cut.FindAll("[aria-label='File actions'] button")
+            .Single(button => button.TextContent.Trim().EndsWith("Show in folder", StringComparison.Ordinal))
             .ClickAsync(new());
 
         Assert.True(opened);
@@ -199,10 +202,8 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
 
         cut.WaitForAssertion(() =>
         {
-            var notes = cut.Find("[data-testid='project-structure-file-interaction-notes']");
+            var notes = cut.Find("[aria-label='File details'] [data-testid='project-structure-file-interaction-notes']");
             Assert.Contains("Reviewed by finance.", notes.TextContent, StringComparison.Ordinal);
-            Assert.Contains("max-height:min(12rem,35%)", notes.GetAttribute("style"), StringComparison.Ordinal);
-            Assert.Contains("overflow:auto", notes.GetAttribute("style"), StringComparison.Ordinal);
             Assert.NotNull(cut.Find("[data-testid='interaction-markdown-view']"));
         });
     }

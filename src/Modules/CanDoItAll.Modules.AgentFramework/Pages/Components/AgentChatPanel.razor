@@ -60,11 +60,15 @@
                             VoiceRecordingToggled="ToggleVoiceRecordingAsync"
                             SpeakLatestAssistantMessageRequested="SpeakLatestAssistantMessageAsync">
             <ComposerActions>
-                @{ var composerOwner = chatSession.Generation; }
-                <Button Text="@(ActionPresentation.FocusedFloating ? null : "Plan project tasks")" Icon="playlist_add"
-                        aria-label="Plan project tasks" Tone="ButtonTone.Secondary" Size="ButtonSize.Small"
-                        Disabled="@(IsChatInteractionBusy || BlocksNewMessage || selectedAgentId is null || draftAttachmentPaths.Count > 0)"
-                        title="Uses the current Project Structure context. Review is required before publication; attachments are not supported."
+                @{
+                    var composerOwner = chatSession.Generation;
+                    var planningUnavailable = ProjectPlanningUnavailableReason();
+                }
+                <Button Text="@(IsFocusedFloating ? "Plan tasks" : "Plan project tasks")" Icon="playlist_add"
+                        aria-label="Plan project tasks" Tone="@(IsFocusedFloating ? ButtonTone.Default : ButtonTone.Secondary)"
+                        Variant="@(IsFocusedFloating ? Variant.Outlined : Variant.Solid)" Size="ButtonSize.Small"
+                        Disabled="@(IsChatInteractionBusy || BlocksNewMessage || planningUnavailable is not null)"
+                        title="@(planningUnavailable ?? "Send this prompt to draft project tasks for review.")"
                         Click="@(() => chatSession.IsCurrent(composerOwner) ? SendMessageCoreAsync(AgentPlanningOwner.ProjectTaskPlan) : Task.CompletedTask)"
                         data-testid="agents-chat-plan-tasks" />
                 <PromptGalleryChatComposerButton Provider="@SelectedAgentProviderKind"

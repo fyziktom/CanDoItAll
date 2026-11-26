@@ -1283,7 +1283,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
                 !string.IsNullOrWhiteSpace(auditScope.ProcessStepId));
     }
 
-    private static CompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)
+    private static MafApprovalAwareCompactionProvider CreateCompactionProvider(AgentRuntimeConfiguration configuration)
     {
         var slidingWindowTurns = configuration.SlidingWindowTurns ?? DefaultCompactionSlidingWindowTurns;
         var truncationTokenLimit = configuration.TruncationTokenLimit ?? DefaultCompactionTruncationTokenLimit;
@@ -1294,7 +1294,7 @@ internal sealed class RuntimeCapabilityComposer : IRuntimeCapabilityComposer
             new SlidingWindowCompactionStrategy(CompactionTriggers.TurnsExceed(slidingWindowTurns)),
             new TruncationCompactionStrategy(CompactionTriggers.TokensExceed(truncationTokenLimit)));
 
-        return new CompactionProvider(pipeline);
+        return new MafApprovalAwareCompactionProvider(pipeline);
     }
 
     /// <summary>

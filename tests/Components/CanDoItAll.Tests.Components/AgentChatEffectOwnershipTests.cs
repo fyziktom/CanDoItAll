@@ -76,7 +76,7 @@ public sealed class AgentChatEffectOwnershipTests {
     }
 
     [Fact]
-    public async Task Run_artifact_staging_omits_unsafe_paths_and_sends_only_canonical_values() {
+    public async Task Run_artifact_staging_preserves_uploads_and_sends_only_distinct_canonical_paths() {
         var (service, reads, agent, first, _) = Reads();
         var run = CreateRunningRun(agent.Id, first.Id) with { State = ExecutionState.Completed };
         reads.Workspace = (_, _, _) => Task.FromResult(CreateWorkspace(agent.Id, first, run));
@@ -86,9 +86,14 @@ public sealed class AgentChatEffectOwnershipTests {
                 new(Guid.NewGuid(), run.Id, "text", "Unsafe", "notes/../PRIVATE_ARTIFACT_482", "text/plain", "fixture", "unsafe", DateTimeOffset.UtcNow)]
         });
         using var context = Context(service, out var effects);
+        var staging = DispatchProxy.Create<IAgentChatAttachmentStagingService, EffectsProxy>();
+        ((EffectsProxy)(object)staging).Upload.SetResult(new("uploads/prior.png", "image/png", 3));
+        context.Services.AddSingleton(staging);
         var cut = Render(context, agent, first);
+        await cut.InvokeAsync(() => Workspace(cut).AttachmentFilesSelected.InvokeAsync(new InputFileChangeEventArgs([new FixtureFile()])));
         await cut.InvokeAsync(() => Workspace(cut).AttachmentRequested.InvokeAsync());
-        Assert.Equal(["artifacts/safe.txt", "artifacts/Safe.txt"], Workspace(cut).DraftAttachmentPaths);
+        await cut.InvokeAsync(() => Workspace(cut).AttachmentRequested.InvokeAsync());
+        Assert.Equal(["uploads/prior.png", "artifacts/safe.txt", "artifacts/Safe.txt"], Workspace(cut).DraftAttachmentPaths);
         Assert.Contains(context.Services.GetRequiredService<NotificationService>().Messages, message => message.Detail.Contains("references were omitted", StringComparison.Ordinal));
         Assert.DoesNotContain("PRIVATE_ARTIFACT_482", cut.Markup, StringComparison.Ordinal);
         var completion = new TaskCompletionSource<AgentChatRunResult>();
@@ -96,7 +101,7 @@ public sealed class AgentChatEffectOwnershipTests {
         await Send(cut, "Read the artifact");
         var request = Assert.Single(effects.Requests);
         Assert.NotNull(request.AttachmentPaths);
-        Assert.Equal(["artifacts/safe.txt", "artifacts/Safe.txt"], request.AttachmentPaths);
+        Assert.Equal(["uploads/prior.png", "artifacts/safe.txt", "artifacts/Safe.txt"], request.AttachmentPaths);
         Assert.DoesNotContain("PRIVATE_ARTIFACT_482", request.Prompt, StringComparison.Ordinal);
         completion.SetResult(CreateRunResult(agent.Id, first.Id));
         cut.WaitForAssertion(() => Assert.False(Workspace(cut).IsBusy));

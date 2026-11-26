@@ -2,6 +2,7 @@ using CanDoItAll.Modules.Workspace.ApiAccess;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Workflows.Abstractions;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.SharedKernel;
 using System.ComponentModel;
 using System.Security.Claims;
@@ -63,40 +64,42 @@ internal static class WorkflowsApi
             .WithName("ListWorkflowExecutorCatalog")
             .Produces<WorkflowExecutorDescriptor[]>();
 
-        workflows.MapGet("/definitions/{workflowId:guid}", GetDefinitionAsync)
+        workflows.MapGet("/definitions/{workflowId:guid}", GetDefinitionAsync).WithWorkflowApiAccess()
             .WithName("GetWorkflowDefinition")
             .Produces<WorkflowDefinitionDetail>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
-        workflows.MapGet("/definitions/{workflowId:guid}/versions/{versionId:guid}", GetDefinitionVersionAsync)
+        workflows.MapGet("/definitions/{workflowId:guid}/versions/{versionId:guid}", GetDefinitionVersionAsync).WithWorkflowApiAccess()
             .WithName("GetWorkflowDefinitionVersion")
             .Produces<WorkflowDefinitionDetail>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
-        workflows.MapGet("/definitions/{workflowId:guid}/export", ExportDefinitionAsync)
+        workflows.MapGet("/definitions/{workflowId:guid}/export", ExportDefinitionAsync).WithWorkflowApiAccess()
             .WithName("ExportWorkflowDefinition")
             .Produces<WorkflowDefinitionExportEnvelope>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
 
         workflows.MapPost("/definitions", SaveDefinitionAsync)
+            .WithWorkflowApiAccess((WorkflowDefinitionSaveRequest request) => request.Id?.Value)
             .WithName("SaveWorkflowDefinition")
             .DescribeApi("Create a workflow or append a version against its original version.",
                 "Existing workflows require expectedVersionId from the original read; null declares create-only absence, including caller-chosen IDs. Missing or stale originals and create collisions return HTTP 409 with workflows.definition-conflict and store nothing. Send the complete graph, input parameters and runtime policy. Blank LLM node provider, model or instructions are filled from the selected component. External namespace/key must be supplied together and are retained when omitted; template provenance cannot be set here.",
                 "The complete accepted workflow version, including its new versionId.",
                 "Complete workflow content and the original expectedVersionId, or null only when creating a new workflow.")
             .Produces<WorkflowDefinition>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
         workflows.MapPost("/definitions/import", ImportDefinitionAsync)
+            .WithWorkflowApiAccess((WorkflowDefinitionImportRequest request) => request.PreserveWorkflowId ? request.Envelope?.Definition?.Id.Value : null)
             .WithName("ImportWorkflowDefinition")
             .DescribeApi("Create or conditionally replace a workflow from a portable definition envelope.",
                 "Accepts CanDoItAll.WorkflowDefinition/v1. Status defaults to Draft and a new version identifier is generated. Without preserveWorkflowId a new workflow identifier is generated and external/template identity is omitted; expectedVersionId must be absent. With preserveWorkflowId the source identifier, external identity and template provenance are kept. Replacing an existing target requires its original expectedVersionId. Null declares create-only absence. Missing or stale originals return HTTP 409 with workflows.definition-conflict and preserve the target.",
                 "The imported workflow with its assigned workflow and version identifiers.",
                 "The complete export envelope, requested lifecycle status and whether to retain its source workflow identity.")
             .Produces<WorkflowDefinition>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
-        workflows.MapPost("/definitions/{workflowId:guid}/publish", PublishDefinitionAsync)
+        workflows.MapPost("/definitions/{workflowId:guid}/publish", PublishDefinitionAsync).WithWorkflowApiAccess()
             .WithName("PublishWorkflowDefinition")
             .DescribeApi("Publish the originally observed workflow version.",
                 "Appends an Active version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Publishing preserves existing runs; future latest-Active starts use the new version.",
@@ -107,7 +110,7 @@ internal static class WorkflowsApi
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
-        workflows.MapPost("/definitions/{workflowId:guid}/suspend", SuspendDefinitionAsync)
+        workflows.MapPost("/definitions/{workflowId:guid}/suspend", SuspendDefinitionAsync).WithWorkflowApiAccess()
             .WithName("SuspendWorkflowDefinition")
             .DescribeApi("Suspend the originally observed workflow version.",
                 "Appends a Suspended version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Existing runs retain their saved versions.",
@@ -118,7 +121,7 @@ internal static class WorkflowsApi
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
-        workflows.MapPost("/definitions/{workflowId:guid}/archive", ArchiveDefinitionAsync)
+        workflows.MapPost("/definitions/{workflowId:guid}/archive", ArchiveDefinitionAsync).WithWorkflowApiAccess()
             .WithName("ArchiveWorkflowDefinition")
             .DescribeApi("Archive the originally observed workflow version.",
                 "Appends an Archived version using the required expectedVersionId originally read. Missing or stale originals return HTTP 409 with workflows.definition-conflict and store nothing. Existing versions and runs remain available under their native read contracts.",
@@ -129,15 +132,15 @@ internal static class WorkflowsApi
                 StatusCodes.Status409Conflict,
                 StatusCodes.Status404NotFound);
 
-        workflows.MapDelete("/definitions/{workflowId:guid}", DeleteDefinitionAsync)
+        workflows.MapDelete("/definitions/{workflowId:guid}", DeleteDefinitionAsync).WithWorkflowApiAccess()
             .WithName("DeleteWorkflowDefinition")
             .DescribeApi("Delete the originally observed workflow and its definition versions.",
                 "Requires expectedVersionId from the original read. Missing, empty or stale originals, including a target deleted or recreated since that read, return HTTP 409 with workflows.definition-conflict and remove nothing. A successful delete removes the definition and its stored versions. Runtime runs, events, artifacts, checkpoints and reusable components remain available. No blind retry or freshly read version substitutes for an unresolved original command.",
                 "The original workflow head and all its definition versions were removed; ok is true.")
             .Produces<ApiAck>()
-            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status409Conflict);
+            .ProducesApiErrors(StatusCodes.Status400BadRequest, StatusCodes.Status404NotFound, StatusCodes.Status409Conflict);
 
-        workflows.MapPost("/definitions/{workflowId:guid}/validate", ValidateSavedDefinitionAsync)
+        workflows.MapPost("/definitions/{workflowId:guid}/validate", ValidateSavedDefinitionAsync).WithWorkflowApiAccess()
             .WithName("ValidateSavedWorkflowDefinition").WithApiPermission(ApiAccessScopeNames.ReadWorkflows)
             .Produces<WorkflowValidationResult>()
             .ProducesApiErrors(StatusCodes.Status404NotFound);
@@ -180,9 +183,12 @@ internal static class WorkflowsApi
             });
 
         workflows.MapPost("/test-runs", RunTestAsync)
+            .WithWorkflowApiAccess((WorkflowTestRunRequest request) => request.DraftDefinition?.Id.Value ?? request.WorkflowId?.Value)
             .WithName("RunWorkflowTest").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowTestRunResult>()
-            .Produces<WorkflowTestRunResult>(StatusCodes.Status400BadRequest);
+            .Produces<WorkflowTestRunResult>(StatusCodes.Status400BadRequest)
+            .ProducesApiErrors(StatusCodes.Status404NotFound)
+            .DescribeApiResponse(StatusCodes.Status404NotFound, "The selected workflow is unavailable through the workflow API. No test run was started.");
 
         workflows.MapGet("/analytics", GetAnalyticsAsync)
             .Produces<WorkflowAnalyticsSnapshot>()
@@ -194,7 +200,7 @@ internal static class WorkflowsApi
 
     internal static RouteGroupBuilder MapWorkflowRunControlApi(this RouteGroupBuilder workflows)
     {
-        workflows.MapPost("/definitions/{workflowId:guid}/runs/start", StartDefinitionRunAsync)
+        workflows.MapPost("/definitions/{workflowId:guid}/runs/start", StartDefinitionRunAsync).WithWorkflowApiAccess()
             .WithName("StartWorkflowDefinitionRun").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowRunStartApiResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -205,6 +211,7 @@ internal static class WorkflowsApi
                 StatusCodes.Status403Forbidden);
 
         workflows.MapPost("/runs/start", StartRunAsync)
+            .WithWorkflowApiAccess((WorkflowRunStartApiRequest request) => request.WorkflowId)
             .WithName("StartWorkflowRun").WithApiPermission(ApiAccessScopeNames.ExecuteWorkflows)
             .Produces<WorkflowRunStartApiResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -222,6 +229,27 @@ internal static class WorkflowsApi
             .Produces<WorkflowRunCancellationResult>(StatusCodes.Status422UnprocessableEntity);
 
         return workflows;
+    }
+
+    private static RouteHandlerBuilder WithWorkflowApiAccess(this RouteHandlerBuilder endpoint)
+        => endpoint.WithWorkflowApiAccess((Guid workflowId) => workflowId, "workflowId");
+
+    private static RouteHandlerBuilder WithWorkflowApiAccess<T>(this RouteHandlerBuilder endpoint, Func<T, Guid?> identify, string? parameterName = null) {
+        return endpoint.AddEndpointFilterFactory((factory, next) => {
+            var parameter = factory.MethodInfo.GetParameters().Single(item => item.ParameterType == typeof(T) &&
+                (parameterName is null || item.Name == parameterName));
+            return async context => {
+                var id = identify(context.GetArgument<T>(parameter.Position));
+                if (id.HasValue) {
+                    var http = context.HttpContext;
+                    var sharing = http.RequestServices.GetRequiredService<RemoteTemplatePublicationStore>();
+                    if (!await sharing.IsApiAvailableAsync(RemoteTemplateKind.Workflow, id.Value, http.RequestAborted)) {
+                        return ApiEndpointResults.NotFound("Workflow definition was not found.", "workflows.definition-not-found");
+                    }
+                }
+                return await next(context);
+            };
+        });
     }
 
     /// <summary>
@@ -786,8 +814,12 @@ internal static class WorkflowsApi
     internal static async Task<IResult> GetAnalyticsAsync(
         [AsParameters] WorkflowAnalyticsApiQuery query,
         IWorkflowAnalyticsQueryService analyticsQueryService,
-        CancellationToken cancellationToken)
-        => await GetWorkflowAnalyticsResultAsync(query, analyticsQueryService, cancellationToken);
+        RemoteTemplatePublicationStore sharing,
+        CancellationToken cancellationToken) {
+        var hidden = await sharing.ListApiUnavailableIdsAsync(RemoteTemplateKind.Workflow, cancellationToken);
+        return await GetWorkflowAnalyticsResultAsync(query, analyticsQueryService, cancellationToken,
+            hidden.Select(id => new WorkflowId(id)).ToHashSet());
+    }
 
     /// <summary>
     /// Start a production run of a workflow addressed in the route and wait until it stops.
@@ -1247,7 +1279,8 @@ internal static class WorkflowsApi
     internal static Task<IResult> GetWorkflowAnalyticsResultAsync(
         WorkflowAnalyticsApiQuery query,
         IWorkflowAnalyticsQueryService analyticsQueryService,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<WorkflowId>? excludedDefinitions = null)
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(analyticsQueryService);
@@ -1258,7 +1291,7 @@ internal static class WorkflowsApi
                     query.State,
                     query.Backend,
                     query.Search ?? string.Empty,
-                    NormalizeAnalyticsRecentTake(query.Take)),
+                    NormalizeAnalyticsRecentTake(query.Take)) { ExcludedDefinitionIds = excludedDefinitions },
                 cancellationToken)));
     }
 

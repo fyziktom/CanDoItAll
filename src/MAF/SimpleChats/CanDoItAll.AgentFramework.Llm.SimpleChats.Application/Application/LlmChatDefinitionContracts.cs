@@ -1,6 +1,7 @@
 using CanDoItAll.AgentFramework.Llm.Abstractions;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Common;
 using CanDoItAll.AgentFramework.Llm.SimpleChats.Definitions;
+using CanDoItAll.RemoteInstances;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.AgentFramework.Llm.SimpleChats.Application;
@@ -86,6 +87,10 @@ public sealed record LlmChatDefinitionQuery
 
     public IReadOnlyList<string> Tags { get; }
 
+    public IReadOnlySet<Guid>? UnavailableDefinitionIds { get; init; }
+
+    public bool OnlyApiAvailable { get; init; }
+
     private static IReadOnlyList<string> NormalizeTagFilters(IReadOnlyList<string>? tags)
     {
         if (tags is null || tags.Count == 0)
@@ -118,6 +123,9 @@ public sealed record LlmChatDefinitionDetails(
     IReadOnlyList<string>? Tags = null)
 {
     public IReadOnlyList<string> NormalizedTags => Tags ?? [];
+    public bool ApiAvailable { get; init; } = true;
+    public bool SharedTemplate { get; init; }
+    public IReadOnlyList<string> EffectiveTags => DefinitionSharingTags.Project(Tags, ApiAvailable, SharedTemplate);
 }
 
 public interface ILlmChatDefinitionApplicationService
