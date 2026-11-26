@@ -26620,7 +26620,7 @@
     {
       "identity": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
       "path": "src/UI/CanDoItAll.AgentFramework.UI/Chat/ChatWorkspaceSurface.razor",
-      "sha256_lf": "b6da4c6d8eb5b59e339abffe5d1799926a3a20a94373bcd012fd1b3a02118276",
+      "sha256_lf": "d48bac949e63b6bcf8ed61c2b69d2bb2fca052b9f6e0b737e562d71d860b9560",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.AgentFramework.UI.Chat.ChatWorkspaceSurface",

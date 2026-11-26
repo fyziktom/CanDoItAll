@@ -39,7 +39,8 @@ public sealed class AgentPlanningNativeBrowserTests {
         var send = chat.GetByTestId("chat-send-button");
         var plan = chat.GetByTestId("agents-chat-plan-tasks");
         await Assertions.Expect(send.GetByText("Send", new() { Exact = true })).ToBeVisibleAsync();
-        await Assertions.Expect(send).ToBeDisabledAsync();
+        await send.ClickAsync();
+        await Assertions.Expect(page.GetByText("Enter a prompt before sending it.", new() { Exact = true }).First).ToBeVisibleAsync();
         await Assertions.Expect(plan.GetByText("Plan tasks", new() { Exact = true })).ToBeVisibleAsync();
         await Assertions.Expect(chat.GetByTestId("chat-attachment-button")).ToBeDisabledAsync();
         await draft.FillAsync(question);
