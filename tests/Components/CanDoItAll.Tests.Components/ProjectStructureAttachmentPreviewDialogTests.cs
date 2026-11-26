@@ -123,9 +123,9 @@ public sealed class ProjectStructureAttachmentPreviewDialogTests
         spreadsheet.WaitForAssertion(() =>
         {
             Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-preview']"));
-            Assert.NotNull(spreadsheet.Find("[data-testid='spreadsheet-grid']"));
             Assert.Contains("Acceptance", spreadsheet.Markup, StringComparison.Ordinal);
-            Assert.Contains("=COUNTA(A1:A2)", spreadsheet.Markup, StringComparison.Ordinal);
+            var calculatedCell = spreadsheet.Find("[data-testid='spreadsheet-grid'] tbody tr:nth-child(2) td:nth-of-type(2)");
+            Assert.Equal("2", calculatedCell.TextContent);
             Assert.Empty(cut.FindAll("iframe"));
         });
         await cut.FindAll("button")
