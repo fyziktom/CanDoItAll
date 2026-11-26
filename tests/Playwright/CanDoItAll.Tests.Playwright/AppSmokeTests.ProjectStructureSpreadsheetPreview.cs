@@ -130,7 +130,14 @@ public sealed partial class AppSmokeTests
         await Assertions.Expect(grid).ToContainTextAsync("Project Structure agent hardening");
         await Assertions.Expect(grid).ToContainTextAsync("Ready");
         await Assertions.Expect(grid).ToContainTextAsync("Verified");
-        await Assertions.Expect(grid).ToContainTextAsync("=COUNTA(B2:B3)");
+        await Assertions.Expect(grid.GetByRole(AriaRole.Row).Filter(new() { HasText = "Verified status count" })
+            .GetByRole(AriaRole.Cell).Last).ToHaveTextAsync("2");
+
+        await preview.GetByRole(AriaRole.Tab, new() { Name = "Totals", Exact = true }).ClickAsync();
+        await Assertions.Expect(grid.GetByRole(AriaRole.Row).Filter(new() { HasText = "Weighted total" })
+            .GetByRole(AriaRole.Cell).Last).ToHaveTextAsync("20");
+        await preview.GetByRole(AriaRole.Tab, new() { Name = "Acceptance", Exact = true }).ClickAsync();
+        await Assertions.Expect(worksheet.GetByRole(AriaRole.Heading)).ToHaveTextAsync("Acceptance");
     }
 
     private async Task<string> CreateSpreadsheetAssetAsync(
@@ -196,6 +203,17 @@ public sealed partial class AppSmokeTests
                 ],
                 [],
                 CreateWorkbookIfMissing: true,
+                Overwrite: true));
+            spreadsheets.Write(new SpreadsheetWriteRequest(
+                workbookPath,
+                workbookPath,
+                "Totals",
+                [
+                    new SpreadsheetCellWrite("A1", "Weighted total"),
+                    new SpreadsheetCellWrite("B1", "=Acceptance!$B$4*10")
+                ],
+                [],
+                CreateWorkbookIfMissing: false,
                 Overwrite: true));
             return File.ReadAllBytes(workbookPath);
         }

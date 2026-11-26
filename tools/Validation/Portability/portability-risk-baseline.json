@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-25T23:59:31.789285+00:00",
+  "generated_utc": "2026-11-26T12:50:24.761875+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -100,14 +100,14 @@
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
-      "source_fingerprint": "bb148e3833dc2d70f4b60877c9c086fdb9593121a86ce76bfba7544a65e78e11",
-      "count": 4
+      "source_fingerprint": "ba756c2f5b4b7cdb49edbddb48102a33163a335740bd07fc2d0a513bee8a65fa",
+      "count": 1
     },
     {
       "path": ".github/workflows/ci.yml",
       "category": "external-tool",
-      "source_fingerprint": "f82bc60e09bf3cb63a4c7ed1b36ac6d6f07a49ad0faa8cba07aef6a486b7c3c9",
-      "count": 1
+      "source_fingerprint": "bb148e3833dc2d70f4b60877c9c086fdb9593121a86ce76bfba7544a65e78e11",
+      "count": 4
     },
     {
       "path": ".github/workflows/ci.yml",
