@@ -1498,7 +1498,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         request.PlanningOwner is { } selection ? await RequirePlanning().PrepareAsync(selection,
                             CreateProviderCompatibleRuntimeAgent(preparation.Blueprint.Agent, provider,
                                 ResolveEffectiveManagedSeedModel(preparation.Blueprint.Agent, provider)),
-                            provider, preparation.Blueprint.Request.Version.CatalogRevision, context, cancellationToken) : null,
+                            provider, preparation.Blueprint.Request.Version.CatalogRevision, context, request.ChatSessionId, cancellationToken) : null,
                         cancellationToken);
                     break;
                 }
