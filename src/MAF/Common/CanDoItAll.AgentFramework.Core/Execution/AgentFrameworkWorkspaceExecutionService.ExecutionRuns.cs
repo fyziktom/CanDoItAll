@@ -347,6 +347,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             } else {
                 AgentPlanningPublicationResult published;
                 using (var registration = executionCancellationRegistry.Register(original, cancellationToken)) {
+                    using var audit = WorkspaceExecutionAuditContext.BeginScope(original);
                     operation.Report(AgentExecutionActivityPhase.UsingTool, "Publishing the exact reviewed planning proposal.");
                     published = await planning.ApproveAsync(original, request, continuationRuntime, registration.Token);
                 }

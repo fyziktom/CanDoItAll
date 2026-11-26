@@ -41,6 +41,7 @@ internal sealed class ProjectTaskPlanOperationFixture(TestApplication applicatio
     internal ProjectTaskPlanPublisher Publisher(DecisionDataPolicyBudget? ceiling = null) => new(
         Services.GetRequiredService<IDbContextFactory<WorkbenchDbContext>>(), Services.GetRequiredService<DatasetActivationService>(),
         Services.GetRequiredService<ProjectWriteAdmissionService>(), Transactions, Epochs, new(), Capture, Reader,
+        Services.GetRequiredService<ProjectStructureChangeFeed>(), Services.GetRequiredService<ProjectStructureChangeSession>(),
         ceiling ?? new(0, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10)), NullLogger<ProjectTaskPlanPublisher>.Instance);
 
     internal static async Task<ProjectTaskPlanOperationFixture> CreateAsync(CanDoItAllTestEnvironment? testEnvironment = null,

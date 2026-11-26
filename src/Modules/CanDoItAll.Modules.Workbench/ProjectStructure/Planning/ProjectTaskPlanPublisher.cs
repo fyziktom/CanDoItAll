@@ -17,12 +17,15 @@ internal sealed class ProjectTaskPlanPublisher {
     private readonly FiniteOperationPoolRegistration pool;
     private readonly ProjectTaskPlanBasisCapture capture;
     private readonly ProjectTaskPlanReceiptReader receipts;
+    private readonly ProjectStructureChangeFeed changes;
+    private readonly ProjectStructureChangeSession changeSession;
     private readonly DecisionDataPolicyBudget policyCeiling;
     private readonly ILogger<ProjectTaskPlanPublisher> logger;
 
     internal ProjectTaskPlanPublisher(IDbContextFactory<WorkbenchDbContext> contexts, DatasetActivationService activation,
         ProjectWriteAdmissionService admissions, CoordinatedDatabaseTransaction transactions, FiniteOperationEpochStore epochs,
         ProjectTaskPlanOperationOptions options, ProjectTaskPlanBasisCapture capture, ProjectTaskPlanReceiptReader receipts,
+        ProjectStructureChangeFeed changes, ProjectStructureChangeSession changeSession,
         DecisionDataPolicyBudget policyCeiling, ILogger<ProjectTaskPlanPublisher> logger) {
         ArgumentNullException.ThrowIfNull(policyCeiling);
         this.contexts = contexts;
@@ -33,6 +36,8 @@ internal sealed class ProjectTaskPlanPublisher {
         pool = WorkbenchTaskPlanFiniteOperations.Create(options);
         this.capture = capture;
         this.receipts = receipts;
+        this.changes = changes;
+        this.changeSession = changeSession;
         this.policyCeiling = policyCeiling;
         this.logger = logger;
     }
@@ -109,6 +114,7 @@ internal sealed class ProjectTaskPlanPublisher {
                     throw new PublicationRefused(ProjectTaskPlanRefusal.BasisChanged);
                 }
                 await authority.RequireEnlistedAsync(cancellationToken);
+                using var changedNodes = new ProjectStructureChangeCapture(context, changes, changeSession, target.DatabaseProfileId);
                 var staged = ProjectTaskPlanTaskStaging.StageNewPlainTasks(context, target, command.Proposal, current, current.Basis.CapturedAtUtc);
                 accepted = new(operation, command.Basis.Project.Expectation, command.Source, digest,
                     current.Basis.CapturedAtUtc, epoch.ReplayUntilUtc, staged.Tasks);
@@ -121,6 +127,7 @@ internal sealed class ProjectTaskPlanPublisher {
                 commitAttempted = true;
                 await transaction.CommitAsync(cancellationToken);
                 committed = true;
+                changedNodes.Publish();
             }
         } catch (Exception exception) {
             failure = exception;
