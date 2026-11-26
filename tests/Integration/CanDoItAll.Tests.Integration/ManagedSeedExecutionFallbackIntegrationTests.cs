@@ -52,9 +52,10 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
         }
     }
 
-    [Fact]
-    public async Task Organization_catalog_repair_preserves_priced_luna_assignment_for_managed_seed_agent()
-    {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(OpenAiModelIds.Gpt56Luna)]
+    public async Task Organization_catalog_repair_preserves_priced_model_for_managed_seed_agent(string? selectedModel) {
         var originalOpenAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         Environment.SetEnvironmentVariable("OPENAI_API_KEY", null);
 
@@ -76,12 +77,17 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
 
             Assert.Equal(openAiDefaultProvider.Id, qaAgentBeforeRepair.ProviderProfileId);
             Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, openAiDefaultProvider.DefaultModel);
-            Assert.Equal(OpenAiModelIds.Gpt56Luna, qaAgentBeforeRepair.Model);
+            Assert.Equal(OpenAiModelIds.Gpt61Sol, qaAgentBeforeRepair.Model);
             Assert.True(ProviderPricingDefaults.TryFindPrice(
                 openAiDefaultProvider.ModelPrices,
                 qaAgentBeforeRepair.Model,
                 out _));
 
+            if (selectedModel is not null) {
+                var editor = await workspaceService.GetAgentEditorAsync(qaAgentBeforeRepair.Id);
+                editor.Model = selectedModel;
+                await workspaceService.SaveAgentAsync(editor);
+            }
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
             var providersAfterRepair = await workspaceService.ListProvidersAsync();
@@ -94,7 +100,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiDefaultProviderAfterRepair.Id, qaAgentAfterRepair.ProviderProfileId);
-            Assert.Equal(OpenAiModelIds.Gpt56Luna, qaAgentAfterRepair.Model);
+            Assert.Equal(selectedModel ?? OpenAiModelIds.Gpt61Sol, qaAgentAfterRepair.Model);
             Assert.True(ProviderPricingDefaults.TryFindPrice(
                 openAiDefaultProviderAfterRepair.ModelPrices,
                 qaAgentAfterRepair.Model,
