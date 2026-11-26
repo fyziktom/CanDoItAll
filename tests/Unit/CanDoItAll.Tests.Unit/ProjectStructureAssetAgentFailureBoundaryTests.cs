@@ -17,6 +17,7 @@ public sealed class ProjectStructureAssetAgentFailureBoundaryTests
         yield return [ProjectStructureAssetAgentFailureKind.MediaPayloadTooLarge, 413, "MediaPayloadTooLarge"];
         yield return [ProjectStructureAssetAgentFailureKind.InvalidBase64Payload, 400, "InvalidBase64Payload"];
         yield return [ProjectStructureAssetAgentFailureKind.MediaSourceRequired, 400, "MediaSourceRequired"];
+        yield return [ProjectStructureAssetAgentFailureKind.RevisionMediaSourceInvalid, 400, "RevisionMediaSourceInvalid"];
         yield return [ProjectStructureAssetAgentFailureKind.NodeNotFound, 404, "NodeNotFound"];
         yield return [ProjectStructureAssetAgentFailureKind.AssetRequired, 400, "AssetRequired"];
     }
