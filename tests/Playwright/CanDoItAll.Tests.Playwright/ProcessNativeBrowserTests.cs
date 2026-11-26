@@ -91,7 +91,7 @@ public sealed class ProcessNativeBrowserTests {
             var files = page.GetByTestId("process-run-files-dialog");
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasTextString = "evidence.md" }).DblClickAsync();
             await Assertions.Expect(files.GetByTestId("interaction-markdown-view")).ToContainTextAsync("First authorized revision");
-            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
+            await Assertions.Expect(files.GetByTestId("interaction-mode-edit")).ToHaveCountAsync(0);
             await WriteArtifactAsync("Second authorized revision");
             await files.GetByTestId("process-run-files-back").ClickAsync();
             await files.Locator(".ft-file-browser__item-main").Filter(new() { HasTextString = "evidence.md" }).PressAsync("Enter");

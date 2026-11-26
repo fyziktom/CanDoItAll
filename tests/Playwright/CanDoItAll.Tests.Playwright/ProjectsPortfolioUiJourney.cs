@@ -85,7 +85,7 @@ internal static class ProjectsPortfolioUiJourney {
         string starterId = Assert.Single(seeded.Nodes, node => node.Title == starter).Id;
         await editor.GetByTestId("project-modal-close-button").ClickAsync();
         await page.GetByTestId("projects-search-input").FillAsync(name);
-        await Assertions.Expect(page.GetByTestId("projects-board")).ToContainTextAsync(name);
+        await Assertions.Expect(page.GetByRole(AriaRole.Article, new() { Name = name, Exact = true })).ToBeVisibleAsync();
         await oracle.NavigateAsync($"{host.BaseUrl}/projects?projectId={saved.Id:D}");
         await page.GetByTestId("projects-detail-modal").GetByRole(AriaRole.Button, new() { Name = "Edit project", Exact = true }).ClickAsync();
         await Assertions.Expect(editor.GetByTestId("project-name-input")).ToHaveValueAsync(name);

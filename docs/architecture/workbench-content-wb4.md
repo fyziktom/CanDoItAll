@@ -60,6 +60,12 @@ not replacement markup. Neutral CanvasOverlayDialog is shared with Structure; th
 Structure wrapper preserves compatibility. Original Mermaid fully-qualified names resolve
 through assembly type forwarding. Existing native media/status method signatures remain.
 
+The file dialog shows the name once. File information is available from the **i**
+button. Supplemental notes and file actions share a narrow, scrollable left column.
+The preview fills the remaining width and height in both normal and maximized views.
+Files with no supplemental content or actions use the full width. Editable files expose
+mode and save controls in the embedded FileInteraction toolbar.
+
 The adapters project typed state and intents; they do not render the former module inside
 a RenderFragment. Page partials retain route-owned authority/lifetime orchestration as the
 canonical seam policy permits. There is no service bag, new filesystem abstraction, replay

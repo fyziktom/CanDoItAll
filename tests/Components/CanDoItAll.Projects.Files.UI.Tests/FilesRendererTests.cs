@@ -67,7 +67,12 @@ public sealed class FilesRendererTests {
                 string viewer = fileName == "README.md" ? "interaction-markdown-view" : "files-fixture-mermaid";
                 cut.WaitForAssertion(() => Assert.Single(cut.FindAll($"[data-testid='{viewer}']")));
             }
-            Assert.True(cut.Find("[data-testid='interaction-mode-edit']").HasAttribute("disabled"));
+            Assert.Equal(dialog, interaction.Embedded);
+            if (dialog) {
+                Assert.Empty(cut.FindAll("[data-testid='interaction-mode-edit']"));
+            } else {
+                Assert.True(cut.Find("[data-testid='interaction-mode-edit']").HasAttribute("disabled"));
+            }
             Assert.DoesNotContain("No compatible", cut.Markup);
             Assert.Contains(fileName, cut.Markup);
             await context.DisposeRenderedComponentsAsync();

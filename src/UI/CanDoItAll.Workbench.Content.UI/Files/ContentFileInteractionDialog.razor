@@ -3,70 +3,84 @@
 @inject ILogger<ContentFileInteractionDialog> Logger
 
 @if (session is { } view) {
+    var hasNotes = !string.IsNullOrWhiteSpace(view.Notes);
+    var hasActions = view.Opening.EditDetails.HasDelegate || view.Opening.OpenPreferred.HasDelegate || view.Opening.ShowInFolder.HasDelegate;
+    var hasDetails = hasActions || hasNotes || view.NotesError is not null || view.ShowCloseGuard;
     <div class="content-file-host">
-    <CanvasOverlayDialog CanvasScoped="true" CanMaximize="true" Title="@view.Opening.Title" Kicker="Governed file" Summary="@view.Opening.Notice"
-                         AriaLabel="@($"{view.Opening.Title} file interaction")" FillBody="true"
-                         SizeToggleTestId="project-structure-dialog-size-toggle" Close="@(() => RequestCloseAsync(view))">
-        <Actions>
-            @if (view.State is not null) {
-                <StatusBadge Tone="@StateTone(view)" Text="@StateLabel(view)" />
-            }
-            @if (view.Opening.EditDetails.HasDelegate) {
-                <Button Text="Edit node details" Tone="ButtonTone.Info" Disabled="view.HasGuardedWork"
-                        Click="@(() => InvokeAsync(view, view.Opening.EditDetails))" />
-            }
-            @if (view.Opening.OpenPreferred.HasDelegate) {
-                <Button Text="Open in preferred app" Tone="ButtonTone.Primary" Click="@(() => InvokeAsync(view, view.Opening.OpenPreferred))" />
-            }
-            @if (view.Opening.ShowInFolder.HasDelegate) {
-                <Button Text="Show in folder" Tone="ButtonTone.Info" Click="@(() => InvokeAsync(view, view.Opening.ShowInFolder))" />
-            }
-            <Button Text="Close" Variant="Variant.Text" Tone="ButtonTone.Default" Click="@(() => RequestCloseAsync(view))" />
-        </Actions>
-        <Body>
-            @if (view.Request is null || view.Opening.ContentSource is null) {
-                <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="project-structure-direct-file-interaction-unavailable">
-                    The current file authority could not be established. No unsigned preview is available.
-                </Alert>
-            } else {
-                <Stack GapScale="LayoutGap.Small" Class="content-file-interaction-layout">
-                    <Alert AlertStyle="AlertStyle.Info" Variant="Variant.Outlined" data-testid="project-structure-file-interaction-policy">@view.Opening.Notice</Alert>
-                    @if (!string.IsNullOrWhiteSpace(view.Notes)) {
-                        <PanelCard Soft="true" Class="content-file-notes" Style="flex:0 1 auto;max-height:min(12rem,35%);min-height:0;overflow:auto;box-sizing:border-box;" data-testid="project-structure-file-interaction-notes">
-                            <Stack GapScale="LayoutGap.Tiny">
-                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Notes" />
-                                <TextBlock TextStyle="TextStyle.Note" Value="@view.Notes" Class="whitespace-pre-wrap break-words" />
+        <CanvasOverlayDialog CanvasScoped="true" CanMaximize="true" Title="@view.Opening.Title" Kicker=""
+                             AriaLabel="@($"{view.Opening.Title} file interaction")" FillBody="true"
+                             SizeToggleTestId="project-structure-dialog-size-toggle" Close="@(() => RequestCloseAsync(view))">
+            <Actions>
+                @if (view.State is not null) {
+                    <StatusBadge Tone="@StateTone(view)" Text="@StateLabel(view)" />
+                }
+                @if (!string.IsNullOrWhiteSpace(view.Opening.Notice)) {
+                    <HelpPopover Glyph="i" AriaLabel="File information" Title="File information" Body="@view.Opening.Notice"
+                                 OpenOnHover="true" PanelTestId="project-structure-file-interaction-policy" />
+                }
+                <Button Text="Close" Size="ButtonSize.Small" Variant="Variant.Text" Click="@(() => RequestCloseAsync(view))" />
+            </Actions>
+            <Body>
+                <Grid ColumnTemplate="@(hasDetails ? "clamp(12rem, 18%, 16rem) minmax(0, 1fr)" : "minmax(0, 1fr)")"
+                      RowTemplate="minmax(0, 1fr)" FillHeight="true" Gap="LayoutGap.Small" Class="content-file-layout">
+                    @if (hasDetails) {
+                        <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Small" Class="content-file-details"
+                               role="complementary" aria-label="File details">
+                            @if (view.ShowCloseGuard) {
+                                <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Filled" data-testid="project-structure-interaction-close-guard">
+                                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.XSmall">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(view.IsSaving ? "Save in progress" : "Discard unsaved changes?")" />
+                                        <Button Text="Keep editing" Variant="Variant.Text" Click="@(() => KeepEditing(view))" />
+                                        <Button Text="Discard and close" Tone="ButtonTone.Danger" Disabled="view.IsSaving"
+                                                data-testid="project-structure-interaction-close-confirm" Click="@(() => ConfirmCloseAsync(view))" />
+                                    </Stack>
+                                </Alert>
+                            }
+                            <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Medium" Class="content-file-details-scroll">
+                                @if (hasActions) {
+                                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.XSmall" role="group" aria-label="File actions">
+                                        @if (view.Opening.EditDetails.HasDelegate) {
+                                            <Button Text="Edit node details" Icon="edit_note" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                                    Disabled="view.HasGuardedWork" Click="@(() => InvokeAsync(view, view.Opening.EditDetails))" />
+                                        }
+                                        @if (view.Opening.OpenPreferred.HasDelegate) {
+                                            <Button Text="Open in preferred app" Icon="open_in_new" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                                    Click="@(() => InvokeAsync(view, view.Opening.OpenPreferred))" />
+                                        }
+                                        @if (view.Opening.ShowInFolder.HasDelegate) {
+                                            <Button Text="Show in folder" Icon="folder_open" Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                                    Click="@(() => InvokeAsync(view, view.Opening.ShowInFolder))" />
+                                        }
+                                    </Stack>
+                                }
+                                @if (view.NotesError is not null) {
+                                    <Alert AlertStyle="AlertStyle.Warning" data-testid="content-file-notes-error">@view.NotesError</Alert>
+                                }
+                                @if (hasNotes) {
+                                    <Stack AlignItems="AlignItems.Stretch" GapScale="LayoutGap.Tiny" data-testid="project-structure-file-interaction-notes">
+                                        <TextBlock TextStyle="TextStyle.Subtitle2" Value="Notes" />
+                                        <TextBlock TextStyle="TextStyle.Note" Value="@view.Notes" Class="content-file-notes" />
+                                    </Stack>
+                                }
                             </Stack>
-                        </PanelCard>
+                        </Stack>
                     }
-                    @if (view.NotesError is not null) {
-                        <Alert AlertStyle="AlertStyle.Warning" data-testid="content-file-notes-error">@view.NotesError</Alert>
-                    }
-                    <SurfaceCard Class="content-file-interaction" data-testid="project-structure-direct-file-interaction">
-                        <FileInteraction @key="view.Opening.Id" Request="view.Request" ContentSource="view.Opening.ContentSource"
-                                         Composition="view.Opening.Composition" SaveRequested="view.SaveCallback"
-                                         ModeChanged="view.ModeChanged" StateChanged="view.StateChanged"
-                                         RequireConflictReview="true"
-                                         AllowModeSwitch="@(view.Opening.Save is not null)" FillAvailableHeight="true"
-                                         MaximumContentBytes="view.Opening.MaximumContentBytes" AriaLabel="@($"Governed project structure file {view.Request.FileName}")" />
-                    </SurfaceCard>
-                    @if (view.ShowCloseGuard) {
-                        <Alert AlertStyle="AlertStyle.Warning" Variant="Variant.Filled" data-testid="project-structure-interaction-close-guard">
-                            <Stack GapScale="LayoutGap.Small">
-                                <TextBlock TextStyle="TextStyle.Subtitle2" Value="@(view.IsSaving ? "Save is still in progress" : "Unsaved work remains")" />
-                                <TextBlock TextStyle="TextStyle.Note" Value="@(view.IsSaving ? "Wait for the awaited save before closing this interaction." : "Close and discard the in-memory edit session?")" />
-                                <Cluster JustifyContent="JustifyContent.End" Gap="LayoutGap.Small">
-                                    <Button Text="Keep editing" Variant="Variant.Text" Click="@(() => KeepEditing(view))" />
-                                    <Button Text="Discard and close" Tone="ButtonTone.Danger" Disabled="view.IsSaving"
-                                            data-testid="project-structure-interaction-close-confirm" Click="@(() => ConfirmCloseAsync(view))" />
-                                </Cluster>
-                            </Stack>
+                    @if (view.Request is null || view.Opening.ContentSource is null) {
+                        <Alert AlertStyle="AlertStyle.Danger" Variant="Variant.Outlined" data-testid="project-structure-direct-file-interaction-unavailable">
+                            The current file authority could not be established. No unsigned preview is available.
                         </Alert>
+                    } else {
+                        <Stack AlignItems="AlignItems.Stretch" Class="content-file-preview" data-testid="project-structure-direct-file-interaction">
+                            <FileInteraction @key="view.Opening.Id" Request="view.Request" ContentSource="view.Opening.ContentSource"
+                                             Composition="view.Opening.Composition" SaveRequested="view.SaveCallback"
+                                             ModeChanged="view.ModeChanged" StateChanged="view.StateChanged" RequireConflictReview="true"
+                                             AllowModeSwitch="@(view.Opening.Save is not null)" FillAvailableHeight="true" Embedded="true"
+                                             MaximumContentBytes="view.Opening.MaximumContentBytes" AriaLabel="@($"Governed project structure file {view.Request.FileName}")" />
+                        </Stack>
                     }
-                </Stack>
-            }
-        </Body>
-    </CanvasOverlayDialog>
+                </Grid>
+            </Body>
+        </CanvasOverlayDialog>
     </div>
 }
 

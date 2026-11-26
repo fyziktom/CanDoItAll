@@ -33201,7 +33201,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor",
-      "sha256_lf": "cab6522646171caa1bef883745b2eaec610eef1eacbb34b1810b41da62df0a5d",
+      "sha256_lf": "c2c4e1baa811c1ebeea126e2171baaa146ee01320e50612c3cb65d16061ead48",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Processes.UI.ProcessRunFilesSurface",
@@ -33224,7 +33224,7 @@
     {
       "identity": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor.css",
       "path": "src/UI/CanDoItAll.Processes.UI/ProcessRunFilesSurface.razor.css",
-      "sha256_lf": "edc5ae3b2b10f76ec965d1ec0331e0d41543dd49a326855633e3569855f7fca5",
+      "sha256_lf": "97f15a050fa265eea51c72ef10e037a7f7c081e4439315ba7157f7456ded76b2",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",
@@ -33351,7 +33351,7 @@
     {
       "identity": "src/UI/CanDoItAll.Projects.Files.UI/ProjectFilesDialogView.razor",
       "path": "src/UI/CanDoItAll.Projects.Files.UI/ProjectFilesDialogView.razor",
-      "sha256_lf": "eda6dd0878ba0014c12bf04de148419e677b64fcc299d93ebfb264589c579f83",
+      "sha256_lf": "582fe798fb8d285f80ca336384b9210338852d9a3f1aed84fb2e699898f887cb",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Projects.Files.UI.ProjectFilesDialogView",
@@ -34830,7 +34830,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor",
-      "sha256_lf": "f81105a991812c7c52e37f8a4ad312ab850f5970679c054ff9c9916178369590",
+      "sha256_lf": "4c0fdf6b664a2643df99c4ae6eb95ff69b3e6b9854f36de1e07e1250ea8adb90",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.ContentFileInteractionDialog",
@@ -34862,7 +34862,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor.css",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Files/ContentFileInteractionDialog.razor.css",
-      "sha256_lf": "4fed9b5b655026b9a2671e04bbc59e997f62c415f316adccaeb4f8adb5dc5642",
+      "sha256_lf": "828976283008f7c8b2bc5f89e9517f7ac2c4c6c91a04ff5003e5adb3c9c02f57",
       "kind": "ASSET",
       "role": "PRODUCT",
       "type": "Not a component type",

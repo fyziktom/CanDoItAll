@@ -113,9 +113,25 @@ public sealed partial class AppSmokeTests
 
     private static async Task AssertSpreadsheetPreviewAsync(ILocator dialog)
     {
-        await dialog.GetByTestId("project-structure-direct-file-interaction").WaitForAsync();
-        await Assertions.Expect(dialog.GetByTestId("project-structure-file-interaction-policy"))
-            .ToContainTextAsync("bounded, read-only preview");
+        var file = dialog.GetByTestId("project-structure-direct-file-interaction");
+        await file.WaitForAsync();
+        var details = dialog.GetByRole(AriaRole.Complementary, new() { Name = "File details" });
+        await Assertions.Expect(details.GetByTestId("project-structure-file-interaction-notes")).ToContainTextAsync("Known cells");
+        var rail = await details.BoundingBoxAsync();
+        var viewer = await file.BoundingBoxAsync();
+        Assert.NotNull(rail);
+        Assert.NotNull(viewer);
+        Assert.True(rail.X + rail.Width <= viewer.X + 1 && rail.Width < viewer.Width / 3);
+        Assert.InRange(Math.Abs(rail.Y - viewer.Y), 0, 1);
+        var info = dialog.GetByRole(AriaRole.Button, new() { Name = "File information", Exact = true });
+        var notice = dialog.GetByTestId("project-structure-file-interaction-policy");
+        await Assertions.Expect(notice).ToHaveCountAsync(0);
+        await info.FocusAsync();
+        await info.PressAsync("Enter");
+        await Assertions.Expect(notice).ToContainTextAsync("bounded, read-only preview");
+        await info.PressAsync("Escape");
+        await Assertions.Expect(notice).ToHaveCountAsync(0);
+        await Assertions.Expect(file.Locator("header.cdi-ft-interaction__header")).ToHaveCountAsync(0);
         var preview = dialog.GetByTestId("spreadsheet-preview");
         await preview.WaitForAsync(new LocatorWaitForOptions { Timeout = 20_000 });
         Assert.Equal(0, await dialog.GetByTestId("spreadsheet-preview-unavailable").CountAsync());

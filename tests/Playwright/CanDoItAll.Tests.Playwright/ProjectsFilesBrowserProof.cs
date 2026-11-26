@@ -62,7 +62,7 @@ internal static class ProjectsFilesBrowserProof {
         Assert.NotNull(bounds);
         Assert.True(bounds.Width >= 640);
         await Assertions.Expect(dialog.GetByTestId(viewer)).ToBeInViewportAsync();
-        await Assertions.Expect(dialog.GetByTestId("interaction-mode-edit")).ToBeDisabledAsync();
+        await Assertions.Expect(dialog.GetByTestId("interaction-mode-edit")).ToHaveCountAsync(0);
         await page.ScreenshotAsync(new() { Path = host.Artifact(evidenceName + "-projects-preview.png") });
         await dialog.GetByRole(AriaRole.Button, new() { Name = "Close", Exact = true }).ClickAsync();
         await Assertions.Expect(dialog).ToHaveCountAsync(0);
