@@ -35,7 +35,7 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             await RequireAuthorityAsync(origin.Authority, cancellationToken);
             provider = await RequireProviderAsync(imageRequest, cancellationToken);
             await RequireAuthorityAsync(origin.Authority, cancellationToken);
-            expected = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
+            expected = await workbench.RecordImageGenerationStateAsync(origin.Authority.Project, expected,
                 Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generation running", cancellationToken: cancellationToken,
                 authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token))
                 ?? throw new ProjectStructureEditConflictException();
@@ -52,16 +52,15 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             await RequireAuthorityAsync(origin.Authority, cancellationToken);
             await RequireProviderAsync(imageRequest, cancellationToken);
             await RequireAuthorityAsync(origin.Authority, cancellationToken);
-            expected = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
+            expected = await workbench.RecordImageGenerationStateAsync(origin.Authority.Project, expected,
                 Metadata(ProjectStructureDeferredNodeCompletionState.Running), "Image generated; attachment pending", cancellationToken: cancellationToken,
                 authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token))
                 ?? throw new ProjectStructureEditConflictException();
             await RequireAuthorityAsync(origin.Authority, cancellationToken);
             persistenceAttempted = true;
-            var saved = await workbench.ReplaceContentMediaAsync(origin.Authority.Project, expected,
-                new(imageRequest.FileName, contentType, Convert.ToBase64String(image.Bytes)),
+            var saved = await workbench.RecordImageGenerationStateAsync(origin.Authority.Project, expected,
                 Metadata(ProjectStructureDeferredNodeCompletionState.Completed), "Generated image ready", cancellationToken,
-                token => RequireAuthorityAsync(origin.Authority, token))
+                token => RequireAuthorityAsync(origin.Authority, token), new(imageRequest.FileName, contentType, Convert.ToBase64String(image.Bytes)))
                 ?? throw new ProjectStructureEditConflictException();
             storedMedia = new(origin.Authority.Project, saved.Id, saved.RecordId!.Value, saved.StorageObjectReferenceJson,
                 saved.MediaOriginalFileName, saved.MediaContentType);
@@ -80,7 +79,7 @@ public sealed class ProjectStructureDeferredNodeCompletionProcessor(
             if (!persistenceAttempted && !cancellationToken.IsCancellationRequested) {
                 try {
                     await RequireAuthorityAsync(origin.Authority, cancellationToken);
-                    observed = await workbench.UpdateContentMetadataAsync(origin.Authority.Project, expected,
+                    observed = await workbench.RecordImageGenerationStateAsync(origin.Authority.Project, expected,
                         Metadata(invoked ? ProjectStructureDeferredNodeCompletionState.RequiresObservation : ProjectStructureDeferredNodeCompletionState.Failed, message),
                         invoked ? "Image generation requires observation" : "Image generation refused", cancellationToken: cancellationToken,
                         authorizeCommit: token => RequireAuthorityAsync(origin.Authority, token));

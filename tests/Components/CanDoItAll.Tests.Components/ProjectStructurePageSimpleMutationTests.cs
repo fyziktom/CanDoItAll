@@ -581,6 +581,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         var persistedSurface = await workbenchService.GetStructureAsync(projectId);
         var persistedNode = Assert.Single(persistedSurface.Nodes, node => string.Equals(node.Id, createdNodeId, StringComparison.Ordinal));
         Assert.Equal("Image generation requires observation", persistedNode.Status);
+        Assert.Equal(("progress", 0), (persistedNode.ProgressMode, persistedNode.ProgressPercent));
         Assert.Equal("waiting-for-image-creation-by-ai.svg", persistedNode.MediaOriginalFileName);
         var metadata = ProjectObjectMetadataSerializer.Parse(persistedNode.MetadataJson);
         Assert.Equal(ProjectStructureDeferredNodeCompletionState.RequiresObservation, metadata.DeferredCompletion?.State);

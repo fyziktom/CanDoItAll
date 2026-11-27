@@ -1568,7 +1568,8 @@ public sealed partial class ProjectWorkbenchService(
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
         ProjectStructureNode? expectedContent = null,
         ProjectStructureNodeState? expectedState = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        bool updateProgressFromStatus = true) {
         if (expectedState is not null) {
             expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, expectedProjectAdmission);
         }
@@ -1597,7 +1598,7 @@ public sealed partial class ProjectWorkbenchService(
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
         ProjectStructureNodeStateGuard.EnsureCurrent(expectedState, node);
-        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status));
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status), replaceProgress: updateProgressFromStatus);
 
         if (notes is not null)
         {
@@ -1628,13 +1629,7 @@ public sealed partial class ProjectWorkbenchService(
             null);
         node.NodeReferences = nodeReferences ?? node.NodeReferences;
 
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            node.Status = status.Trim();
-            var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
-            node.ProgressMode = progress.Mode;
-            node.ProgressPercent = progress.Percent;
-        }
+        ApplyContentStatus(node, status, updateProgressFromStatus);
 
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
@@ -1681,7 +1676,8 @@ public sealed partial class ProjectWorkbenchService(
         string? status = null,
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null, ProjectStructureNode? expectedContent = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        bool updateProgressFromStatus = true) {
         ArgumentNullException.ThrowIfNull(media);
         if (authorizeCommit is not null) {
             await authorizeCommit(cancellationToken);
@@ -1709,7 +1705,7 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
-        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status));
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status), replaceProgress: updateProgressFromStatus);
         if (authorizeCommit is not null) {
             await authorizeCommit(cancellationToken);
         }
@@ -1736,13 +1732,7 @@ public sealed partial class ProjectWorkbenchService(
                 node.Notes,
                 savedMedia);
 
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                node.Status = status.Trim();
-                var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
-                node.ProgressMode = progress.Mode;
-                node.ProgressPercent = progress.Percent;
-            }
+            ApplyContentStatus(node, status, updateProgressFromStatus);
 
             node.UpdatedAtUtc = clock.GetUtcNow();
             var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);

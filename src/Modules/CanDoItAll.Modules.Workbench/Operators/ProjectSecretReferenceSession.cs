@@ -4,6 +4,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Operators.UI.Secrets;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Workbench;
@@ -14,6 +15,8 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
     Func<SecretListItem, SecretReferenceInput, Action<ProjectStructureNode>, Func<CancellationToken, ValueTask>, Task<ProjectStructureNode>> write,
     Func<ProjectStructureNode, Func<CancellationToken, ValueTask>, Task> observe, Action<SecretReferenceReceipt> record, ILogger logger) : IAsyncDisposable {
     public SecretReferenceState State { get; } = new(isEdit);
+    public PlanningCreateSignalsDraft Signals { get; set; } = new();
+    public PlanningCreateSignalsDraft SubmittedSignals { get; private set; } = new();
     public bool IsCurrent => current() && originalAuthority() && secrets.IsCurrent && !State.IsRetired;
     private long readGeneration;
     private SecretReferenceInput? submitted;
@@ -183,6 +186,7 @@ internal sealed class ProjectSecretReferenceSession(ProjectWriteAdmission admiss
         }
         State.IsBusy = true;
         State.Message = string.Empty;
+        SubmittedSignals = Signals;
         return true;
     }
 

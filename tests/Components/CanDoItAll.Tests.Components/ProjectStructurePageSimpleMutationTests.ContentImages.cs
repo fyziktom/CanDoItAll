@@ -249,21 +249,34 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
         Assert.Equal(1, queue.Calls);
     }
 
-    [Fact]
-    public async Task Generated_image_duplicate_queue_delivery_cannot_repeat_completed_provider() {
-        var image = new RecordingAgentImageGenerationService();
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(40, 70)]
+    public async Task Generated_image_duplicate_queue_delivery_cannot_repeat_completed_provider(int? initialProgress, int? revisedProgress) {
+        var image = new RecordingAgentImageGenerationService(waitForRelease: true);
         await using var harness = await ImageHarnessAsync(image);
-        var (_, queue) = await QueueNativeImageAsync(harness);
+        var (_, queue) = await QueueNativeImageAsync(harness, initialProgress);
+        var request = queue.Request!;
+        var workbench = harness.Context.Services.GetRequiredService<ProjectWorkbenchService>();
         await using var worker = await StartedDeferredCompletionWorker.StartAsync(harness);
+        await image.WaitForFirstRequestAsync();
+        var surface = await workbench.GetStructureAsync(request.ProjectId);
+        var running = Assert.Single(surface.Nodes, node => node.Id == request.NodeId);
+        Assert.Equal(("Image generation running", "progress", initialProgress ?? 0), (running.Status, running.ProgressMode, running.ProgressPercent));
+        if (revisedProgress is { } revised) {
+            Assert.Equal(1, await workbench.UpdateObjectProgressAsync(request.ProjectId, [running.Id], "progress", revised,
+                expectedStates: [ProjectStructureNodeStateGuard.Capture(running, surface.ExpectedProjectAdmission)]));
+        }
+        image.CompleteGeneration();
         var accepted = await queue.Handle!.Completion.WaitAsync(TimeSpan.FromSeconds(20));
         Assert.True(accepted.IsSuccess);
-        var duplicate = await harness.Context.Services.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>().EnqueueAsync(queue.Request!);
+        var duplicate = await harness.Context.Services.GetRequiredService<ProjectStructureDeferredNodeCompletionQueue>().EnqueueAsync(request);
         var refused = await duplicate.Completion.WaitAsync(TimeSpan.FromSeconds(20));
         Assert.False(refused.IsSuccess);
         Assert.False(refused.ProviderInvoked);
         Assert.Single(image.Requests);
-        var stored = Assert.Single((await harness.Context.Services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(queue.Request!.ProjectId)).Nodes,
-            node => node.Id == queue.Request.NodeId);
+        var stored = Assert.Single((await workbench.GetStructureAsync(request.ProjectId)).Nodes, node => node.Id == request.NodeId);
+        Assert.Equal(("Generated image ready", "progress", revisedProgress ?? initialProgress ?? 0), (stored.Status, stored.ProgressMode, stored.ProgressPercent));
         Assert.Equal(accepted.UpdatedNode!.StorageObjectReferenceJson, stored.StorageObjectReferenceJson);
         Assert.Equal(ProjectStructureDeferredNodeCompletionState.Completed, ProjectObjectMetadataSerializer.Parse(stored.MetadataJson).DeferredCompletion!.State);
     }
@@ -278,6 +291,8 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
         var project = await CreateProjectAsync(harness.Context.Services.GetRequiredService<ProjectsService>(), "Enqueue refusal owner");
         var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(page => page.ProjectId, project));
         await RefreshGeneratedImageCreateActionAsync(cut, WaitForCanvasWorkbench(cut));
+        cut.Find("button[aria-label='Priority 2']").Click();
+        cut.Find("button[aria-label='30%']").Click();
         var submit = cut.FindComponent<ContentImageDialog>().Instance.Submit;
         var draft = new ContentImageDraft("Accepted placeholder", "", "Synthetic prompt", provider, "");
         await cut.InvokeAsync(() => submit(draft));
@@ -285,6 +300,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
         var placeholder = Assert.Single((await harness.Context.Services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(project)).Nodes,
             node => node.ObjectType == ProjectObjectType.ImageAsset);
         Assert.Equal(queue.Request!.Origin!.Placeholder.RecordId, placeholder.RecordId);
+        Assert.Equal((2, "progress", 30), (placeholder.Priority, placeholder.ProgressMode, placeholder.ProgressPercent));
         Assert.Equal(ContentImagePhase.PlaceholderSaved, cut.FindComponent<ContentImageDialog>().Instance.State.Receipt!.Phase);
         Assert.Empty(image.Requests);
         Assert.Equal(1, queue.Calls);
@@ -306,12 +322,15 @@ public sealed partial class ProjectStructurePageSimpleMutationTests {
             configure?.Invoke(services);
         });
 
-    private static async Task<(IRenderedComponent<ProjectStructurePage> Page, NativeImageQueueProbe Queue)> QueueNativeImageAsync(ComponentTestHarness harness) {
+    private static async Task<(IRenderedComponent<ProjectStructurePage> Page, NativeImageQueueProbe Queue)> QueueNativeImageAsync(ComponentTestHarness harness, int? initialProgress = null) {
         var provider = await SaveImageProviderAsync(harness.Context.Services.GetRequiredService<SecretService>(), harness.Context.Services.GetRequiredService<IAgentFrameworkWorkspaceService>());
         var project = await CreateProjectAsync(harness.Context.Services.GetRequiredService<ProjectsService>(), "Original image owner");
         var cut = harness.Context.Render<ProjectStructurePage>(parameters => parameters.Add(page => page.ProjectId, project));
         var canvas = WaitForCanvasWorkbench(cut);
         await RefreshGeneratedImageCreateActionAsync(cut, canvas);
+        if (initialProgress is { } progress) {
+            cut.Find($"button[aria-label='{progress}%']").Click();
+        }
         var dialog = cut.FindComponent<ContentImageDialog>().Instance;
         await cut.InvokeAsync(() => dialog.Submit(new("Original image", "Native queue proof", "Synthetic bounded image", provider, "")));
         var queue = harness.Context.Services.GetRequiredService<NativeImageQueueProbe>();

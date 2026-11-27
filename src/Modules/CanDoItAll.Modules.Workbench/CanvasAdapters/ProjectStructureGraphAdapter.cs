@@ -49,6 +49,12 @@ public sealed class ProjectStructureGraphAdapter
                 SourceId = link.SourceId,
                 TargetId = link.TargetId,
                 Kind = link.Kind.ToString(),
+                IsVisualLink = link.Kind == ProjectObjectLinkKind.RelatesTo,
+                Summary = link.Kind switch {
+                    ProjectObjectLinkKind.RelatesTo => "Visual link · no scheduling effect",
+                    ProjectObjectLinkKind.DependsOn => "Prerequisite · schedules linked tasks",
+                    _ => string.Empty
+                },
                 IsUserAuthored = link.IsUserAuthored
             }).ToList()
         };
@@ -232,6 +238,8 @@ public sealed class ProjectStructureGraphAdapter
 
     private static void ConfigureChrome(ProjectStructureSurface surface, CanvasWorkbenchChrome chrome)
     {
+        chrome.AllowVisualLinks = true;
+        chrome.CreateInputFields = [.. ProjectStructureCreateSignals.Fields];
         chrome.HintText = string.IsNullOrWhiteSpace(chrome.HintText)
             ? "Select a project object, drag to reorganize, use the minimap for navigation, and toggle diagnostics when alignment or routing feels off."
             : chrome.HintText;

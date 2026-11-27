@@ -9,6 +9,9 @@
             <StepsItem Text="Details" />
             <StepsItem Text="Content" />
             <StepsItem Text="Notes (optional)" />
+            @if (CreationOptions is not null) {
+                <StepsItem Text="Planning (optional)" />
+            }
         </Steps>
         <Stack GapScale="LayoutGap.Medium" hidden="@(step != TextStep.Details)"
                Style="@(step != TextStep.Details ? "display:none" : null)" data-testid="content-text-details-step">
@@ -68,6 +71,9 @@
                           ValueChanged="@(value => Change(form, () => form.Notes = value ?? string.Empty))" data-testid="project-structure-text-asset-notes" />
             </FormField>
         </Stack>
+        @if (CreationOptions is not null && step == TextStep.Planning) {
+            @CreationOptions(() => IsCurrent(form) && !form.Locked)
+        }
         @if (!string.IsNullOrWhiteSpace(form.Error)) {
             <Alert AlertStyle="AlertStyle.Danger" data-testid="project-structure-text-asset-validation-error">@form.Error</Alert>
         }
@@ -82,7 +88,7 @@
         <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
             <Button Text="Back" Variant="Variant.Text" Tone="ButtonTone.Default" Disabled="@(form.Locked || step == TextStep.Details)"
                     data-testid="content-text-back" Click="@(() => ChangeStep((int)step - 1))" />
-            @if (step != TextStep.Notes) {
+            @if (step != (CreationOptions is null ? TextStep.Notes : TextStep.Planning)) {
                 <Button Text="Next" Variant="Variant.Outlined" Tone="ButtonTone.Default" Disabled="form.Locked"
                         data-testid="content-text-next" Click="@(() => ChangeStep((int)step + 1))" />
             }
@@ -96,7 +102,7 @@
 }
 
 @code {
-    private enum TextStep { Details, Content, Notes }
+    private enum TextStep { Details, Content, Notes, Planning }
     private TextStep step;
     private ContentTextDraftSession? draft;
     private bool disposed;
@@ -108,6 +114,7 @@
     [Parameter] public EventCallback<ContentTextOutcome> Completed { get; set; }
     [Parameter] public EventCallback Cancelled { get; set; }
     [Parameter] public CancellationToken CancellationToken { get; set; }
+    [Parameter] public RenderFragment<Func<bool>>? CreationOptions { get; set; }
 
     protected override async Task OnParametersSetAsync() {
         if (OpeningId == Guid.Empty) {
@@ -127,7 +134,8 @@
     private bool IsCurrent(ContentTextDraftSession form) => !disposed && !form.Retired && ReferenceEquals(form, draft);
 
     private void ChangeStep(int value) {
-        if (draft is not { Locked: false } form || !IsCurrent(form) || !Enum.IsDefined(typeof(TextStep), value)) {
+        if (draft is not { Locked: false } form || !IsCurrent(form) || !Enum.IsDefined(typeof(TextStep), value) ||
+            value == (int)TextStep.Planning && CreationOptions is null) {
             return;
         }
         step = (TextStep)value;

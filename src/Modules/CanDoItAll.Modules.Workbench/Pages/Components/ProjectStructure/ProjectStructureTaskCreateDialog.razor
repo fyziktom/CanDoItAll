@@ -17,6 +17,7 @@
                             ResourceOptions="ResourceOptions" ResourceWarnings="ResourceWarnings" QuoteResolver="QuoteResolver"
                             DefaultCurrencyCode="@CurrencyFormatter.CurrencyCode" Readback="Readback"
                             ComparisonOwner="ComparisonOwner"
+                            SignalFields="ProjectStructureCreateSignals.Fields"
                             Submitted="@(draft => SubmitAsync(draft, submit, reference, isCurrent))"
                             Cancelled="@(() => isCurrent() ? CloseAsync(reference) : Task.CompletedTask)" />
 

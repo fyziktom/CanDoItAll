@@ -95,7 +95,7 @@ public partial class ProjectStructurePage
         return new ProjectStructureSignalActionTile(
             action.ActionId,
             action.MenuLabel,
-            ResolveMarkerGlyph(markerIcon),
+            ProjectStructureCreateSignals.MarkerGlyph(markerIcon),
             action.Tone,
             isActive,
             action.Description);
@@ -109,7 +109,7 @@ public partial class ProjectStructurePage
         return new ProjectStructureSignalActionTile(
             action.ActionId,
             action.MenuLabel,
-            ResolveProgressGlyph(action.ActionId, action.MenuLabel),
+            ProjectStructureCreateSignals.ProgressGlyph(action.ActionId),
             action.Tone,
             isActive,
             action.Description);
@@ -138,33 +138,4 @@ public partial class ProjectStructurePage
             _ => false
         };
 
-    private static string ResolveProgressGlyph(string actionId, string fallbackLabel)
-    {
-        var token = actionId.StartsWith("progress:", StringComparison.OrdinalIgnoreCase)
-            ? actionId["progress:".Length..]
-            : string.Empty;
-        return token switch
-        {
-            "started" => "▶",
-            "na" => "N/A",
-            _ => fallbackLabel
-        };
-    }
-
-    private static string ResolveMarkerGlyph(string markerIcon)
-        => markerIcon.ToLowerInvariant() switch
-        {
-            "question" => "?",
-            "alert" => "!",
-            "thumbs-up" => "👍",
-            "thumbs-down" => "👎",
-            "pause" => "⏸",
-            "stop" => "■",
-            "money" => "$",
-            "car" => "🚗",
-            "idea" => "✦",
-            "risk" => "⚠",
-            "none" => "×",
-            _ => "•"
-        };
 }

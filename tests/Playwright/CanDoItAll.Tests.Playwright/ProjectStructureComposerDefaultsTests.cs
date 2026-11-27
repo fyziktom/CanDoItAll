@@ -1,4 +1,6 @@
 using System.IO;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +48,18 @@ public sealed partial class AppSmokeTests
         await composer.Locator("input[placeholder='Specialist']").FillAsync("Canvas QA");
         await CanvasComposerUi.ShowFieldAsync(composer, composer.Locator("textarea[placeholder='Availability or engagement notes']"));
         await composer.Locator("textarea[placeholder='Availability or engagement notes']").FillAsync("Subtype-specific participant create should not require a redundant kind selection.");
+        var priority = composer.Locator("button[aria-label='Priority 2']");
+        await CanvasComposerUi.ShowFieldAsync(composer, priority);
+        await priority.ClickAsync();
+        var next = composer.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^(Next|Skip)$") });
+        await next.ClickAsync();
+        await composer.GetByRole(AriaRole.Button, new() { Name = "40%", Exact = true }).ClickAsync();
+        await next.ClickAsync();
+        await composer.GetByRole(AriaRole.Button, new() { Name = "Question", Exact = true }).ClickAsync();
+        await composer.GetByRole(AriaRole.Button, new() { Name = "Risk", Exact = true }).ClickAsync();
+        await composer.GetByRole(AriaRole.Button, new() { Name = "Back", Exact = true }).ClickAsync();
+        await Assertions.Expect(composer.GetByRole(AriaRole.Button, new() { Name = "40%", Exact = true }))
+            .ToHaveAttributeAsync("aria-pressed", "true");
 
         var addParticipantButton = page.GetByRole(AriaRole.Button, new() { Name = "Add participant", Exact = true });
         Assert.True(
@@ -71,13 +85,22 @@ public sealed partial class AppSmokeTests
         await taskDialog.GetByTestId("project-structure-task-create-title").FillAsync("Autoselected Task");
         await taskDialog.GetByTestId("project-structure-task-create-subtitle").FillAsync("Canvas QA");
         await taskDialog.GetByTestId("project-structure-task-create-notes").FillAsync("Subtype-specific work-item create should not require a redundant kind selection.");
+        await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p3-01-structure-composer-defaults.png"));
+        var steps = taskDialog.GetByTestId("project-structure-task-steps");
+        await steps.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("Priority") }).ClickAsync();
+        await taskDialog.GetByRole(AriaRole.Button, new() { Name = "Priority 1", Exact = true }).ClickAsync();
+        await taskDialog.GetByTestId("project-structure-task-step-next").ClickAsync();
+        await taskDialog.GetByRole(AriaRole.Button, new() { Name = "Started", Exact = true }).ClickAsync();
+        await taskDialog.GetByTestId("project-structure-task-step-next").ClickAsync();
+        await taskDialog.GetByRole(AriaRole.Button, new() { Name = "Risk", Exact = true }).ClickAsync();
+        await taskDialog.GetByRole(AriaRole.Button, new() { Name = "Idea", Exact = true }).ClickAsync();
+        await taskDialog.GetByRole(AriaRole.Button, new() { Name = "Risk", Exact = true }).ClickAsync();
 
         var addWorkItemButton = taskDialog.GetByTestId("project-structure-task-create-submit");
         Assert.True(
             await addWorkItemButton.IsEnabledAsync(),
             "Expected the task dialog to be submittable after the visible required fields are filled.");
 
-        await CapturePrimaryWorkbenchShellAsync(page, Path.Combine(artifactsDir, "bundle-p3-01-structure-composer-defaults.png"));
         await addWorkItemButton.ClickAsync();
         await taskDialog.WaitForAsync(new() { State = WaitForSelectorState.Detached });
         await page.WaitForSelectorAsync("text=Autoselected Task");
@@ -93,6 +116,15 @@ public sealed partial class AppSmokeTests
             .SingleAsync(item => item.ProjectId == projectId && item.NodeKey == taskNode.Id);
         Assert.Equal(ProjectObjectType.WorkItem, savedTask.ObjectType);
         Assert.Equal("task", savedTask.ObjectSubtype);
+        Assert.Equal((1, "started", 0), (savedTask.Priority, savedTask.ProgressMode, savedTask.ProgressPercent));
+        using var taskMarkers = JsonDocument.Parse(savedTask.MarkersJson);
+        Assert.Equal("idea", Assert.Single(taskMarkers.RootElement.EnumerateArray()).GetProperty("icon").GetString());
+        var participant = await owner.Set<ProjectObjectRecord>().AsNoTracking()
+            .SingleAsync(item => item.ProjectId == projectId && item.Title == "Autoselected Freelancer");
+        Assert.Equal((2, "progress", 40), (participant.Priority, participant.ProgressMode, participant.ProgressPercent));
+        using var participantMarkers = JsonDocument.Parse(participant.MarkersJson);
+        Assert.Equal(["question", "risk"], participantMarkers.RootElement.EnumerateArray()
+            .Select(marker => marker.GetProperty("icon").GetString()));
         var workItem = ProjectObjectMetadataSerializer.Parse(savedTask.MetadataJson).WorkItem;
         Assert.NotNull(workItem);
         Assert.Equal(ProjectWorkItemKind.Task, workItem.WorkItemKind);

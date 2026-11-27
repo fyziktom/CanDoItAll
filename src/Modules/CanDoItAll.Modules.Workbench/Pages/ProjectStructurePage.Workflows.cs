@@ -168,9 +168,10 @@ public partial class ProjectStructurePage
         var selectionRevision = insightsSelectionRevision;
         var mode = canvasToolMode;
         linkOperation = opening;
+        var linkName = requested.Kind == ProjectObjectLinkKind.RelatesTo ? "visual link" : "dependency link";
         var outcome = new ProjectStructureAuthoringOutcome(opening.Id, Guid.NewGuid(), context.Admission,
             remove ? ProjectStructureAuthoringOperation.DisconnectNodes : ProjectStructureAuthoringOperation.ConnectNodes,
-            ProjectStructureAuthoringResultKind.Rejected, "The selected dependency could not be changed.") {
+            ProjectStructureAuthoringResultKind.Rejected, $"The selected {linkName} could not be changed.") {
             SourceNodeId = requested.SourceId, Link = requested
         };
         await using var access = ObserveActionAccess();
@@ -191,7 +192,7 @@ public partial class ProjectStructurePage
                 outcome = outcome with { Link = accepted };
             }
             outcome = outcome with { Kind = ProjectStructureAuthoringResultKind.Committed,
-                Message = remove ? "The dependency link was deleted." : "The dependency link was added." };
+                Message = remove ? $"The {linkName} was deleted." : $"The {linkName} was added." };
             RecordCurrentAuthoringOutcome(opening, outcome);
             if (IsCurrentAuthoring(opening, linkOperation) && selectionRevision == insightsSelectionRevision) {
                 if (canvasToolMode == mode) {
@@ -204,7 +205,7 @@ public partial class ProjectStructurePage
             opening.RequiresObservation = !IsKnownGraphRejection(failure);
             RecordCurrentAuthoringOutcome(opening, outcome with { Failure = failure,
                 Kind = opening.RequiresObservation ? ProjectStructureAuthoringResultKind.Unconfirmed : ProjectStructureAuthoringResultKind.Rejected,
-                Message = opening.RequiresObservation ? "The dependency change is unconfirmed. Observe the original project before repeating it." : failure.Message });
+                Message = opening.RequiresObservation ? $"The {linkName} change is unconfirmed. Observe the original project before repeating it." : failure.Message });
         } finally {
             opening.IsBusy = false;
             await RenderAuthoringOutcomeAsync();

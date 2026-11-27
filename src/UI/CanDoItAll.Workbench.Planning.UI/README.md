@@ -27,6 +27,12 @@ controls. Hosts key an editor by its original opening; sections and quote update
 keep the same draft. Raw invalid text and timestamp/decimal precision survive an
 unrelated edit. Unknown execution and multi-assignee restrictions are explicit.
 
+Structure's task creation wizard can finish as soon as the task has a name.
+Three optional steps after assignment set priority, canvas progress and markers.
+The draft keeps those choices when the user moves between steps or cancels a
+close request. The create command writes them with the new task. A skipped
+progress step starts the ring at 0%. Gantt follows the task's recorded execution.
+
 Native adapters retain project admission, assignment revision and historical cost
 basis. Submission ports return task, assignment, pricing, attachment, row-order and
 compensation facts before the captured dialog can close. Partial and unknown results

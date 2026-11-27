@@ -88,6 +88,9 @@
 </SelectInput>
                 </FormField>
             </Grid>
+            @if (CreationOptions is not null) {
+                @CreationOptions(() => CanEdit(opening))
+            }
             @if (!string.IsNullOrWhiteSpace(state.Message)) {
                 <Alert AlertStyle="AlertStyle.Warning">@state.Message</Alert>
             }
@@ -114,6 +117,7 @@
     [Parameter, EditorRequired] public Func<ContentImageDraft, Task> Submit { get; set; } = default!;
     [Parameter] public EventCallback Close { get; set; }
     [Parameter] public bool CanvasScoped { get; set; } = true;
+    [Parameter] public RenderFragment<Func<bool>>? CreationOptions { get; set; }
     private Guid currentOpening;
     private ContentImageDraft draft = new("Generated image", "", "", null, "");
     private bool submitting;
@@ -132,15 +136,18 @@
         localError = null;
     }
 
+    private bool CanEdit(Guid opening) =>
+        !disposed && opening == currentOpening && State.CanSubmit && !State.IsLoading && !State.IsBusy && !submitting && !unconfirmed;
+
     private void Change(Guid opening, Action change) {
-        if (!disposed && opening == currentOpening && State.CanSubmit && !State.IsLoading && !State.IsBusy && !submitting && !unconfirmed) {
+        if (CanEdit(opening)) {
             change();
             localError = null;
         }
     }
 
     private async Task SubmitAsync(Guid opening, Func<ContentImageDraft, Task> submit) {
-        if (disposed || opening != currentOpening || submitting || unconfirmed || !State.CanSubmit || State.IsLoading || State.IsBusy) {
+        if (!CanEdit(opening)) {
             return;
         }
         submitting = true;

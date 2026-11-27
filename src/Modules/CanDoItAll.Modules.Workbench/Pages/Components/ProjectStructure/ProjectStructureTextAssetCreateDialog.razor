@@ -2,10 +2,15 @@
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Workbench.Content.UI
+@using CanDoItAll.Workbench.Planning.UI
 @inject ProjectAssetCreationService AssetCreationService
 
 <ContentTextForm OpeningId="openingId" Definition="contentDefinition" InitialDraft="initialDraft"
-                 Submit="submit" Completed="complete" Cancelled="cancel" CancellationToken="CancellationToken" />
+                 Submit="submit" Completed="complete" Cancelled="cancel" CancellationToken="CancellationToken">
+    <CreationOptions Context="canEdit">
+        <ProjectStructureCreateSignalSections @key="openingId" @bind-Value="signals" CanEdit="canEdit" />
+    </CreationOptions>
+</ContentTextForm>
 
 @code {
     private Guid openingId;
@@ -13,6 +18,7 @@
     private CanvasWorkbenchCreateActionRequest? boundRequest;
     private ContentTextDefinition contentDefinition = default!;
     private ContentTextInitialDraft initialDraft = default!;
+    private PlanningCreateSignalsDraft signals = new();
     private Func<ContentTextSubmission, CancellationToken, Task<ContentTextOutcome>> submit = default!;
     private Func<ContentTextOutcome, Task> complete = default!;
     private Func<Task> cancel = default!;
@@ -36,6 +42,8 @@
         boundRequest = original;
         boundDefinition = definition;
         openingId = Guid.NewGuid();
+        var originalOpening = openingId;
+        signals = PlanningCreateSignalsDraft.From(original.InputValues);
         var kind = definition.FileSubtype switch {
             ProjectFileSubtype.Text => ContentTextKind.Text,
             ProjectFileSubtype.Json => ContentTextKind.Json,
@@ -51,6 +59,10 @@
         initialDraft = new(original.Title ?? string.Empty, original.Subtitle ?? string.Empty, original.Notes ?? string.Empty);
         ProjectStructureTextAssetDialogResult? accepted = null;
         submit = async (submission, cancellationToken) => {
+            if (openingId != originalOpening) {
+                return new(ContentTextOutcomeKind.Rejected, "This file creation dialog has closed.");
+            }
+            var inputs = signals.ApplyTo(original.InputValues);
             try {
                 var media = submission.Source switch {
                     ContentTextSource.CreateNew => await AssetCreationService.CreateTextAsync(definition.FileSubtype, submission.FileName,
@@ -60,7 +72,7 @@
                     _ => throw new InvalidDataException("Choose an existing file to upload.")
                 };
                 var result = new ProjectStructureTextAssetDialogResult(original with {
-                    Title = submission.Title, Subtitle = submission.Subtitle, Notes = submission.Notes, UploadedFile = null
+                    Title = submission.Title, Subtitle = submission.Subtitle, Notes = submission.Notes, UploadedFile = null, InputValues = inputs
                 }, media);
                 ContentTextOutcome outcome;
                 if (persistOutcome is not null) {

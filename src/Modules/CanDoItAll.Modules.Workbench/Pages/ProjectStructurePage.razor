@@ -274,7 +274,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
 @if (imageOpening is { } imageSetup) {
     <CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog State="@imageSetup.State" CanvasScoped="false"
         InitialDraft="@(new(imageSetup.Request.Title, imageSetup.Request.Subtitle, imageSetup.Request.Notes, null, string.Empty))"
-        Submit="@(draft => TrackAuthoringOperationAsync(GenerateImageAsync(imageSetup, draft)))" Close="@(() => CloseImageSetup(imageSetup))" />
+        Submit="@(draft => TrackAuthoringOperationAsync(GenerateImageAsync(imageSetup, draft)))" Close="@(() => CloseImageSetup(imageSetup))">
+        <CreationOptions Context="canEdit">
+            <ProjectStructureCreateSignalSections @key="imageSetup.Ownership.Id" @bind-Value="imageSetup.Signals"
+                CanEdit="@(() => IsCurrentImage(imageSetup) && canEdit())" />
+        </CreationOptions>
+    </CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog>
 }
 
 <ProjectStructureDeferredSurface RenderKey="@SupportDialogRenderKey">
@@ -333,7 +338,12 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         Create="@((input, model) => TrackSecretOperationAsync(referenceOpening.CreateAsync(input, model)))"
         Retry="@(() => TrackSecretOperationAsync(referenceOpening.RetryAsync()))"
         Finish="@(() => TrackSecretOperationAsync(referenceOpening.FinishAsync()))"
-        Close="@(() => CloseSecretReferenceDialog(referenceOpening))" />
+        Close="@(() => CloseSecretReferenceDialog(referenceOpening))">
+        <CreationOptions Context="canEdit">
+            <ProjectStructureCreateSignalSections @bind-Value="referenceOpening.Signals"
+                CanEdit="@(() => referenceOpening.IsCurrent && canEdit())" />
+        </CreationOptions>
+    </CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor>
 }
 
 @{
@@ -1313,6 +1323,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
             case "dependency:create":
                 await CreateDependencyAsync(request.LinkSourceId, request.NodeId ?? request.LinkTargetId);
                 break;
+            case CanvasWorkbenchContextActionRequest.CreateVisualLink when canvasToolMode == CanvasAuthoringMode.Select:
+                await CreateStructureLinkAsync(request.LinkSourceId, request.LinkTargetId, ProjectObjectLinkKind.RelatesTo);
+                break;
             case "delete-link":
                 await DeleteDependencyAsync(request.LinkSourceId, request.LinkTargetId, request.LinkKind);
                 break;
@@ -1995,19 +2008,22 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
         return selectedNodeIds.FirstOrDefault();
     }
 
-    private Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId) {
+    private Task CreateDependencyAsync(string? sourceNodeId, string? targetNodeId) =>
+        CreateStructureLinkAsync(sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn);
+
+    private Task CreateStructureLinkAsync(string? sourceNodeId, string? targetNodeId, ProjectObjectLinkKind kind) {
         if (string.IsNullOrWhiteSpace(sourceNodeId) || string.IsNullOrWhiteSpace(targetNodeId) || sourceNodeId == targetNodeId) {
             return Task.CompletedTask;
         }
-        var sourceOpening = dependencyOpening?.Node.Id == sourceNodeId ? dependencyOpening : null;
+        var sourceOpening = kind == ProjectObjectLinkKind.DependsOn && dependencyOpening?.Node.Id == sourceNodeId ? dependencyOpening : null;
         var context = sourceOpening?.Context ?? CaptureActionContext();
         if (!IsCurrentAction(context)) {
             return Task.CompletedTask;
         }
         var source = sourceOpening?.Node ?? context.Surface.Nodes.FirstOrDefault(node => node.Id == sourceNodeId);
-        var target = surface?.Nodes.FirstOrDefault(node => node.Id == targetNodeId);
+        var target = context.Surface.Nodes.FirstOrDefault(node => node.Id == targetNodeId);
         return source is null || target is null ? Task.CompletedTask : ExecuteGraphLinkAsync(context,
-            new(sourceNodeId, targetNodeId, ProjectObjectLinkKind.DependsOn, true), [source, target], remove: false);
+            new(sourceNodeId, targetNodeId, kind, true), [source, target], remove: false);
     }
 
     private async Task SetCanvasToolModeAsync(string mode, bool keepDependencySource = false)
@@ -2025,9 +2041,9 @@ tests: component:ProjectStructurePageTests, e2e:workbench-structure
     private string ResolveCanvasHintText()
         => canvasToolMode switch
         {
-            CanvasAuthoringMode.Dependency => "Dependency tool: drag normally to move nodes, or click a second node to say the selected node depends on it.",
-            CanvasAuthoringMode.Delete => "Delete tool: hover a node or dependency arrow to highlight it, then click to delete. Connected branches may ask for confirmation.",
-            _ => "Click to select, Ctrl+M for node actions, Ctrl+I to copy the node id, Ctrl+Shift+click to multi-select, Alt-drag to marquee, and right-click for grouped actions."
+            CanvasAuthoringMode.Dependency => "Click the prerequisite of the selected node. Between tasks, the solid dependency line sets their order in Gantt.",
+            CanvasAuthoringMode.Delete => "Click a highlighted node or link to delete it. Connected branches may ask for confirmation.",
+            _ => "Drag a node to move it or a round handle to create a visual link. Ctrl+Shift+click or Alt-drag to multi-select. Right-click or Ctrl+M for actions. Ctrl+I copies the node ID."
         };
 
     private IReadOnlyList<CanvasWorkbenchAction> BuildQuickCreateActions()

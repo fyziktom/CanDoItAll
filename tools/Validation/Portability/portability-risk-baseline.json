@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_utc": "2026-11-26T16:40:55.001645+00:00",
+  "generated_utc": "2026-11-27T15:12:45.556216+00:00",
   "review_gate": "CI portability-static executable-source baseline",
   "patterns_sha256": "a5aacd07eb879556dee2612ff830e67637d7f41adc0c3b245f2d7e44a439e02e",
   "policy_categories": [
@@ -41,7 +41,7 @@
     "docker-compose.yml",
     "global.json"
   ],
-  "allowance_count": 15860,
+  "allowance_count": 15835,
   "allowances": [
     {
       "path": ".github/copilot-instructions.md",
@@ -60920,132 +60920,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "058ae30634eeeb68bdaeff09f794612d3efdde0ca5f5a6322cf1d996892fb1bd",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1b05a0e7e45e42a315cbe375d7831896408f080cc197ace6ee3d954f182d4184",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "1c8bdb0b6fe20bcd6d304bd2cf5217f11ae5692a477ac3a595bfababaf4886a0",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "22ac3899d894ef769243ee4ce61b58e16ec6b62d2462c6b755294503a4dece50",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "2554280a86d10c8581cf8adcf9faa07c8f0ff0ec7c8072561d404eec0945d194",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "3793c745da43ef8ef8a66947c5bcb7c11e3b01a61203e527652dc276d3f00770",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "381029ae49ff2d642285146b1886b92cdeb87ea50df604b52b0a9a1ec7e6ff43",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "527383e36d8c719166585b3d48e5bb9460684fd801cdd1ce34ee23b4733df0ac",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "5df7c7d347d8f3b4bad5290fa0648c274b688d008da8e4626a9664f78c0d7dd9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "6bbf548c1411d96dd206d9393610123957e5342300084d9f5c38abf7c70b617e",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "6cf4f3aa627ecf1e33b2b9fbe24691f78b9213e51194a1f9839f4fdf18922291",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "8121eef682f079d1ce8b1098b4d961fe162a0606fefb9892286e4599a2bbeeca",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "8834a1fa25a206bcb6106634e07ecd1086cb505674b04e84d5e9a225f0cad1c9",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a25230a794e9a9606f403d7437a0ec5864e204b5665d2367b397b8af1d2f11ee",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a2931844b1c2ac592520d533045c20d88b6b5d707a8fa0932ebc57e234f29437",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "a2ae4edb738ac00cef82fbedc258e7c63dd828ad2a9ea06f8933d6d7e1e4449c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "aa94ff28ef962b422a5183687bb42ec41984a623746b8828cc6ba7cc7378c06c",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "dab07a05300da7ca7b1ddff3fc2b49c34a329b2c4456ad064115e0d57a79c362",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "dbdee395585a54b66324f0ae44334a2cc6baed017fcb655a5fa165676d3c3e66",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "e438498229dbaf8948524b5a41320ce1476f2a8cf992dbb1aff571f3f8e04f14",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructureGraphAdapter.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f6f8a4d047933d1918c0ea1c558f52ae5aeff4f2352e129ecabab433a567cee5",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/CanvasAdapters/ProjectStructurePlacementPolicy.cs",
       "category": "case-policy",
       "source_fingerprint": "20ea4d1a79b6856fdc6abeec8b839711ec996353853c33193175d7c76babe106",
@@ -62192,12 +62066,6 @@
       "count": 1
     },
     {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
-      "category": "case-policy",
-      "source_fingerprint": "f9d1b6440706d0c48b7b7c6ba3aa98afe706b2d4b5673dd596a49c076a72b250",
-      "count": 1
-    },
-    {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Storage.cs",
       "category": "case-policy",
       "source_fingerprint": "d070708d0b1b94b207b5c615f6a9e78a1b08570412904fc17327ba4383dd4565",
@@ -62333,6 +62201,12 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "category": "link-reparse",
       "source_fingerprint": "459ee0a855a7acfdcb8fd20b579144f6e658711a99df39434357777d0030d421",
+      "count": 1
+    },
+    {
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
+      "category": "link-reparse",
+      "source_fingerprint": "775d9a85540c18d44a4b7d8cba60cddea568034f5f2b9bdeab575f570bd0b3f8",
       "count": 1
     },
     {
@@ -68206,12 +68080,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
       "category": "case-policy",
-      "source_fingerprint": "3f1b1c08d6cd2686f4e949fcf4b9c2bde610ad6e598de38f01aaa88a953d0ea3",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
-      "category": "case-policy",
       "source_fingerprint": "40602dcb92eae3a251bc33d7ffe7a0d4a8516f068445acb82b7f5ac909210ec5",
       "count": 1
     },
@@ -68224,12 +68092,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
       "category": "case-policy",
-      "source_fingerprint": "5f3a517f85306d3732c2e0f1693f51ae2055392e774b751a757ef74d89242099",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
-      "category": "case-policy",
       "source_fingerprint": "6157a9b1329944a8f343ef509cde2c4f4a046f7a96029b1b8343d19ad2bf028e",
       "count": 1
     },
@@ -68237,12 +68099,6 @@
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
       "category": "case-policy",
       "source_fingerprint": "6df5328355b8d9040027be506e54a9ac40d55ce033f793007e2bcda2deaafcdc",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
-      "category": "case-policy",
-      "source_fingerprint": "85b15d19a31b6e2958bbbb0d09319429b7c2c78a16ac3dd36c3215050ad904e5",
       "count": 1
     },
     {
@@ -68278,12 +68134,6 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
       "category": "case-policy",
-      "source_fingerprint": "a2a45a4f3ad025ab2c3e5721c6932a845901a53e038088391b2639db9a789f33",
-      "count": 1
-    },
-    {
-      "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
-      "category": "case-policy",
       "source_fingerprint": "a2dea961a6025cd5db5b0f723a3c915af21cb2af4aa2b57529d81f2bf5c53a75",
       "count": 1
     },
@@ -68308,7 +68158,7 @@
     {
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Workbench/ProjectWorkbenchObjectModeling.cs",
       "category": "case-policy",
-      "source_fingerprint": "df38be50e00901c8e72edc32892695dd08e8c9d4a5f9ebfebeee7310b437ff2b",
+      "source_fingerprint": "db81ecd5db6a4bc8039738c563429eac23695e8707ba806eab255099122e48ba",
       "count": 1
     },
     {
