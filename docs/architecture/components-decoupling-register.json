@@ -36619,7 +36619,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
-      "sha256_lf": "355da7f008aa68dcebff41865eee83ccc5d914e2573c6da113fd75dedf83077d",
+      "sha256_lf": "18e20bec55a5957bd4e4cb962cec05105fbe30a94281f76d423ceaa4e6268bf4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Structure.UI.StructureWorkspace",

@@ -642,7 +642,7 @@ public sealed record ProjectStructureNodeSummary(
 }
 
 /// <summary>
-/// One directed link between two nodes of a project structure, returned by the structure read when
+/// One link between two nodes of a project structure, returned by the structure read when
 /// <c>includeLinks</c> is true.
 /// </summary>
 /// <param name="SourceId">Identifier of the node the link starts from, as in <c>nodes[].id</c>.</param>
@@ -1350,8 +1350,8 @@ public sealed record ProjectStructureNodeDeleteBatchInput(
 }
 
 /// <summary>
-/// Directed link between two nodes of one project, to create or remove. The dependency operations always use kind
-/// DependsOn and ignore <c>kind</c>.
+/// Link between two nodes of one project, to create or remove. Creating RelatesTo in either direction returns
+/// the same stored endpoints. The dependency operations always use DependsOn and ignore <c>kind</c>.
 /// </summary>
 /// <param name="SourceNodeId">
 /// Identifier of the node the link starts from, as returned in <c>nodes[].id</c>; required. For DependsOn it is the

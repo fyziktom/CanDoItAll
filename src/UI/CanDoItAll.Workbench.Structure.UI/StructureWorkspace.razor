@@ -70,7 +70,8 @@
                                                        OpenGanttView="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Gantt)))"
                                                        RecomposeBranch="@(() => Dispatch.InvokeAsync(new StructureToolbarIntent(view.ContextId, StructureToolbarCommand.Recompose)))" />
                         <div class="project-structure-toolbar-stats"
-                             data-testid="project-structure-canvas-loaded">
+                             data-testid="project-structure-canvas-loaded"
+                             data-link-count="@canvasSurface.Links.Count">
                             <StatusBadge Tone="info" Text="@($"Nodes {canvasSurface.Nodes.Count}")" />
                             <StatusBadge Tone="neutral" Text="@($"Selection {view.SelectionCount}")" />
                         </div>

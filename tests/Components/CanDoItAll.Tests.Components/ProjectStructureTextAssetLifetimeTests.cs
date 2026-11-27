@@ -47,10 +47,11 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
         await firstDialog.InvokeAsync(() => firstDialog.Find("[data-testid='project-structure-text-asset-source-upload']").ClickAsync(new MouseEventArgs()));
         var upload = new HeldUpload();
         await firstDialog.InvokeAsync(() => firstDialog.FindComponent<InputFile>().Instance.OnChange.InvokeAsync(new InputFileChangeEventArgs([upload])));
-        for (var step = 0; step < 3; step++) {
-            firstDialog.Find("[data-testid='content-text-next']").Click();
-        }
-        firstDialog.Find("button[aria-label='40%']").Click();
+        var planningStep = firstDialog.FindAll("[data-testid='content-text-steps'] button")
+            .Single(button => button.TextContent.Contains("Planning", StringComparison.Ordinal));
+        await firstDialog.InvokeAsync(() => planningStep.ClickAsync(new MouseEventArgs()));
+        var progressButton = firstDialog.WaitForElement("button[aria-label='40%']");
+        await firstDialog.InvokeAsync(() => progressButton.ClickAsync(new MouseEventArgs()));
         var originalProgressChange = firstDialog.FindComponents<PlanningCreateSignalPicker>()
             .Single(picker => picker.Instance.Field.Key == PlanningCreateSignalsDraft.ProgressKey).Instance.ValueChanged;
         var firstPending = firstDialog.InvokeAsync(() => firstDialog.Find("[data-testid='project-structure-text-asset-submit']").ClickAsync(new MouseEventArgs()));

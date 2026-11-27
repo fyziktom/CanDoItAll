@@ -28,11 +28,11 @@ public sealed class ProjectStructureVisualLinkBrowserTests {
         var firstBody = await ReadBodyAsync(page, first);
         await page.Mouse.ClickAsync(firstBody.X, firstBody.Y);
         await DragHandleAsync(page, first, "top", second);
-        await WaitForLinksAsync(page, 1, 0);
+        await WaitForLinksAsync(1, 0);
 
         await page.ReloadAsync();
         await ProjectFilesUiJourney.ReadyFileCanvasAsync(page);
-        await WaitForLinksAsync(page, 1, 0);
+        await WaitForLinksAsync(1, 0);
         await HideCanvasWindowsAsync(page);
         var secondBody = await ReadBodyAsync(page, second);
         await page.Mouse.ClickAsync(secondBody.X, secondBody.Y);
@@ -44,7 +44,7 @@ public sealed class ProjectStructureVisualLinkBrowserTests {
         await page.WaitForFunctionAsync("() => document.querySelector('.cw-canvas-host').__canvasWorkbenchState.surface.mode === 'dependency'");
         firstBody = await ReadBodyAsync(page, first);
         await page.Mouse.ClickAsync(firstBody.X, firstBody.Y);
-        await WaitForLinksAsync(page, 1, 1);
+        await WaitForLinksAsync(1, 1);
         await page.ScreenshotAsync(new() { Path = host.Artifact("visual-link-and-prerequisite.png") });
 
         var before = await ReadAsync();
@@ -64,10 +64,30 @@ public sealed class ProjectStructureVisualLinkBrowserTests {
             }
             """);
         await page.Mouse.ClickAsync(linkPoint.X, linkPoint.Y);
-        await WaitForLinksAsync(page, 0, 1);
+        await WaitForLinksAsync(0, 1);
         var after = await ReadAsync();
         Assert.DoesNotContain(after.Links, link => link.Kind == ProjectObjectLinkKind.RelatesTo);
         Assert.Contains(prerequisite, after.Links);
+
+        async Task WaitForLinksAsync(int visual, int prerequisites) {
+            try {
+                await page.WaitForFunctionAsync("""
+                    expected => {
+                        const links = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.links;
+                        const pair = links?.filter(l => (l.sourceId === expected.first && l.targetId === expected.second) ||
+                            (l.sourceId === expected.second && l.targetId === expected.first));
+                        return pair?.filter(l => l.kind === 'RelatesTo').length === expected.visual &&
+                            pair.filter(l => l.kind === 'DependsOn').length === expected.prerequisites;
+                    }
+                    """, new { first, second, visual, prerequisites });
+            } catch (TimeoutException failure) {
+                var saved = await ReadAsync();
+                var presentation = await page.GetByTestId("project-structure-canvas-loaded").GetAttributeAsync("data-link-count");
+                var rendered = await page.Locator(".cw-canvas-host").EvaluateAsync<string[]>("host => host.__canvasWorkbenchState.surface.links.map(l => l.kind)");
+                throw new InvalidOperationException(
+                    $"Expected {visual} visual links and {prerequisites} prerequisites. Database: {string.Join(", ", saved.Links.Select(link => link.Kind))}. Presented: {presentation}. Canvas: {string.Join(", ", rendered)}.", failure);
+            }
+        }
 
         Task<ProjectStructureSurface> ReadAsync() => host.SeedAsync(services =>
             services.GetRequiredService<ProjectWorkbenchService>().GetStructureAsync(project));
@@ -120,11 +140,4 @@ public sealed class ProjectStructureVisualLinkBrowserTests {
         await page.Mouse.UpAsync();
     }
 
-    private static Task WaitForLinksAsync(IPage page, int visual, int prerequisites) => page.WaitForFunctionAsync("""
-        expected => {
-            const links = document.querySelector('.cw-canvas-host')?.__canvasWorkbenchState?.surface?.links;
-            return links?.filter(link => link.kind === 'RelatesTo').length === expected.visual &&
-                links.filter(link => link.kind === 'DependsOn').length === expected.prerequisites;
-        }
-        """, new { visual, prerequisites });
 }

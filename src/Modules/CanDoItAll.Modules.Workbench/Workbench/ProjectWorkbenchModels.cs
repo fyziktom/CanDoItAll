@@ -214,7 +214,7 @@ public sealed record ProjectStructureNode(
     public Guid? RecordId { get; init; }
 }
 
-[System.ComponentModel.Description("Directed relationship between project structure nodes, including its persisted occurrence when available.")]
+[System.ComponentModel.Description("Relationship between project structure nodes, with its stored endpoints and occurrence identity when available. RelatesTo works in either direction.")]
 public sealed record ProjectStructureLink(
     [property: System.ComponentModel.Description("Source node key of the relationship.")] string SourceId,
     [property: System.ComponentModel.Description("Target node key of the relationship.")] string TargetId,

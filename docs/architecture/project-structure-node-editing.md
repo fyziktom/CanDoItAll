@@ -34,9 +34,9 @@ dashed violet **visual link**. For example, link a supplier's quote to the task
 that mentions it. The association works in either direction and leaves the
 schedule and readiness unchanged.
 
-Use **Dependency** to select a task and then its prerequisite. A solid blue arrow
-records that the first task depends on the second. Gantt schedules the prerequisite
-first. Both kinds of link can coexist, and the Delete tool can remove either one.
+Select the task that is waiting, activate **Dependency**, then click its prerequisite.
+A solid blue arrow connects the two. Gantt schedules the prerequisite first. Both
+kinds of link can coexist, and the Delete tool can remove either one.
 
 Creation presents short sections as steps. Start with the item's name and context,
 then fill the relevant settings. Optional steps can be skipped. The create action
