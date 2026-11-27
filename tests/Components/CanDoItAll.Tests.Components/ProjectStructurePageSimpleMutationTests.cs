@@ -1074,7 +1074,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         {
             Assert.Equal("dependency", canvasWorkbench.Instance.Surface.Mode);
             Assert.Equal(noteNode.Id, canvasWorkbench.Instance.Surface.DependencySourceId);
-            Assert.Contains("Dependency tool:", cut.Markup);
+            Assert.Contains("prerequisite of the selected node", canvasWorkbench.Find(".cw-hint-pill").TextContent);
         });
 
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
@@ -1083,7 +1083,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         {
             Assert.Equal("delete", canvasWorkbench.Instance.Surface.Mode);
             Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
-            Assert.Contains("Delete tool:", cut.Markup);
+            Assert.Contains("node or link to delete", canvasWorkbench.Find(".cw-hint-pill").TextContent);
         });
 
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-select']").ClickAsync(new MouseEventArgs()));
@@ -1137,7 +1137,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         {
             Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
             Assert.True(string.IsNullOrWhiteSpace(canvasWorkbench.Instance.Surface.DependencySourceId));
-            Assert.Contains("Click to select", cut.Markup);
+            Assert.Contains("round handle to create a visual link", canvasWorkbench.Find(".cw-hint-pill").TextContent);
         });
 
         await cut.InvokeAsync(() => cut.Find("[data-testid='project-structure-toolbar-tool-delete']").ClickAsync(new MouseEventArgs()));
@@ -1145,7 +1145,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("delete", canvasWorkbench.Instance.Surface.Mode);
-            Assert.Contains("Delete tool:", cut.Markup);
+            Assert.Contains("node or link to delete", canvasWorkbench.Find(".cw-hint-pill").TextContent);
         });
 
         await cut.InvokeAsync(() => canvasWorkbench.Instance.OnContextActionRequest(JsonSerializer.Serialize(
@@ -1154,7 +1154,7 @@ public sealed partial class ProjectStructurePageSimpleMutationTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("authoring", canvasWorkbench.Instance.Surface.Mode);
-            Assert.Contains("Click to select", cut.Markup);
+            Assert.Contains("round handle to create a visual link", canvasWorkbench.Find(".cw-hint-pill").TextContent);
         });
     }
 
