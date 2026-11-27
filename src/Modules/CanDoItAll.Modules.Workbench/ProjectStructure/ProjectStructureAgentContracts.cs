@@ -503,8 +503,7 @@ public sealed record ProjectStructureNodeActionCapabilities(
 /// <param name="Title">Display title of the node.</param>
 /// <param name="Subtitle">Secondary display text; may be empty.</param>
 /// <param name="Status">
-/// Free-text status, for example Draft, Active or Done. Progress and the finished state are derived from words in it
-/// (see <c>progressMode</c>).
+/// Free-text status, for example Draft, Active or Done. A status edit also updates the node's displayed progress.
 /// </param>
 /// <param name="Notes">Free-text notes; in a structure read, null unless <c>includeNotes</c> was true.</param>
 /// <param name="Route">Application route that shows the node or its artifact in the web UI; informational.</param>
@@ -539,9 +538,9 @@ public sealed record ProjectStructureNodeActionCapabilities(
 /// the status text.
 /// </param>
 /// <param name="ProgressPercent">
-/// Progress from 0 through 100, or -1 when it is not tracked. Unless set explicitly, it follows the status: for example
-/// 28 for draft, planned, pending or queued, 62 for active, running or blocked, 78 for review or testing, and 100 for
-/// done, complete, approved, ready or final.
+/// Progress from 0 through 100, or -1 when it is not tracked. A newly authored node starts at 0 unless an initial
+/// progress was selected. Later status edits set the progress from the status text: for example 0 for draft or planned,
+/// 62 for active or running, 78 for review or testing, and 100 for done or complete.
 /// </param>
 /// <param name="MarkerIcon">Icon token of the node's primary marker; empty when the node has no marker.</param>
 /// <param name="MarkerTone">Tone (color) token of the node's primary marker; empty when there is none.</param>

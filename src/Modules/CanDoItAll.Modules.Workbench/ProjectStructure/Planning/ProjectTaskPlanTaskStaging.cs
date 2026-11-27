@@ -74,7 +74,6 @@ internal static class ProjectTaskPlanTaskStaging {
         var nodeKey = $"{ProjectWorkbenchGraphConventions.CustomNodePrefix}{id:N}";
         var parent = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId);
         new ProjectStructureInvariantService().ValidateParentAssignment(projectId, nodeKey, parent, []);
-        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress("Draft");
         var layout = ProjectWorkbenchGraphConventions.GetDefaultPosition(ProjectObjectType.WorkItem, position);
         var estimate = ProjectTaskEstimate.Empty();
         var metadata = new ProjectObjectMetadataEnvelope {
@@ -92,7 +91,7 @@ internal static class ProjectTaskPlanTaskStaging {
             Id = id, ProjectId = projectId, NodeKey = nodeKey, ParentNodeKey = parent,
             ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = ProjectObjectSubtypePolicy.Task,
             Title = item.Title, Subtitle = "Task", Notes = item.Notes, Status = "Draft", Priority = item.Priority,
-            ProgressMode = progress.Mode, ProgressPercent = progress.Percent,
+            ProgressMode = "progress", ProgressPercent = 0,
             PositionX = layout.X, PositionY = layout.Y, CreatedAtUtc = acceptedAtUtc, UpdatedAtUtc = acceptedAtUtc,
             NodeReferences = new(),
             MetadataJson = ProjectStructureCanonicalTaskCreationPolicy.NormalizeMetadataJson(ProjectObjectType.WorkItem,

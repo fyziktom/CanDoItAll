@@ -127,6 +127,14 @@ public sealed class WorkflowProjectLifetimeSerializationTests {
             SourceAuthorityFingerprint = WorkflowStructureAuthorityFingerprint.Create(authority) };
         var currentHash = ProjectWorkflowContributionFingerprint.Create(current, request);
         Assert.NotEqual(oldHash, currentHash);
+        Assert.Equal(oldHash, ProjectWorkflowContributionFingerprint.Create(legacy, request with { InitialSignals = new() }));
+        var marked = request with { InitialSignals = new(2, ProjectNodeInitialProgress.FromPreset("progress", 40)) };
+        var markedHash = ProjectWorkflowContributionFingerprint.Create(current, marked);
+        Assert.NotEqual(currentHash, markedHash);
+        Assert.NotEqual(markedHash, ProjectWorkflowContributionFingerprint.Create(current,
+            marked with { InitialSignals = new(2, ProjectNodeInitialProgress.FromPreset("progress", 40), [new("question", "sky", "Question")]) }));
+        var reloaded = JsonSerializer.Deserialize<ProjectObjectCreateRequest>(JsonSerializer.Serialize(marked))!;
+        Assert.Equal(markedHash, ProjectWorkflowContributionFingerprint.Create(current, reloaded));
         Assert.NotEqual(currentHash, ProjectWorkflowContributionFingerprint.Create(current with {
             ProjectLifetime = new(Profile, Project, Guid.NewGuid()) }, request));
         Assert.NotEqual(currentHash, ProjectWorkflowContributionFingerprint.Create(current with {

@@ -115,10 +115,7 @@ public static class ProjectTaskExecutionStatePolicy
     public static bool AllowsAuthoritativeRepricing(ProjectTaskExecutionState state)
         => state == ProjectTaskExecutionState.NotStarted;
 
-    // Every canvas node carries a status-backed progress hint (a "Draft" task renders as 28 %). For a canonical task
-    // the recorded execution state is the authoritative fact on every plan surface: a task that has not started has
-    // no progress, a completed task is done, a cancelled task has no trackable progress, and a task without a
-    // recorded state keeps the hint.
+    // Planning uses recorded execution when it determines progress, including for older tasks with a stored canvas hint.
     public static int ResolveExecutionBackedProgress(ProjectTaskExecutionState state, int progressPercent)
         => state switch
         {

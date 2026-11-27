@@ -294,6 +294,9 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectPlacementIntent PlacementIntent = ProjectObjectPlacementIntent.CallerControlled,
     ProjectObjectTaskPricingInitialization TaskPricingInitialization =
         ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectNodeInitialSignals? InitialSignals { get; init; }
+
     [JsonIgnore]
     public IReadOnlyList<ProjectStructureNode> ExpectedParticipants { get; init; } = [];
 
@@ -840,7 +843,7 @@ public sealed partial class ProjectWorkbenchService(
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
         var normalizedStatus = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status.Trim();
-        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(normalizedStatus);
+        var progress = request.InitialSignals?.Progress ?? ProjectNodeInitialProgress.Zero;
 
         var record = new ProjectObjectRecord
         {
@@ -855,6 +858,7 @@ public sealed partial class ProjectWorkbenchService(
             ObjectSubtype = normalizedObjectSubtype,
             ProgressMode = progress.Mode,
             ProgressPercent = progress.Percent,
+            Priority = request.InitialSignals?.Priority ?? 0,
             MetadataJson = metadataJson,
             ParentNodeKey = normalizedParentNodeKey,
             PositionX = position.Item1,
@@ -873,7 +877,7 @@ public sealed partial class ProjectWorkbenchService(
                 binding.MediaOriginalFileName,
                 binding.StorageObjectReferenceJson),
             NodeReferences = request.NodeReferences ?? ProjectNodeReferenceCollection.Empty,
-            MarkersJson = "[]"
+            MarkersJson = ProjectNodeMarkerState.Serialize(request.InitialSignals?.Markers)
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);

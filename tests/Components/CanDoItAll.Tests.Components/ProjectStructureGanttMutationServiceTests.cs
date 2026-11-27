@@ -860,8 +860,10 @@ public sealed class ProjectStructureGanttMutationServiceTests
         Assert.Equal(At(1), persisted.EndUtc);
     }
 
-    [Fact]
-    public async Task ApplyInsertionAsync_RewiresOnlyBridge_PreservesOtherPrerequisite_AndPersistsCriticalPathDates()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(40)]
+    public async Task ApplyInsertionAsync_RewiresOnlyBridge_PreservesOtherPrerequisite_AndPersistsCriticalPathDates(int? initialProgress)
     {
         var taskA = CreateTask("custom:00000000000000000000000000000001", "A", 0, 1);
         var taskB = CreateTask("custom:00000000000000000000000000000002", "B", 1, 2);
@@ -876,7 +878,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
         var insertedId = TaskId("custom:00000000000000000000000000000005");
         var predecessorToInsertedId = Guid.NewGuid();
         var insertedToSuccessorId = Guid.NewGuid();
-        var insertedTask = new GanttTask(insertedId, "Inserted", At(1), At(1.5));
+        var insertedTask = new GanttTask(insertedId, "Inserted", At(1), At(1.5)) { ProgressPercent = initialProgress };
         var request = new GanttTaskInsertionRequest(
             insertedTask,
             TaskId(taskA.NodeKey),
@@ -931,6 +933,7 @@ public sealed class ProjectStructureGanttMutationServiceTests
         var persistedC = await fixture.FindTaskAsync(taskC.NodeKey);
         Assert.Equal(ProjectObjectType.WorkItem, inserted.ObjectType);
         Assert.Equal("task", inserted.ObjectSubtype);
+        Assert.Equal(("progress", initialProgress ?? 0), (inserted.ProgressMode, inserted.ProgressPercent));
         Assert.Equal(At(1), inserted.StartUtc);
         Assert.Equal(At(1.5), inserted.EndUtc);
         Assert.Equal(1800, inserted.DurationSeconds);

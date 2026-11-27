@@ -180,7 +180,7 @@ internal static class ProjectWorkbenchObjectModeling
         if (normalizedStatus.Contains("done", StringComparison.OrdinalIgnoreCase) ||
             normalizedStatus.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
             normalizedStatus.Contains("approved", StringComparison.OrdinalIgnoreCase) ||
-            normalizedStatus.Contains("used", StringComparison.OrdinalIgnoreCase) ||
+            normalizedStatus.Equals("used", StringComparison.OrdinalIgnoreCase) ||
             normalizedStatus.Contains("ready", StringComparison.OrdinalIgnoreCase) ||
             normalizedStatus.Contains("final", StringComparison.OrdinalIgnoreCase))
         {
@@ -203,15 +203,7 @@ internal static class ProjectWorkbenchObjectModeling
             return ("progress", 62);
         }
 
-        if (normalizedStatus.Contains("planned", StringComparison.OrdinalIgnoreCase) ||
-            normalizedStatus.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
-            normalizedStatus.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
-            normalizedStatus.Contains("queued", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 28);
-        }
-
-        return ("progress", 48);
+        return ("progress", 0);
     }
 
     internal static IReadOnlyList<ProjectNodeMarker> AddMarker(

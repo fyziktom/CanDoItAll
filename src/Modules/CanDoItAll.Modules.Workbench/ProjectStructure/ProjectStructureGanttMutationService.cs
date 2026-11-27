@@ -635,7 +635,7 @@ public sealed class ProjectStructureGanttMutationService(
         ProjectObjectRecord successor,
         DateTimeOffset now)
     {
-        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress("Draft");
+        var progress = ProjectNodeInitialProgress.FromPreset("progress", task.ProgressPercent ?? 0);
         return new ProjectObjectRecord
         {
             ProjectId = projectId,
