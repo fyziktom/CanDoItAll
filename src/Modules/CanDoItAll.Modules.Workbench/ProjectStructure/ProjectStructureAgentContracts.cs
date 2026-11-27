@@ -650,7 +650,7 @@ public sealed record ProjectStructureNodeSummary(
 /// <param name="TargetId">Identifier of the node the link points to, as in <c>nodes[].id</c>.</param>
 /// <param name="Kind">
 /// Meaning of the link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo. For DependsOn the source depends on the target.
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo. For DependsOn the source depends on the target. RelatesTo is undirected.
 /// </param>
 /// <param name="IsUserAuthored">
 /// True when a caller created the link; false for links the owner maintains, such as the containment links between a
@@ -822,7 +822,7 @@ public sealed record ProjectStructureNodeCatalogObjectType(
 /// <summary>One link kind in the node catalog, with guidance on when to use it.</summary>
 /// <param name="Kind">
 /// The link kind, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks, 6 DerivedFrom,
-/// 7 BelongsTo.
+/// 7 BelongsTo, 8 RelatesTo.
 /// </param>
 /// <param name="Label">Name of the link kind, for example <c>DependsOn</c>.</param>
 /// <param name="Guidance">
@@ -1363,7 +1363,7 @@ public sealed record ProjectStructureNodeDeleteBatchInput(
 /// </param>
 /// <param name="Kind">
 /// Meaning of the link, as a JSON integer: 0 Contains, 1 DependsOn (default), 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo. Contains and BelongsTo are hierarchy links and cannot be created here; change the parent
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo. Contains and BelongsTo are hierarchy links and cannot be created here; change the parent
 /// instead. A Uses link from a canonical task is rejected: attach task resources with the task resource operation.
 /// </param>
 /// <param name="LeaseToken">
@@ -1387,7 +1387,7 @@ public sealed record ProjectStructureLinkInput(
 /// For a removal, true when a matching link was removed and false when none existed. For a creation it is always true,
 /// also when the same link already existed.
 /// </param>
-/// <param name="Link">The link that was requested, echoed back with <c>isUserAuthored</c> true.</param>
+/// <param name="Link">The stored link with its original endpoints and <c>isUserAuthored</c> true.</param>
 public sealed record ProjectStructureLinkChangeResult(
     bool Changed,
     ProjectStructureLinkSummary Link);

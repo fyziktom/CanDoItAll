@@ -55,7 +55,8 @@ public enum ProjectObjectType
 /// target), 3 Validates (validation evidence or a validation run validates the target), 4 Tests (a test plan or test
 /// evidence tests the target), 5 Blocks (the source blocks the target without being a direct schedule prerequisite),
 /// 6 DerivedFrom (the source is a revision or derivation of the target), 7 BelongsTo (a parent relationship maintained
-/// by the owner; set it through a parent node key or a reparent operation).
+/// by the owner; set it through a parent node key or a reparent operation), 8 RelatesTo (an undirected visual
+/// relationship with no scheduling effect).
 /// </summary>
 public enum ProjectObjectLinkKind
 {
@@ -66,7 +67,8 @@ public enum ProjectObjectLinkKind
     Tests,
     Blocks,
     DerivedFrom,
-    BelongsTo
+    BelongsTo,
+    RelatesTo
 }
 
 public interface IProjectObject

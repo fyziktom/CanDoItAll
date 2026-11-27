@@ -470,7 +470,7 @@ public sealed record ProjectStructureTransferRecovery(
 /// <param name="TargetNodeId">Identifier of the link's target node.</param>
 /// <param name="LinkKind">
 /// Kind of the deleted link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo.
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo.
 /// </param>
 /// <param name="IsSystemManaged">True when the application had created the link rather than a user.</param>
 public sealed record ProjectStructureBoundaryLinkRemoval(
@@ -509,7 +509,7 @@ public enum ProjectStructureClipboardCopyTaskPolicy
 /// <param name="TargetNodeId">Identifier of the original link's target node.</param>
 /// <param name="LinkKind">
 /// Meaning of the link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo.
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo.
 /// </param>
 public sealed record ProjectStructureCopyOmittedLink(
     Guid LinkId,
@@ -1092,21 +1092,19 @@ public sealed partial class ProjectWorkbenchService(
             seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, null, null, seed.DurationSeconds)).ToList(),
             cancellationToken);
 
-    public async Task LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default,
+    public Task<ProjectStructureLink> LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
         Func<CancellationToken, ValueTask>? authorizeCommit = null)
-    {
-        await relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit);
-    }
+        => relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit);
 
     public Task<ProjectStructureLink> LinkObjectsDetailedAsync(ProjectWriteAdmission admission, string sourceNodeKey, string targetNodeKey,
         ProjectObjectLinkKind linkKind, IReadOnlyCollection<ProjectStructureNode> expectedNodes, CancellationToken cancellationToken = default,
         Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => relationService.LinkObjectsDetailedAsync(admission, sourceNodeKey, targetNodeKey, linkKind, expectedNodes, cancellationToken, authorizeCommit);
 
-    internal Task LinkCanonicalTaskResourceAsync(
+    internal Task<ProjectStructureLink> LinkCanonicalTaskResourceAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
