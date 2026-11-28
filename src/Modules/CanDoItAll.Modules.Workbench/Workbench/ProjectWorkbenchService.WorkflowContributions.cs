@@ -305,6 +305,9 @@ internal static class ProjectWorkflowContributionFingerprint {
             MediaContentType = request.Media?.ContentType,
             ContentHash = contentHash
         });
+        if (request.InitialSignals is { HasValues: true }) {
+            payload = JsonSerializer.Serialize(new { Payload = payload, request.InitialSignals });
+        }
         return plan.ProjectLifetime is null && plan.SourceAuthorityFingerprint is null ? Hash(payload)
             : Hash("workflow-project-lifetime-v1\n" + JsonSerializer.Serialize(new {
                 plan.ProjectLifetime, plan.SourceAuthorityFingerprint, Payload = payload

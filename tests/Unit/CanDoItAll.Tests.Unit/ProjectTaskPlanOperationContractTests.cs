@@ -114,6 +114,23 @@ public sealed class ProjectTaskPlanOperationContractTests {
     }
 
     [Fact]
+    public void Retained_draft_receipts_keep_the_original_progress_hint_and_reject_other_nonzero_values() {
+        var accepted = Accept(Command());
+        var tasks = accepted.Tasks.Select(task => task with { Fact = task.Fact with { ProgressPercent = 28 } }).ToArray();
+        var historical = new ProjectTaskPlanAccepted(accepted.Operation, accepted.OriginalDefinition, accepted.Source,
+            accepted.SemanticDigest, accepted.AcceptedAtUtc, accepted.ReplayUntilUtc, tasks);
+        var encoded = ProjectTaskPlanOperationCodec.EncodeAccepted(historical);
+
+        var restored = ProjectTaskPlanOperationCodec.DecodeAccepted(encoded);
+        Assert.All(restored.Tasks, task => Assert.Equal(28, task.Fact.ProgressPercent));
+        Assert.Equal(encoded, ProjectTaskPlanOperationCodec.EncodeAccepted(restored));
+
+        var invalid = JsonNode.Parse(encoded)!;
+        invalid["tasks"]![0]!["fact"]!["progressPercent"] = 29;
+        Assert.Throws<ProjectTaskPlanReceiptDecodeException>(() => ProjectTaskPlanOperationCodec.DecodeAccepted(Encoding.UTF8.GetBytes(invalid.ToJsonString())));
+    }
+
+    [Fact]
     public void Actual_receipt_payload_and_metadata_are_bounded_before_they_can_be_replayed() {
         Assert.Throws<ProjectTaskPlanReceiptDecodeException>(() => ProjectTaskPlanOperationCodec.DecodeAccepted(
             new byte[ProjectTaskPlanReceiptRecord.MaximumPayloadBytes + 1]));

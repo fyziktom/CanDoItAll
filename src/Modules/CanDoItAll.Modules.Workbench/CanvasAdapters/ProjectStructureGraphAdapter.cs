@@ -49,6 +49,12 @@ public sealed class ProjectStructureGraphAdapter
                 SourceId = link.SourceId,
                 TargetId = link.TargetId,
                 Kind = link.Kind.ToString(),
+                IsVisualLink = link.Kind == ProjectObjectLinkKind.RelatesTo,
+                Summary = link.Kind switch {
+                    ProjectObjectLinkKind.RelatesTo => "Visual link · no scheduling effect",
+                    ProjectObjectLinkKind.DependsOn => "Prerequisite · schedules linked tasks",
+                    _ => string.Empty
+                },
                 IsUserAuthored = link.IsUserAuthored
             }).ToList()
         };
@@ -232,6 +238,8 @@ public sealed class ProjectStructureGraphAdapter
 
     private static void ConfigureChrome(ProjectStructureSurface surface, CanvasWorkbenchChrome chrome)
     {
+        chrome.AllowVisualLinks = true;
+        chrome.CreateInputFields = [.. ProjectStructureCreateSignals.Fields];
         chrome.HintText = string.IsNullOrWhiteSpace(chrome.HintText)
             ? "Select a project object, drag to reorganize, use the minimap for navigation, and toggle diagnostics when alignment or routing feels off."
             : chrome.HintText;
@@ -321,50 +329,7 @@ public sealed class ProjectStructureGraphAdapter
             };
         }
 
-        var status = node.Status?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(status) ||
-            status.Contains("n/a", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("not applicable", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("skip", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("na", 0);
-        }
-
-        if (status.Contains("done", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("approved", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("used", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("ready", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("final", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("complete", 100);
-        }
-
-        if (status.Contains("review", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("testing", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("qa", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 78);
-        }
-
-        if (status.Contains("active", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("in progress", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("running", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("blocked", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 62);
-        }
-
-        if (status.Contains("planned", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("draft", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("pending", StringComparison.OrdinalIgnoreCase) ||
-            status.Contains("queued", StringComparison.OrdinalIgnoreCase))
-        {
-            return ("progress", 28);
-        }
-
-        return ("progress", 48);
+        return ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
     }
 
     private static bool FrameMatchesSelection(CanvasWorkbenchGroupFrame frame, IReadOnlyList<string> selectedIds, IReadOnlyList<ProjectStructureNode> nodes)

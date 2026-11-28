@@ -69,7 +69,7 @@ public sealed class ProjectPlanSummaryCalculatorTests
     [Fact]
     public void Build_uses_the_recorded_execution_state_over_the_status_backed_progress_hint()
     {
-        // The canvas renders a "Draft" node with a 28 % status-backed hint; the recorded execution state decides the plan.
+        // Earlier drafts stored a 28% hint. Recorded execution decides planning progress.
         var scheduledStartUtc = AsOfUtc.AddDays(5);
         var tasks = new[]
         {
@@ -305,7 +305,7 @@ public sealed class ProjectPlanSummaryCalculatorTests
     [Fact]
     public void BuildManagerSummary_forecast_keeps_the_full_cost_of_a_not_started_task_despite_the_status_hint()
     {
-        // The canvas hint marks a "Draft" task as 28 % done; the recorded NotStarted execution state keeps its full cost.
+        // Older drafts may retain a progress hint. The recorded NotStarted state keeps their full cost.
         var scheduledStartUtc = AsOfUtc.AddDays(5);
         var snapshot = new ProjectPlanManagerForecastSnapshot(
             ProjectId,

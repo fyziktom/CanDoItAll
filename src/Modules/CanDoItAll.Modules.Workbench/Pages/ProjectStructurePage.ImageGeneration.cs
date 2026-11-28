@@ -7,6 +7,7 @@ using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Infrastructure.Editing;
 using CanDoItAll.Workbench.Content.UI.Generation;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
@@ -18,6 +19,7 @@ public partial class ProjectStructurePage {
         public ProjectStructureAuthoringOpening Ownership { get; } = ownership;
         public ProjectStructureCreateLeafDefinition Definition { get; } = definition;
         public CanvasWorkbenchCreateActionRequest Request { get; } = request;
+        public PlanningCreateSignalsDraft Signals { get; set; } = PlanningCreateSignalsDraft.From(request.InputValues);
         public ProjectStructureImageAuthority Authority { get; } = authority;
         public IReadOnlyList<ProviderProfile> Providers { get; set; } = [];
         public ContentImageSetup State { get; set; } = new(ownership.Id, [], true, false, false);
@@ -112,6 +114,7 @@ public partial class ProjectStructurePage {
         var owner = opening.Ownership;
         var context = owner.Context;
         owner.IsBusy = true;
+        var inputs = opening.Signals.ApplyTo(opening.Request.InputValues);
         opening.State = opening.State with { IsBusy = true, Message = string.Empty };
         var outcome = NewContentOutcome(owner, ProjectStructureAuthoringOperation.GenerateImage);
         var invoked = false;
@@ -143,7 +146,8 @@ public partial class ProjectStructurePage {
             await AuthorizeActionAsync(context, access, write: true, deferredCompletionCts.Token);
             invoked = true;
             var created = await CreateObjectAsync(context, opening.Definition, opening.Request with {
-                UploadedFile = BuildGeneratedImageWaitingPlaceholderUpload(), Title = draft.Title, Subtitle = draft.Usage, Notes = request.Prompt
+                UploadedFile = BuildGeneratedImageWaitingPlaceholderUpload(), Title = draft.Title, Subtitle = draft.Usage, Notes = request.Prompt,
+                InputValues = inputs
             }, native => native with {
                 ExpectedProjectAdmission = context.Admission, ExpectedParticipants = [owner.Node],
                 MetadataJson = ProjectStructureDeferredCompletionMetadataFactory.BuildGeneratedImageMetadataJson(outcome.SubmissionId,

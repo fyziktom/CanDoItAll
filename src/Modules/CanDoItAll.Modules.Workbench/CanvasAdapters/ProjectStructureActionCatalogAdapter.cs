@@ -570,7 +570,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             Tone = "accent"
         };
 
-    private static CanvasWorkbenchAction BuildProgressAction()
+    internal static CanvasWorkbenchAction BuildProgressAction()
         => new()
         {
             ActionId = "progress",
@@ -687,7 +687,7 @@ public sealed class ProjectStructureActionCatalogAdapter
            string.Equals(node.ObjectSubtype, "folder", StringComparison.OrdinalIgnoreCase) &&
            ProjectStructureFileActions.CanBrowseFiles(node);
 
-    private static CanvasWorkbenchAction BuildMarkerAction()
+    internal static CanvasWorkbenchAction BuildMarkerAction()
         => new()
         {
             ActionId = "marker",
@@ -713,7 +713,7 @@ public sealed class ProjectStructureActionCatalogAdapter
             ]
         };
 
-    private static CanvasWorkbenchAction BuildPriorityAction()
+    internal static CanvasWorkbenchAction BuildPriorityAction()
         => new()
         {
             ActionId = "priority",

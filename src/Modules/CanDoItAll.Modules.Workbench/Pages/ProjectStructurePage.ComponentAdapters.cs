@@ -7,6 +7,7 @@ using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using CanDoItAll.Workbench.Structure.UI;
+using CanDoItAll.Workbench.Planning.UI;
 
 namespace CanDoItAll.Modules.Workbench.Pages;
 
@@ -395,7 +396,8 @@ public partial class ProjectStructurePage
             await TextAssetCreationCoordinator.CreateAsync(
                 new(context.Surface.ProjectId, (capturedDefinition, submitted, media, cancellationToken) =>
                     CreateTextAssetNodeAsync(opening, capturedDefinition, original with {
-                        Title = submitted.Title, Subtitle = submitted.Subtitle, Notes = submitted.Notes, UploadedFile = null
+                        Title = submitted.Title, Subtitle = submitted.Subtitle, Notes = submitted.Notes, UploadedFile = null,
+                        InputValues = PlanningCreateSignalsDraft.From(submitted.InputValues).ApplyTo(original.InputValues)
                     }, media, cancellationToken)), definition, original, deferredCompletionCts.Token);
         } finally {
             if (ReferenceEquals(textAssetOpening, opening)) {

@@ -13,6 +13,7 @@ using CanDoItAll.Modules.Workbench.Pages;
 using CanDoItAll.FileTools.FileInteraction;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Workbench.Structure.UI;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
@@ -46,9 +47,17 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
         await firstDialog.InvokeAsync(() => firstDialog.Find("[data-testid='project-structure-text-asset-source-upload']").ClickAsync(new MouseEventArgs()));
         var upload = new HeldUpload();
         await firstDialog.InvokeAsync(() => firstDialog.FindComponent<InputFile>().Instance.OnChange.InvokeAsync(new InputFileChangeEventArgs([upload])));
+        var planningStep = firstDialog.FindAll("[data-testid='content-text-steps'] button")
+            .Single(button => button.TextContent.Contains("Planning", StringComparison.Ordinal));
+        await firstDialog.InvokeAsync(() => planningStep.ClickAsync(new MouseEventArgs()));
+        var progressButton = firstDialog.WaitForElement("button[aria-label='40%']");
+        await firstDialog.InvokeAsync(() => progressButton.ClickAsync(new MouseEventArgs()));
+        var originalProgressChange = firstDialog.FindComponents<PlanningCreateSignalPicker>()
+            .Single(picker => picker.Instance.Field.Key == PlanningCreateSignalsDraft.ProgressKey).Instance.ValueChanged;
         var firstPending = firstDialog.InvokeAsync(() => firstDialog.Find("[data-testid='project-structure-text-asset-submit']").ClickAsync(new MouseEventArgs()));
         try {
             await upload.Entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            await firstDialog.InvokeAsync(() => originalProgressChange.InvokeAsync("progress:90"));
             await firstDialog.InvokeAsync(() => {
                 firstDialog.Find("[data-testid='project-structure-text-asset-title']").Input("Later title");
                 firstDialog.Find("[data-testid='project-structure-text-asset-subtitle']").Input("Later context");
@@ -68,8 +77,10 @@ public sealed class ProjectStructureTextAssetLifetimeTests {
         await firstOpening.WaitAsync(TimeSpan.FromSeconds(20));
         var firstNode = Assert.Single((await workbench.GetStructureAsync(first)).Nodes, node => node.ObjectType == ProjectObjectType.File);
         Assert.Equal(("Frozen first", "Original context", "Original notes"), (firstNode.Title, firstNode.Subtitle, firstNode.Notes));
+        Assert.Equal(("progress", 40), (firstNode.ProgressMode, firstNode.ProgressPercent));
         var secondNode = Assert.Single((await workbench.GetStructureAsync(second)).Nodes, node => node.ObjectType == ProjectObjectType.File);
         Assert.Equal("Independent second asset", secondNode.Title);
+        Assert.Equal(0, secondNode.ProgressPercent);
         Assert.NotEqual(firstNode.RecordId, secondNode.RecordId);
         Assert.NotEqual(firstNode.StorageObjectReferenceJson, secondNode.StorageObjectReferenceJson);
         Assert.Equal(first, Assert.Single(firstPage.Instance.AuthoringOutcomes).Project.ProjectId);

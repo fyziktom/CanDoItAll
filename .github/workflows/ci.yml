@@ -33,7 +33,7 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_NOLOGO: true
   NUGET_XMLDOC_MODE: skip
-  CANDOITALL_COMPONENTS_COMMIT: 73d31f3ea38b5d134b3057cb8fd6d56f2b018fbe
+  CANDOITALL_COMPONENTS_COMMIT: 1c24e9d3f54d3961f2fdd31db185fcfbe4329839
   CANDOITALL_FILETOOLS_COMMIT: 4786d12c4557ce73d02699315ad0b419c604e535
 
 jobs:
@@ -271,7 +271,7 @@ jobs:
         shell: pwsh
         run: ./tests/Playwright/CanDoItAll.Tests.Playwright/bin/Release/net10.0/playwright.ps1 install chromium
 
-      - name: Verify floating agent refresh, approvals and cancellation in Chromium
+      - name: Verify floating chat and Project Structure interactions in Chromium
         if: runner.os == 'Linux'
         timeout-minutes: 25
         shell: pwsh
@@ -282,19 +282,21 @@ jobs:
           $refresh = 'CanDoItAll.Tests.Playwright.AgentChatRefreshBrowserTests.Running_floating_chat_survives_soft_and_hard_reload_and_reopens_its_original_view'
           $decisions = 'CanDoItAll.Tests.Playwright.Smoke.AgentRuntimeUiTests.Actual_MAF_chat_approval_activity_stream_reopen_and_cancel_replace_only_external_model'
           $planning = 'CanDoItAll.Tests.Playwright.AgentPlanningNativeBrowserTests.Stopping_a_floating_chat_cancels_the_reviewed_plan_without_publishing_tasks'
-          $filter = "FullyQualifiedName=$refresh|FullyQualifiedName=$decisions|FullyQualifiedName=$planning"
+          $links = 'CanDoItAll.Tests.Playwright.ProjectStructureVisualLinkBrowserTests.Dragging_task_handles_persists_one_visual_link_alongside_an_independently_removable_prerequisite'
+          $wizard = 'CanDoItAll.Tests.Playwright.Smoke.AppSmokeTests.Project_structure_toolbox_specific_entries_preselect_single_required_kind_inputs'
+          $filter = (@($refresh,$decisions,$planning,$links,$wizard) | ForEach-Object { "FullyQualifiedName=$_" }) -join '|'
           $discovery = @(dotnet test $project --configuration Release --no-build --no-restore --list-tests --filter $filter -p:UseLocalCanDoItAllLibraries=true /m:1)
           if ($LASTEXITCODE -ne 0) {
-            throw 'Floating agent browser test discovery failed.'
+            throw 'Browser test discovery failed.'
           }
           $discovery | Write-Host
           $names = @($discovery | ForEach-Object { $_.Trim() })
-          foreach ($case in @($refresh, $planning, "${decisions}(action: Approve)", "${decisions}(action: Reject)", "${decisions}(action: Cancel)", "${decisions}(action: StopChat)")) {
-            if ($case -notin $names) { throw "Missing floating agent browser case $case." }
+          foreach ($case in @($refresh, $planning, $links, $wizard, "${decisions}(action: Approve)", "${decisions}(action: Reject)", "${decisions}(action: Cancel)", "${decisions}(action: StopChat)")) {
+            if ($case -notin $names) { throw "Missing browser case $case." }
           }
-          dotnet test $project --configuration Release --no-build --no-restore --filter $filter --logger "trx;LogFilePrefix=floating-agent-chat" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
+          dotnet test $project --configuration Release --no-build --no-restore --filter $filter --logger "trx;LogFilePrefix=chat-and-structure" --results-directory "${{ runner.temp }}/test-results" -p:UseLocalCanDoItAllLibraries=true /m:1
           if ($LASTEXITCODE -ne 0) {
-            throw 'Floating agent browser regression failed.'
+            throw 'Chat or Project Structure browser regression failed.'
           }
 
       - name: Run focused actual-host runtime portability gate

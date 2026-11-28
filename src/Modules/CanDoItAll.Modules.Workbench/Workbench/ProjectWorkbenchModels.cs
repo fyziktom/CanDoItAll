@@ -214,7 +214,7 @@ public sealed record ProjectStructureNode(
     public Guid? RecordId { get; init; }
 }
 
-[System.ComponentModel.Description("Directed relationship between project structure nodes, including its persisted occurrence when available.")]
+[System.ComponentModel.Description("Relationship between project structure nodes, with its stored endpoints and occurrence identity when available. RelatesTo works in either direction.")]
 public sealed record ProjectStructureLink(
     [property: System.ComponentModel.Description("Source node key of the relationship.")] string SourceId,
     [property: System.ComponentModel.Description("Target node key of the relationship.")] string TargetId,
@@ -294,6 +294,9 @@ public sealed record ProjectObjectCreateRequest(
     ProjectObjectPlacementIntent PlacementIntent = ProjectObjectPlacementIntent.CallerControlled,
     ProjectObjectTaskPricingInitialization TaskPricingInitialization =
         ProjectObjectTaskPricingInitialization.ClearAuthoritativePricing) {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ProjectNodeInitialSignals? InitialSignals { get; init; }
+
     [JsonIgnore]
     public IReadOnlyList<ProjectStructureNode> ExpectedParticipants { get; init; } = [];
 
@@ -470,7 +473,7 @@ public sealed record ProjectStructureTransferRecovery(
 /// <param name="TargetNodeId">Identifier of the link's target node.</param>
 /// <param name="LinkKind">
 /// Kind of the deleted link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo.
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo.
 /// </param>
 /// <param name="IsSystemManaged">True when the application had created the link rather than a user.</param>
 public sealed record ProjectStructureBoundaryLinkRemoval(
@@ -509,7 +512,7 @@ public enum ProjectStructureClipboardCopyTaskPolicy
 /// <param name="TargetNodeId">Identifier of the original link's target node.</param>
 /// <param name="LinkKind">
 /// Meaning of the link, as a JSON integer: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks,
-/// 6 DerivedFrom, 7 BelongsTo.
+/// 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo.
 /// </param>
 public sealed record ProjectStructureCopyOmittedLink(
     Guid LinkId,
@@ -840,7 +843,7 @@ public sealed partial class ProjectWorkbenchService(
         var resolvedEndUtc = ProjectWorkbenchObjectModeling.ResolveEndUtc(request.StartUtc, request.EndUtc, request.DurationSeconds);
         var normalizedDurationSeconds = ProjectWorkbenchObjectModeling.NormalizeDurationSeconds(request.DurationSeconds, request.StartUtc, resolvedEndUtc);
         var normalizedStatus = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status.Trim();
-        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(normalizedStatus);
+        var progress = request.InitialSignals?.Progress ?? ProjectNodeInitialProgress.Zero;
 
         var record = new ProjectObjectRecord
         {
@@ -855,6 +858,7 @@ public sealed partial class ProjectWorkbenchService(
             ObjectSubtype = normalizedObjectSubtype,
             ProgressMode = progress.Mode,
             ProgressPercent = progress.Percent,
+            Priority = request.InitialSignals?.Priority ?? 0,
             MetadataJson = metadataJson,
             ParentNodeKey = normalizedParentNodeKey,
             PositionX = position.Item1,
@@ -873,7 +877,7 @@ public sealed partial class ProjectWorkbenchService(
                 binding.MediaOriginalFileName,
                 binding.StorageObjectReferenceJson),
             NodeReferences = request.NodeReferences ?? ProjectNodeReferenceCollection.Empty,
-            MarkersJson = "[]"
+            MarkersJson = ProjectNodeMarkerState.Serialize(request.InitialSignals?.Markers)
         };
 
         await dbContext.Set<ProjectObjectRecord>().AddAsync(record, cancellationToken);
@@ -1092,21 +1096,19 @@ public sealed partial class ProjectWorkbenchService(
             seeds.Select(seed => new ProjectObjectSeedRequest(seed.ObjectType, seed.Title, seed.Subtitle, seed.Notes, seed.StartUtc, seed.EndUtc, null, null, seed.DurationSeconds)).ToList(),
             cancellationToken);
 
-    public async Task LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default,
+    public Task<ProjectStructureLink> LinkObjectsAsync(Guid projectId, string sourceNodeKey, string targetNodeKey, ProjectObjectLinkKind linkKind, CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null,
         ProjectProcessMutationAdmission? processMutationAdmission = null,
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
         Func<CancellationToken, ValueTask>? authorizeCommit = null)
-    {
-        await relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit);
-    }
+        => relationService.LinkObjectsAsync(projectId, sourceNodeKey, targetNodeKey, linkKind, cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit);
 
     public Task<ProjectStructureLink> LinkObjectsDetailedAsync(ProjectWriteAdmission admission, string sourceNodeKey, string targetNodeKey,
         ProjectObjectLinkKind linkKind, IReadOnlyCollection<ProjectStructureNode> expectedNodes, CancellationToken cancellationToken = default,
         Func<CancellationToken, ValueTask>? authorizeCommit = null)
         => relationService.LinkObjectsDetailedAsync(admission, sourceNodeKey, targetNodeKey, linkKind, expectedNodes, cancellationToken, authorizeCommit);
 
-    internal Task LinkCanonicalTaskResourceAsync(
+    internal Task<ProjectStructureLink> LinkCanonicalTaskResourceAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
@@ -1566,7 +1568,8 @@ public sealed partial class ProjectWorkbenchService(
         ProjectAgentMutationAdmission? agentMutationAdmission = null,
         ProjectStructureNode? expectedContent = null,
         ProjectStructureNodeState? expectedState = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        bool updateProgressFromStatus = true) {
         if (expectedState is not null) {
             expectedProjectAdmission = ProjectStructureNodeStateGuard.RequireProject(expectedState, projectId, nodeKey, expectedProjectAdmission);
         }
@@ -1595,7 +1598,7 @@ public sealed partial class ProjectWorkbenchService(
                 : null;
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
         ProjectStructureNodeStateGuard.EnsureCurrent(expectedState, node);
-        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status));
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status), replaceProgress: updateProgressFromStatus);
 
         if (notes is not null)
         {
@@ -1626,13 +1629,7 @@ public sealed partial class ProjectWorkbenchService(
             null);
         node.NodeReferences = nodeReferences ?? node.NodeReferences;
 
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            node.Status = status.Trim();
-            var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
-            node.ProgressMode = progress.Mode;
-            node.ProgressPercent = progress.Percent;
-        }
+        ApplyContentStatus(node, status, updateProgressFromStatus);
 
         node.UpdatedAtUtc = clock.GetUtcNow();
         var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);
@@ -1679,7 +1676,8 @@ public sealed partial class ProjectWorkbenchService(
         string? status = null,
         CancellationToken cancellationToken = default,
         ProjectWriteAdmission? expectedProjectAdmission = null, ProjectStructureNode? expectedContent = null,
-        Func<CancellationToken, ValueTask>? authorizeCommit = null) {
+        Func<CancellationToken, ValueTask>? authorizeCommit = null,
+        bool updateProgressFromStatus = true) {
         ArgumentNullException.ThrowIfNull(media);
         if (authorizeCommit is not null) {
             await authorizeCommit(cancellationToken);
@@ -1707,7 +1705,7 @@ public sealed partial class ProjectWorkbenchService(
         }
 
         await ProjectNodeBindingStorage.LoadAsync(dbContext, [node], cancellationToken);
-        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status));
+        ProjectStructureNodeExpectations.EnsureContentCurrent(expectedContent, node, replaceStatus: !string.IsNullOrWhiteSpace(status), replaceProgress: updateProgressFromStatus);
         if (authorizeCommit is not null) {
             await authorizeCommit(cancellationToken);
         }
@@ -1734,13 +1732,7 @@ public sealed partial class ProjectWorkbenchService(
                 node.Notes,
                 savedMedia);
 
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                node.Status = status.Trim();
-                var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
-                node.ProgressMode = progress.Mode;
-                node.ProgressPercent = progress.Percent;
-            }
+            ApplyContentStatus(node, status, updateProgressFromStatus);
 
             node.UpdatedAtUtc = clock.GetUtcNow();
             var bindingPlan = await ProjectNodeBindingStorage.PersistAsync(dbContext, node, cancellationToken);

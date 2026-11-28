@@ -11,6 +11,35 @@ namespace CanDoItAll.Tests.Integration.ProjectStructure;
 [Trait("Category", "HostPlatform")]
 public sealed partial class ProjectStructureStaleEditHttpTests {
     [Fact]
+    public async Task Visual_link_retries_return_the_original_endpoints_and_unlink_preserves_the_prerequisite() {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+        var (project, note) = await CreateNodeAsync(host);
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var peer = await workbench.CreateObjectAsync(project.Id, new(ProjectObjectType.Note, "Related quote", "", "", note.ParentId));
+        var route = $"/api/project-structure/projects/{project.Id:D}";
+        var input = new ProjectStructureLinkInput(note.Id, peer.Id, ProjectObjectLinkKind.RelatesTo);
+        using var added = await host.Client.PostAsJsonAsync($"{route}/links", input);
+        added.EnsureSuccessStatusCode();
+        using var reverse = await host.Client.PostAsJsonAsync($"{route}/links", input with { SourceNodeId = peer.Id, TargetNodeId = note.Id });
+        reverse.EnsureSuccessStatusCode();
+        var observed = (await reverse.Content.ReadFromJsonAsync<ProjectStructureLinkChangeResult>(ProjectStructureHttpContractTestJson.SerializerOptions))!.Link;
+        Assert.Equal((note.Id, peer.Id, ProjectObjectLinkKind.RelatesTo), (observed.SourceId, observed.TargetId, observed.Kind));
+        using var prerequisite = await host.Client.PostAsJsonAsync($"{route}/links", input with { Kind = ProjectObjectLinkKind.DependsOn });
+        prerequisite.EnsureSuccessStatusCode();
+        using var read = await host.Client.PostAsJsonAsync($"{route}/structure/read", new ProjectStructureReadRequest(IncludeLinks: true));
+        read.EnsureSuccessStatusCode();
+        var snapshot = (await read.Content.ReadFromJsonAsync<ProjectStructureReadResponse>(ProjectStructureHttpContractTestJson.SerializerOptions))!;
+        var visual = Assert.Single(snapshot.Links, link => link.Kind == ProjectObjectLinkKind.RelatesTo);
+        var original = Assert.IsType<ProjectStructureLinkState>(visual.ExpectedState);
+        using var removed = await host.Client.PostAsJsonAsync($"{route}/links/unlink", input with { ExpectedState = original });
+        removed.EnsureSuccessStatusCode();
+        var current = await workbench.GetStructureAsync(project.Id);
+        Assert.DoesNotContain(current.Links, link => link.Kind == ProjectObjectLinkKind.RelatesTo);
+        Assert.Contains(current.Links, link => link.Kind == ProjectObjectLinkKind.DependsOn && link.SourceId == note.Id && link.TargetId == peer.Id);
+    }
+
+    [Fact]
     public async Task GraphPhantomLink_BlocksStaleCascadeDelete() {
         await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
         var (project, created) = await CreateNodeAsync(host);

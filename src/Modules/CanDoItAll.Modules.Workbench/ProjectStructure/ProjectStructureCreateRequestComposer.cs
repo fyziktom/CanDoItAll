@@ -234,7 +234,7 @@ internal static class ProjectStructureCreateRequestComposer
                     : new ProjectObjectMediaPayload(request.UploadedFile.FileName, request.UploadedFile.ContentType, request.UploadedFile.Base64Data),
                 metadataJson,
                 null,
-                nodeReferences.IsEmpty ? null : nodeReferences),
+                nodeReferences.IsEmpty ? null : nodeReferences) { InitialSignals = ProjectStructureCreateSignals.Read(inputValues) },
             pendingLinks);
     }
 

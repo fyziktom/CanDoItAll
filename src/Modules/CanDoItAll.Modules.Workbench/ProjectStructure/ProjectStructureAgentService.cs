@@ -960,28 +960,15 @@ public sealed partial class ProjectStructureAgentService(
                     request,
                     allowCanonicalTaskResourceLink,
                     cancellationToken);
-                if (allowCanonicalTaskResourceLink)
-                {
-                    await projectWorkbenchService.LinkCanonicalTaskResourceAsync(
-                        projectId,
-                        request.SourceNodeId,
-                        request.TargetNodeId,
-                        request.Kind,
+                var link = allowCanonicalTaskResourceLink
+                    ? await projectWorkbenchService.LinkCanonicalTaskResourceAsync(projectId, request.SourceNodeId, request.TargetNodeId, request.Kind,
+                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, authorizeCommit)
+                    : await projectWorkbenchService.LinkObjectsAsync(projectId, request.SourceNodeId, request.TargetNodeId, request.Kind,
                         cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission, authorizeCommit);
-                }
-                else
-                {
-                    await projectWorkbenchService.LinkObjectsAsync(
-                        projectId,
-                        request.SourceNodeId,
-                        request.TargetNodeId,
-                        request.Kind,
-                        cancellationToken, agent.ExpectedProjectAdmission, agent.ProcessMutationAdmission, agent.AgentMutationAdmission);
-                }
 
                 return new ProjectStructureLinkChangeResult(
                     true,
-                    new ProjectStructureLinkSummary(request.SourceNodeId, request.TargetNodeId, request.Kind, true));
+                    new ProjectStructureLinkSummary(link.SourceId, link.TargetId, link.Kind, link.IsUserAuthored));
             },
             cancellationToken);
     }

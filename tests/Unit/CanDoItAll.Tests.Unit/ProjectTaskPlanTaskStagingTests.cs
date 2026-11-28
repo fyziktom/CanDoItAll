@@ -57,7 +57,7 @@ public sealed class ProjectTaskPlanTaskStagingTests {
         Assert.Equal(ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(row.ProjectId), row.ParentNodeKey);
         Assert.Equal("Task", row.Subtitle);
         Assert.Equal("Draft", row.Status);
-        Assert.Equal(("progress", 28), (row.ProgressMode, row.ProgressPercent));
+        Assert.Equal(("progress", 0), (row.ProgressMode, row.ProgressPercent));
         Assert.Equal((760d, 100d), (row.PositionX, row.PositionY));
         Assert.Null(row.StartUtc);
         Assert.Null(row.EndUtc);
@@ -107,6 +107,7 @@ public sealed class ProjectTaskPlanTaskStagingTests {
     [Fact]
     public void Binding_preparation_refuses_noncanonical_metadata_references_and_external_storage() {
         Action<ProjectObjectRecord>[] changes = [
+            row => row.ProgressPercent = 28,
             row => row.Binding = new("foreign", "WorkItem", null, "", "", "", ""),
             row => row.Binding = new("", "", null, "file", "", "", ""),
             row => row.Binding = new("", "", Guid.NewGuid(), "", "", "", ""),
@@ -225,7 +226,7 @@ public sealed class ProjectTaskPlanTaskStagingTests {
             Id = id, ProjectId = projectId, NodeKey = $"custom:{id:N}",
             ParentNodeKey = ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(projectId),
             ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = ProjectObjectSubtypePolicy.Task,
-            Title = "Task", Subtitle = "Task", Notes = "Notes", Status = "Draft", ProgressMode = "progress", ProgressPercent = 28,
+            Title = "Task", Subtitle = "Task", Notes = "Notes", Status = "Draft", ProgressMode = "progress", ProgressPercent = 0,
             NodeReferences = new(), CreatedAtUtc = Instant, UpdatedAtUtc = Instant,
             MetadataJson = ProjectObjectMetadataSerializer.Serialize(new ProjectObjectMetadataEnvelope {
                 WorkItem = new() { WorkItemKind = ProjectWorkItemKind.Task, Description = description,

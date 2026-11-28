@@ -38,7 +38,7 @@ public sealed record ProjectStructureLinkState(
     [property: Description(ProjectStructureMutationStateDescriptions.LinkKind)] ProjectObjectLinkKind Kind);
 
 internal static class ProjectStructureMutationStateDescriptions {
-    internal const string LinkKind = "Original relationship kind. Values: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks, 6 DerivedFrom, 7 BelongsTo. Return the value from the canonical read unchanged.";
+    internal const string LinkKind = "Original relationship kind. Values: 0 Contains, 1 DependsOn, 2 Uses, 3 Validates, 4 Tests, 5 Blocks, 6 DerivedFrom, 7 BelongsTo, 8 RelatesTo. Return the value from the canonical read unchanged.";
     internal const string Node = "Original node state from a canonical read. Return it unchanged with a mutation; missing or stale state is rejected with HTTP 409.";
     internal const string Nodes = "Original states for exactly the nodes being changed, from a canonical read. Return each state unchanged; missing or stale state is rejected with HTTP 409.";
     internal const string Link = "Original link state from a canonical read. Return it unchanged when removing the link; missing or stale state is rejected with HTTP 409.";

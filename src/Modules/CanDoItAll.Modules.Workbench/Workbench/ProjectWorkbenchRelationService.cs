@@ -14,7 +14,7 @@ public sealed class ProjectWorkbenchRelationService(
 {
     private static readonly ProjectStructureInvariantService InvariantService = new();
 
-    public Task LinkObjectsAsync(
+    public Task<ProjectStructureLink> LinkObjectsAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
@@ -32,7 +32,7 @@ public sealed class ProjectWorkbenchRelationService(
             allowCanonicalTaskResourceLink: false,
             cancellationToken, expectedProjectAdmission, processMutationAdmission, agentMutationAdmission, authorizeCommit: authorizeCommit);
 
-    internal Task LinkCanonicalTaskResourceAsync(
+    internal Task<ProjectStructureLink> LinkCanonicalTaskResourceAsync(
         Guid projectId,
         string sourceNodeKey,
         string targetNodeKey,
@@ -830,9 +830,9 @@ public sealed class ProjectWorkbenchRelationService(
         var existingLink = await dbContext.Set<ProjectObjectLinkRecord>()
             .FirstOrDefaultAsync(item =>
                 item.ProjectId == projectId &&
-                item.SourceNodeKey == sourceNodeKey &&
-                item.TargetNodeKey == targetNodeKey &&
-                item.LinkKind == linkKind,
+                item.LinkKind == linkKind &&
+                ((item.SourceNodeKey == sourceNodeKey && item.TargetNodeKey == targetNodeKey) ||
+                 (linkKind == ProjectObjectLinkKind.RelatesTo && item.SourceNodeKey == targetNodeKey && item.TargetNodeKey == sourceNodeKey)),
                 cancellationToken);
         if (existingLink is not null)
         {

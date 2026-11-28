@@ -17,6 +17,25 @@ public sealed partial class ProjectWorkbenchService {
         => ReplaceObjectMediaCoreAsync(admission.ProjectId, expectedNode.Id, media, metadataJson,
             null, status, cancellationToken, admission, expectedNode, authorizeCommit);
 
+    internal Task<ProjectStructureNode?> RecordImageGenerationStateAsync(ProjectWriteAdmission admission,
+        ProjectStructureNode expectedNode, string metadataJson, string status, CancellationToken cancellationToken,
+        Func<CancellationToken, ValueTask> authorizeCommit, ProjectObjectMediaPayload? media = null)
+        => media is null
+            ? UpdateObjectMetadataCoreAsync(admission.ProjectId, expectedNode.Id, metadataJson, null, null, status, null,
+                cancellationToken, admission, expectedContent: expectedNode, authorizeCommit: authorizeCommit, updateProgressFromStatus: false)
+            : ReplaceObjectMediaCoreAsync(admission.ProjectId, expectedNode.Id, media, metadataJson, null, status,
+                cancellationToken, admission, expectedNode, authorizeCommit, updateProgressFromStatus: false);
+
+    private static void ApplyContentStatus(ProjectObjectRecord node, string? status, bool updateProgressFromStatus) {
+        if (string.IsNullOrWhiteSpace(status)) {
+            return;
+        }
+        node.Status = status.Trim();
+        if (updateProgressFromStatus) {
+            (node.ProgressMode, node.ProgressPercent) = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress(node.Status);
+        }
+    }
+
     public Task<IReadOnlyList<ProjectStructureNode>> UpdateContentStatusesAsync(ProjectWriteAdmission admission,
         IReadOnlyCollection<ProjectStructureNode> expectedNodes, string status, CancellationToken cancellationToken = default,
         Func<CancellationToken, ValueTask>? authorizeCommit = null)

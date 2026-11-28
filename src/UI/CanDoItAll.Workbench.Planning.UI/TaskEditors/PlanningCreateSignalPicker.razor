@@ -1,0 +1,40 @@
+@using System.Text.Json
+@namespace CanDoItAll.Workbench.Planning.UI
+
+<Cluster Gap="LayoutGap.Small" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" role="group" aria-label="@Field.Label">
+    @foreach (var option in Field.Options) {
+        var selected = Active.Contains(option.Value);
+        <Button Text="@(string.IsNullOrEmpty(option.Glyph) || option.Glyph == option.Label ? option.Label : $"{option.Glyph} {option.Label}")"
+                aria-label="@option.Label" aria-pressed="@(selected ? "true" : "false")"
+                Type="button" Disabled="Disabled"
+                Variant="@(selected ? Variant.Filled : Variant.Outlined)" Tone="@(selected ? ButtonTone.Primary : ButtonTone.Default)"
+                Click="@(() => ToggleAsync(option.Value))" />
+    }
+</Cluster>
+
+@code {
+    [Parameter, EditorRequired] public CanvasWorkbenchInputField Field { get; set; } = default!;
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private bool Multiple => Field.InputMode == CanvasWorkbenchInputField.MultipleChoice;
+    private HashSet<string> Active { get; set; } = [];
+
+    protected override void OnParametersSet() {
+        Active = Value.Length == 0 ? [] : Multiple ? JsonSerializer.Deserialize<HashSet<string>>(Value) ??
+            throw new InvalidOperationException("Marker selections must be a list.") : [Value];
+    }
+
+    private Task ToggleAsync(string value) {
+        if (Disabled) {
+            return Task.CompletedTask;
+        }
+        if (!Multiple) {
+            return ValueChanged.InvokeAsync(Value == value ? string.Empty : value);
+        }
+        var selected = Field.Options.Select(option => option.Value)
+            .Where(option => option == value ? !Active.Contains(option) : Active.Contains(option)).ToArray();
+        return ValueChanged.InvokeAsync(selected.Length == 0 ? string.Empty : JsonSerializer.Serialize(selected));
+    }
+}

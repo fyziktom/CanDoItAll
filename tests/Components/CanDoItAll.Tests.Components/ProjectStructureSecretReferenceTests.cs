@@ -39,6 +39,9 @@ public sealed partial class ProjectStructureSecretReferenceTests {
         var cut = Render(harness, target.ProjectId);
         var rootId = $"project:{target.ProjectId:D}";
         await OpenAsync(cut, rootId);
+        cut.Find("button[aria-label='Priority 1']").Click();
+        cut.Find("button[aria-label='50%']").Click();
+        cut.Find("button[aria-label='Question']").Click();
         Guid? accepted;
         if (create) {
             await FillAsync(cut);
@@ -55,6 +58,7 @@ public sealed partial class ProjectStructureSecretReferenceTests {
         Assert.Equal(SecretReferencePhase.Observed, State(cut).Receipt!.Phase);
         var reference = Assert.Single(await ReferencesAsync(harness, target.ProjectId));
         Assert.Equal(rootId, reference.ParentId);
+        Assert.Equal((1, "progress", 50, "question"), (reference.Priority, reference.ProgressMode, reference.ProgressPercent, reference.MarkerIcon));
         Assert.Equal(accepted, ProjectObjectMetadataSerializer.Parse(reference.MetadataJson).SecretReference!.SecretId);
         Assert.Equal(create ? 1 : 0, gate.Saves);
         Assert.Equal(0, gate.PlaintextReads);
@@ -136,6 +140,7 @@ public sealed partial class ProjectStructureSecretReferenceTests {
         var first = Render(harness, target.ProjectId);
         var second = Render(harness, target.ProjectId);
         await EditAsync(first, node.Id);
+        Assert.Empty(first.FindComponents<ProjectStructureCreateSignalSections>());
         await EditAsync(second, node.Id);
         await InputAsync(first, "purpose", "First committed purpose");
         await UseAsync(first);

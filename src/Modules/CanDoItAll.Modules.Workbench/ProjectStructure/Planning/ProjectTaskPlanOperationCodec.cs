@@ -100,7 +100,7 @@ internal static class ProjectTaskPlanOperationCodec {
                 fact.Title != fact.Title.Trim() || fact.Description != fact.Description.Trim() || fact.Notes != fact.Notes.Trim()) {
             throw new JsonException();
         }
-        _ = ProjectNodeBindingStorage.PrepareNewPlainTaskBinding(new() {
+        ProjectNodeBindingStorage.ValidateAcceptedPlainTaskBinding(new() {
             Id = fact.RecordId, ProjectId = projectId, NodeKey = fact.NodeKey, ParentNodeKey = fact.ParentNodeKey,
             ObjectType = ProjectObjectType.WorkItem, ObjectSubtype = ProjectObjectSubtypePolicy.Task,
             Title = fact.Title, Subtitle = fact.Subtitle, Notes = fact.Notes, Status = fact.Status, Priority = fact.Priority,

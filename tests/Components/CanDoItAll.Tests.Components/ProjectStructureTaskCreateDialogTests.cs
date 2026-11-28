@@ -12,6 +12,29 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 public sealed class ProjectStructureTaskCreateDialogTests
 {
     [Fact]
+    public async Task Unsubmitted_signal_choices_participate_in_the_task_dialog_close_guard() {
+        await using var context = CreateContext();
+        var host = context.Render<DialogHost>();
+        var result = OpenDialog(context, []);
+        host.WaitForElement("[data-testid='project-structure-task-steps']");
+        var editor = host.FindComponent<PlanningStructureTaskEditor>().Instance;
+        var steps = host.FindComponent<Steps>().Instance;
+        await host.InvokeAsync(() => steps.ValueChanged.InvokeAsync(5));
+        Assert.False(editor.ReadCloseRequest().IsDirty);
+        await host.InvokeAsync(() => host.Find("button[aria-label='Risk']").ClickAsync(new()));
+        Assert.True(editor.ReadCloseRequest().IsDirty);
+        var leave = host.InvokeAsync(editor.ConfirmLeaveAsync);
+        host.WaitForElement("[data-testid='planning-task-dirty-close']");
+        await host.InvokeAsync(() => host.Find("[data-testid='planning-task-dirty-continue']").ClickAsync(new()));
+        Assert.False(await leave);
+        Assert.Equal("true", host.Find("button[aria-label='Risk']").GetAttribute("aria-pressed"));
+        await host.InvokeAsync(() => host.Find("button[aria-label='Risk']").ClickAsync(new()));
+        Assert.False(editor.ReadCloseRequest().IsDirty);
+        await host.InvokeAsync(() => host.Find("[data-testid='project-structure-task-create-cancel']").ClickAsync(new()));
+        Assert.Null(await result.WaitAsync(TimeSpan.FromSeconds(2)));
+    }
+
+    [Fact]
     public async Task A_task_without_a_submit_owner_is_rejected_and_keeps_its_draft() {
         await using var context = CreateContext();
         var host = context.Render<DialogHost>();

@@ -1038,6 +1038,11 @@ and a scripted loopback model. It covers browser refresh, approval, rejection,
 cancelling the pending run and stopping the chat. The decision cases verify the
 saved run, provider request count and whether the proposed file was created.
 
+The same Chromium job covers Project Structure on PostgreSQL. It drags a visual link
+between two tasks, reloads the canvas, adds a scheduling dependency between the same
+tasks and removes the visual link. It also creates nodes through the wizard and checks
+that their selected priority, progress and markers were saved.
+
 A Components or Integration test class is host-platform when its own source reaches the operating
 system: processes, real files and directories, temporary roots, links and file modes, data
 protection or secret stores, environment variables and special folders, native path literals, or

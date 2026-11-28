@@ -21,6 +21,23 @@ Specialized block types remain available when their meaning is useful.
 
 ## Creation and editing
 
+New nodes start at 0% complete. During creation, the optional Priority, Progress and
+Markers steps use the same choices as the canvas toolbar. A planner can record an
+urgent, half-finished task at creation or skip the steps and set its signals later.
+For tasks, the progress ring is the same manual signal as the toolbar. Gantt uses
+the task's execution state and actual dates to report completion.
+
+### Connecting nodes
+
+With **Select** active, drag a round handle on a node to another node to create a
+dashed violet **visual link**. For example, link a supplier's quote to the task
+that mentions it. The association works in either direction and leaves the
+schedule and readiness unchanged.
+
+Select the task that is waiting, activate **Dependency**, then click its prerequisite.
+A solid blue arrow connects the two. Gantt schedules the prerequisite first. Both
+kinds of link can coexist, and the Delete tool can remove either one.
+
 Creation presents short sections as steps. Start with the item's name and context,
 then fill the relevant settings. Optional steps can be skipped. The create action
 is available as soon as the node's actual requirements are satisfied; users do not
@@ -49,8 +66,10 @@ label without offering a change that the task's existing save boundary cannot
 persist; an unavailable linked repository is reported explicitly.
 Payment creation presents amount and currency before optional scheduling and
 assignment details.
-Text-file creation separates Details, Content (write or upload), and optional Notes.
-Moving between those steps keeps the chosen upload and unfinished text intact.
+Text-file creation offers Details, Content (write or upload), Notes and an optional
+Planning step with priority, progress and markers. Moving between steps keeps the
+upload and unfinished text. Generated image and secret reference creation offer the
+same three choices in expandable sections of their own dialogs.
 
 ## Ownership and draft safety
 

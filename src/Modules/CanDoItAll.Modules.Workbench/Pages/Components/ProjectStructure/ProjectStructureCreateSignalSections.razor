@@ -1,0 +1,20 @@
+@namespace CanDoItAll.Modules.Workbench.Pages
+@using CanDoItAll.Workbench.Planning.UI
+@{
+    var canEdit = CanEdit;
+    var changed = ValueChanged;
+}
+
+@foreach (var field in ProjectStructureCreateSignals.Fields) {
+    <details class="ui-fieldset" data-testid="@($"structure-create-{field.Key}")" @key="field.Key">
+        <summary class="ui-fieldset__summary">@field.SectionTitle (optional)</summary>
+        <PlanningCreateSignalPicker Field="@field" Value="@Value.Get(field.Key)" Disabled="@(!canEdit())"
+            ValueChanged="@(value => canEdit() ? changed.InvokeAsync(Value.With(field.Key, value)) : Task.CompletedTask)" />
+    </details>
+}
+
+@code {
+    [Parameter, EditorRequired] public PlanningCreateSignalsDraft Value { get; set; } = default!;
+    [Parameter, EditorRequired] public EventCallback<PlanningCreateSignalsDraft> ValueChanged { get; set; }
+    [Parameter, EditorRequired] public Func<bool> CanEdit { get; set; } = default!;
+}

@@ -13,7 +13,9 @@ public abstract record PlanningTaskEditorInput {
     public sealed record Structure(string Title, string Subtitle, string Notes, string Due, string? Repository,
         TaskEstimateInputText? Estimate, TaskExecutionInputText? Execution,
         ProjectStructureTaskResourceSelection? Assignee, ProjectStructureTaskResourceSelection? Attachment,
-        ProjectStructureTaskResourceSelection? SelectedResource) : PlanningTaskEditorInput;
+        ProjectStructureTaskResourceSelection? SelectedResource) : PlanningTaskEditorInput {
+        public PlanningCreateSignalsDraft? InitialSignals { get; init; }
+    }
 }
 
 public sealed record PlanningTaskCloseRequest(Guid OpeningId, PlanningTaskEditorInput Input, bool IsDirty,

@@ -40,8 +40,10 @@
                 <StepsItem Text="Basics" />
                 <StepsItem Text="Planning (optional)" />
                 <StepsItem Text="Assignment (optional)" />
+                @foreach (var field in SignalFields) {
+                    <StepsItem Text="@($"{field.SectionTitle} (optional)")" />
+                }
             </Steps>
-            <TextBlock TextStyle="TextStyle.Note" Value="Start with a name and notes. Planning and assignment are optional; create the task whenever it is ready." />
         }
 
         <section class="project-structure-task-create-dialog__section"
@@ -200,12 +202,20 @@
         </details>
 
         @if (!IsEditMode) {
+            @if (ActiveSignalField is { } field) {
+                <Stack GapScale="LayoutGap.Small" AlignItems="AlignItems.Stretch">
+                    <TextBlock TextStyle="TextStyle.Note" Value="@(field.Key == PlanningCreateSignalsDraft.ProgressKey
+                        ? "Canvas progress starts at 0%. Gantt uses the task’s execution state and actual dates." : field.SectionDescription)" />
+                    <PlanningCreateSignalPicker Field="field" Value="@initialSignals.Get(field.Key)" Disabled="@submissionState.IsBusy"
+                                                ValueChanged="@(value => initialSignals = initialSignals.With(field.Key, value))" />
+                </Stack>
+            }
             <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
                 <Button Text="Back" Icon="arrow_back" Variant="Variant.Text" Tone="ButtonTone.Default"
                         Disabled="@(activeStep == TaskEditorStep.Basics)"
                         data-testid="project-structure-task-step-back" Click="PreviousStep" />
-                @if (activeStep != TaskEditorStep.Assignment) {
-                    <Button Text="@(activeStep == TaskEditorStep.Basics ? "Next: planning" : "Next: assignment")"
+                @if ((int)activeStep < LastStepIndex) {
+                    <Button Text="@($"Next: {(activeStep + 1).ToString().ToLowerInvariant()}")"
                             Icon="arrow_forward" Variant="Variant.Outlined" Tone="ButtonTone.Default"
                             data-testid="project-structure-task-step-next" Click="NextStep" />
                 }
@@ -229,8 +239,14 @@
 </Stack>
 
 @code {
-    private enum TaskEditorStep { Basics, Planning, Assignment }
+    private enum TaskEditorStep { Basics, Planning, Assignment, Priority, Progress, Markers }
     private TaskEditorStep activeStep;
+    private const int FirstSignalStep = (int)TaskEditorStep.Priority;
+    private int LastStepIndex => (int)TaskEditorStep.Assignment + SignalFields.Count;
+    private CanvasWorkbenchInputField? ActiveSignalField => (int)activeStep >= FirstSignalStep
+        ? SignalFields[(int)activeStep - FirstSignalStep] : null;
+    private PlanningCreateSignalsDraft initialSignals = new();
+    [Parameter] public IReadOnlyList<CanvasWorkbenchInputField> SignalFields { get; set; } = [];
     private bool planningExpanded;
     private bool executionExpanded;
     private bool assignmentExpanded;
@@ -244,7 +260,7 @@
             ?? "Linked repository unavailable";
 
     private void ChangeStep(int value) {
-        if (Enum.IsDefined(typeof(TaskEditorStep), value)) {
+        if (value >= 0 && value <= LastStepIndex) {
             ShowStep((TaskEditorStep)value);
         }
     }
@@ -256,8 +272,8 @@
         }
     }
 
-    private void PreviousStep() => ShowStep(activeStep == TaskEditorStep.Assignment ? TaskEditorStep.Planning : TaskEditorStep.Basics);
-    private void NextStep() => ShowStep(activeStep == TaskEditorStep.Basics ? TaskEditorStep.Planning : TaskEditorStep.Assignment);
+    private void PreviousStep() => ShowStep(activeStep - 1);
+    private void NextStep() => ShowStep(activeStep + 1);
     private void TogglePlanning() => planningExpanded = !planningExpanded;
     private void ToggleExecution() => executionExpanded = !executionExpanded;
     private void ToggleAssignment() => assignmentExpanded = !assignmentExpanded;
@@ -311,7 +327,7 @@
 
     private PlanningTaskEditorInput CaptureInput() => new PlanningTaskEditorInput.Structure(title, subtitle, notes,
         dueText, repositoryNodeId, estimateEditor?.CaptureInput(), executionEditor?.CaptureInput(), proposedAssignee,
-        resourceToAttach, selectedResource);
+        resourceToAttach, selectedResource) { InitialSignals = IsEditMode ? null : initialSignals };
 
     public PlanningTaskCloseRequest ReadCloseRequest() {
         var input = CaptureInput();
@@ -453,6 +469,7 @@
             : null;
         execution = IsEditMode ? InitialExecution : ProjectTaskExecutionSnapshot.NotStarted;
         var inputValues = CreateRequest.InputValues ?? [];
+        initialSignals = PlanningCreateSignalsDraft.From(inputValues);
         estimate = ResolveEstimate(inputValues);
         repositoryNodeId = inputValues
             .LastOrDefault(value => string.Equals(value.Key, ProjectTaskInputKeys.RepositoryRef, StringComparison.OrdinalIgnoreCase))
@@ -712,7 +729,7 @@
                 Notes = notes.Trim(),
                 CreateMode = ProjectStructureTaskActionIds.CreateMode,
                 ObjectSubtype = TaskSubtype,
-                InputValues = inputValues.ToArray()
+                InputValues = IsEditMode ? inputValues.ToArray() : initialSignals.ApplyTo(inputValues)
             },
             proposedAssignee,
             execution,

@@ -7,6 +7,27 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureGraphAdapterTests
 {
+    [Theory]
+    [InlineData("Draft", "", -1, "progress", 0)]
+    [InlineData("Planned", "", -1, "progress", 0)]
+    [InlineData("Not started", "", -1, "progress", 0)]
+    [InlineData("Image generation refused", "", -1, "progress", 0)]
+    [InlineData("Image generation running", "", -1, "progress", 62)]
+    [InlineData("", "", -1, "na", 0)]
+    [InlineData("Draft", "progress", 28, "progress", 28)]
+    [InlineData("Completed", "", -1, "complete", 100)]
+    public void Canvas_preserves_recorded_progress_and_resolves_missing_values_from_the_status(
+        string status, string storedMode, int storedPercent, string expectedMode, int expectedPercent) {
+        var node = CreateFileNode("file", "pdf", "#dc2626", ProjectObjectPaletteKeys.Danger) with {
+            Status = status, ProgressMode = storedMode, ProgressPercent = storedPercent
+        };
+        var surface = new ProjectStructureSurface(Guid.NewGuid(), "Canvas progress", [node], [], null);
+
+        var result = Assert.Single(new ProjectStructureGraphAdapter().BuildSurface(surface, new(), new(), new()).Nodes);
+
+        Assert.Equal((expectedMode, expectedPercent), (result.ProgressMode, result.ProgressPercent));
+    }
+
     [Fact]
     public void Focus_root_identifies_the_active_project_without_reordering_related_projects() {
         var parent = CreateProjectNode("parent", "Parent", ProjectStructureProjectRole.ParentProject);

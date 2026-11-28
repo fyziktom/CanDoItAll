@@ -615,6 +615,7 @@ internal static partial class ProjectStructureCanvasCatalog
         => linkKind switch
         {
             ProjectObjectLinkKind.DependsOn => "Use for task and scheduling prerequisites. The source node depends on the target node.",
+            ProjectObjectLinkKind.RelatesTo => "Use for a visual association between two nodes. Either direction identifies the same link. It has no effect on readiness or the Gantt schedule.",
             ProjectObjectLinkKind.Contains => "System-owned parent/root containment. Prefer parentNodeKey or reparent tools instead of authoring this directly.",
             ProjectObjectLinkKind.BelongsTo => "System-owned editable parent relationship. Prefer parentNodeKey or reparent tools instead of authoring this directly.",
             ProjectObjectLinkKind.Uses => "Use when one node consumes, references, or needs another artifact or resource.",

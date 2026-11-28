@@ -3,7 +3,7 @@
   "state": "COMPONENTS_DECOUPLING_COMPLETE",
   "entry_commit": "663fb1391e4acb12439173f1cb1d287fb1f24685",
   "implementation_checkpoint": "7d392a42a3cde07da968ea2fee90a03530dc17ef",
-  "coverage": "1288 current rendering inputs. Remote definition publishing, multi-selection and nested provider review are covered by native component and two-instance browser tests. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
+  "coverage": "1293 current rendering inputs. Remote definition publishing, multi-selection and nested provider review are covered by native component and two-instance browser tests. UI refactoring control migration, shell/header ownership, avatar defaults and asset inputs reviewed; see docs/architecture/ui-refactoring-v2.md. Workbench node comparison, retained view/control lifetime, bounded status and existing native orchestration reviewed; remaining Workbench surfaces and final R2 runtime gates stay open.",
   "limitations": [
     "Route declarations and reviewed source activations are complemented by evaluated consumer closure and actual compiled/native/browser proof. Excluded generic-type/name matches are retained explicitly; arbitrary reflection cannot be inferred from lexical callers.",
     "Assets/scenario/evidence fields refer to family entries; execution outcomes are recorded by dimension in the closure document.",
@@ -14081,6 +14081,29 @@
       "rationale": "Headless native subscription owner. Cancels waits on disposal and scope changes, filters the current circuit session, and reports inbox state; renders no product UI. Supporting concurrent-editing validation repair: coalesced cancellation and captured lifetime/task ownership prevent overlapping actor-change shutdowns from disposing a successor or orphaning observation. No merge adoption in Workbench."
     },
     {
+      "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCreateSignalSections.razor",
+      "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCreateSignalSections.razor",
+      "sha256_lf": "9cf10740cad09488551a55d97e9f45beaf27672092b3544abb1344032b497156",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureCreateSignalSections",
+      "project": "src/Modules/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj",
+      "classification": "NATIVE_HOST",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
+        "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor"
+      ],
+      "native_owner": "Original Project Structure node creation opening",
+      "visual_owner": "PlanningCreateSignalPicker",
+      "descendants": [
+        "PlanningCreateSignalPicker"
+      ],
+      "assets": "CanDoItAll.Modules.Workbench",
+      "scenario": "CanDoItAll.Modules.Workbench",
+      "evidence": "CanDoItAll.Modules.Workbench",
+      "rationale": "Maps the node creation signal catalog into optional sections for text assets, generated images and secret references. Each form submits its original draft through its native owner."
+    },
+    {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureFileBrowserWindow.razor",
       "sha256_lf": "ce9560d4287cffa67b4895b634a6760ce2b96580b9b4ae03387865bdd5288a0d",
@@ -14290,7 +14313,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTaskCreateDialog.razor",
-      "sha256_lf": "7b00ea6f6531a92d5561962fa0a08d04c03c4f673aad03bd34615083433637d7",
+      "sha256_lf": "7c76bb6dc9dbfe5a252912bdcd7ec3fed399d87b596d6dcff737350042d6a4ee",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureTaskCreateDialog",
@@ -14312,7 +14335,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureTextAssetCreateDialog.razor",
-      "sha256_lf": "0a50ce840e3f0e02d9f43ce9f52c5d02f0a0a1beae0ceb8466242efcd2e01893",
+      "sha256_lf": "5777425902766ea4e02b6ea2d7748069dd55340560caac5e36a261dcfd2da63e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureTextAssetCreateDialog",
@@ -14324,7 +14347,8 @@
       "native_owner": "ProjectAssetCreationService AssetCreationService",
       "visual_owner": "ContentTextForm",
       "descendants": [
-        "ContentTextForm"
+        "ContentTextForm",
+        "ProjectStructureCreateSignalSections"
       ],
       "assets": "CanDoItAll.Modules.Workbench",
       "scenario": "CanDoItAll.Modules.Workbench",
@@ -14503,7 +14527,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ComponentAdapters.cs",
-      "sha256_lf": "c951c856a6d9cec83430a93fd48c5b0df7a30353fc519dbf97bd30067f8efaa5",
+      "sha256_lf": "58443dcdf638311d8c2062738310232403e47730a00d327c2463787deab6147f",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureNodeCreatedWithFollowUpFailureException, CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14586,7 +14610,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.ImageGeneration.cs",
-      "sha256_lf": "28282c1fd14b13be54161468f15d703228f67190a4f9f353da825d19656304d8",
+      "sha256_lf": "ba022966b368bb79cd132f068cf4ab90bffbf548d2f9044cd68baf86b0ed4816",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.ImageOpening",
@@ -14874,7 +14898,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Secrets.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Secrets.cs",
-      "sha256_lf": "fd0c7594ef23efb5811818a556acc3aed1809fb2aae9c141c4d6edec17c3d674",
+      "sha256_lf": "a4e90b7c2bf4916f3642baa61e97aaceba50ae1ef71e34fc970438a24c766fbd",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -14935,7 +14959,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.SignalToolbox.cs",
-      "sha256_lf": "451e9000d32121162934bd9f867540e7a8cdfc3fad94d87540dab4cbd3d98adb",
+      "sha256_lf": "68b1163bb23aab7d99c98689d54144c5abb3a77b1bee850f8ed2893248f41453",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -15036,7 +15060,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.Workflows.cs",
-      "sha256_lf": "2b367ffc935e7be2cb79135a0b1d5acc5b35fee360a0f93f052e0a69b5e41c9b",
+      "sha256_lf": "7c392a77132a1ef88e5187bfacf1cbcacf19f71a08569af06e70c36ea69406f8",
       "kind": "CS_RENDER_OR_ACTIVATION",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage, CanDoItAll.Modules.Workbench.Pages.RetainedDeletionOutcome",
@@ -15057,7 +15081,7 @@
     {
       "identity": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
       "path": "src/Modules/CanDoItAll.Modules.Workbench/Pages/ProjectStructurePage.razor",
-      "sha256_lf": "cc1f33c7580494bad1b63250a8afe00293514c5928dbdcd1d72997500f10d8eb",
+      "sha256_lf": "957aef5f3931703127f46903a2f58a9a58f49e035d41f0f1b6344adfb67bfb8d",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructurePage",
@@ -15080,15 +15104,16 @@
         "ProjectStructureAgentChatContextProvider",
         "ProjectStructureCanvasDialogs",
         "ProjectStructureCanvasHealthWindow",
+        "ProjectStructureChangeObserver",
+        "ProjectStructureCreateSignalSections",
         "ProjectStructureDeferredSurface",
         "ProjectStructureFileBrowserWindow",
         "ProjectStructureGanttPanel",
         "ProjectStructureObjectIndexWindow",
         "ProjectStructureSignalsWindow",
         "ProjectStructureSupportDialogs",
-        "StructureWorkspace",
-        "ProjectStructureChangeObserver",
         "StructureChangesWindow",
+        "StructureWorkspace",
         "ToolbarSupplement"
       ],
       "assets": "CanDoItAll.Modules.Workbench",
@@ -34925,7 +34950,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Generation/ContentImageDialog.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Generation/ContentImageDialog.razor",
-      "sha256_lf": "c1a6a17405b79bda1fe5bdc80a527c59ec168c89aa42fafef89606e1466f2c46",
+      "sha256_lf": "ac1b8a085c50ac7da8f94149d135f350d1493a23b8f186f8679e42b514ce53da",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.Generation.ContentImageDialog",
@@ -34945,7 +34970,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
       "path": "src/UI/CanDoItAll.Workbench.Content.UI/Text/ContentTextForm.razor",
-      "sha256_lf": "f6eaaefc83130c5ad0d1802ec983b724b523f383ad12e25e586a5072516250c0",
+      "sha256_lf": "b19ee76a449419c940e2f45098367f1b017c28297fd935693ffd8a5d7f4dc2bf",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Content.UI.ContentTextForm",
@@ -35815,7 +35840,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Operators.UI/Secrets/SecretReferenceEditor.razor",
       "path": "src/UI/CanDoItAll.Workbench.Operators.UI/Secrets/SecretReferenceEditor.razor",
-      "sha256_lf": "1b567a077236ae76b892585033767b73fb924b8a6f33f0969bb23b8e162b2934",
+      "sha256_lf": "081d41e03b3458c91e413c6c3fe96b159cb4b522537676572904d0b576e5806e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Operators.UI.Secrets.SecretReferenceEditor",
@@ -35966,6 +35991,30 @@
       "rationale": "CSS/JS asset input; host/static-web-asset and browser proof determine consumption."
     },
     {
+      "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningCreateSignalPicker.razor",
+      "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningCreateSignalPicker.razor",
+      "sha256_lf": "2fb921ee8b72cfe82cab0e02952efb60f32791d99edcd75cbeba666166cb025a",
+      "kind": "RAZOR",
+      "role": "PRODUCT",
+      "type": "CanDoItAll.Workbench.Planning.UI.PlanningCreateSignalPicker",
+      "project": "src/UI/CanDoItAll.Workbench.Planning.UI/CanDoItAll.Workbench.Planning.UI.csproj",
+      "classification": "EXTRACTED_RENDERER",
+      "caller": [
+        "src/Modules/CanDoItAll.Modules.Workbench/Pages/Components/ProjectStructure/ProjectStructureCreateSignalSections.razor",
+        "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor"
+      ],
+      "native_owner": "Project Structure node creation host",
+      "visual_owner": "CanDoItAll.Workbench.Planning.UI",
+      "descendants": [
+        "Button",
+        "Cluster"
+      ],
+      "assets": "CanDoItAll.Workbench.Planning.UI",
+      "scenario": "ConcurrentEditing.Workbench.Tasks",
+      "evidence": "ConcurrentEditing.Workbench.Tasks",
+      "rationale": "Renders keyboard-accessible single and multiple icon choices using the supplied planning presets. Changes are returned to the draft owner before submission."
+    },
+    {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningGanttTaskEditor.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningGanttTaskEditor.razor",
       "sha256_lf": "c5124751da7dba2d584e1bf7416934a11c4a49acde0934429758bad921ce5ffd",
@@ -36026,7 +36075,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
       "path": "src/UI/CanDoItAll.Workbench.Planning.UI/TaskEditors/PlanningStructureTaskEditor.razor",
-      "sha256_lf": "ea9743018b9f18fc886e1f9953dde62fff775afa3b468daa5bc472c7f1993b22",
+      "sha256_lf": "cf18b51f91874bc49a08c912112991976fb828cd8480b2ca8082df781818e58b",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Planning.UI.PlanningStructureTaskEditor",
@@ -36039,6 +36088,7 @@
       "native_owner": "ProjectStructureCanvasTaskDialogCoordinator",
       "visual_owner": "CanDoItAll.Workbench.Planning.UI",
       "descendants": [
+        "PlanningCreateSignalPicker",
         "PlanningTaskComparison",
         "PlanningTaskFormActions",
         "PlanningTaskLeaveGuard",
@@ -36373,7 +36423,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/ProjectStructureToolbarActions.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/ProjectStructureToolbarActions.razor",
-      "sha256_lf": "f5b98f0a107d16dd601a04cf7af489f44544da73ecafef20db6d8c53bdc8fb41",
+      "sha256_lf": "e1ee39eb4b4649f2eeff2f0ca5040087439a8115269f1a4fb504f8b5b1001b5e",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Modules.Workbench.Pages.ProjectStructureToolbarActions",
@@ -36569,7 +36619,7 @@
     {
       "identity": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
       "path": "src/UI/CanDoItAll.Workbench.Structure.UI/StructureWorkspace.razor",
-      "sha256_lf": "355da7f008aa68dcebff41865eee83ccc5d914e2573c6da113fd75dedf83077d",
+      "sha256_lf": "18e20bec55a5957bd4e4cb962cec05105fbe30a94281f76d423ceaa4e6268bf4",
       "kind": "RAZOR",
       "role": "PRODUCT",
       "type": "CanDoItAll.Workbench.Structure.UI.StructureWorkspace",

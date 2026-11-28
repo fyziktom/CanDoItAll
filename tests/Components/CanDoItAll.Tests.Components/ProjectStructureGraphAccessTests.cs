@@ -20,7 +20,7 @@ namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 [Trait("Category", "HostPlatform")]
 public sealed class ProjectStructureGraphAccessTests {
-    public enum Command { Move, Link, Unlink, Reconnect, Copy, Cut, Convert, Recompose }
+    public enum Command { Move, Link, VisualLink, Unlink, Reconnect, Copy, Cut, Convert, Recompose }
     public enum AccessCondition { Allowed, DeniedBefore, DeniedAfterSql }
 
     public static IEnumerable<object[]> Commands => Enum.GetValues<Command>()
@@ -79,6 +79,10 @@ public sealed class ProjectStructureGraphAccessTests {
                 invoke = () => canvas.OnContextActionRequest(JsonSerializer.Serialize(new CanvasWorkbenchContextActionRequest(
                     target.Id, "delete-link", 0, 0, "link", source.Id, target.Id, ProjectObjectLinkKind.DependsOn.ToString())));
                 break;
+            case Command.VisualLink:
+                invoke = () => canvas.OnContextActionRequest(JsonSerializer.Serialize(new CanvasWorkbenchContextActionRequest(
+                    target.Id, CanvasWorkbenchContextActionRequest.CreateVisualLink, target.X, target.Y, "link", source.Id, target.Id)));
+                break;
             case Command.Copy:
             case Command.Cut:
                 await page.InvokeAsync(() => ClipboardAsync(page, command == Command.Copy ? CanvasWorkbenchClipboardAction.Copy : CanvasWorkbenchClipboardAction.Cut, source.Id));
@@ -120,6 +124,10 @@ public sealed class ProjectStructureGraphAccessTests {
                 break;
             case Command.Link:
                 Assert.Contains(accepted.Links, link => link.SourceId == source.Id && link.TargetId == target.Id && link.Kind == ProjectObjectLinkKind.DependsOn);
+                break;
+            case Command.VisualLink:
+                Assert.Contains(accepted.Links, link => link.SourceId == source.Id && link.TargetId == target.Id && link.Kind == ProjectObjectLinkKind.RelatesTo);
+                Assert.DoesNotContain(accepted.Links, link => link.Kind == ProjectObjectLinkKind.DependsOn);
                 break;
             case Command.Unlink:
                 Assert.DoesNotContain(accepted.Links, link => link.SourceId == source.Id && link.TargetId == target.Id && link.Kind == ProjectObjectLinkKind.DependsOn);

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CanDoItAll.Modules.Workbench;
 
 internal static class ProjectStructureNodeExpectations {
-    public static void EnsureContentCurrent(ProjectStructureNode? expected, ProjectObjectRecord current, bool replaceStatus = false) {
+    public static void EnsureContentCurrent(ProjectStructureNode? expected, ProjectObjectRecord current, bool replaceStatus = false, bool replaceProgress = true) {
         if (expected is null) {
             return;
         }
@@ -11,8 +11,8 @@ internal static class ProjectStructureNodeExpectations {
         if (expected.MetadataJson != current.MetadataJson || expected.Notes != current.Notes ||
             expected.StorageObjectReferenceJson != current.Binding.StorageObjectReferenceJson ||
             !(expected.NodeReferences?.Entries ?? []).SequenceEqual(current.NodeReferences.Entries) ||
-            replaceStatus && (expected.Status, expected.ProgressMode, expected.ProgressPercent) !=
-                (current.Status, current.ProgressMode, current.ProgressPercent)) {
+            replaceStatus && (expected.Status != current.Status ||
+                replaceProgress && (expected.ProgressMode, expected.ProgressPercent) != (current.ProgressMode, current.ProgressPercent))) {
             throw new ProjectStructureEditConflictException();
         }
     }

@@ -61,6 +61,7 @@ public sealed class ProjectStructureTaskCreationServiceTests
         Assert.Equal(backlog.Id, second.BacklogNodeId);
         Assert.Equal(backlog.Id, firstTask.ParentId);
         Assert.Equal(backlog.Id, secondTask.ParentId);
+        Assert.All(new[] { backlog, firstTask, secondTask }, node => Assert.Equal(("progress", 0), (node.ProgressMode, node.ProgressPercent)));
         Assert.Equal(ProjectObjectType.WorkItem, firstTask.ObjectType);
         Assert.Equal("task", firstTask.ObjectSubtype);
         Assert.Equal(StartUtc, firstTask.StartUtc);

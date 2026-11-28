@@ -3,6 +3,7 @@ using CanDoItAll.Modules.Security;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.Workbench.Operators.UI.Secrets;
+using CanDoItAll.Workbench.Planning.UI;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -63,7 +64,8 @@ public partial class ProjectStructurePage {
                     return updated;
                 }
                 var submitted = request! with { Title = secret.Name, Subtitle = note, Notes = purpose,
-                    InputValues = [new() { Key = "secretId", Value = secret.Id.ToString("D") }, new() { Key = "secretName", Value = secret.Name }] };
+                    InputValues = opening!.SubmittedSignals.ApplyTo([
+                        new() { Key = "secretId", Value = secret.Id.ToString("D") }, new() { Key = "secretName", Value = secret.Name }]) };
                 return await CreateObjectAsync(context, definition!, submitted,
                     configureRequest: prepared => prepared with { ExpectedProjectAdmission = context.Admission, ExpectedParticipants = participants },
                     onNodeCommitted: onCommitted,
@@ -82,7 +84,7 @@ public partial class ProjectStructurePage {
                         : receipt.Message;
                     ReportActionResult(context, message, receipt.Phase == SecretReferencePhase.Observed ? "mint" : "warn");
                 }
-            }, Logger);
+            }, Logger) { Signals = PlanningCreateSignalsDraft.From(request?.InputValues) };
         if (edited is not null) {
             var metadata = ProjectObjectMetadataSerializer.Parse(edited.MetadataJson).SecretReference;
             opening.State.Draft.SelectedId = metadata?.SecretId is { } id && id != Guid.Empty ? id : null;

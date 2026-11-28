@@ -299,9 +299,17 @@ internal static class ProjectNodeBindingStorage
                 row.PositionX, row.PositionY, row.CreatedAtUtc, row.UpdatedAtUtc);
     }
 
-    internal static PreparedPlainTaskBinding PrepareNewPlainTaskBinding(ProjectObjectRecord node) {
+    internal static PreparedPlainTaskBinding PrepareNewPlainTaskBinding(ProjectObjectRecord node) =>
+        PreparePlainTaskBinding(node, expectedProgressPercent: 0);
+
+    internal static void ValidateAcceptedPlainTaskBinding(ProjectObjectRecord node) {
+        const int legacyDraftProgressPercent = 28;
+        var expectedPercent = node.ProgressPercent == legacyDraftProgressPercent ? legacyDraftProgressPercent : 0;
+        _ = PreparePlainTaskBinding(node, expectedPercent);
+    }
+
+    private static PreparedPlainTaskBinding PreparePlainTaskBinding(ProjectObjectRecord node, int expectedProgressPercent) {
         ArgumentNullException.ThrowIfNull(node);
-        var progress = ProjectWorkbenchObjectModeling.ResolveStatusBackedProgress("Draft");
         if (node.Id == Guid.Empty || node.ProjectId == Guid.Empty ||
                 node.NodeKey != $"{ProjectWorkbenchGraphConventions.CustomNodePrefix}{node.Id:N}" ||
                 node.ParentNodeKey != ProjectWorkbenchGraphConventions.BuildProjectRootNodeKey(node.ProjectId) ||
@@ -309,7 +317,7 @@ internal static class ProjectNodeBindingStorage
                 node.IsSystemManaged || string.IsNullOrWhiteSpace(node.Title) || node.Title != node.Title.Trim() ||
                 node.Title.Length > ProjectTaskPlanProposal.MaximumTitleCharacters || node.Notes is null ||
                 node.Notes != node.Notes.Trim() || node.Priority is < 0 or > 6 || node.Subtitle != "Task" ||
-                node.Status != "Draft" || node.ProgressMode != progress.Mode || node.ProgressPercent != progress.Percent ||
+                node.Status != "Draft" || node.ProgressMode != "progress" || node.ProgressPercent != expectedProgressPercent ||
                 node.MarkersJson != "[]" || node.StartUtc is not null || node.EndUtc is not null ||
                 node.DurationSeconds is not null || node.CreatedAtUtc == default || node.CreatedAtUtc.Offset != TimeSpan.Zero ||
                 node.UpdatedAtUtc != node.CreatedAtUtc || node.UpdatedAtUtc.Offset != TimeSpan.Zero ||

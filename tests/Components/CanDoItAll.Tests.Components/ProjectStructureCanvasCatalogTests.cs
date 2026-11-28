@@ -3,11 +3,37 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Modules.Workbench.CanvasAdapters;
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Workbench.Planning.UI;
 
 namespace CanDoItAll.Tests.Components.ProjectStructure;
 
 public sealed class ProjectStructureCanvasCatalogTests
 {
+    [Theory]
+    [InlineData("initialPriority", "priority:7")]
+    [InlineData("initialProgress", "progress:120")]
+    [InlineData("initialMarkers", "not a selection")]
+    [InlineData("initialMarkers", "[\"marker:missing\"]")]
+    public void Creation_rejects_choices_outside_the_advertised_signal_presets(string key, string value) {
+        Assert.Throws<ArgumentException>(() => ProjectStructureCreateSignals.Read(new Dictionary<string, string> { [key] = value }));
+    }
+
+    [Fact]
+    public void Optional_creation_steps_preserve_zero_defaults_and_compose_visual_signals() {
+        Assert.Equal([PlanningCreateSignalsDraft.PriorityKey, PlanningCreateSignalsDraft.ProgressKey, PlanningCreateSignalsDraft.MarkersKey],
+            ProjectStructureCreateSignals.Fields.Select(field => field.Key));
+        Assert.All(ProjectStructureCreateSignals.Fields, field => Assert.False(field.IsRequired));
+        Assert.Null(ProjectStructureCreateSignals.Read(new Dictionary<string, string>()));
+        var input = new PlanningCreateSignalsDraft("priority:1", "progress:100", "[\"marker:question\",\"marker:risk\"]")
+            .ApplyTo([new() { Key = "channel", Value = "online" }]);
+        Assert.Contains(input, entry => entry.Key == "channel" && entry.Value == "online");
+        var signals = ProjectStructureCreateSignals.Read(input.ToDictionary(entry => entry.Key, entry => entry.Value));
+        Assert.NotNull(signals);
+        Assert.Equal(1, signals.Priority);
+        Assert.Equal(ProjectNodeInitialProgress.FromPreset("complete", 100), signals.Progress);
+        Assert.Equal(["question", "risk"], signals.Markers!.Select(marker => marker.Icon));
+    }
+
     [Theory]
     [InlineData("add-file-text", ".txt,text/plain")]
     [InlineData("add-file-json", ".json,application/json,text/json,text/plain")]

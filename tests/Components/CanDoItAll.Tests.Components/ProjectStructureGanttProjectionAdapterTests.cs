@@ -10,6 +10,29 @@ public sealed class ProjectStructureGanttProjectionAdapterTests
 {
     private static readonly DateTimeOffset ProjectionOrigin = new(2026, 7, 14, 8, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public void Visual_task_links_preserve_parallel_work_until_a_prerequisite_is_added() {
+        var first = CreateTask("first", "Prepare the soil", ProjectionOrigin, ProjectionOrigin.AddHours(2));
+        var second = CreateTask("second", "Build the frame", durationSeconds: 3600);
+        var visual = new ProjectStructureLink(first.Id, second.Id, ProjectObjectLinkKind.RelatesTo, true, Guid.NewGuid());
+        var project = Guid.NewGuid();
+        var independent = CreateSurface(project, [first, second], [visual]);
+
+        var before = Build(independent);
+        Assert.Empty(before.Dependencies);
+        Assert.Equal((ProjectionOrigin, ProjectionOrigin.AddHours(1)), Dates(before, second.Id));
+        Assert.Empty(ProjectStructureDependencyAnalyzer.Build(independent).FindNode(second.Id)!.ExplicitDependencyIds);
+
+        var prerequisite = new ProjectStructureLink(second.Id, first.Id, ProjectObjectLinkKind.DependsOn, true, Guid.NewGuid());
+        var scheduled = CreateSurface(project, [first, second], [visual, prerequisite]);
+        var after = Build(scheduled);
+        var dependency = Assert.Single(after.Dependencies);
+        Assert.Equal(first.Id, dependency.PredecessorId.Value);
+        Assert.Equal(second.Id, dependency.SuccessorId.Value);
+        Assert.Equal((ProjectionOrigin.AddHours(2), ProjectionOrigin.AddHours(3)), Dates(after, second.Id));
+        Assert.Equal(first.Id, Assert.Single(ProjectStructureDependencyAnalyzer.Build(scheduled).FindNode(second.Id)!.ExplicitDependencyIds));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
